@@ -4,11 +4,12 @@
 
 # Site
 title: Linsight
-subtitle: 'welcome'
-description: 'stay hungry stay foolish'
+subtitle: '聊聊技术，也聊聊其他的'
+description: '林浩智，专业的业余玩家，希望能做一点有用的事情'
 keywords:
-author: Lin
-language: en
+author: Lin Haozhi
+# language: en
+language: zh-CN
 timezone: 'Asia/Shanghai'
 
 # URL
