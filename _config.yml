@@ -5,7 +5,7 @@
 # Site
 title: Linsight
 subtitle: '聊聊技术，也聊聊其他的'
-description: '林浩智，专业的业余玩家，希望能做一点有用的事情'
+description: '专业的业余玩家，希望能做一点有用的事情'
 keywords:
 author: Lin Haozhi
 # language: en
@@ -17,6 +17,7 @@ timezone: 'Asia/Shanghai'
 url: https://saicat.github.io
 # permalink: :year/:month/:day/:title/
 # permalink_defaults:
+root: /
 
 permalink: :abbrlink.html
 # permalink: :title
