@@ -5,9 +5,9 @@
 # Site
 title: Linsight
 subtitle: '聊聊技术，也聊聊其他的'
-description: '专业的业余玩家，希望能做一点有用的事情'
+description: 'AI | NLP'
 keywords:
-author: Lin Haozhi
+author: Lin
 # language: en
 language: zh-CN
 timezone: 'Asia/Shanghai'
@@ -42,8 +42,8 @@ skip_render:
 
 # Writing
 # new_post_name: :year/:month/:day/:title.md
-new_post_name: :year/:month/:title.md
-# new_post_name: :title.md
+# new_post_name: :year/:month/:title.md
+new_post_new_onew_oname: :title.md
  # File name of new posts
 default_layout: post
 titlecase: false # Transform title into titlecase
@@ -135,3 +135,10 @@ excerpt:
   more_excludes: []
   hideWholePostExcerpts: true
 
+math:
+engine: 'mathjax' # or 'katex'
+mathjax:
+  # src: custom_mathjax_source
+  config:
+    # MathJax config
+      
