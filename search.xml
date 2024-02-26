@@ -4,12 +4,12 @@
     <title>理解LLM位置编码:RoPE</title>
     <url>/a051710f.html</url>
     <content><![CDATA[<p>最近在做LLM窗口外推的相关工作，因此刚好也回顾一下目前最流行的位置编码RoPE。</p>
-<h1 id="关于rope">1.关于RoPE</h1>
+<h1 id="关于rope">关于RoPE</h1>
 <p>RoPE（Rotary Position
 Embedding），是苏剑林大神在2021年就提出的一种Transformer模型的位置编码。RoPE是一种可以<big><u><strong>以绝对位置编码形式实现的相对位置编码</strong></u></big>，兼顾了模型性能和效率。</p>
 <p>2023年上半年的时候，大模型位置编码尚有Alibi和RoPE在相互比拼，而到了2023年下半年，及今2024年，新开源出来的模型，大部分都是使用RoPE了。当然Alibi也有其优势，这个在讲Alibi的时候来说。</p>
 <p>苏神在他的个人网站科学空间中对RoPE有相关文章进行了介绍，本篇是在这个基础上，对RoPE进行理解（公式和符号上也会沿用苏神的写法）。</p>
-<h1 id="以绝对位置编码的方式实现相对位置编码">2.以绝对位置编码的方式实现相对位置编码</h1>
+<h1 id="以绝对位置编码的方式实现相对位置编码">以绝对位置编码的方式实现相对位置编码</h1>
 <p>前面提到，RoPE是一种一绝对位置编码的方式实现的相对位置编码，那么这么做能带来什么收益？</p>
 <p>先说原因：</p>
 <p>在文本长度不长的情况下（比如Bert时代基本都是256/512token的长度），相对位置编码和绝对位置编码在使用效果上可以说没有显著差别。<br>
@@ -19,7 +19,7 @@ Embedding），是苏剑林大神在2021年就提出的一种Transformer模型�
 总结来说，就是绝对位置编码<u><strong>好实现</strong></u>，<u><strong>效率高</strong></u>，<u><strong>适用线性注意力</strong></u>，而相对位置编码<u><strong>易外推</strong></u>，因此就有了对“绝对位置编码的方式实现相对位置编码”的追求，去把二者的优点结合起来。</p>
 <p>下面简单回顾一下绝对位置编码和相对位置编码。</p>
 <p>（对位置编码比较熟悉的朋友可以直接跳到第3节。）</p>
-<h2 id="绝对位置编码">2.1.绝对位置编码</h2>
+<h2 id="绝对位置编码">绝对位置编码</h2>
 <p>先回顾一下带绝对位置编码的self-attention。</p>
 <p><span class="math display">\[\left.\left\{\begin{array}{l}q_\mathrm{i}=(x_\mathrm{i}+p_\mathrm{i})W_\mathrm{Q}\\k_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{K}\\\nu_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{V}\\\mathrm{a_\mathrm{i,j}}=\mathrm{softmax}\left(q_\mathrm{i}k_\mathrm{j}^\top\right)\\o_\mathrm{i}=\sum_\mathrm{j}a_\mathrm{i,j}\nu_\mathrm{j}\end{array}\right.\right.\tag{1}\]</span></p>
 <p><span class="math inline">\(x_i\)</span> 和 <span class="math inline">\(x_j\)</span> 分别是位置 <span class="math inline">\(i\)</span> 和 <span class="math inline">\(j\)</span> 的输入，<span class="math inline">\(p\)</span> 是对应位置的位置编码向量。</p>
@@ -29,7 +29,7 @@ Embedding），是苏剑林大神在2021年就提出的一种Transformer模型�
 addition操作的计算量非常小，是可以忽略不计的。</p>
 <p>大部分绝对位置编码使用的是这样向量相加的形式，即加性编码，也有一些用乘性编码的工作，把
 <span class="math inline">\(x + p\)</span> 变成 <span class="math inline">\(x * p\)</span> 这样，效果上也是大差不差。</p>
-<h2 id="相对位置编码">2.2.相对位置编码</h2>
+<h2 id="相对位置编码">相对位置编码</h2>
 <p>在绝对位置编码中，可以在输入阶段就把 <span class="math inline">\(x\)</span> 和 <span class="math inline">\(p\)</span>
 直接相加，是因为这里把位置信息当做是这个位置的词的固有特征。</p>
 <p>比如“我”这个词放在位置1时，形成一个 <span class="math inline">\(e_1 =
@@ -44,7 +44,7 @@ x_j^\top+{\color{red}W_K^\top
 p_j^\top}\right)\end{align*}\tag{2}\]</span></p>
 <p>和位置相关的有 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
 和 <span class="math inline">\(W_K^\top p_j^\top\)</span> 两项。</p>
-<h3 id="google式">2.2.1.Google式</h3>
+<h3 id="google式">Google式</h3>
 <p>在最早引入相对位置编码的Google的论文《Self-Attention with Relative
 Position Representations》中，把第一项 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
 去掉了（因为要搞相对位置编码，只要能把相对位置信息加到其中一项输入就可以了，这里加在了位置
@@ -77,7 +77,7 @@ o_{\mathrm{i}}=\sum_{\mathrm{j}}\mathrm{a_{i,j}}\left(x_{j}W_{\mathrm{V}}+R_{\ma
 <p><span class="math inline">\(R_{\mathrm{i,j}}^{\mathrm{V}}\)</span> 和
 <span class="math inline">\(R_{ij}^K\)</span> 相似，都是一个相对位置向量
 + clip操作。</p>
-<h3 id="xlnet式">2.2.2.XLNET式</h3>
+<h3 id="xlnet式">XLNET式</h3>
 <p>XLNET也使用了相对位置编码，思路类似Google，只是具体的操作不同。</p>
 <p>在公式（2）的基础上继续展开</p>
 <p><span class="math display">\[\begin{align*}
@@ -122,7 +122,7 @@ o_\mathrm{i}
 <span class="math inline">\(i\)</span> 、 <span class="math inline">\(j\)</span>
 都相关的向量。很多其他变体其实都大差不差，基本就是在怎么加入相对位置向量、怎么clip上下功夫。</p>
 <p>当然，也有简单一点的实现，比如T5的方法。</p>
-<h3 id="t5式">2.2.3.T5式</h3>
+<h3 id="t5式">T5式</h3>
 <p>公式（6）中展开了内积计算，一共有四项，第一项完全没有位置信息，只和词向量本身有关，第二三项分别包含了位置
 <span class="math inline">\(i\)</span> 和位置 <span class="math inline">\(j\)</span>
 的信息，而第四项只和位置相关，和词向量本身是什么内容无关。也就是说，位置相关的信息都是在后面三项引入的，那简单点，直接把后面三项替换成一个位置向量：</p>
@@ -133,7 +133,7 @@ o_\mathrm{i}
 \tag{10}
 \]</span></p>
 <p>（从最早提出，到XLNET，以及DeBerta，T5等，可以看到相对位置编码的实现有一个简化的趋势，而效果也越来越好，正所谓大道至简，有时候有用的东西未必需要很复杂）</p>
-<h2 id="对比">2.3.对比</h2>
+<h2 id="对比">对比</h2>
 <p>看来相对位置编码确实比较复杂，说个大概需要这么多篇幅；并且相对绝对位置编码，也没有那么直接明了，需要对attention计算做一些改造。</p>
 <p>公式（1）的绝对位置编码中，可以看到在进softmax操作前需要做3次矩阵加法，3次矩阵乘法</p>
 <p>从公式（8）可以看到，共有4组矩阵计算要做，每组要做3次矩阵乘法，相对会比较复杂。公式（3）也有类似的情况。当然同时也有一些针对相对位置编码的高效计算被提出，这些就需要针对不同的计算方案来优化了。</p>
@@ -141,7 +141,7 @@ o_\mathrm{i}
 <p>而在输入输出窗口外推方面，相对位置编码有着天然的优势。</p>
 <p>另外，绝对位置编码保持self-attention的经典形式，使得应用面更广，如可以使用到linear
 attention方案中去，这个以后再展开讲（又挖了个坑）。</p>
-<h1 id="rope的设计思路">3.RoPE的设计思路</h1>
+<h1 id="rope的设计思路">RoPE的设计思路</h1>
 <h2 id="保持attention计算形式">保持attention计算形式</h2>
 <p>回顾完经典的绝对位置编码和相对位置编码，回到RoPE上来。</p>
 <p>先说设计思路：</p>
