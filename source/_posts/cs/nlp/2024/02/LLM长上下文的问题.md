@@ -139,6 +139,7 @@ $$
 23年6月，Meta在[《EXTENDING CONTEXT WINDOW OF LARGE LANGUAGE MODELS VIA POSITION INTERPOLATION》](https://arxiv.org/pdf/2306.15595.pdf)中就提出了针对RoPE的线性插值方法PI（Position Interpolation），可以把2k的基础模型扩展到32k，并在1k个step的训练下就达到很好的效果。
 
 {% asset_img meta_pi.png PI效果 %}  
+{% asset_img LLM长上下文的问题/meta_pi.png PI效果 %}  
 
 >In contrast, LLaMA models that are extended via direct fine-tuning only saw a minimal increase of the effective context window size kmax from 2048 to 2560, even after fine-tuning for more than 10000 steps, with no clear indication of an acceleration in the increase of window size.  
 
