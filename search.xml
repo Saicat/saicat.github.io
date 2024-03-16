@@ -1,6 +1,804 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>LLM长上下文的问题</title>
+    <url>/c4da56c0.html</url>
+    <content><![CDATA[<p>最近长上下文的业务需求越来越多，刚好把这个能力现状和主流方案的基础内容简单梳理一下。</p>
+<p>跟长文本最相关的自然就是位置编码，现在很多模型都使用了RoPE这种位置编码，之前已经把RoPE的基础内容梳理了一遍：<a href="http://www.linsight.cn/a051710f.html">博客</a> <a href="https://zhuanlan.zhihu.com/p/684072868">知乎</a> <a href="https://mp.weixin.qq.com/s?__biz=MzkyODY1MTA3Ng==&amp;mid=2247483759&amp;idx=1&amp;sn=f7b59b879476b8687a340606b5568eae&amp;chksm=c214c344f5634a52e299108c3deddfd2a0eccbf14d9392c205410723956c477925e89e791b9b&amp;token=88551061&amp;lang=zh_CN#rd">微信公众号</a></p>
+<h1 id="关于长上下文">关于长上下文</h1>
+<p>2023年中开始，各大LLM厂商开始关注到长上下文的问题。2023年5月，Claude把长度支持到100k
+tokens；6、7月的时候，ChatGPT3.5也已经支持16k，而ChatGLM2-B最大长度已经可以到32k。</p>
+<p>（插一句，ChatGLM系列做得一直很不错，从基础模型、长窗口、工具调用、Agent都一直保持在比较前沿的水平，个人最近用ChatGLM3、ChatGLM4体验还是很不错的）</p>
+<p>差不多同时间还有LM-SYS的LongChat，MosaicLM的MPT也支持16k以及更长的上下文。</p>
+<p>今年过年前刚出来的Qwen-1.5系列全家桶也都是32k起步了。还有一些支持超长窗口的模型</p>
+<center>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;">模型</th>
+<th style="text-align: center;">支持长度</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">Baichuan2</td>
+<td style="text-align: center;">192k</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">GPT4-turbo</td>
+<td style="text-align: center;">128k</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">Yi</td>
+<td style="text-align: center;">200k</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">Kimi Chat</td>
+<td style="text-align: center;">128k(20万汉字)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">Claude2</td>
+<td style="text-align: center;">200k</td>
+</tr>
+</tbody>
+</table>
+</center>
+<p>大厂商们卷完基础模型效果，把能刷的榜刷完，又盯上了长上下文能力（当然现在长上下文也有榜了）。</p>
+<p>为什么要那么长？</p>
+<h1 id="长上下文的需求">长上下文的需求</h1>
+<p>取决于语言和所使用的tokenizer，每个token对应编码的文本有所不同。以中文为例，大部分模型每个token对应的中文字数都&gt;1.5个字（部分高效的tokenizer可以做到2个字以上）。那么200k的token就能对应处理30w字的上下文了。</p>
+<p>最近刚看了刘震云的长篇小说《一句顶一万句》，全书差不多27万字，也就是说现在这些长上下文大模型可以秒读完一部长篇小说，然后和我交流心得，或者告诉我全书的概要，又或者帮我找到一些文中的细节描写。</p>
+<p>上面这个场景对应的是大模型的<big><u><strong>工具化</strong></u></big>场景。我们可以借助大模型的能力，来阅读论文，总结研报或者阅读代码，这些场景都需要比较长的上下文输入。</p>
+<p>另外还有一个也比较火的大模型应用场景，RAG（Retrieval-augmented
+generation），也对长上下文输入有要求，只是在RAG中，大部分输入文本并不是直接来自于用户输入，而是通过检索得来的。</p>
+<p>除了工具化的应用场景，还有一些<big><u><strong>个性化</strong></u></big>的场景也会对长上下文有需求。举例来说，就是一些智能助手需要对用户的偏好和设置做长期记忆，这些偏好和设置可以以prompt或者对话的形式持久化存储下来，在进行新的对话的时候就把这些内容连同用户新的输入一起给到模型进行处理。</p>
+<p>实际上，哪怕是单次的聊天，也很有可能需要模型处理比较长的上下文。比如我们可能会让模型扮演一个特定的影视角色或者游戏角色和我们进行对话。这时通常会给模型一些设定，比如这是一个什么样的任务，故事背景世界观都是什么样的，以及现在要进行哪些方面的交流等。这些设定都会以prompt的形式在最开始输入给模型。而随着对话的进行，模型如果长文本能力比较差，就有可能忘记了我们之前给的设定，这样体验上就有问题了。</p>
+<p>上面这个例子实际引出了对长文本需求更具体的内容：（1）在文本比较长的时候，还能说人话，ppl要低（2）说人话之余，还要能attention到前面提过的细节，不能出现自我矛盾。</p>
+<h1 id="模型怎么支持长上下文">模型怎么支持长上下文</h1>
+<p>看来目前的很多应用场景确实对长上下文有需求，那怎么实现呢？</p>
+<p>如果我们直接训练2k/4k长度的模型，然后在推理的时候设定8k或者16k窗口，那么PPL会急剧上升，导致模型直接讲不了人话，原因之一在之前讲RoPE的时候也有提到，对于没有训练过的<u><strong>位置编码</strong></u>，模型不能很好地处理。</p>
+<h2 id="直接训练">直接训练</h2>
+<p>既然训练的时候用2k/4k不能很好地在8k/16k/32k+的上下文长度下推理，那直接在训练的时候用更长的数据进行训练不就可以了？</p>
+<p>这个思路理论上可行，只是实操的时候会遇到一些问题（壕可能觉得不是问题）。</p>
+<p>1.训练数据</p>
+<p>直观上来说，要训练长上下文的模型，就需要长文本。要达到32k或者更大的长度，基本都只能是书籍。</p>
+<p>当然，我们也可以通过把多个中等长度的文本进行拼接，再用来训练。比如筛选4k长度数据，那8条拼在一起也够长了。然后通过attention
+mask来限制各段文本之间注意力，让它们可以在各自的位置上各训各的，互不干扰。甚至实际上即使不做attention
+mask，效果也挺好。</p>
+<p>总的来说，就是【连续长文本】&gt;【多个中等文本拼接】（也可用）</p>
+<p>2.资源消耗</p>
+<p>来简单看一下transformer在训练中所消耗的资源。</p>
+<p>假设模型有 <span class="math inline">\(l\)</span> 层，词表大小为
+<span class="math inline">\(V\)</span> ，hidden size为 <span class="math inline">\(h\)</span> ，batch size为 <span class="math inline">\(b\)</span> ，训练窗口长度为 <span class="math inline">\(s\)</span>
+，使用Adam优化器训练（需要存一阶和二阶动量），为简化估算，可以假设注意力头数为1。</p>
+<ol type="1">
+<li>参数量</li>
+</ol>
+<p>模型总参数量 <span class="math inline">\(\Phi\)</span> = 词向量参数量
++ <span class="math inline">\(l\)</span> * decoder层参数量 = <span class="math inline">\(Vh + l(12h^2 + 13h)\)</span></p>
+<p>可以看到参数量和窗口长度 <span class="math inline">\(s\)</span>
+无关，模型确定了就是一个固定值。</p>
+<ol start="2" type="1">
+<li>计算量</li>
+</ol>
+<p>一次前向计算量 = 输出分类头logits计算 + <span class="math inline">\(l\)</span> * 每层计算量 <span class="math inline">\(\approx2bshV + l*(24bsh^2+4bs^2h)\)</span></p>
+<p>（这里的计算忽略了softmax，实际上softmax计算量也是和长度 <span class="math inline">\(s\)</span> 成平方关系）</p>
+<p>看一下计算量和参数量的关系。忽略参数量和计算量中的低次项，则有</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\frac{计算量}{参数量}
+&amp;=\frac{2bshV + l*(24bsh^2+4bs^2h)}{Vh + l(12h^2 + 13h)}\\
+&amp;\rightarrow bs\frac{6h+s}{3h}
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>可以看到，总计算量随着输入长度的增长是平方的。在 <span class="math inline">\(s &lt;&lt; h\)</span>
+的时候，基本还可以认为是线性的。目前大部分模型的 <span class="math inline">\(h\)</span> 是在1k到1w这个范围，基本上可以认为
+<span class="math inline">\(s\)</span> 和 <span class="math inline">\(sh\)</span>
+在不是超级长的情况下，还是可比较的。计算量算是长度的“弱”二次方关系</p>
+<ol start="3" type="1">
+<li>显存</li>
+</ol>
+<p>训练过程中，显存主要有模型参数、梯度、optimizer状态值和中间激活值。</p>
+<p>训练中，每个参数（<span class="math inline">\(\Phi\)</span>）有一个对应梯度（<span class="math inline">\(\Phi\)</span>），每个参数又对应优化器一个一阶动量和二阶动量（<span class="math inline">\(2\Phi\)</span>）。在混合精度训练中，使用半精度进行前向计算和梯度计算，同时优化器备份一份单精度的优化器状态、梯度和参数用于更新参数，因此共有
+<span class="math inline">\((\Phi + \Phi) \times 2 + (\Phi + \Phi +
+2\Phi) \times 4 = 20\Phi = 20[Vh + l(12h^2 + 13h)]\)</span>
+的参数占用。</p>
+<img src="/c4da56c0/mix_precision_fp16.png" class title="混合精度训练">
+<p>这部分跟输入长度没有直接关系。</p>
+<p>另外一个需要占用显存的部分是中间激活值。</p>
+<p>保存激活值是为了计算梯度，因此每个矩阵相乘、softmax、dropout都需要保存输入值的中间的激活值。</p>
+<p>对于attention层，输入时先要对 <span class="math inline">\(x\)</span>
+做 <span class="math inline">\(Q、K、V\)</span> 投影，需要保存 <span class="math inline">\(x\)</span> 的中间值；计算权重的时候有 <span class="math inline">\(Q、K\)</span> 矩阵的相乘，需要保存 <span class="math inline">\(Q、K\)</span> 矩阵的值；做softmax的时候输入有
+<span class="math inline">\(QK^T\)</span>
+要保存；以此类推，则需要保存的所有中间激活值为 <span class="math inline">\(11bsh+5bs^2+19sh+4bsh=34bsh+5bs^2\)</span> 。对于
+<span class="math inline">\(l\)</span> 层的模型，就再乘以 <span class="math inline">\(l\)</span> 。</p>
+<p>可以看到中间激活值随着 <span class="math inline">\(s\)</span>
+增大，是以平方关系在增长。训练4k长度的模型和32k长度的模型，激活值所需的显存增长到了64倍。这种情况下，要么扩大集群，加入更多的GPU，要么减小batch
+size，或者提升gradient
+accumulation的值，无论如何，都会增加<big><u><strong>训练成本</strong></u></big>。</p>
+<p>小模型（比如2B、7B）可以硬刚，支持到16k或者32k长度，但是对于更大的长度（200k），或者更大的模型（34B、70B+），这么做就性价比就比较低了。</p>
+<p>现在一般的做法是分两阶段，第一阶段用2k或者4k训练一个基础模型，等到模型把文本内容和短位置关系都学好之后，再来用相比第一阶段小的数据量优化在长上下文情况下的效果。</p>
+<p>而第二阶段在如何用更少的训练量达到更好的效果这件事上，又有很多工作。</p>
+<h2 id="线性插值-position-interpolation">线性插值 Position
+Interpolation</h2>
+<p>23年6月，Meta在<a href="https://arxiv.org/pdf/2306.15595.pdf">《EXTENDING CONTEXT WINDOW
+OF LARGE LANGUAGE MODELS VIA POSITION
+INTERPOLATION》</a>中就提出了针对RoPE的线性插值方法PI（Position
+Interpolation），可以把2k的基础模型扩展到32k，并在1k个step的训练下就达到很好的效果。</p>
+<img src="/c4da56c0/meta_pi.png" class title="PI效果">
+
+<blockquote>
+<p>In contrast, LLaMA models that are extended via direct fine-tuning
+only saw a minimal increase of the effective context window size kmax
+from 2048 to 2560, even after fine-tuning for more than 10000 steps,
+with no clear indication of an acceleration in the increase of window
+size.</p>
+</blockquote>
+<p>相比之下，直接基于基础模型进行长文本微调的效率就比较低，训练1w步后，有效长度只是从2048提升到2560。</p>
+<p>看来RoPE虽然拥有诸多优点，长上下文外推这个事情却不在其中。</p>
+<p>论文中对RoPE外推性能也进行了一些分析。本来RoPE是相对位置编码，而且具有远程衰减的特性，理论上应该具备一定的外推能力，但实际上却不是这样。简单地说，论文发现，在相对位置差
+<span class="math inline">\(\left|m-n \right|\)</span>
+不太大的时候（&lt;2048），确实能保持远程衰减且attention值保持在较小的区间，但是一旦
+<span class="math inline">\(\left|m-n \right|\)</span>
+超过这个区间，还是有可能出现很大的值。</p>
+<img src="/c4da56c0/meta_rope_ext.png" class title="RoPE外推">
+<p>看上图中间的这个图，在位置超过3000的时候，突然出现很大的attention
+score。而右边的图使用了插值的方式，就相对稳定。</p>
+<p>（远程衰减上界问题具体推导的过程就不展开了，感兴趣的朋友可以看下论文原文）</p>
+<p>而另一方面，PI甚至可以在只使用插值，而没有训练的情况下，就拥有一定的长窗口能力。</p>
+<img src="/c4da56c0/meta_pi_nosft.png" class title="PI效果">
+<p>插值的思路是这样的：如下图所示，左上部分表示预训练过的2k长度的位置编码，右上部分表示在这个基础上直接外推，这样就会出现很多之前没有训练过的值，模型的学习成本会比较高；下半部分表示在已经训练好的2k模型基础上进行插值，类似于在每两个位置编码之间，插入一个位置点，这样总的位置表示就从2k增加到4k。在这个基础上再进行少量的微调，模型就可以很快学到新的位置表示。</p>
+<img src="/c4da56c0/meta_pi_explanation.png" class title="PI效果">
+<p>这个思路也很符合直觉，比如原来模型针对位置1，位置2，位置3...学到了一定的规律，现在告诉模型，位置不一定是整数，变成位置1，位置1.5，位置2，位置2.5...。虽然值变了，但是相对关系还在，因此模型也能借助原来学到的关系，快速推广到“0.5”的位置中。</p>
+<p>由于三角函数光滑的特性，我们可以重新定义attention
+score的计算，使得结果不要出现异常大的值，也就是 <span class="math inline">\(\tilde{a}(s)=a(Ls/L^{\prime})\)</span> ，<span class="math inline">\(L\)</span> 是原长度（也就是2048），<span class="math inline">\(L^{\prime}\)</span>
+是我们想要增大的长度（8k/16k/32k等）。</p>
+<p>更具体来说，就是对RoPE做一点修改</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\mathbf{f}&#39;(\mathbf{x},m)=\mathbf{f}\left(\mathbf{x},\frac{mL}{L&#39;}\right)
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>相当于位置 <span class="math inline">\(m\)</span> 的分辨率从1下降成了
+<span class="math inline">\({L}/{L&#39;}\)</span>。</p>
+<p>（一通分析，实现却很简单，工程师的福音，真希望以后论文都能给出这样的结果）</p>
+<p>然后使用几万到几十万条样本进行预训练，就可以了。</p>
+<p>（文章里还埋有一个后续的关注点，在对长上下文进行训练后，在短上下文的场景下，效果略略有所下降）</p>
+<h2 id="ntk-aware-interpolation">NTK-Aware Interpolation</h2>
+<p>线性插值相当于直接线性拉伸了cos函数，减小了不同位置之间的差异，使得模型对于相近位置的区分度有所下降，多少有点简单粗暴，而NTK-Aware
+Interpolation就提出了理论上看起来更为“精致”方法，一种在RoPE上做<u><strong>非线性插值</strong></u>的方法，NTK-Aware
+Scaled RoPE。CodeLlama就是用这种方法把长度推广到1M。</p>
+<p>NTK，就是Neural Tangent
+Kernel，神经正切核。具体是什么，让GLM4帮忙解答一下</p>
+<blockquote>
+<p>Neural Tangent Kernel (NTK)
+是深度学习理论中的一个概念，它是在训练无限宽的神经网络时出现的一个理论工具。在深度学习领域，宽度通常指的是网络中每一层的神经元数量。NTK
+的提出，为理解深度学习提供了一个新的视角，特别是在网络宽度趋于无穷大时，网络的行为可以用线性模型来近似。<br>
+在理想情况下，当网络宽度趋于无穷大时，网络的训练过程可以用一个固定的核函数来描述，这个核函数就是
+Neural Tangent
+Kernel。这个核函数描述了网络输出与输入之间关系的性质，使得我们可以用核方法来分析这类网络的训练和泛化能力。<br>
+具体来说，NTK
+使得我们能够预测在无限宽的网络中，随着训练的进行，网络权重的演化情况，以及网络的损失函数如何随时间变化。这些预测在数学上更加清晰和可分析，有助于我们深入理解深度学习的工作原理，特别是在泛化和优化方面。<br>
+NTK
+的研究对设计新的网络架构、训练算法和理论分析提供了重要的理论基础。它也表明，在一定的条件下，深度学习可以简化为传统的统计学习理论，如核方法，这为将深度学习与经典机器学习理论联系起来提供了桥梁。</p>
+</blockquote>
+<p>这个了解各大概就行。那么具体在长上下文扩展这个事上，NTK有什么说法呢？</p>
+<p>它认为，线性插值把所有方向上的分量一视同仁，把旋转速度统一变慢，这里有问题。</p>
+<p>回顾一下在RoPE中，对位置 <span class="math inline">\(m\)</span>
+的输入向量进行“旋转”的矩阵长这样</p>
+<img src="/c4da56c0/rope_matrix.png" class title="RoPE旋转矩阵">
+<p>它把输入向量的元素划分成2个2个一组，共有 <span class="math inline">\(d/2\)</span>
+组，每组有两个元素，不同组分别旋转。这里可以发现每组的旋转速度并不相同，由于
+<span class="math inline">\(\theta_j=10000^{-2j/d}\)</span> ，可以看到，
+<span class="math inline">\(j\)</span> 越小越靠前的组旋转越快，<span class="math inline">\(j\)</span> 越大的旋转越慢。这里 <span class="math inline">\(base=10000\)</span> ， <span class="math inline">\(base\)</span>
+越大，整体的旋转速度越慢，反之越快。同一个位置下，由于旋转速度不同，位置向量的信号频率有高低，前面的部分是高频，越往后越低频。</p>
+<p>不加区分地对高低频信息进行拉伸，会丢失很多重要的高频信息，这样不是很好。高频信号应该外推，以防止分辨率太低，都挤在一起；而低频信号就适合插值。</p>
+<p>怎么实现“高频外推，低频内插”？</p>
+<p>先看回讲<a href="https://www.zhihu.com/people/us4ever">RoPE</a>的时候，对于2维情况，有</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+&amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle=
+\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>推广到高维的情况，则有</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\langle
+f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle=&amp;\mathrm{Re}[\sum_j^{d/2}h_je^{is\theta_j}]\\
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>其中 <span class="math inline">\(h_j=\boldsymbol{q}_m\boldsymbol{k}_n^*\)</span>
+，<span class="math inline">\(s=m-n\)</span> 。</p>
+<p>在这个公式下，线性插值相当于把</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\mathrm{Re}[\sum_j^{d/2}h_je^{is\theta_j}]\\
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>变成了</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\mathrm{Re}[\sum_j^{d/2}h_je^{i\frac{s}{\alpha}\theta_j}]\\
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>其中 <span class="math inline">\(\alpha=L&#39;/L&gt;1\)</span>
+，相当于把 <span class="math inline">\(s\)</span> 压缩了。</p>
+<p>而NTK-Aware Scaled RoPE则是对 <span class="math inline">\(\theta_j\)</span>
+进行了改动，具体来说，是修改了其中的base值（RoPE中原来是10000）</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\hat{base}=base\times\alpha^{\frac{d}{d-2}}
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>则有</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\hat{\theta_j}=\hat{base}^{-2j/d}=base^{-2j/d}\times\alpha^{\frac{-2j}{d-2}}
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>相当于 <span class="math inline">\(\theta\)</span> 乘了一个系数 <span class="math inline">\(\alpha^{\frac{-2j}{d-2}}\)</span> ，当 <span class="math inline">\(j\)</span> 比较小的时候， <span class="math inline">\(\alpha^{\frac{-2j}{d-2}}\)</span>
+接近1，相当于直接进行了外推，而当 <span class="math inline">\(j\)</span>
+比较大的时候（注意 <span class="math inline">\(j\)</span> 的取值是从0到
+<span class="math inline">\(d/2 - 1\)</span>），<span class="math inline">\(\alpha^{\frac{-2j}{d-2}}\)</span> 就接近 <span class="math inline">\(\alpha^{-1}\)</span> ，这就和线性插值趋近了。</p>
+<p>引用来自<a href="https://zhuanlan.zhihu.com/p/645770522">知乎一篇文章</a>的一个视角来理解NTK-Aware
+Interpolation</p>
+<blockquote>
+<p>有意思的解释一下，RoPE
+的行为就像一个时钟。12小时时钟基本上是一个维度为 3、底数为 60 的
+RoPE。因此，每秒钟，分针转动 1/60 分钟，每分钟，时针转动
+1/60。现在，如果将时间减慢 4 倍，那就是二使用的线性RoPE
+缩放。不幸的是，现在区分每一秒，因为现在秒针几乎每秒都不会移动。因此，如果有人给你两个不同的时间，仅相差一秒，你将无法从远处区分它们。NTK-Aware
+RoPE 扩展不会减慢时间。一秒仍然是一秒，但它会使分钟减慢 1.5
+倍，将小时减慢 2 倍。这样，您可以将 90 分钟容纳在一个小时中，将 24
+小时容纳在半天中。所以现在你基本上有了一个可以测量 129.6k 秒而不是 43.2k
+秒的时钟。由于在查看时间时不需要精确测量时针，因此与秒相比，更大程度地缩放小时至关重要。不想失去秒针的精度，但可以承受分针甚至时针的精度损失。</p>
+</blockquote>
+<p>另外苏剑林从“进制”角度对RoPE作了分析，感兴趣的朋友可以看下<a href="https://kexue.fm/archives/9675">原文</a>，也很巧妙。</p>
+<p>在YaRN的<a href="https://arxiv.org/pdf/2309.00071.pdf">论文</a>中，对NTK的优缺点作了点评</p>
+<blockquote>
+<p>Given the results from [6], this method performs much better at
+extending the context size of non-finetuned models compared to PI [9].
+However, one major disadvantage of this method is that given it is not
+just an interpolation scheme, some dimensions are slightly extrapolated
+to "out-of-bound" values, thus fine-tuning with "NTK-aware"
+interpolation [6] yields inferior results to PI [9]. Furthermore, due to
+the "out-of-bound" values, the theoretical scale factor s does not
+accurately describe the true context extension scale. In practice, the
+scale value s has to be set higher than the expected scale for a given
+context length extension.</p>
+</blockquote>
+<p>NTK的优点是不用微调的情况下，能比线性插值做得好。但是由于低频部分还是会有部分被外推到超出范围的值，因此在设定系数的时候，要比需要的设得更大才行。比如想4k模型要在32k的时候取得比较好的效果，那
+<span class="math inline">\(\alpha=L&#39;/L\)</span>
+就要选得比8更大一些，比如16。</p>
+<h2 id="ntk-by-parts">NTK-by-parts</h2>
+<p>NTK-by-parts的方法在NTK插值的基础上又多想了一层。它认为无论是线性插值还是NTK-aware插值，认为RoPE的所有分量都对网络有同样的重要性。而NTK-by-parts的思路认为，应该区别对待不同分量，他们对网络的影响有所不同。</p>
+<p>对于分量 <span class="math inline">\(j\)</span> ，RoPE嵌入的波长</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\lambda_j=\frac{2\pi}{\theta_j}=2\pi\cdot base^{\frac{2j}{d}}
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p><span class="math inline">\(\lambda_j\)</span>
+代表旋转一周所需的长度。当 <span class="math inline">\(j\)</span>
+比较小时，波长短，反之波长长，这也对应我们前面说的，前面的分量高频，后面的分量低频。</p>
+<p>这里观察到，当 <span class="math inline">\(j\)</span>
+比较大时，波长就可能比 <span class="math inline">\(L\)</span>
+要大，这种情况下RoPE一圈都没有转完，会导致这个分量的分布不均匀（比如
+<span class="math inline">\(sin\)</span>
+只转了1/4圈，那值全都集中在0<sub>1之间，-1</sub>0的就没有值）。这种情况下，这个维度的编码相当于是绝对位置编码了，因为几乎每个位置都有自己独特的一个值。反之当
+<span class="math inline">\(j\)</span>
+比较小时，模型只能访问到相对位置信息。</p>
+<p>此外，插值会导致相邻或相近位置的关系更近（因为旋转量小，点积更大），文章认为这样会损害模型理解局部关系的能力，因此选择不对高频部分进行插值。NTK-by-parts的思路是</p>
+<ul>
+<li>如果维度 <span class="math inline">\(j\)</span> 的波长 <span class="math inline">\(\lambda_j\)</span> 远小于上下文长度
+，就不插值只外推<br>
+</li>
+<li>如果波长 <span class="math inline">\(\lambda_j\geq\)</span>
+上下文长度，就只插值不外推<br>
+</li>
+<li>中间的部分就同时存在两种，类似NTK-aware interpolation</li>
+</ul>
+<p>引入一个比例 <span class="math inline">\(r(j)=\frac{L}{\lambda_j}\)</span>
+来表示波长和上下文长度的关系。另外还需要两个阈值 <span class="math inline">\(\beta_1、\beta_2\)</span> 来区分以上三种情况。如果
+<span class="math inline">\(r(j)&lt;\beta_1\)</span>
+，就认为波长大，如果 <span class="math inline">\(r(j)\geq
+\beta_2\)</span> ，就认为波长小。方便起见，定义一个斜坡函数</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\left.\gamma(r)=\left\{\begin{matrix}0&amp;if&amp;r(j)&lt;\beta_1\\1&amp;if&amp;r(j)\geq\beta_2\\\frac{r-\beta_1}{\beta_2-\beta_1}&amp;otherwise\end{matrix}\right.\right.
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>NTK-by-parts插值可以定义为对 <span class="math inline">\(\theta_j\)</span> 的一个操作</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\hat{\theta_j}=\left(1-\gamma(r(j))\right)\frac{\theta_j}s+\gamma(r(j))\theta_j
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>这里有两个超参 <span class="math inline">\(\beta_1、\beta_2\)</span>
+要定，文中根据实验给出的推荐值是 <span class="math inline">\(\beta_1=1，\beta_2=32\)</span>
+，也就是当波长和上下文长度一样长的时候，认为波长大，就只插值，当波长小于上下文长度1/32时，认为波长远小于上下文，就只外推。</p>
+<h2 id="dynamically-ntk-scaled-rope">Dynamically NTK Scaled RoPE</h2>
+<p>无论是线性插值还是NTK-Aware
+Interpolation，都是通过使用一个固定的系数，对原RoPE做了一个缩放，这样就会有一些局限。一方面，这种情况下，模型能支持的最大上下文就由使用的这个缩放系数来决定了，超出这个范围的，依然会出现attention
+score暴增的风险。另一方面，在解码过程中，当已解码的长度 <span class="math inline">\(l\)</span> 还没有达到训练长度 <span class="math inline">\(L\)</span> 时，就使用 <span class="math inline">\(\alpha\)</span>
+来修改base，也可能带来一些损失。Dynamically NTK Scaled
+RoPE是在NTK插值的基础上，把固定的系数改成动态的系数。</p>
+<p>具体来说，就是</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\hat{\alpha}=max(1,\frac{l}{L})
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>这样随着解码长度 <span class="math inline">\(l\)</span> 的增长，当
+<span class="math inline">\(l&gt;L\)</span> 之后 <span class="math inline">\(\alpha\)</span> 从1逐渐增大， <span class="math inline">\(l\leq L\)</span> 时则不需要改动。</p>
+<p>有一点要注意的是，使用动态的系数时要注意kv-cache的缓存机制是否正确，记得要缓存使用应用RoPE之前的值。</p>
+<h2 id="yarn">YaRN</h2>
+<p>上面的方法都是使用插值，研究者发现，随着插值，token之间的距离变得更近（因为现在旋转角度变小了），平均最小距离在减小，这样注意力softmax的分布会变得更尖（也就是都集中在某个区间）。换句话说，就是RoPE原本远距离衰减的特性变弱了，衰减得更不明显，就会导致模型更平均地关注到更多的token，这样就削弱了注意力机制，导致输出质量下降。</p>
+<p>当将RoPE插值到更长的上下文时，注意力softmax分布中的熵会减少，因此研究者的目标是逆转这种熵减（即增加注意力logit的“温度”）。这可以通过在softmax之前，将中间注意力矩阵乘以温度
+<span class="math inline">\(t&gt;1\)</span>
+来完成，但由于RoPE被编码为一个旋转矩阵，就可以简单地按常数因子 <span class="math inline">\(\sqrt{t}\)</span>
+来扩展RoPE的长度。这样可以不必修改注意力的代码。</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\text{softmax}\left(\frac{\mathbf{q}_m^T\mathbf{k}_n}{t\sqrt{d}}\right)
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>通过对Llama 1和Llama 2的实验，文章提出了建议值<span class="math inline">\(\begin{aligned}\sqrt{\frac1t}&amp;=0.1\ln(\alpha)+1.\end{aligned}\)</span>。这个值的效果再Llama各个版本和规模的模型都能有比较好的效果，这样说明这样的熵变在长文本中是常见的。</p>
+<p>YaRN最终的方法就是结合NTK-by-parts，以及使用这个温度值对attention
+score进行调整。</p>
+<p>YaRN在微调以及无微调的情况下，效果都比上面的几种都要好。</p>
+<h2 id="logn">logn</h2>
+<p>logn指的是对attention计算中的缩放因子 <span class="math inline">\(\sqrt{d}\)</span>
+进行通过logn进行改进的一个方法，苏剑林在<a href="https://zhuanlan.zhihu.com/p/678755776">博客</a>中进行了分析。大致的思路和YaRN中的缩放颇有些相似。</p>
+<p>简单来说，依然是希望在长上下文的时候，引入了更多token的情况下，已有的token还能保持聚焦在原来哪些token上，而不要被过分分散了注意力。因此提出了一个新的attention
+score公式</p>
+<p><span class="math display">\[
+\begin{equation}
+\begin{aligned}
+\text{Attention}_E(\boldsymbol{Q},\boldsymbol{K},\boldsymbol{V})=\text{softmax}\left(\frac{\log_{L}{L&#39;}}{\sqrt{d}}\boldsymbol{Q}\boldsymbol{K}^\mathrm{T}\right)\boldsymbol{V}
+\end{aligned}
+\end{equation}
+\]</span></p>
+<p>可以看到，当 <span class="math inline">\(L&#39;&gt;L\)</span>
+时，其效果和YaRN中的放缩是类似的。</p>
+<h2 id="其他">其他</h2>
+<p>在扩展推理长度上，还有很多其他有效的工作，比如各种window
+attention，streaming LLM，LongLoRA，Focus
+Transformer等，还有数据、评测等更方面的分析，待逐个梳理。</p>
+<h1 id="小结">小结</h1>
+<p>较短的预训练模型（2k、4k）应用在长上下文会因为训练和推理的两个不一致导致效果下降</p>
+<ul>
+<li>推理时用到了没训练过的位置编码<br>
+</li>
+<li>推理时注意力机制所处理的token数量远超训练时的数量，导致注意力机制的崩坏</li>
+</ul>
+<p>这两个问题分别可以从位置编码和attention score的放缩来缓解。</p>
+<p>线性插值PI、NTK插值、分部NTK插值都可以缓解第一个问题，logn和YaRN则把第二个问题纳入的考虑。目前这些方法在实际应用中也有很多变体，包括超参的修改，函数的重定义等。</p>
+<h1 id="reference">Reference</h1>
+<p>【1】分析transformer模型的参数量、计算量、中间激活、KV cache
+https://zhuanlan.zhihu.com/p/624740065<br>
+【2】EXTENDING CONTEXT WINDOW OF LARGE LANGUAGE MODELS VIA POSITION
+INTERPOLATION https://arxiv.org/pdf/2306.15595.pdf<br>
+【3】Transformer升级之路：10、RoPE是一种β进制编码
+https://kexue.fm/archives/9675<br>
+【4】YaRN: Efficient Context Window Extension of Large Language Models
+https://arxiv.org/pdf/2309.00071.pdf<br>
+【5】详解基于调整RoPE旋转角度的大模型长度外推方法
+https://mp.weixin.qq.com/s/RtI95hu-ZLxGkdGuNIkERQ<br>
+【6】浅谈LLM的长度外推 https://zhuanlan.zhihu.com/p/645770522
+【7】想让大模型在prompt中学习更多示例，这种方法能让你输入更多字符
+https://cloud.tencent.com/developer/article/2330611<br>
+【8】Transformer升级之路：8、长度外推性与位置鲁棒性
+https://spaces.ac.cn/archives/9444<br>
+【9】RoPE外推优化——支持192K上下文长度
+https://zhuanlan.zhihu.com/p/678755776 ***</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>长上下文</tag>
+        <tag>窗口外推</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>稀疏注意力计算:sliding window attention</title>
+    <url>/c61d17e3.html</url>
+    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
+<p>LLM的长文本能力现在已经是各个大模型巨头的必争之地。</p>
+<p>我们之前在<a href="http://www.linsight.cn/c4da56c0.html">《LLM长上下文的问题》</a>简单介绍了目前把大模型理解和生成能力推广到32k+/128k+的主流方法，在<a href="http://www.linsight.cn/3dc22f96.html">《理解Attention:从起源到MHA,MQA和GQA》</a>一文中也解析了MQA和GQA通过节省KV缓存的方式，支持模型在长上下文情况下推理加速的方案。</p>
+<p>在这讲一下另一种（理论有损）提升注意力计算效率的方法：SWA（sliding
+window attention）。</p>
+<p>一些效果受到广泛关注的模型，如Qwen系列和Mistral就使用了SWA。</p>
+<p>关于Mistral：</p>
+<p>Mistral
+AI是法国一家AI独角兽公司，2023年5月才成立，但是在2023年9月和12月就分别推出了Mistral
+7B和MoE模型Mistral 8x7B并开源。</p>
+<p>2024年2月，微软也投资了它。</p>
+<img src="/c61d17e3/ms_invest_mistral.png" class title="MS">
+<p>它在2024年2月发布的Mistral Large，支持多语言 &amp;
+32k的上下文长度，在MMLU上也是获得了直逼GPT4的效果</p>
+<img src="/c61d17e3/mistral_large_performance.jpeg" class title="Mistral Large MMLU Performance">
+<p>（大家也因此对Mistral寄予了厚望，希望它能成为大模型行业的鲶鱼，激活一下OPENAI和META加速一下开源。）</p>
+<h1 id="swa">SWA</h1>
+<p>虽然SWA的思路最早不是Mistral提出的，我们还是先以Mistral
+7B为例来看下SWA的具体做法。</p>
+<h2 id="mistral-7b">Mistral 7B</h2>
+<p>2023年10月，Mistral发布了Mistral 7B的<a href="https://arxiv.org/pdf/2310.06825.pdf">技术报告</a>。其中开篇就说到，相比Llama，Mistral在结构上做了一些改动，除了GQA，另一个用于支持长文本下高效推理的改动就是SWA。</p>
+<p>来看下Mistral 7B的模型结构参数</p>
+<img src="/c61d17e3/mistral_architechture.png" class title="Mistral Architechture">
+<p>Mistral使用了kv组数=8的GQA，intermediate
+size相比Llama2（11008）大一些，其他基本没有太大变化。</p>
+<h2 id="计算量和缓存">计算量和缓存</h2>
+<p>对于原始的causal
+attention，其注意力矩阵是一个下三角矩阵，这样每个token都能看到自己和在自己前面的token。</p>
+<p>这样随着输入长度 <span class="math inline">\(s\)</span>
+增大，这个下三角矩阵中1的元素数量以 <span class="math inline">\(s^2\)</span> 的速度增长，带来的是计算量和所需的KV
+Cache以平方的速度增长。</p>
+<p>（我们知道计算量/缓存和长度 <span class="math inline">\(s\)</span>
+成平方关系，这里放一些更具体的推算细节，已经熟悉的朋友可以跳过）</p>
+<p>（1）计算量</p>
+<p>对于两个这样大小的矩阵相乘： <span class="math inline">\([m,n]\times[n,p]\)</span> ，输出矩阵大小为 <span class="math inline">\([m,p]\)</span>，共有 <span class="math inline">\(m\times p\)</span> 个元素，每个元素需要 <span class="math inline">\(n\)</span> 次乘法和 <span class="math inline">\(n\)</span> 次加法，因此一次矩阵乘法有 <span class="math inline">\(2mpn\)</span> 个floating point
+operations（FLOPs）。</p>
+<p>计算量上，按<a href="https://arxiv.org/pdf/2203.15556.pdf">《Training
+Compute-Optimal Large Language Models》</a>的算法来。</p>
+<p>对于一般MHA，输入长度为 <span class="math inline">\(s\)</span>
+，层数为 <span class="math inline">\(L\)</span> ，模型hidden size为
+<span class="math inline">\(d_{model}\)</span> ，每个头的维度为 <span class="math inline">\(d_{q}\)</span> ， 头的数量为 <span class="math inline">\(n_{q}\)</span>（这里假设有 <span class="math inline">\(d_{model} = n_{q}\times d_{q}\)</span>
+），各个operation的FLOPs如下</p>
+<center>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Operation</th>
+<th style="text-align: center;">FLOPs（MHA）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Attention: QKV</td>
+<td style="text-align: center;"><span class="math inline">\(6\times
+s\times h_{model}^{2}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Attention: QK logits ( <span class="math inline">\(QK^T\)</span> )</td>
+<td style="text-align: center;"><span class="math inline">\(2\times
+s^2\times h_{model}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Attention: Softmax</td>
+<td style="text-align: center;"><span class="math inline">\(3\times
+n_{q}\times s^2\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Attention: Reduction (apply to <span class="math inline">\(V\)</span>)</td>
+<td style="text-align: center;"><span class="math inline">\(2\times
+s^2\times h_{model}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Attention: Outupt Linear Project</td>
+<td style="text-align: center;"><span class="math inline">\(2\times
+s\times h_{model}^{2}\)</span></td>
+</tr>
+</tbody>
+</table>
+</center>
+<p>Softmax项中，对一个 <span class="math inline">\([1,s]\)</span>
+的向量做softmax，计算量为 <span class="math inline">\(3s\)</span> （一个
+<span class="math inline">\(s\)</span> 是算每个元素的exp，一个 <span class="math inline">\(s\)</span> 是求和算分母，一个 <span class="math inline">\(s\)</span> 是算除法），而对 <span class="math inline">\([s,s]\)</span> 的矩阵做softmax，则计算量为 <span class="math inline">\(3s^2\)</span> ，每个头都要计算一遍，因此再乘以
+<span class="math inline">\(n_{q}\)</span> 。</p>
+<p>（这里忽略了其他一些operation，比如scaling，dropout等，有兴趣的朋友可以自己推算一下）</p>
+<p>顺便算下对于Mistral 7B这样使用了GQA的情况。</p>
+<p>其实只有第一项的KV有变化，其他都没变。假设kv头的数量为 <span class="math inline">\(n_{kv}\)</span>，则有</p>
+<center>
+<table>
+<colgroup>
+<col style="width: 45%">
+<col style="width: 54%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Operation</th>
+<th style="text-align: center;">FLOPs（GQA）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Attention: QKV</td>
+<td style="text-align: center;"><span class="math inline">\(2\times
+s\times h_{model}^{2}\\+4\times s\times h_{model}\times (h_{q}\times
+n_{kv})\)</span></td>
+</tr>
+</tbody>
+</table>
+</center>
+<p>从上面的推算可以看到QK logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span> 成平方关系的，其他则是线性关系。</p>
+<p>（2）缓存</p>
+<p>KV Cache需要缓存的参数量为</p>
+<p><span class="math display">\[
+2\times L\times s\times d_{q}\times n_{kv}
+\]</span></p>
+<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
+<p><span class="math display">\[
+2\times 2\times L\times s\times d_{q}\times n_{kv}
+\]</span></p>
+<p>对于Mistral 7B，在输入长度为16k的情况下，所需的KV_Cache约为2G。</p>
+<p>看来虽然用了GQA，但是在长文本（16k+）的情况下计算量和显存还是颇有压力。</p>
+<h2 id="swa思路">SWA思路</h2>
+<p>看来要提升attention计算效率，需要想办法减小上面推算中的 <span class="math inline">\(s\)</span> ，但是怎么在减小 <span class="math inline">\(s\)</span>
+的同时，还能保持模型长上下文的理解和生成能力呢？</p>
+<p>来看一下，CNN中的感受野</p>
+<img src="/c61d17e3/receptive_field_cnn.png" class title="CNN Receptive Field">
+<p>如上图，假设模型有3层，每层卷积核大小为 <span class="math inline">\(3\times 3\)</span>
+（实际上CNN里卷积操作就是一个sliding window）。</p>
+<p>那对于layer 3，每一个像素能看到layer 2中的一个 <span class="math inline">\(3\times 3\)</span> 的区域，layer
+2中其他较远的像素就看到不了。</p>
+<p>但我们再往前推，layer 2里的每个像素也可以看到layer 1中的一个 <span class="math inline">\(3\times 3\)</span> 区域，那么layer 2中的 <span class="math inline">\(3\times 3\)</span> 区域就可以看到layer 1中一个
+<span class="math inline">\(5\times 5\)</span> 的区域，相当于layer
+3中一个像素可以<u><strong>间接</strong></u>看到一个 <span class="math inline">\(5\times 5\)</span> 的输入。</p>
+<p>以此类推，如果我们再增加一层layer 4，那么layer
+4中一个像素就能获取输入层（layer 1） 一个 <span class="math inline">\(7\times 7\)</span> 区域的信息。</p>
+<p>虽然每层只能多看周围一格的信息，但是只要我们层数够多，理论上靠近输出端的层想看多远就能看多远。</p>
+<p>值得注意的一点是，我们一般认为模型低层部分提取比较基础的特征，而高层会提取高级的语义特征。</p>
+<p>在CNN里，前几层提取的可能更多是关于简单的边界、颜色、形状等基础特征，而后面的层则提取较复杂的语义特征，比如在分类任务中会是和分类类别相关的花纹、物体大小、风格等特征。</p>
+<p>如果我们把模型设计成，最后一层的一个像素刚好要到第一层才能接收到全局信息（在其它层都只能看到局部），那对于图像边缘的语义特征识别能力可能会受到一些限制。</p>
+<p>具体来说，假设我们做猫和狗的图像分类任务，如果这个时候决定性的特征出现在图像最边缘几个像素里，那这种情况下的错误率会比特征出现在图像中间时要高。</p>
+<p>而对于语言模型，一般情况下，越远距离的信息，对当前位置的重要性越低，因此只要我们的窗口大小不要太过极限小，问题应该都还不大。</p>
+<p>看下Mistral的SWA具体是怎么做的</p>
+<img src="/c61d17e3/mistral_swa.png" class title="Mistral SWA">
+<p>左边是正常的causal
+attention，每个位置能看到自己和前面的位置，attention
+mask是个下三角矩阵。</p>
+<p>中间则是SWA的attention
+mask，这里的窗口大小为3。包括自己在内，每个位置只能往前看3个输入。</p>
+<p>同CNN的感受野一样，随着层数的堆叠，模型理论上能处理的最远距离也逐层线性递增。只是LLM里递增的方向是单向的，只能往前。</p>
+<p>Mistral 7B使用了4096的窗口大小，模型层数为32，则最终输出的”感受野“为
+<span class="math inline">\(4096\times 32=131,072\)</span>
+达到131k的长度。</p>
+<p>前面我们推算了attention的计算量，其中QK
+logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span>
+成平方关系。在使用了SWA之后，理论上，这几个operation仅使用4k的计算量，就能获得131k的上下文效果。当输入长度为131k时，除去已经缓存部分的数值，新的输入计算量相差
+<span class="math inline">\(32\times 32=1024\)</span> 倍。</p>
+<p>而缓存和上下文长度 <span class="math inline">\(s\)</span>
+成线性关系，当上下文长度为131k时，最大也能节省 <span class="math inline">\(31/32\)</span> 的显存。</p>
+<p>即SWA在上下文长度在4k以下时，和普通causal
+attention一样；当上下文长度超过4k时，则相对节省资源，长度越大，节省的比例越高。</p>
+<blockquote>
+<p>In practice, for a sequence length of 16K and W = 4096, changes made
+to FlashAttention [11] and xFormers [18] yield a 2x speed improvement
+over a vanilla attention baseline.</p>
+</blockquote>
+<p>实际使用中，Mistral通过把SWA实现在FlashAttention和xFormers中，对于16k的上下文长度，获得了2倍的速度提升。</p>
+<h2 id="和kv-cache的配合实现">和KV Cache的配合实现</h2>
+<p>在不使用sliding window的情况下，随着自回归推理的进行，KV
+Cache是只增不减的。</p>
+<p>而在使用SWA的情况下，超出窗口长度的kv就可以不用再缓存了，因此使用一个轮转替换的策略。</p>
+<p>比如窗口大小 <span class="math inline">\(W=4\)</span>
+，则当第5个token需要缓存是，直接替换掉第1个token，这样就可以保持kv缓存有一个最大值（为窗口大小），而不会无限增长。</p>
+<img src="/c61d17e3/rolling_buffer.png" class title="swa rolling buffer">
+<p>这样便于我们估计硬件设备所能支持的throughput，也不会因为少量超长的case而造成堵塞，在工程上有利于提高硬件利用率，降低成本。</p>
+<h2 id="长prompt的分块">长Prompt的分块</h2>
+<p>更近一步，考虑到我们使用RAG或者funciton
+call的时候，都会使用比较长的，固定的prompt来知道模型的行为。</p>
+<p>比如GPT4就被诱导说出它接收到的长system
+prompt（当然未必真的就是OPENAI用的）</p>
+<blockquote>
+<p>Your user's user agent is "Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+and the user's locale is "en-US" Your knowledge cutoff date is 2023-04.
+The current date is 2024-02-07. Image input capabilities: Enabled</p>
+<p>Tools</p>
+<p>python</p>
+<p>When you send a message containing Python code to python, it will be
+executed in a stateful Jupyter notebook environment. python will respond
+with the output of the execution or time out after 60.0 seconds. The
+drive at '/mnt/data' can be used to save and persist user files.
+Internet access for this session is disabled. Do not make external web
+requests or API calls as they will fail.</p>
+<p>dalle</p>
+<p>Whenever a description of an image is given, create a prompt that
+dalle can use to generate the image and abide to the following policy:
+1. The prompt must be in English. Translate to English if needed. 2. DO
+NOT ask for permission to generate the image, just do it! 3. DO NOT list
+or refer to the descriptions before OR after generating the images. 4.
+Do not create more than 1 image, even if the user requests more. 5. Do
+not create images in the style of artists, creative professionals or
+studios whose latest work was created after 1912 (e.g. Picasso, Kahlo).
+- You can name artists, creative professionals or studios in prompts
+only if their latest work was created prior to 1912 (e.g. Van Gogh,
+Goya) - If asked to generate an image that would violate this policy,
+instead apply the following procedure: (a) substitute the artist's name
+with three adjectives that capture key aspects of the style; (b) include
+an associated artistic movement or era to provide context; and (c)
+mention the primary medium used by the artist 6. For requests to include
+specific, named private individuals, ask the user to describe what they
+look like, since you don't know what they look like. 7. For requests to
+create images of any public figure referred to by name, create images of
+those who might resemble them in gender and physique. But they shouldn't
+look like them. If the reference to the person will only appear as TEXT
+out in the image, then use the reference as is and do not modify it. 8.
+Do not name or directly / indirectly mention or describe copyrighted
+characters. Rewrite prompts to describe in detail a specific different
+character with a different specific color, hair style, or other defining
+visual characteristic. Do not discuss copyright policies in responses.
+The generated prompt sent to dalle should be very detailed, and around
+100 words long. Example dalle invocation: { "prompt":
+"<insert prompt here>" } namespace dalle {</insert></p>
+<p>Create images from a text-only prompt. type text2im = (_: { The size
+of the requested image. Use 1024x1024 (square) as the default, 1792x1024
+if the user requests a wide image, and 1024x1792 for full-body
+portraits. Always include this parameter in the request. n?: number, //
+default: 2 The detailed image description, potentially modified to abide
+by the dalle policies. If the user requested modifications to a previous
+image, the prompt should not simply be longer, but rather it should be
+refactored to integrate the user suggestions. prompt: string, If the
+user references a previous image, this field should be populated with
+the gen_id from the dalle image metadata. referenced_image_ids?:
+string[], }) =&gt; any; } // namespace dalle</p>
+<p>voice_mode Voice mode functions are not available in text
+conversations. namespace voice_mode { } // namespace voice_mode</p>
+<p>browser</p>
+<p>You have the tool <code>browser</code>. Use <code>browser</code> in
+the following circumstances: - User is asking about current events or
+something that requires real-time information (weather, sports scores,
+etc.) - User is asking about some term you are totally unfamiliar with
+(it might be new) - User explicitly asks you to browse or provide links
+to references</p>
+<p>Given a query that requires retrieval, your turn will consist of
+three steps: 1. Call the search function to get a list of results. 2.
+Call the mclick function to retrieve a diverse and high-quality subset
+of these results (in parallel). Remember to SELECT AT LEAST 3 sources
+when using <code>mclick</code>. 3. Write a response to the user based on
+these results. In your response, cite sources using the citation format
+below.</p>
+<p>In some cases, you should repeat step 1 twice, if the initial results
+are unsatisfactory, and you believe that you can refine the query to get
+better results.</p>
+<p>You can also open a url directly if one is provided by the user. Only
+use the <code>open_url</code> command for this purpose; do not open urls
+returned by the search function or found on webpages.</p>
+<p>The <code>browser</code> tool has the following commands:
+<code>search(query: str, recency_days: int)</code> Issues a query to a
+search engine and displays the results.
+<code>mclick(ids: list[str])</code>. Retrieves the contents of the
+webpages with provided IDs (indices). You should ALWAYS SELECT AT LEAST
+3 and at most 10 pages. Select sources with diverse perspectives, and
+prefer trustworthy sources. Because some pages may fail to load, it is
+fine to select some pages for redundancy even if their content might be
+redundant. <code>open_url(url: str)</code> Opens the given URL and
+displays it.</p>
+<p>For citing quotes from the 'browser' tool: please render in this
+format: 【{message idx}†{link text}】. For long citations: please render
+in this format: <a href="message%20idx">link text</a>. Otherwise do not
+render links.</p>
+</blockquote>
+<p>除了预先计算好system
+prompt的kv值，并保存在缓存中方便每次用户输入使用外，如果system
+prompt很长（比sliding window大），还可以通过对system
+prompt的kv值进行切分来进一步优化计算。</p>
+<p>比如窗口大小 <span class="math inline">\(W=4\)</span>，system
+prompt大小为9时，就可以把system prompt的kv缓存切成 [4,4,1] 三块。</p>
+<p>第一块由于和当前的输入距离超过了一个window的大小，所以是完全看不见的，对应的attention
+mask全为0，因此可以完全忽略。</p>
+<p>第二块的attention
+mask则是一个上三角矩阵，当前的输入需要用到这部分信息。</p>
+<p>第三块是一个下三角矩阵（的左边部分），包含了当前的输入在内。</p>
+<p>在推理的时候，我们只需要用到第二块和第三块的内容，这就节省了缓存的操作。</p>
+<p>而且无论prompt有多长，只要我们按窗口大小分块，一定只会用到最后两块。</p>
+<img src="/c61d17e3/prefill_and_chunking.png" class title="prefill and chunking">
+<p>（实际上现在推理框架基本上都有FlashAttention/PagedAttention等技术加持，能够进一步节省资源，提高效率，这个后续再开一篇讲）</p>
+<p>Mistral
+7B整体的效果上的效果相比Llama是有优势的，部分任务甚至超过了Llama
+34B。</p>
+<img src="/c61d17e3/mistral_perf.png" class title="mistral performance">
+<p>Mistral认为大语言模型压缩知识的能力实际超过我们的认知，7B这个规模的效果还有提升空间。</p>
+<h1 id="sparse-attention">Sparse Attention</h1>
+<p>SWA实际上是一种sparse attention，而sparse
+attention也有许多工作做了深入探索。</p>
+<p>这里简单说一小部分，有机会再完整梳理一遍sparse
+attention的理论和实践。</p>
+<h2 id="longformer">Longformer</h2>
+<p>前面提到，Mistral并不是第一个使用SWA的。</p>
+<p>2020年，<a href="https://arxiv.org/pdf/2004.05150.pdf">《Longformer:
+The Long-Document Transformer》</a>就提出包含SWA在内的一系列sparse
+attention的做法。</p>
+<p>从文章名字就看到出来，Longformer主要目的也是为了解决长上下文的问题。</p>
+<img src="/c61d17e3/longformer_attention.png" class title="longformer">
+<p>上图中的（b）就是SWA，只是用在Bert中的时候它是双向的。</p>
+<p>在SWA的基础上，还可以进行空洞滑窗（dilated sliding
+window），在不增加计算量的情况下，提升感受野。这也是从空洞卷积（下图）来的灵感了。</p>
+<img src="/c61d17e3/dilated_conv.png" class title="dilated convolution">
+<p>还可以更进一步优化attention。无论是SWA还是dilated sliding
+window，每个位置都只能看到局部的信息。</p>
+<p>但是实际上有些位置就是对全局信息有很高的需求。</p>
+<p>在Bert中，[CLS]
+token就常常作为分类token或者相似度向量使用，这种情况下就需要它能获取整个上下文的完整信息。</p>
+<p>而在GPT中，instruction，或者说prompt的部分也对全局信息有更高要求，因为我们希望在整个对话过程中，模型都能遵循我们给出的规则。</p>
+<p>对于这些token，我们让它可以看到其他所有位置，使用完整的global
+attention，而其他位置则使用sliding window，如（d）中所示。</p>
+<h2 id="big-bird">Big Bird</h2>
+<p>无独有偶，同样在2020年，和Longformer差不多在同一时期，也有另外一个通过sparse
+attention来优化长文本效果的工作，<a href="https://arxiv.org/abs/2007.14062">《Big Bird: Transformers for
+Longer Sequences》</a>。</p>
+<p>其中sliding window和global attention结合的思路和Longformer相似。Big
+Bird还额外加入了一个random attention的做法。</p>
+<img src="/c61d17e3/big_bird_attention.png" class title="big bird attention">
+<p>上图中 <span class="math inline">\(r=2\)</span>
+即每个位置使用2个随机注意力。</p>
+<h1 id="小结">小结</h1>
+<p>SWA在优化长上下文的计算效率上有明显的收益。而在模型效果上，目前基本没有看到不可接受的损失。对长上下文有需求的业务，值得探索。</p>
+<p>除了SWA，sparse
+attention还有许多其他探索。目前来看，这些做法都有一定的理论基础，效果也不错。但是阻碍这些方案大规模使用的一个原因就是<big><strong>工程实现</strong></big>，比如如何高效计算global
++ local attention，在flash attention中能够支持random
+attention，这都是要考虑的内容。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Mistral 7B https://arxiv.org/pdf/2310.06825.pdf<br>
+【2】Longformer: The Long-Document Transformer
+https://arxiv.org/pdf/2004.05150.pdf<br>
+【3】Training Compute-Optimal Large Language Models
+https://arxiv.org/pdf/2203.15556.pdf<br>
+【4】GPT-4 System Prompt Revealed
+https://patmcguinness.substack.com/p/gpt-4-system-prompt-revealed<br>
+【5】Big Bird: Transformers for Longer Sequences
+https://arxiv.org/abs/2007.14062</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>attention</tag>
+        <tag>sliding window attention</tag>
+        <tag>sparse attention</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>理解LLM位置编码:RoPE</title>
     <url>/a051710f.html</url>
     <content><![CDATA[<p>最近在做LLM窗口外推的相关工作，因此刚好也回顾一下目前最流行的位置编码RoPE。</p>
@@ -410,442 +1208,6 @@ https://zhuanlan.zhihu.com/p/647109286</p>
       </tags>
   </entry>
   <entry>
-    <title>LLM长上下文的问题</title>
-    <url>/c4da56c0.html</url>
-    <content><![CDATA[<p>最近长上下文的业务需求越来越多，刚好把这个能力现状和主流方案的基础内容简单梳理一下。</p>
-<p>跟长文本最相关的自然就是位置编码，现在很多模型都使用了RoPE这种位置编码，之前已经把RoPE的基础内容梳理了一遍：<a href="http://www.linsight.cn/a051710f.html">博客</a> <a href="https://zhuanlan.zhihu.com/p/684072868">知乎</a> <a href="https://mp.weixin.qq.com/s?__biz=MzkyODY1MTA3Ng==&amp;mid=2247483759&amp;idx=1&amp;sn=f7b59b879476b8687a340606b5568eae&amp;chksm=c214c344f5634a52e299108c3deddfd2a0eccbf14d9392c205410723956c477925e89e791b9b&amp;token=88551061&amp;lang=zh_CN#rd">微信公众号</a></p>
-<h1 id="关于长上下文">关于长上下文</h1>
-<p>2023年中开始，各大LLM厂商开始关注到长上下文的问题。2023年5月，Claude把长度支持到100k
-tokens；6、7月的时候，ChatGPT3.5也已经支持16k，而ChatGLM2-B最大长度已经可以到32k。</p>
-<p>（插一句，ChatGLM系列做得一直很不错，从基础模型、长窗口、工具调用、Agent都一直保持在比较前沿的水平，个人最近用ChatGLM3、ChatGLM4体验还是很不错的）</p>
-<p>差不多同时间还有LM-SYS的LongChat，MosaicLM的MPT也支持16k以及更长的上下文。</p>
-<p>今年过年前刚出来的Qwen-1.5系列全家桶也都是32k起步了。还有一些支持超长窗口的模型</p>
-<center>
-<table>
-<thead>
-<tr class="header">
-<th style="text-align: center;">模型</th>
-<th style="text-align: center;">支持长度</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: center;">Baichuan2</td>
-<td style="text-align: center;">192k</td>
-</tr>
-<tr class="even">
-<td style="text-align: center;">GPT4-turbo</td>
-<td style="text-align: center;">128k</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center;">Yi</td>
-<td style="text-align: center;">200k</td>
-</tr>
-<tr class="even">
-<td style="text-align: center;">Kimi</td>
-<td style="text-align: center;">192k</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center;">Claude2</td>
-<td style="text-align: center;">200k</td>
-</tr>
-</tbody>
-</table>
-</center>
-<p>大厂商们卷完基础模型效果，把能刷的榜刷完，又盯上了长上下文能力（当然现在长上下文也有榜了）。</p>
-<p>为什么要那么长？</p>
-<h1 id="长上下文的需求">长上下文的需求</h1>
-<p>取决于语言和所使用的tokenizer，每个token对应编码的文本有所不同。以中文为例，大部分模型每个token对应的中文字数都&gt;1.5个字（部分高效的tokenizer可以做到2个字以上）。那么200k的token就能对应处理30w字的上下文了。</p>
-<p>最近刚看了刘震云的长篇小说《一句顶一万句》，全书差不多27万字，也就是说现在这些长上下文大模型可以秒读完一部长篇小说，然后和我交流心得，或者告诉我全书的概要，又或者帮我找到一些文中的细节描写。</p>
-<p>上面这个场景对应的是大模型的<big><u><strong>工具化</strong></u></big>场景。我们可以借助大模型的能力，来阅读论文，总结研报或者阅读代码，这些场景都需要比较长的上下文输入。</p>
-<p>另外还有一个也比较火的大模型应用场景，RAG（Retrieval-augmented
-generation），也对长上下文输入有要求，只是在RAG中，大部分输入文本并不是直接来自于用户输入，而是通过检索得来的。</p>
-<p>除了工具化的应用场景，还有一些<big><u><strong>个性化</strong></u></big>的场景也会对长上下文有需求。举例来说，就是一些智能助手需要对用户的偏好和设置做长期记忆，这些偏好和设置可以以prompt或者对话的形式持久化存储下来，在进行新的对话的时候就把这些内容连同用户新的输入一起给到模型进行处理。</p>
-<p>实际上，哪怕是单次的聊天，也很有可能需要模型处理比较长的上下文。比如我们可能会让模型扮演一个特定的影视角色或者游戏角色和我们进行对话。这时通常会给模型一些设定，比如这是一个什么样的任务，故事背景世界观都是什么样的，以及现在要进行哪些方面的交流等。这些设定都会以prompt的形式在最开始输入给模型。而随着对话的进行，模型如果长文本能力比较差，就有可能忘记了我们之前给的设定，这样体验上就有问题了。</p>
-<p>上面这个例子实际引出了对长文本需求更具体的内容：（1）在文本比较长的时候，还能说人话，ppl要低（2）说人话之余，还要能attention到前面提过的细节，不能出现自我矛盾。</p>
-<h1 id="模型怎么支持长上下文">模型怎么支持长上下文</h1>
-<p>看来目前的很多应用场景确实对长上下文有需求，那怎么实现呢？</p>
-<p>如果我们直接训练2k/4k长度的模型，然后在推理的时候设定8k或者16k窗口，那么PPL会急剧上升，导致模型直接讲不了人话，原因之一在之前讲RoPE的时候也有提到，对于没有训练过的<u><strong>位置编码</strong></u>，模型不能很好地处理。</p>
-<h2 id="直接训练">直接训练</h2>
-<p>既然训练的时候用2k/4k不能很好地在8k/16k/32k+的上下文长度下推理，那直接在训练的时候用更长的数据进行训练不就可以了？</p>
-<p>这个思路理论上可行，只是实操的时候会遇到一些问题（壕可能觉得不是问题）。</p>
-<p>1.训练数据</p>
-<p>直观上来说，要训练长上下文的模型，就需要长文本。要达到32k或者更大的长度，基本都只能是书籍。</p>
-<p>当然，我们也可以通过把多个中等长度的文本进行拼接，再用来训练。比如筛选4k长度数据，那8条拼在一起也够长了。然后通过attention
-mask来限制各段文本之间注意力，让它们可以在各自的位置上各训各的，互不干扰。甚至实际上即使不做attention
-mask，效果也挺好。</p>
-<p>总的来说，就是【连续长文本】&gt;【多个中等文本拼接】（也可用）</p>
-<p>2.资源消耗</p>
-<p>来简单看一下transformer在训练中所消耗的资源。</p>
-<p>假设模型有 <span class="math inline">\(l\)</span> 层，词表大小为
-<span class="math inline">\(V\)</span> ，hidden size为 <span class="math inline">\(h\)</span> ，batch size为 <span class="math inline">\(b\)</span> ，训练窗口长度为 <span class="math inline">\(s\)</span>
-，使用Adam优化器训练（需要存一阶和二阶动量），为简化估算，可以假设注意力头数为1。</p>
-<ol type="1">
-<li>参数量</li>
-</ol>
-<p>模型总参数量 <span class="math inline">\(\Phi\)</span> = 词向量参数量
-+ <span class="math inline">\(l\)</span> * decoder层参数量 = <span class="math inline">\(Vh + l(12h^2 + 13h)\)</span></p>
-<p>可以看到参数量和窗口长度 <span class="math inline">\(s\)</span>
-无关，模型确定了就是一个固定值。</p>
-<ol start="2" type="1">
-<li>计算量</li>
-</ol>
-<p>一次前向计算量 = 输出分类头logits计算 + <span class="math inline">\(l\)</span> * 每层计算量 <span class="math inline">\(\approx2bshV + l*(24bsh^2+4bs^2h)\)</span></p>
-<p>看一下计算量和参数量的关系。忽略参数量和计算量中的低次项，则有</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\frac{计算量}{参数量}
-&amp;=\frac{2bshV + l*(24bsh^2+4bs^2h)}{Vh + l(12h^2 + 13h)}\\
-&amp;\rightarrow bs\frac{6h+s}{3h}
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>可以看到，总计算量随着输入长度的增长是平方的。在 <span class="math inline">\(s &lt;&lt; h\)</span>
-的时候，基本还可以认为是线性的。目前大部分模型的 <span class="math inline">\(h\)</span> 是在1k到1w这个范围，基本上可以认为
-<span class="math inline">\(s\)</span> 和 <span class="math inline">\(sh\)</span>
-在不是超级长的情况下，还是可比较的。计算量算是长度的“弱”二次方关系</p>
-<ol start="3" type="1">
-<li>显存</li>
-</ol>
-<p>训练过程中，显存主要有模型参数、梯度、optimizer状态值和中间激活值。</p>
-<p>训练中，每个参数（<span class="math inline">\(\Phi\)</span>）有一个对应梯度（<span class="math inline">\(\Phi\)</span>），每个参数又对应优化器一个一阶动量和二阶动量（<span class="math inline">\(2\Phi\)</span>）。在混合精度训练中，使用半精度进行前向计算和梯度计算，同时优化器备份一份单精度的优化器状态、梯度和参数用于更新参数，因此共有
-<span class="math inline">\((\Phi + \Phi) \times 2 + (\Phi + \Phi +
-2\Phi) \times 4 = 20\Phi = 20[Vh + l(12h^2 + 13h)]\)</span>
-的参数占用。</p>
-<img src="/c4da56c0/mix_precision_fp16.png" class title="混合精度训练">
-<p>这部分跟输入长度没有直接关系。</p>
-<p>另外一个需要占用显存的部分是中间激活值。</p>
-<p>保存激活值是为了计算梯度，因此每个矩阵相乘、softmax、dropout都需要保存输入值的中间的激活值。</p>
-<p>对于attention层，输入时先要对 <span class="math inline">\(x\)</span>
-做 <span class="math inline">\(Q、K、V\)</span> 投影，需要保存 <span class="math inline">\(x\)</span> 的中间值；计算权重的时候有 <span class="math inline">\(Q、K\)</span> 矩阵的相乘，需要保存 <span class="math inline">\(Q、K\)</span> 矩阵的值；做softmax的时候输入有
-<span class="math inline">\(QK^T\)</span>
-要保存；以此类推，则需要保存的所有中间激活值为 <span class="math inline">\(11bsh+5bs^2+19sh+4bsh=34bsh+5bs^2\)</span> 。对于
-<span class="math inline">\(l\)</span> 层的模型，就再乘以 <span class="math inline">\(l\)</span> 。</p>
-<p>可以看到中间激活值随着 <span class="math inline">\(s\)</span>
-增大，是以平方关系在增长。训练4k长度的模型和32k长度的模型，激活值所需的显存增长到了64倍。这种情况下，要么扩大集群，加入更多的GPU，要么减小batch
-size，或者提升gradient
-accumulation的值，无论如何，都会增加<big><u><strong>训练成本</strong></u></big>。</p>
-<p>小模型（比如2B、7B）可以硬刚，支持到16k或者32k长度，但是对于更大的长度（200k），或者更大的模型（34B、70B+），这么做就性价比就比较低了。</p>
-<p>现在一般的做法是分两阶段，第一阶段用2k或者4k训练一个基础模型，等到模型把文本内容和短位置关系都学好之后，再来用相比第一阶段小的数据量优化在长上下文情况下的效果。</p>
-<p>而第二阶段在如何用更少的训练量达到更好的效果这件事上，又有很多工作。</p>
-<h2 id="线性插值-position-interpolation">线性插值 Position
-Interpolation</h2>
-<p>23年6月，Meta在<a href="https://arxiv.org/pdf/2306.15595.pdf">《EXTENDING CONTEXT WINDOW
-OF LARGE LANGUAGE MODELS VIA POSITION
-INTERPOLATION》</a>中就提出了针对RoPE的线性插值方法PI（Position
-Interpolation），可以把2k的基础模型扩展到32k，并在1k个step的训练下就达到很好的效果。</p>
-<img src="/c4da56c0/meta_pi.png" class title="PI效果">
-
-<blockquote>
-<p>In contrast, LLaMA models that are extended via direct fine-tuning
-only saw a minimal increase of the effective context window size kmax
-from 2048 to 2560, even after fine-tuning for more than 10000 steps,
-with no clear indication of an acceleration in the increase of window
-size.</p>
-</blockquote>
-<p>相比之下，直接基于基础模型进行长文本微调的效率就比较低，训练1w步后，有效长度只是从2048提升到2560。</p>
-<p>看来RoPE虽然拥有诸多优点，长上下文外推这个事情却不在其中。</p>
-<p>论文中对RoPE外推性能也进行了一些分析。本来RoPE是相对位置编码，而且具有远程衰减的特性，理论上应该具备一定的外推能力，但实际上却不是这样。简单地说，论文发现，在相对位置差
-<span class="math inline">\(\left|m-n \right|\)</span>
-不太大的时候（&lt;2048），确实能保持远程衰减且attention值保持在较小的区间，但是一旦
-<span class="math inline">\(\left|m-n \right|\)</span>
-超过这个区间，还是有可能出现很大的值。</p>
-<img src="/c4da56c0/meta_rope_ext.png" class title="RoPE外推">
-<p>看上图中间的这个图，在位置超过3000的时候，突然出现很大的attention
-score。而右边的图使用了插值的方式，就相对稳定。</p>
-<p>（远程衰减上界问题具体推导的过程就不展开了，感兴趣的朋友可以看下论文原文）</p>
-<p>而另一方面，PI甚至可以在只使用插值，而没有训练的情况下，就拥有一定的长窗口能力。</p>
-<img src="/c4da56c0/meta_pi_nosft.png" class title="PI效果">
-<p>插值的思路是这样的：如下图所示，左上部分表示预训练过的2k长度的位置编码，右上部分表示在这个基础上直接外推，这样就会出现很多之前没有训练过的值，模型的学习成本会比较高；下半部分表示在已经训练好的2k模型基础上进行插值，类似于在每两个位置编码之间，插入一个位置点，这样总的位置表示就从2k增加到4k。在这个基础上再进行少量的微调，模型就可以很快学到新的位置表示。</p>
-<img src="/c4da56c0/meta_pi_explanation.png" class title="PI效果">
-<p>这个思路也很符合直觉，比如原来模型针对位置1，位置2，位置3...学到了一定的规律，现在告诉模型，位置不一定是整数，变成位置1，位置1.5，位置2，位置2.5...。虽然值变了，但是相对关系还在，因此模型也能借助原来学到的关系，快速推广到“0.5”的位置中。</p>
-<p>由于三角函数光滑的特性，我们可以重新定义attention
-score的计算，使得结果不要出现异常大的值，也就是 <span class="math inline">\(\tilde{a}(s)=a(Ls/L^{\prime})\)</span> ，<span class="math inline">\(L\)</span> 是原长度（也就是2048），<span class="math inline">\(L^{\prime}\)</span>
-是我们想要增大的长度（8k/16k/32k等）。</p>
-<p>更具体来说，就是对RoPE做一点修改</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\mathbf{f}&#39;(\mathbf{x},m)=\mathbf{f}\left(\mathbf{x},\frac{mL}{L&#39;}\right)
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>相当于位置 <span class="math inline">\(m\)</span> 的分辨率从1下降成了
-<span class="math inline">\({L}/{L&#39;}\)</span>。</p>
-<p>（一通分析，实现却很简单，工程师的福音，真希望以后论文都能给出这样的结果）</p>
-<p>然后使用几万到几十万条样本进行预训练，就可以了。</p>
-<p>（文章里还埋有一个后续的关注点，在对长上下文进行训练后，在短上下文的场景下，效果略略有所下降）</p>
-<h2 id="ntk-aware-interpolation">NTK-Aware Interpolation</h2>
-<p>线性插值相当于直接线性拉伸了cos函数，减小了不同位置之间的差异，使得模型对于相近位置的区分度有所下降，多少有点简单粗暴，而NTK-Aware
-Interpolation就提出了理论上看起来更为“精致”方法，一种在RoPE上做<u><strong>非线性插值</strong></u>的方法，NTK-Aware
-Scaled RoPE。CodeLlama就是用这种方法把长度推广到1M。</p>
-<p>NTK，就是Neural Tangent
-Kernel，神经正切核。具体是什么，让GLM4帮忙解答一下</p>
-<blockquote>
-<p>Neural Tangent Kernel (NTK)
-是深度学习理论中的一个概念，它是在训练无限宽的神经网络时出现的一个理论工具。在深度学习领域，宽度通常指的是网络中每一层的神经元数量。NTK
-的提出，为理解深度学习提供了一个新的视角，特别是在网络宽度趋于无穷大时，网络的行为可以用线性模型来近似。<br>
-在理想情况下，当网络宽度趋于无穷大时，网络的训练过程可以用一个固定的核函数来描述，这个核函数就是
-Neural Tangent
-Kernel。这个核函数描述了网络输出与输入之间关系的性质，使得我们可以用核方法来分析这类网络的训练和泛化能力。<br>
-具体来说，NTK
-使得我们能够预测在无限宽的网络中，随着训练的进行，网络权重的演化情况，以及网络的损失函数如何随时间变化。这些预测在数学上更加清晰和可分析，有助于我们深入理解深度学习的工作原理，特别是在泛化和优化方面。<br>
-NTK
-的研究对设计新的网络架构、训练算法和理论分析提供了重要的理论基础。它也表明，在一定的条件下，深度学习可以简化为传统的统计学习理论，如核方法，这为将深度学习与经典机器学习理论联系起来提供了桥梁。</p>
-</blockquote>
-<p>这个了解各大概就行。那么具体在长上下文扩展这个事上，NTK有什么说法呢？</p>
-<p>它认为，线性插值把所有方向上的分量一视同仁，把旋转速度统一变慢，这里有问题。</p>
-<p>回顾一下在RoPE中，对位置 <span class="math inline">\(m\)</span>
-的输入向量进行“旋转”的矩阵长这样</p>
-<img src="/c4da56c0/rope_matrix.png" class title="RoPE旋转矩阵">
-<p>它把输入向量的元素划分成2个2个一组，共有 <span class="math inline">\(d/2\)</span>
-组，每组有两个元素，不同组分别旋转。这里可以发现每组的旋转速度并不相同，由于
-<span class="math inline">\(\theta_j=10000^{-2j/d}\)</span> ，可以看到，
-<span class="math inline">\(j\)</span> 越小越靠前的组旋转越快，<span class="math inline">\(j\)</span> 越大的旋转越慢。这里 <span class="math inline">\(base=10000\)</span> ， <span class="math inline">\(base\)</span>
-越大，整体的旋转速度越慢，反之越快。同一个位置下，由于旋转速度不同，位置向量的信号频率有高低，前面的部分是高频，越往后越低频。</p>
-<p>不加区分地对高低频信息进行拉伸，会丢失很多重要的高频信息，这样不是很好。高频信号应该外推，以防止分辨率太低，都挤在一起；而低频信号就适合插值。</p>
-<p>怎么实现“高频外推，低频内插”？</p>
-<p>先看回讲<a href="https://www.zhihu.com/people/us4ever">RoPE</a>的时候，对于2维情况，有</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-&amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle=
-\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>推广到高维的情况，则有</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\langle
-f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle=&amp;\mathrm{Re}[\sum_j^{d/2}h_je^{is\theta_j}]\\
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>其中 <span class="math inline">\(h_j=\boldsymbol{q}_m\boldsymbol{k}_n^*\)</span>
-，<span class="math inline">\(s=m-n\)</span> 。</p>
-<p>在这个公式下，线性插值相当于把</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\mathrm{Re}[\sum_j^{d/2}h_je^{is\theta_j}]\\
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>变成了</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\mathrm{Re}[\sum_j^{d/2}h_je^{i\frac{s}{\alpha}\theta_j}]\\
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>其中 <span class="math inline">\(\alpha=L&#39;/L&gt;1\)</span>
-，相当于把 <span class="math inline">\(s\)</span> 压缩了。</p>
-<p>而NTK-Aware Scaled RoPE则是对 <span class="math inline">\(\theta_j\)</span>
-进行了改动，具体来说，是修改了其中的base值（RoPE中原来是10000）</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\hat{base}=base\times\alpha^{\frac{d}{d-2}}
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>则有</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\hat{\theta_j}=\hat{base}^{-2j/d}=base^{-2j/d}\times\alpha^{\frac{-2j}{d-2}}
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>相当于 <span class="math inline">\(\theta\)</span> 乘了一个系数 <span class="math inline">\(\alpha^{\frac{-2j}{d-2}}\)</span> ，当 <span class="math inline">\(j\)</span> 比较小的时候， <span class="math inline">\(\alpha^{\frac{-2j}{d-2}}\)</span>
-接近1，相当于直接进行了外推，而当 <span class="math inline">\(j\)</span>
-比较大的时候（注意 <span class="math inline">\(j\)</span> 的取值是从0到
-<span class="math inline">\(d - 1\)</span>），<span class="math inline">\(\alpha^{\frac{-2j}{d-2}}\)</span> 就接近 <span class="math inline">\(\alpha^{-1}\)</span> ，这就和线性插值趋近了。</p>
-<p>引用来自<a href="https://zhuanlan.zhihu.com/p/645770522">知乎一篇文章</a>的一个视角来理解NTK-Aware
-Interpolation</p>
-<blockquote>
-<p>有意思的解释一下，RoPE
-的行为就像一个时钟。12小时时钟基本上是一个维度为 3、底数为 60 的
-RoPE。因此，每秒钟，分针转动 1/60 分钟，每分钟，时针转动
-1/60。现在，如果将时间减慢 4 倍，那就是二使用的线性RoPE
-缩放。不幸的是，现在区分每一秒，因为现在秒针几乎每秒都不会移动。因此，如果有人给你两个不同的时间，仅相差一秒，你将无法从远处区分它们。NTK-Aware
-RoPE 扩展不会减慢时间。一秒仍然是一秒，但它会使分钟减慢 1.5
-倍，将小时减慢 2 倍。这样，您可以将 90 分钟容纳在一个小时中，将 24
-小时容纳在半天中。所以现在你基本上有了一个可以测量 129.6k 秒而不是 43.2k
-秒的时钟。由于在查看时间时不需要精确测量时针，因此与秒相比，更大程度地缩放小时至关重要。不想失去秒针的精度，但可以承受分针甚至时针的精度损失。</p>
-</blockquote>
-<p>另外苏剑林从“进制”角度对RoPE作了分析，感兴趣的朋友可以看下<a href="https://kexue.fm/archives/9675">原文</a>，也很巧妙。</p>
-<p>在YaRN的<a href="https://arxiv.org/pdf/2309.00071.pdf">论文</a>中，对NTK的优缺点作了点评</p>
-<blockquote>
-<p>Given the results from [6], this method performs much better at
-extending the context size of non-finetuned models compared to PI [9].
-However, one major disadvantage of this method is that given it is not
-just an interpolation scheme, some dimensions are slightly extrapolated
-to "out-of-bound" values, thus fine-tuning with "NTK-aware"
-interpolation [6] yields inferior results to PI [9]. Furthermore, due to
-the "out-of-bound" values, the theoretical scale factor s does not
-accurately describe the true context extension scale. In practice, the
-scale value s has to be set higher than the expected scale for a given
-context length extension.</p>
-</blockquote>
-<p>NTK的优点是不用微调的情况下，能比线性插值做得好。但是由于低频部分还是会有部分被外推到超出范围的值，因此在设定系数的时候，要比需要的设得更大才行。比如想4k模型要在32k的时候取得比较好的效果，那
-<span class="math inline">\(\alpha=L&#39;/L\)</span>
-就要选得比8更大一些，比如16。</p>
-<h2 id="ntk-by-parts">NTK-by-parts</h2>
-<p>NTK-by-parts的方法在NTK插值的基础上又多想了一层。它认为无论是线性插值还是NTK-aware插值，认为RoPE的所有分量都对网络有同样的重要性。而NTK-by-parts的思路认为，应该区别对待不同分量，他们对网络的影响有所不同。</p>
-<p>对于分量 <span class="math inline">\(j\)</span> ，RoPE嵌入的波长</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\lambda_j=\frac{2\pi}{\theta_j}=2\pi\cdot base^{\frac{2j}{d}}
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p><span class="math inline">\(\lambda_j\)</span>
-代表旋转一周所需的长度。当 <span class="math inline">\(j\)</span>
-比较小时，波长短，反之波长长，这也对应我们前面说的，前面的分量高频，后面的分量低频。</p>
-<p>这里观察到，当 <span class="math inline">\(j\)</span>
-比较大时，波长就可能比 <span class="math inline">\(L\)</span>
-要大，这种情况下RoPE一圈都没有转完，会导致这个分量的分布不均匀（比如
-<span class="math inline">\(sin\)</span>
-只转了1/4圈，那值全都集中在0<sub>1之间，-1</sub>0的就没有值）。这种情况下，这个维度的编码相当于是绝对位置编码了，因为几乎每个位置都有自己独特的一个值。反之当
-<span class="math inline">\(j\)</span>
-比较小时，模型只能访问到相对位置信息。</p>
-<p>此外，插值会导致相邻或相近位置的关系更近（因为旋转量小，点积更大），文章认为这样会损害模型理解局部关系的能力，因此选择不对高频部分进行插值。NTK-by-parts的思路是</p>
-<ul>
-<li>如果维度 <span class="math inline">\(j\)</span> 的波长 <span class="math inline">\(\lambda_j\)</span> 远小于上下文长度
-，就不插值只外推<br>
-</li>
-<li>如果波长 <span class="math inline">\(\lambda_j\geq\)</span>
-上下文长度，就只插值不外推<br>
-</li>
-<li>中间的部分就同时存在两种，类似NTK-aware interpolation</li>
-</ul>
-<p>引入一个比例 <span class="math inline">\(r(j)=\frac{L}{\lambda_j}\)</span>
-来表示波长和上下文长度的关系。另外还需要两个阈值 <span class="math inline">\(\beta_1、\beta_2\)</span> 来区分以上三种情况。如果
-<span class="math inline">\(r(j)&lt;\beta_1\)</span>
-，就认为波长大，如果 <span class="math inline">\(r(j)\geq
-\beta_2\)</span> ，就认为波长小。方便起见，定义一个斜坡函数</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\left.\gamma(r)=\left\{\begin{matrix}0&amp;if&amp;r(j)&lt;\beta_1\\1&amp;if&amp;r(j)\geq\beta_2\\\frac{r-\beta_1}{\beta_2-\beta_1}&amp;otherwise\end{matrix}\right.\right.
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>NTK-by-parts插值可以定义为对 <span class="math inline">\(\theta_j\)</span> 的一个操作</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\hat{\theta_j}=\left(1-\gamma(r(j))\right)\frac{\theta_j}s+\gamma(r(j))\theta_j
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>这里有两个超参 <span class="math inline">\(\beta_1、\beta_2\)</span>
-要定，文中根据实验给出的推荐值是 <span class="math inline">\(\beta_1=1，\beta_2=32\)</span>
-，也就是当波长和上下文长度一样长的时候，认为波长大，就只插值，当波长小于上下文长度1/32时，认为波长远小于上下文，就只外推。</p>
-<h2 id="dynamically-ntk-scaled-rope">Dynamically NTK Scaled RoPE</h2>
-<p>无论是线性插值还是NTK-Aware
-Interpolation，都是通过使用一个固定的系数，对原RoPE做了一个缩放，这样就会有一些局限。一方面，这种情况下，模型能支持的最大上下文就由使用的这个缩放系数来决定了，超出这个范围的，依然会出现attention
-score暴增的风险。另一方面，在解码过程中，当已解码的长度 <span class="math inline">\(l\)</span> 还没有达到训练长度 <span class="math inline">\(L\)</span> 时，就使用 <span class="math inline">\(\alpha\)</span>
-来修改base，也可能带来一些损失。Dynamically NTK Scaled
-RoPE是在NTK插值的基础上，把固定的系数改成动态的系数。</p>
-<p>具体来说，就是</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\hat{\alpha}=max(1,\frac{l}{L})
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>这样随着解码长度 <span class="math inline">\(l\)</span> 的增长，当
-<span class="math inline">\(l&gt;L\)</span> 之后 <span class="math inline">\(\alpha\)</span> 从1逐渐增大， <span class="math inline">\(l\leq L\)</span> 时则不需要改动。</p>
-<p>有一点要注意的是，使用动态的系数时要注意kv-cache的缓存机制是否正确，记得要缓存使用应用RoPE之前的值。</p>
-<h2 id="yarn">YaRN</h2>
-<p>上面的方法都是使用插值，研究者发现，随着插值，token之间的距离变得更近（因为现在旋转角度变小了），平均最小距离在减小，这样注意力softmax的分布会变得更尖（也就是都集中在某个区间）。换句话说，就是RoPE原本远距离衰减的特性变弱了，衰减得更不明显，就会导致模型更平均地关注到更多的token，这样就削弱了注意力机制，导致输出质量下降。</p>
-<p>当将RoPE插值到更长的上下文时，注意力softmax分布中的熵会减少，因此研究者的目标是逆转这种熵减（即增加注意力logit的“温度”）。这可以通过在softmax之前，将中间注意力矩阵乘以温度
-<span class="math inline">\(t&gt;1\)</span>
-来完成，但由于RoPE被编码为一个旋转矩阵，就可以简单地按常数因子 <span class="math inline">\(\sqrt{t}\)</span>
-来扩展RoPE的长度。这样可以不必修改注意力的代码。</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\text{softmax}\left(\frac{\mathbf{q}_m^T\mathbf{k}_n}{t\sqrt{d}}\right)
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>通过对Llama 1和Llama 2的实验，文章提出了建议值<span class="math inline">\(\begin{aligned}\sqrt{\frac1t}&amp;=0.1\ln(\alpha)+1.\end{aligned}\)</span>。这个值的效果再Llama各个版本和规模的模型都能有比较好的效果，这样说明这样的熵变在长文本中是常见的。</p>
-<p>YaRN最终的方法就是结合NTK-by-parts，以及使用这个温度值对attention
-score进行调整。</p>
-<p>YaRN在微调以及无微调的情况下，效果都比上面的几种都要好。</p>
-<h2 id="logn">logn</h2>
-<p>logn指的是对attention计算中的缩放因子 <span class="math inline">\(\sqrt{d}\)</span>
-进行通过logn进行改进的一个方法，苏剑林在<a href="https://zhuanlan.zhihu.com/p/678755776">博客</a>中进行了分析。大致的思路和YaRN中的缩放颇有些相似。</p>
-<p>简单来说，依然是希望在长上下文的时候，引入了更多token的情况下，已有的token还能保持聚焦在原来哪些token上，而不要被过分分散了注意力。因此提出了一个新的attention
-score公式</p>
-<p><span class="math display">\[
-\begin{equation}
-\begin{aligned}
-\text{Attention}_E(\boldsymbol{Q},\boldsymbol{K},\boldsymbol{V})=\text{softmax}\left(\frac{\log_{L}{L&#39;}}{\sqrt{d}}\boldsymbol{Q}\boldsymbol{K}^\mathrm{T}\right)\boldsymbol{V}
-\end{aligned}
-\end{equation}
-\]</span></p>
-<p>可以看到，当 <span class="math inline">\(L&#39;&gt;L\)</span>
-时，其效果和YaRN中的放缩是类似的。</p>
-<h2 id="其他">其他</h2>
-<p>在扩展推理长度上，还有很多其他有效的工作，比如各种window
-attention，streaming LLM，LongLoRA，Focus
-Transformer等，还有数据、评测等更方面的分析，待逐个梳理。</p>
-<h1 id="小结">小结</h1>
-<p>较短的预训练模型（2k、4k）应用在长上下文会因为训练和推理的两个不一致导致效果下降</p>
-<ul>
-<li>推理时用到了没训练过的位置编码<br>
-</li>
-<li>推理时注意力机制所处理的token数量远超训练时的数量，导致注意力机制的崩坏</li>
-</ul>
-<p>这两个问题分别可以从位置编码和attention score的放缩来缓解。</p>
-<p>线性插值PI、NTK插值、分部NTK插值都可以缓解第一个问题，logn和YaRN则把第二个问题纳入的考虑。目前这些方法在实际应用中也有很多变体，包括超参的修改，函数的重定义等。</p>
-<h1 id="reference">Reference</h1>
-<p>【1】分析transformer模型的参数量、计算量、中间激活、KV cache
-https://zhuanlan.zhihu.com/p/624740065<br>
-【2】EXTENDING CONTEXT WINDOW OF LARGE LANGUAGE MODELS VIA POSITION
-INTERPOLATION https://arxiv.org/pdf/2306.15595.pdf<br>
-【3】Transformer升级之路：10、RoPE是一种β进制编码
-https://kexue.fm/archives/9675<br>
-【4】YaRN: Efficient Context Window Extension of Large Language Models
-https://arxiv.org/pdf/2309.00071.pdf<br>
-【5】详解基于调整RoPE旋转角度的大模型长度外推方法
-https://mp.weixin.qq.com/s/RtI95hu-ZLxGkdGuNIkERQ<br>
-【6】浅谈LLM的长度外推 https://zhuanlan.zhihu.com/p/645770522
-【7】想让大模型在prompt中学习更多示例，这种方法能让你输入更多字符
-https://cloud.tencent.com/developer/article/2330611<br>
-【8】Transformer升级之路：8、长度外推性与位置鲁棒性
-https://spaces.ac.cn/archives/9444<br>
-【9】RoPE外推优化——支持192K上下文长度
-https://zhuanlan.zhihu.com/p/678755776 ***</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>长上下文</tag>
-        <tag>窗口外推</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>理解Attention:从起源到MHA,MQA和GQA</title>
     <url>/3dc22f96.html</url>
     <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
@@ -1054,18 +1416,23 @@ o_{3}&amp;=\alpha_{3,0}v_{0}+\alpha_{3,1}v_{1}+\alpha_{3,2}v_{2}+\alpha_{3,3}v_{
 <p>可以看到，在预测第5个字时，只有最后一步引入了新的计算，而 <span class="math inline">\(o_{0}\)</span> 到 <span class="math inline">\(o_{2}\)</span> 的计算和前面是完全重复的。</p>
 <p>但是模型在推理的时候可不管这些，无论你是不是只要最后一个字的输出，它都把所有输入计算一遍，给出所有输出结果。</p>
 <p>也就是说中间有很多我们用不到的计算，这样就造成了浪费。</p>
-<p>而且随着生成的结果越来越多，输入的长度也越来越长，上面这个例子里，输入长度就从step0的10个，每步增长1，直到step5的15个。如果输入的instruction是让模型写作文，那可能就有800个step。这个情况下，step0被算了800次，step1被算了799次...这样浪费的计算资源确实不容忽视。</p>
+<p>而且随着生成的结果越来越多，输入的长度也越来越长。上面这个例子里，输入长度就从step0的10个，每步增长1，直到step5的15个。如果输入的instruction是让模型写高考作文，那可能就有800个step或者更多。这个情况下，step0被算了800次，step1被算了799次...</p>
 <p>有没有什么办法可以重复利用上一个step里已经计算过的结果，减少浪费呢？</p>
 <p>答案就是KV
-Cache，利用一个缓存，把需要重复利用的中间计算结果存下来，减少重复计算。</p>
-<p>而 <span class="math inline">\(k\)</span> 和 <span class="math inline">\(v\)</span> 就是我要缓存的对象。</p>
-<p>想象一下，在上面的例子中，假设我们一开始的输入就是3个字，我们第一次预测就是预测第4个字，那么由于一开始没有任何缓存，所有我们每一层还是要老实地计算一遍。然后把
+Cache。利用缓存空间，把需要重复利用的中间计算结果存下来，减少重复计算。</p>
+<p>而 <span class="math inline">\(k\)</span> 和 <span class="math inline">\(v\)</span> 就是要缓存的对象。</p>
+<p>想象一下，在上面的例子中，假设我们一开始的输入就是3个字，我们第一次预测就是预测第4个字，那么由于一开始没有任何缓存，所有我们每一层还是要踏踏实实地计算一遍。然后把
 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值缓存起来。</p>
 <p>则有</p>
 <p><span class="math display">\[
-\text{kv\_cache}_l=\text{None}\\
-\downarrow\\
-\text{kv\_cache}_l=[(k_{0}, v_{0}),(k_{1}, v_{1}),(k_{2}, v_{2})]
+\text{cache}_l=\text{None}\\
+\]</span></p>
+<center>
+↓
+</center>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
 \]</span></p>
 <p>kv_cache的下标 <span class="math inline">\(l\)</span>
 表示模型层数。</p>
@@ -1078,10 +1445,15 @@ Cache，利用一个缓存，把需要重复利用的中间计算结果存下来
 <p>然后我们把本次新增算出来的 <span class="math inline">\(k\)</span> 、
 <span class="math inline">\(v\)</span> 值也存入缓存。</p>
 <p><span class="math display">\[
-\text{kv\_cache}_l=[(k_{0}, v_{0}),(k_{1}, v_{1}),(k_{2}, v_{2})]\\
-\downarrow\\
-\text{kv\_cache}_l=[(k_{0}, v_{0}),(k_{1}, v_{1}),(k_{2}, v_{2}),(k_{3},
-v_{3})]
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
+\]</span></p>
+<center>
+↓
+</center>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l}),(k_{3}^{l}, v_{3}^{l})]
 \]</span></p>
 <p>这样就节省了attention和FFN的很多重复计算。</p>
 <p>transformers中，生成的时候传入use_cache=True就会开启KV Cache。</p>
@@ -1114,7 +1486,7 @@ size增大，这个值更是很容易就超过1G。</p>
 Cache的大小更是可以忽略不计），大概只能支持Llama2
 7B总共100个token左右的输入。</p>
 <p>想想我们现在用的LLM动辄34B/70B的规模，长度更是以千为基础单位，这样明显是不够用的。</p>
-<p>那么超出L2 Cache的部分只能走到显存中去了，但是DRAM速度比L2
+<p>那么超出L2 Cache的部分只能走到显存中去了，但是HBM速度比L2
 Cache慢多了。</p>
 <img src="/3dc22f96/sram_dram.png" class title="储存空间与速度">
 <p>看来还需要进一步优化。</p>
