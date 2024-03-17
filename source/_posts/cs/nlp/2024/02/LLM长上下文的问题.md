@@ -35,8 +35,8 @@ categories:
 | Baichuan2 | 192k |
 | GPT4-turbo  | 128k |
 | Yi | 200k |
-| Kimi | 192k |
-| Claude2 | 200k |
+| Kimi Chat | 128k(20万汉字) |
+| Claude2 | 200k |  
 
 </center>
 
@@ -95,6 +95,8 @@ categories:
 (2) 计算量  
 
 一次前向计算量 = 输出分类头logits计算 + $l$ * 每层计算量 $\approx2bshV + l*(24bsh^2+4bs^2h)$
+
+（这里的计算忽略了softmax，实际上softmax计算量也是和长度 $s$ 成平方关系）
 
 看一下计算量和参数量的关系。忽略参数量和计算量中的低次项，则有
 
@@ -274,7 +276,7 @@ $$
 \end{equation}
 $$  
 
-相当于 $\theta$ 乘了一个系数 $\alpha^{\frac{-2j}{d-2}}$ ，当 $j$ 比较小的时候， $\alpha^{\frac{-2j}{d-2}}$ 接近1，相当于直接进行了外推，而当 $j$ 比较大的时候（注意 $j$ 的取值是从0到 $d - 1$），$\alpha^{\frac{-2j}{d-2}}$ 就接近 $\alpha^{-1}$ ，这就和线性插值趋近了。
+相当于 $\theta$ 乘了一个系数 $\alpha^{\frac{-2j}{d-2}}$ ，当 $j$ 比较小的时候， $\alpha^{\frac{-2j}{d-2}}$ 接近1，相当于直接进行了外推，而当 $j$ 比较大的时候（注意 $j$ 的取值是从0到 $d/2 - 1$），$\alpha^{\frac{-2j}{d-2}}$ 就接近 $\alpha^{-1}$ ，这就和线性插值趋近了。
 
 引用来自[知乎一篇文章](https://zhuanlan.zhihu.com/p/645770522)的一个视角来理解NTK-Aware Interpolation  
 
