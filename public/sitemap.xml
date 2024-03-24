@@ -2,6 +2,24 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://saicat.github.io/6a40bfa5.html</loc>
+    
+    <lastmod>2024-03-24</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://saicat.github.io/c61d17e3.html</loc>
+    
+    <lastmod>2024-03-20</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://saicat.github.io/3345028a.html</loc>
     
     <lastmod>2024-03-17</lastmod>
@@ -14,15 +32,6 @@
     <loc>https://saicat.github.io/14e576c.html</loc>
     
     <lastmod>2024-03-17</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://saicat.github.io/c61d17e3.html</loc>
-    
-    <lastmod>2024-03-16</lastmod>
     
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -85,7 +94,7 @@
 
   <url>
     <loc>https://saicat.github.io/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -93,126 +102,161 @@
   
   <url>
     <loc>https://saicat.github.io/tags/NLP/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/LLM/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/transformer/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/positional-encoding/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/RoPE/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/%E7%AA%97%E5%8F%A3%E5%A4%96%E6%8E%A8/</loc>
-    <lastmod>2024-03-17</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://saicat.github.io/tags/%E7%AE%97%E6%B3%95%E9%A2%98/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/attention/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/sliding-window-attention/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/sparse-attention/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://saicat.github.io/tags/layernorm/</loc>
+    <lastmod>2024-03-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://saicat.github.io/tags/post-norm/</loc>
+    <lastmod>2024-03-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://saicat.github.io/tags/pre-norm/</loc>
+    <lastmod>2024-03-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://saicat.github.io/tags/normalization/</loc>
+    <lastmod>2024-03-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://saicat.github.io/tags/batchnorm/</loc>
+    <lastmod>2024-03-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://saicat.github.io/tags/%E7%AE%97%E6%B3%95%E9%A2%98/</loc>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/ChatGPT/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/Sparrow/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/LaMDA/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/GopherCite/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/WebGPT/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/InstructGPT/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/tags/KV-Cache/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
@@ -221,21 +265,21 @@
   
   <url>
     <loc>https://saicat.github.io/categories/CS/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/categories/CS/NLP/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://saicat.github.io/categories/CS/NLP/LLM/</loc>
-    <lastmod>2024-03-17</lastmod>
+    <lastmod>2024-03-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>

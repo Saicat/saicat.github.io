@@ -74,9 +74,9 @@ Mistral使用了kv组数=8的GQA，intermediate size相比Llama2（11008）大�
 | Operation | FLOPs（MHA） |
 | :---- | :----: |
 | Attention: QKV | $6\times s\times h_{model}^{2}$  |
-| Attention: QK logits ( $QK^T$ ) | $2\times s^2\times h_{model}$ |
-| Attention: Softmax | $3\times n_{q}\times s^2$ |
-| Attention: Reduction (apply to $V$) | $2\times s^2\times h_{model}$ |
+| Attention: QK logits ( $QK^T$ ) | $n_{q}\times 2\times s^2\times h_{q}$ |
+| Attention: Softmax | $n_{q}\times 3\times s^2$ |
+| Attention: Reduction (apply to $V$) | $n_{q}\times 2\times s^2\times h_{q}$ |
 | Attention: Outupt Linear Project | $2\times s\times h_{model}^{2}$ |
 
 </center>
