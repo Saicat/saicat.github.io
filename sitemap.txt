@@ -12,6 +12,8 @@ https://saicat.github.io/
 https://saicat.github.io/tags/NLP/
 https://saicat.github.io/tags/LLM/
 https://saicat.github.io/tags/transformer/
+https://saicat.github.io/tags/positional-encoding/
+https://saicat.github.io/tags/RoPE/
 https://saicat.github.io/tags/%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87/
 https://saicat.github.io/tags/%E7%AA%97%E5%8F%A3%E5%A4%96%E6%8E%A8/
 https://saicat.github.io/tags/attention/
@@ -30,8 +32,6 @@ https://saicat.github.io/tags/GopherCite/
 https://saicat.github.io/tags/WebGPT/
 https://saicat.github.io/tags/InstructGPT/
 https://saicat.github.io/tags/KV-Cache/
-https://saicat.github.io/tags/positional-encoding/
-https://saicat.github.io/tags/RoPE/
 https://saicat.github.io/categories/CS/
 https://saicat.github.io/categories/CS/NLP/
 https://saicat.github.io/categories/CS/NLP/LLM/
