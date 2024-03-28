@@ -1,923 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>稀疏注意力计算:sliding window attention</title>
-    <url>/c61d17e3.html</url>
-    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
-<p>LLM的长文本能力现在已经是各个大模型巨头的必争之地。</p>
-<p>我们之前在<a href="http://www.linsight.cn/c4da56c0.html">《LLM长上下文的问题》</a>简单介绍了目前把大模型理解和生成能力推广到32k+/128k+的主流方法，在<a href="http://www.linsight.cn/3dc22f96.html">《理解Attention:从起源到MHA,MQA和GQA》</a>一文中也解析了MQA和GQA通过节省KV缓存的方式，支持模型在长上下文情况下推理加速的方案。</p>
-<p>在这讲一下另一种（理论有损）提升注意力计算效率的方法：SWA（sliding
-window attention）。</p>
-<p>一些效果受到广泛关注的模型，如Qwen系列和Mistral就使用了SWA。</p>
-<p>关于Mistral：</p>
-<p>Mistral
-AI是法国一家AI独角兽公司，2023年5月才成立，但是在2023年9月和12月就分别推出了Mistral
-7B和MoE模型Mistral 8x7B并开源。</p>
-<p>2024年2月，微软也投资了它。</p>
-<img src="/c61d17e3/ms_invest_mistral.png" class title="MS">
-<p>它在2024年2月发布的Mistral Large，支持多语言 &amp;
-32k的上下文长度，在MMLU上也是获得了直逼GPT4的效果</p>
-<img src="/c61d17e3/mistral_large_performance.jpeg" class title="Mistral Large MMLU Performance">
-<p>（大家也因此对Mistral寄予了厚望，希望它能成为大模型行业的鲶鱼，激活一下OPENAI和META加速一下开源。）</p>
-<h1 id="swa">SWA</h1>
-<p>虽然SWA的思路最早不是Mistral提出的，我们还是先以Mistral
-7B为例来看下SWA的具体做法。</p>
-<h2 id="mistral-7b">Mistral 7B</h2>
-<p>2023年10月，Mistral发布了Mistral 7B的<a href="https://arxiv.org/pdf/2310.06825.pdf">技术报告</a>。其中开篇就说到，相比Llama，Mistral在结构上做了一些改动，除了GQA，另一个用于支持长文本下高效推理的改动就是SWA。</p>
-<p>来看下Mistral 7B的模型结构参数</p>
-<img src="/c61d17e3/mistral_architechture.png" class title="Mistral Architechture">
-<p>Mistral使用了kv组数=8的GQA，intermediate
-size相比Llama2（11008）大一些，其他基本没有太大变化。</p>
-<h2 id="计算量和缓存">计算量和缓存</h2>
-<p>对于原始的causal
-attention，其注意力矩阵是一个下三角矩阵，这样每个token都能看到自己和在自己前面的token。</p>
-<p>这样随着输入长度 <span class="math inline">\(s\)</span>
-增大，这个下三角矩阵中1的元素数量以 <span class="math inline">\(s^2\)</span> 的速度增长，带来的是计算量和所需的KV
-Cache以平方的速度增长。</p>
-<p>（我们知道计算量/缓存和长度 <span class="math inline">\(s\)</span>
-成平方关系，这里放一些更具体的推算细节，已经熟悉的朋友可以跳过）</p>
-<p>（1）计算量</p>
-<p>对于两个这样大小的矩阵相乘： <span class="math inline">\([m,n]\times[n,p]\)</span> ，输出矩阵大小为 <span class="math inline">\([m,p]\)</span>，共有 <span class="math inline">\(m\times p\)</span> 个元素，每个元素需要 <span class="math inline">\(n\)</span> 次乘法和 <span class="math inline">\(n\)</span> 次加法，因此一次矩阵乘法有 <span class="math inline">\(2mpn\)</span> 个floating point
-operations（FLOPs）。</p>
-<p>计算量上，按<a href="https://arxiv.org/pdf/2203.15556.pdf">《Training
-Compute-Optimal Large Language Models》</a>的算法来。</p>
-<p>对于一般MHA，输入长度为 <span class="math inline">\(s\)</span>
-，层数为 <span class="math inline">\(L\)</span> ，模型hidden size为
-<span class="math inline">\(d_{model}\)</span> ，每个头的维度为 <span class="math inline">\(d_{q}\)</span> ， 头的数量为 <span class="math inline">\(n_{q}\)</span>（这里假设有 <span class="math inline">\(d_{model} = n_{q}\times d_{q}\)</span>
-），各个operation的FLOPs如下</p>
-<center>
-<table>
-<colgroup>
-<col style="width: 45%">
-<col style="width: 54%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Operation</th>
-<th style="text-align: center;">FLOPs（MHA）</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Attention: QKV</td>
-<td style="text-align: center;"><span class="math inline">\(6\times
-s\times h_{model}^{2}\)</span></td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Attention: QK logits ( <span class="math inline">\(QK^T\)</span> )</td>
-<td style="text-align: center;"><span class="math inline">\(n_{q}\times
-2\times s^2\times h_{q}\)</span></td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Attention: Softmax</td>
-<td style="text-align: center;"><span class="math inline">\(n_{q}\times
-3\times s^2\)</span></td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Attention: Reduction (apply to <span class="math inline">\(V\)</span>)</td>
-<td style="text-align: center;"><span class="math inline">\(n_{q}\times
-2\times s^2\times h_{q}\)</span></td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Attention: Outupt Linear Project</td>
-<td style="text-align: center;"><span class="math inline">\(2\times
-s\times h_{model}^{2}\)</span></td>
-</tr>
-</tbody>
-</table>
-</center>
-<p>Softmax项中，对一个 <span class="math inline">\([1,s]\)</span>
-的向量做softmax，计算量为 <span class="math inline">\(3s\)</span> （一个
-<span class="math inline">\(s\)</span> 是算每个元素的exp，一个 <span class="math inline">\(s\)</span> 是求和算分母，一个 <span class="math inline">\(s\)</span> 是算除法），而对 <span class="math inline">\([s,s]\)</span> 的矩阵做softmax，则计算量为 <span class="math inline">\(3s^2\)</span> ，每个头都要计算一遍，因此再乘以
-<span class="math inline">\(n_{q}\)</span> 。</p>
-<p>（这里忽略了其他一些operation，比如scaling，dropout等，有兴趣的朋友可以自己推算一下）</p>
-<p>顺便算下对于Mistral 7B这样使用了GQA的情况。</p>
-<p>其实只有第一项的KV有变化，其他都没变。假设kv头的数量为 <span class="math inline">\(n_{kv}\)</span>，则有</p>
-<center>
-<table>
-<colgroup>
-<col style="width: 45%">
-<col style="width: 54%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Operation</th>
-<th style="text-align: center;">FLOPs（GQA）</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Attention: QKV</td>
-<td style="text-align: center;"><span class="math inline">\(2\times
-s\times h_{model}^{2}\\+4\times s\times h_{model}\times (h_{q}\times
-n_{kv})\)</span></td>
-</tr>
-</tbody>
-</table>
-</center>
-<p>从上面的推算可以看到QK logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span> 成平方关系的，其他则是线性关系。</p>
-<p>（2）缓存</p>
-<p>KV Cache需要缓存的参数量为</p>
-<p><span class="math display">\[
-2\times L\times s\times d_{q}\times n_{kv}
-\]</span></p>
-<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
-<p><span class="math display">\[
-2\times 2\times L\times s\times d_{q}\times n_{kv}
-\]</span></p>
-<p>对于Mistral 7B，在输入长度为16k的情况下，所需的KV_Cache约为2G。</p>
-<p>看来虽然用了GQA，但是在长文本（16k+）的情况下计算量和显存还是颇有压力。</p>
-<h2 id="swa思路">SWA思路</h2>
-<p>看来要提升attention计算效率，需要想办法减小上面推算中的 <span class="math inline">\(s\)</span> ，但是怎么在减小 <span class="math inline">\(s\)</span>
-的同时，还能保持模型长上下文的理解和生成能力呢？</p>
-<p>来看一下，CNN中的感受野</p>
-<img src="/c61d17e3/receptive_field_cnn.png" class title="CNN Receptive Field">
-<p>如上图，假设模型有3层，每层卷积核大小为 <span class="math inline">\(3\times 3\)</span>
-（实际上CNN里卷积操作就是一个sliding window）。</p>
-<p>那对于layer 3，每一个像素能看到layer 2中的一个 <span class="math inline">\(3\times 3\)</span> 的区域，layer
-2中其他较远的像素就看到不了。</p>
-<p>但我们再往前推，layer 2里的每个像素也可以看到layer 1中的一个 <span class="math inline">\(3\times 3\)</span> 区域，那么layer 2中的 <span class="math inline">\(3\times 3\)</span> 区域就可以看到layer 1中一个
-<span class="math inline">\(5\times 5\)</span> 的区域，相当于layer
-3中一个像素可以<u><strong>间接</strong></u>看到一个 <span class="math inline">\(5\times 5\)</span> 的输入。</p>
-<p>以此类推，如果我们再增加一层layer 4，那么layer
-4中一个像素就能获取输入层（layer 1） 一个 <span class="math inline">\(7\times 7\)</span> 区域的信息。</p>
-<p>虽然每层只能多看周围一格的信息，但是只要我们层数够多，理论上靠近输出端的层想看多远就能看多远。</p>
-<p>值得注意的一点是，我们一般认为模型低层部分提取比较基础的特征，而高层会提取高级的语义特征。</p>
-<p>在CNN里，前几层提取的可能更多是关于简单的边界、颜色、形状等基础特征，而后面的层则提取较复杂的语义特征，比如在分类任务中会是和分类类别相关的花纹、物体大小、风格等特征。</p>
-<p>如果我们把模型设计成，最后一层的一个像素刚好要到第一层才能接收到全局信息（在其它层都只能看到局部），那对于图像边缘的语义特征识别能力可能会受到一些限制。</p>
-<p>具体来说，假设我们做猫和狗的图像分类任务，如果这个时候决定性的特征出现在图像最边缘几个像素里，那这种情况下的错误率会比特征出现在图像中间时要高。</p>
-<p>而对于语言模型，一般情况下，越远距离的信息，对当前位置的重要性越低，因此只要我们的窗口大小不要太过极限小，问题应该都还不大。</p>
-<p>看下Mistral的SWA具体是怎么做的</p>
-<img src="/c61d17e3/mistral_swa.png" class title="Mistral SWA">
-<p>左边是正常的causal
-attention，每个位置能看到自己和前面的位置，attention
-mask是个下三角矩阵。</p>
-<p>中间则是SWA的attention
-mask，这里的窗口大小为3。包括自己在内，每个位置只能往前看3个输入。</p>
-<p>同CNN的感受野一样，随着层数的堆叠，模型理论上能处理的最远距离也逐层线性递增。只是LLM里递增的方向是单向的，只能往前。</p>
-<p>Mistral 7B使用了4096的窗口大小，模型层数为32，则最终输出的”感受野“为
-<span class="math inline">\(4096\times 32=131,072\)</span>
-达到131k的长度。</p>
-<p>前面我们推算了attention的计算量，其中QK
-logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span>
-成平方关系。在使用了SWA之后，理论上，这几个operation仅使用4k的计算量，就能获得131k的上下文效果。当输入长度为131k时，除去已经缓存部分的数值，新的输入计算量相差
-<span class="math inline">\(32\times 32=1024\)</span> 倍。</p>
-<p>而缓存和上下文长度 <span class="math inline">\(s\)</span>
-成线性关系，当上下文长度为131k时，最大也能节省 <span class="math inline">\(31/32\)</span> 的显存。</p>
-<p>即SWA在上下文长度在4k以下时，和普通causal
-attention一样；当上下文长度超过4k时，则相对节省资源，长度越大，节省的比例越高。</p>
-<blockquote>
-<p>In practice, for a sequence length of 16K and W = 4096, changes made
-to FlashAttention [11] and xFormers [18] yield a 2x speed improvement
-over a vanilla attention baseline.</p>
-</blockquote>
-<p>实际使用中，Mistral通过把SWA实现在FlashAttention和xFormers中，对于16k的上下文长度，获得了2倍的速度提升。</p>
-<h2 id="和kv-cache的配合实现">和KV Cache的配合实现</h2>
-<p>在不使用sliding window的情况下，随着自回归推理的进行，KV
-Cache是只增不减的。</p>
-<p>而在使用SWA的情况下，超出窗口长度的kv就可以不用再缓存了，因此使用一个轮转替换的策略。</p>
-<p>比如窗口大小 <span class="math inline">\(W=4\)</span>
-，则当第5个token需要缓存是，直接替换掉第1个token，这样就可以保持kv缓存有一个最大值（为窗口大小），而不会无限增长。</p>
-<img src="/c61d17e3/rolling_buffer.png" class title="swa rolling buffer">
-<p>这样便于我们估计硬件设备所能支持的throughput，也不会因为少量超长的case而造成堵塞，在工程上有利于提高硬件利用率，降低成本。</p>
-<h2 id="长prompt的分块">长Prompt的分块</h2>
-<p>更近一步，考虑到我们使用RAG或者funciton
-call的时候，都会使用比较长的，固定的prompt来知道模型的行为。</p>
-<p>比如GPT4就被诱导说出它接收到的长system
-prompt（当然未必真的就是OPENAI用的）</p>
-<blockquote>
-<p>Your user's user agent is "Mozilla/5.0 (Windows NT 10.0; Win64; x64)
-AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-and the user's locale is "en-US" Your knowledge cutoff date is 2023-04.
-The current date is 2024-02-07. Image input capabilities: Enabled</p>
-<p>Tools</p>
-<p>python</p>
-<p>When you send a message containing Python code to python, it will be
-executed in a stateful Jupyter notebook environment. python will respond
-with the output of the execution or time out after 60.0 seconds. The
-drive at '/mnt/data' can be used to save and persist user files.
-Internet access for this session is disabled. Do not make external web
-requests or API calls as they will fail.</p>
-<p>dalle</p>
-<p>Whenever a description of an image is given, create a prompt that
-dalle can use to generate the image and abide to the following policy:
-1. The prompt must be in English. Translate to English if needed. 2. DO
-NOT ask for permission to generate the image, just do it! 3. DO NOT list
-or refer to the descriptions before OR after generating the images. 4.
-Do not create more than 1 image, even if the user requests more. 5. Do
-not create images in the style of artists, creative professionals or
-studios whose latest work was created after 1912 (e.g. Picasso, Kahlo).
-- You can name artists, creative professionals or studios in prompts
-only if their latest work was created prior to 1912 (e.g. Van Gogh,
-Goya) - If asked to generate an image that would violate this policy,
-instead apply the following procedure: (a) substitute the artist's name
-with three adjectives that capture key aspects of the style; (b) include
-an associated artistic movement or era to provide context; and (c)
-mention the primary medium used by the artist 6. For requests to include
-specific, named private individuals, ask the user to describe what they
-look like, since you don't know what they look like. 7. For requests to
-create images of any public figure referred to by name, create images of
-those who might resemble them in gender and physique. But they shouldn't
-look like them. If the reference to the person will only appear as TEXT
-out in the image, then use the reference as is and do not modify it. 8.
-Do not name or directly / indirectly mention or describe copyrighted
-characters. Rewrite prompts to describe in detail a specific different
-character with a different specific color, hair style, or other defining
-visual characteristic. Do not discuss copyright policies in responses.
-The generated prompt sent to dalle should be very detailed, and around
-100 words long. Example dalle invocation: { "prompt":
-"<insert prompt here>" } namespace dalle {</insert></p>
-<p>Create images from a text-only prompt. type text2im = (_: { The size
-of the requested image. Use 1024x1024 (square) as the default, 1792x1024
-if the user requests a wide image, and 1024x1792 for full-body
-portraits. Always include this parameter in the request. n?: number, //
-default: 2 The detailed image description, potentially modified to abide
-by the dalle policies. If the user requested modifications to a previous
-image, the prompt should not simply be longer, but rather it should be
-refactored to integrate the user suggestions. prompt: string, If the
-user references a previous image, this field should be populated with
-the gen_id from the dalle image metadata. referenced_image_ids?:
-string[], }) =&gt; any; } // namespace dalle</p>
-<p>voice_mode Voice mode functions are not available in text
-conversations. namespace voice_mode { } // namespace voice_mode</p>
-<p>browser</p>
-<p>You have the tool <code>browser</code>. Use <code>browser</code> in
-the following circumstances: - User is asking about current events or
-something that requires real-time information (weather, sports scores,
-etc.) - User is asking about some term you are totally unfamiliar with
-(it might be new) - User explicitly asks you to browse or provide links
-to references</p>
-<p>Given a query that requires retrieval, your turn will consist of
-three steps: 1. Call the search function to get a list of results. 2.
-Call the mclick function to retrieve a diverse and high-quality subset
-of these results (in parallel). Remember to SELECT AT LEAST 3 sources
-when using <code>mclick</code>. 3. Write a response to the user based on
-these results. In your response, cite sources using the citation format
-below.</p>
-<p>In some cases, you should repeat step 1 twice, if the initial results
-are unsatisfactory, and you believe that you can refine the query to get
-better results.</p>
-<p>You can also open a url directly if one is provided by the user. Only
-use the <code>open_url</code> command for this purpose; do not open urls
-returned by the search function or found on webpages.</p>
-<p>The <code>browser</code> tool has the following commands:
-<code>search(query: str, recency_days: int)</code> Issues a query to a
-search engine and displays the results.
-<code>mclick(ids: list[str])</code>. Retrieves the contents of the
-webpages with provided IDs (indices). You should ALWAYS SELECT AT LEAST
-3 and at most 10 pages. Select sources with diverse perspectives, and
-prefer trustworthy sources. Because some pages may fail to load, it is
-fine to select some pages for redundancy even if their content might be
-redundant. <code>open_url(url: str)</code> Opens the given URL and
-displays it.</p>
-<p>For citing quotes from the 'browser' tool: please render in this
-format: 【{message idx}†{link text}】. For long citations: please render
-in this format: <a href="message%20idx">link text</a>. Otherwise do not
-render links.</p>
-</blockquote>
-<p>除了预先计算好system
-prompt的kv值，并保存在缓存中方便每次用户输入使用外，如果system
-prompt很长（比sliding window大），还可以通过对system
-prompt的kv值进行切分来进一步优化计算。</p>
-<p>比如窗口大小 <span class="math inline">\(W=4\)</span>，system
-prompt大小为9时，就可以把system prompt的kv缓存切成 [4,4,1] 三块。</p>
-<p>第一块由于和当前的输入距离超过了一个window的大小，所以是完全看不见的，对应的attention
-mask全为0，因此可以完全忽略。</p>
-<p>第二块的attention
-mask则是一个上三角矩阵，当前的输入需要用到这部分信息。</p>
-<p>第三块是一个下三角矩阵（的左边部分），包含了当前的输入在内。</p>
-<p>在推理的时候，我们只需要用到第二块和第三块的内容，这就节省了缓存的操作。</p>
-<p>而且无论prompt有多长，只要我们按窗口大小分块，一定只会用到最后两块。</p>
-<img src="/c61d17e3/prefill_and_chunking.png" class title="prefill and chunking">
-<p>（实际上现在推理框架基本上都有FlashAttention/PagedAttention等技术加持，能够进一步节省资源，提高效率，这个后续再开一篇讲）</p>
-<p>Mistral
-7B整体的效果上的效果相比Llama是有优势的，部分任务甚至超过了Llama
-34B。</p>
-<img src="/c61d17e3/mistral_perf.png" class title="mistral performance">
-<p>Mistral认为大语言模型压缩知识的能力实际超过我们的认知，7B这个规模的效果还有提升空间。</p>
-<h1 id="sparse-attention">Sparse Attention</h1>
-<p>SWA实际上是一种sparse attention，而sparse
-attention也有许多工作做了深入探索。</p>
-<p>这里简单说一小部分，有机会再完整梳理一遍sparse
-attention的理论和实践。</p>
-<h2 id="longformer">Longformer</h2>
-<p>前面提到，Mistral并不是第一个使用SWA的。</p>
-<p>2020年，<a href="https://arxiv.org/pdf/2004.05150.pdf">《Longformer:
-The Long-Document Transformer》</a>就提出包含SWA在内的一系列sparse
-attention的做法。</p>
-<p>从文章名字就看到出来，Longformer主要目的也是为了解决长上下文的问题。</p>
-<img src="/c61d17e3/longformer_attention.png" class title="longformer">
-<p>上图中的（b）就是SWA，只是用在Bert中的时候它是双向的。</p>
-<p>在SWA的基础上，还可以进行空洞滑窗（dilated sliding
-window），在不增加计算量的情况下，提升感受野。这也是从空洞卷积（下图）来的灵感了。</p>
-<img src="/c61d17e3/dilated_conv.png" class title="dilated convolution">
-<p>还可以更进一步优化attention。无论是SWA还是dilated sliding
-window，每个位置都只能看到局部的信息。</p>
-<p>但是实际上有些位置就是对全局信息有很高的需求。</p>
-<p>在Bert中，[CLS]
-token就常常作为分类token或者相似度向量使用，这种情况下就需要它能获取整个上下文的完整信息。</p>
-<p>而在GPT中，instruction，或者说prompt的部分也对全局信息有更高要求，因为我们希望在整个对话过程中，模型都能遵循我们给出的规则。</p>
-<p>对于这些token，我们让它可以看到其他所有位置，使用完整的global
-attention，而其他位置则使用sliding window，如（d）中所示。</p>
-<h2 id="big-bird">Big Bird</h2>
-<p>无独有偶，同样在2020年，和Longformer差不多在同一时期，也有另外一个通过sparse
-attention来优化长文本效果的工作，<a href="https://arxiv.org/abs/2007.14062">《Big Bird: Transformers for
-Longer Sequences》</a>。</p>
-<p>其中sliding window和global attention结合的思路和Longformer相似。Big
-Bird还额外加入了一个random attention的做法。</p>
-<img src="/c61d17e3/big_bird_attention.png" class title="big bird attention">
-<p>上图中 <span class="math inline">\(r=2\)</span>
-即每个位置使用2个随机注意力。</p>
-<h1 id="小结">小结</h1>
-<p>SWA在优化长上下文的计算效率上有明显的收益。而在模型效果上，目前基本没有看到不可接受的损失。对长上下文有需求的业务，值得探索。</p>
-<p>除了SWA，sparse
-attention还有许多其他探索。目前来看，这些做法都有一定的理论基础，效果也不错。但是阻碍这些方案大规模使用的一个原因就是<big><strong>工程实现</strong></big>，比如如何高效计算global
-+ local attention，在flash attention中能够支持random
-attention，这都是要考虑的内容。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<h1 id="reference">Reference</h1>
-<p>【1】Mistral 7B https://arxiv.org/pdf/2310.06825.pdf<br>
-【2】Longformer: The Long-Document Transformer
-https://arxiv.org/pdf/2004.05150.pdf<br>
-【3】Training Compute-Optimal Large Language Models
-https://arxiv.org/pdf/2203.15556.pdf<br>
-【4】GPT-4 System Prompt Revealed
-https://patmcguinness.substack.com/p/gpt-4-system-prompt-revealed<br>
-【5】Big Bird: Transformers for Longer Sequences
-https://arxiv.org/abs/2007.14062</p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>attention</tag>
-        <tag>sliding window attention</tag>
-        <tag>sparse attention</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大模型算法题(1)</title>
-    <url>/3345028a.html</url>
-    <content><![CDATA[<p><img src="/images/cover.png"></p>
-<p>往期回顾</p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<hr>
-<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
-<p>本系列将整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错误，欢迎指正</sub></p>
-<h1 id="在transformer模型中为什么scaled-dot-product-attention在计算qk内积之后要除以根号d">1、在Transformer模型中，为什么scaled
-dot-product attention在计算QK内积之后要除以根号d？</h1>
-<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。如果不对attention值进行scaling，也可以通过在参数初始化时将方差除以根号d
-，同样可以起到预防softmax饱和的效果。</p>
-<h1 id="transformer自注意力计算中为什么q和k要使用不同的权重矩阵进行线性变换投影为什么不使用同一个变换矩阵或者不进行变换">2、Transformer自注意力计算中，为什么Q和K要使用不同的权重矩阵进行线性变换投影，为什么不使用同一个变换矩阵，或者不进行变换？</h1>
-<p>1、如果Q和K一样，则矩阵乘积的结果是一个对称矩阵，这样减弱了模型的表达能力。</p>
-<p>2、如果Q和K一样，乘积结果的对称矩阵中，对角线的值会比较大，导致每个位置过分关注自己。</p>
-<p>3、使用不同的投影矩阵，参数增多，可以增强模型表达能力。</p>
-<h1 id="transformer模型中注意力计算后面使用了两个ffn层为什么第一个ffn层先把维度提升第二个ffn层再把维度降回原大小">3、Transformer模型中，注意力计算后面使用了两个FFN层，为什么第一个FFN层先把维度提升，第二个FFN层再把维度降回原大小？</h1>
-<p>1、提升维度：类似SVM
-kernel，通过提升维度可以识别一些在低维无法识别的特征。</p>
-<p>2、提升维度：更大的可训练参数，提升模型的容量。</p>
-<p>3、降回原维度：方便多层注意力层和残差模块进行拼接，而无需进行额外的处理。</p>
-<h1 id="mqamulti-query-attention和gqagrouped-query-attention相比mhamulti-head-attention计算量变化如何主要带来了什么优化">4、MQA(Multi-Query
-Attention)和GQA(Grouped-Query Attention)相比MHA(Multi-Head
-Attention)，计算量变化如何，主要带来了什么优化？</h1>
-<p>1、MQA和GQA虽然可训练参数量比MHA少，但是计算量和MHA相比变化不大，主要在生成KV时有少量降低。</p>
-<p>2、Decoder-only的大模型由于causal
-attention的存在，使用了KV缓存加速推理。MQA和GQA能减少KV头的数量，节省了缓存，使得在输入长度较长时也能把KV放进缓存。</p>
-<h1 id="为什么现在主流的llm模型基本都是decoder-only的结构单向注意力模型为什么效果比双向注意力效果好">5、为什么现在主流的LLM模型基本都是Decoder-only的结构？单向注意力模型为什么效果比双向注意力效果好？</h1>
-<p>1、双向Attention在多层模型训练中容易退化成低秩矩阵，限制了模型容量；而Decoder-only模型使用了下三角注意力矩阵，使得训练过程中矩阵是满秩，建模能力更强。</p>
-<p>2、单向注意力模型相比双向注意力模型在训练的时候难度更大，能迫使模型学到更多信息。</p>
-<p>3、Causal
-Attention天然具有位置编码的功能，而双向Attention即使交换两个token的位置也基本不影响表示，对语序区分能力较弱。</p>
-<p>4、工程上，单向模型支持KV Cache等，对于对话场景效率友好。</p>
-<p>5、轨迹依赖，基模型训练成本高，业界倾向于沿着已经成功的模型继续开发。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>往期回顾</p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>transformer中normalization的二三事</title>
-    <url>/6a40bfa5.html</url>
-    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>Normalization在模型中，相对于attention这种经常被魔改的结构，受到的关注度似乎没那么高，但它对模型能否顺利训练，却有很关键的作用。</p>
-<p>在此简单梳理下normalization相关的背景和内容，也分析一下在transformer发展上的相关内容。</p>
-<p>这部分内容感觉目前还有些存在争议的地方，如果有不同意见欢迎讨论。</p>
-<h1 id="why-normalization">why normalization</h1>
-<p>normalization，也叫「归一化」、「正则化」、「规范化」、「标准化」等，可以说已经是神经网络不可以或缺的一环。</p>
-<p>使用的话，现在基本只需几行代码就能实现。但要用得好，还是需要了解一下它作用的机制。</p>
-<h2 id="从输入数据看normalization">从输入数据看normalization</h2>
-<p>假设我们有一个二元损失函数 <span class="math inline">\(Loss(x_1,x_2)=x_1^2+x_2^2+b\)</span>
-，那在三维空间画出来的损失平面大概是这样</p>
-<img src="/6a40bfa5/lossfunc_surface.jpeg" class title="loss function surface">
-<p>在这样一个平面上，使用梯度下降法，梯度方向是垂直于当前位置等高线的切线方向的。</p>
-<p>如果这个损失函数的等高线是一系列完美的同心圆，那么无论我们起点在哪里，梯度下降的时候都会以垂直切线方向，沿着圆心一路奔去。</p>
-<p>这种情况下优化很快，控制好学习率不要跳过minimum就可以（也可以用自适应优化器来控制速度）。</p>
-<p>但是实际上我们的损失平面很难那么完美。损失函数的等高线更可能是个椭圆（或者更复杂的形状）。</p>
-<img src="/6a40bfa5/ellipse_1.png" class title="ellipse">
-<p>这样我们梯度下降是方向就要经常修正，训练效率就会受影响。</p>
-<p>如果这个椭圆很扁或者我们的训练参数不太好，可能会出现反复震荡收敛缓慢的情况。</p>
-<img src="/6a40bfa5/ellipse_2.png" class title="ellipse">
-<p>损失在这个狭窄的山谷中反复横跳。</p>
-<p>那损失函数等高线什么时候会是椭圆形？</p>
-<p>假设我们现在有两个输入变量，以米为单位的身高 <span class="math inline">\(x_{1}\)</span>，和以元为单位的月工资收入 <span class="math inline">\(x_{2}\)</span>。（这里对量纲的使用也会改变数值，如米-&gt;厘米）</p>
-<p>如果我们用这两个自变量训练模型，我们会发现，身高取值范围基本是在0.x米~2.x米，而工资的取值范围是0到几百几千几万或者几十万以及更多。</p>
-<p>而模型的一个主要操作就是对输入特征进行线性组合。</p>
-<p>这时模型的输出值会更大地受到 <span class="math inline">\(x_{2}\)</span>
-的影响，因为它的变化更大，取值范围也更大。</p>
-<p>这时损失函数在不同变量维度的变化速度相差很多，损失函数就会出现椭圆形等高线的情况。</p>
-<p>既然由于量纲和取值范围的问题，会导致训练困难，那最直接方法就是规定一个标准范围，所有输入变量，不管原来是什么范围，现在都归一化到标准范围里来。</p>
-<p>这就是最朴素的输入normalization的思想。</p>
-<p>输入的normalization有很多种做法<br>
-<span class="math display">\[x^{\prime}=\frac{x-\min(\mathrm{x})}{\max(\mathrm{x})-\min(\mathrm{x})}\]</span></p>
-<p><span class="math display">\[x^{\prime}=\frac{x-\mu}{\max(\mathrm{x})-\min(\mathrm{x})}\]</span></p>
-<p><span class="math display">\[x^{\prime}=\frac{x-\mu}\sigma\]</span></p>
-<p>其中 <span class="math inline">\(\mu\)</span> 为均值，<span class="math inline">\(\sigma\)</span> 为方差。</p>
-<p>第三种，均值方差归一化，也叫Z-score
-normalization，应该是我们用得比较多的。</p>
-<p>这样我们通过对输入进行一些操作，把「椭圆」拉成了「圆」，解决输入参数范围带来的一些训练问题。</p>
-<p>除了针对均值、方差、最大值、最小值的归一化，对输入还有一些其他的处理，如PCA等，就暂不展开。</p>
-<h2 id="缓解ics...吗">缓解ICS...吗？</h2>
-<p>机器学习里有一个叫i.i.d.（independent and identical
-distribution，独立同分布）的假设：独立，每次抽样之间是没有关系的，不会相互影响；同分布，即每次抽样，样本都服从同样的一个分布。</p>
-<p>为什么需要i.i.d.？</p>
-<p>由于机器学习依赖于使用现有数据来训练模型，进而对未来的数据做出预测和模拟，因此这一过程本质上是在历史数据的基础上，通过模型来推测未来的数据走向。</p>
-<p>这就要求我们使用的历史数据必须具备整体的代表性。以便从现有数据（经验）中提炼出规律，对未知数据进行决策。</p>
-<p>如果用于训练的数据缺乏总体代表性，即仅代表特殊情况，那么得出的规律可能不准确或错误，因为这些规律是基于个别案例推测出来的，就不具备泛化性。</p>
-<p>当然并不是所有机器学习都需要i.i.d.，但是有i.i.d.的话，可以简化很多事情，让模型学习起来更容易快速。</p>
-<p>对于输入，通过合理的抽样和处理（前面提到的PCA就可以用来解耦特征间的关联，达到“独立”的效果），我们可以得到输入的i.i.d.的条件，但这只是针对输入。</p>
-<p>在多层的神经网络中，上一层的输出会作为下一层的输入。</p>
-<p>而在训练过程中，由于上层的模型参数在不断学习变化，则上层输出的分布也在不断变化，靠后的层实际上要学习不断的变化的分布，这就很不i.i.d.，那靠后面的层的学习速度和效果就会收到影响，调参也变得困难，模型也难以加深。</p>
-<p>这个问题就是ICS，internal covariate shift。</p>
-<p>那有没有办法保证上一层的分布不要变化呢？</p>
-<p>一个「可能」的方案就是normalization。我们通过把上一层的输出映射到一个固定的分布上，来稳定给下一层的输入，这样就降低了学习难度。</p>
-<p>但也有一些工作表明normalization（batchnorm）的作用机制和ICS的关系并不大，这个观点下面在batchnorm部分说。</p>
-<p>当然ICS的问题也可以通过改变初始化策略、调控训练超参如学习率等方法来优化，但是这样做的效率并不是很高。</p>
-<h2 id="远离激活函数饱和区">远离激活函数饱和区</h2>
-<p>神经网络中还有一个重要组件，非线性激活函数，比如常用的sigmoid。</p>
-<img src="/6a40bfa5/sigmoid.png" class title="sigmoid">
-<p>当输入 &gt; 6 或者 &lt; -6
-的时候，sigmoid函数的梯度已经变得非常小，也就是进入了饱和区。</p>
-<p>这种情况下训练就变得困难。</p>
-<p>ICS就会加剧梯度消失的情况。在没有normalization的情况下，分布不断变化，后面层的参数变化激烈，导致输出值更容易进入到左右两端，更容易进入到激活函数的饱和区。</p>
-<p>而normalization能把部分输出值拉回到梯度正常的范围内，一定程度缓解了梯度消失的问题，使训练可以正常进行下去。</p>
-<h1 id="batchnorm">batchnorm</h1>
-<p>神经网络中使用的normalization有很多种，这里不一一展开，只梳理一下最重要的batchnorm和layernorm两类。</p>
-<h2 id="batchnorm算法">batchnorm算法</h2>
-<p>假设输入数据的形状是 <span class="math inline">\([B,C]\)</span>
-，其中 <span class="math inline">\(B\)</span> 是batch size，<span class="math inline">\(C\)</span> 是特征向量维度。</p>
-<p>这 <span class="math inline">\(C\)</span>
-个输入特征每个都有不同的含义，如我们前面的例子，第一个元素可能是身高，第二个元素可能是月收入，因此做normalization的时候这
-<span class="math inline">\(C\)</span> 个特征分别来做。</p>
-<p>具体来说，对于第 <span class="math inline">\(i\)</span>
-个特征维度，首先计算整个batch内的均值</p>
-<p><span class="math display">\[
-\mu_{i}=\frac{1}{B}\sum_{j=1}^{B}x_{i,j}
-\]</span></p>
-<p>再计算这个维度上的方差</p>
-<p><span class="math display">\[
-\sigma_{i}^{2}=\frac{1}{B}\sum_{j=1}^{B}(x_{i,j}-\mu_{i})^2
-\]</span></p>
-<p>得到均值和方差之后，对batch内维度上的所有值进行Z-score
-normalization</p>
-<p><span class="math display">\[
-x_{i,j}&#39;=\frac{x_{i,j}-\mu_{i}}{\sqrt{\sigma_{i}^{2}+\epsilon}}
-\]</span></p>
-<p>其中 <span class="math inline">\(\epsilon\)</span>
-是为了防止分母为0。这个在实际代码中挺重要的，忘记加可能会出问题。</p>
-<p>经过这样的变换之后，在 <span class="math inline">\(C\)</span>
-个特征维度上就是均值为0，方差为1的分布了。</p>
-<p>但是到这还没结束。</p>
-<p>每个维度的数值全部归一化之后，对于激活函数来说，更集中在中间的部分，而这部分的非线性特征并不强（比如上面的sigmoid），这样非线性激活层近似了一个线性变换，这样就降低了模型的学习能力。</p>
-<p>且无论输入是什么，最终输出都会被强行拉到这样一个“平均”的值，也极大抑制了模型的表达能力。</p>
-<p>所以为了保证模型的能力，也保证非线性能力的获得，对每个特征，又增加两个可学习的参数，
-缩放参数 <span class="math inline">\(\gamma\)</span> 和位移参数 <span class="math inline">\(\beta\)</span> 。</p>
-<p><span class="math display">\[
-y_{i,j} = \gamma_{i} x_{i,j}&#39; + \beta_{i}
-\]</span></p>
-<p>这样每个特征值就有机会从“线性区”移动到“非线性区”，把被归一化削弱的非线性能力找了回来。</p>
-<p>并且通过这样一个归一化再重新缩放移动的操作，解耦了上层输出分布和下层输入，本来下层参数要去适应上层分布变化，现在只需要通过每个batchnorm层中的
-<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span>
-直接学习就行了，训练变得简单了。</p>
-<p><a href="https://zhuanlan.zhihu.com/p/340856414">《Batch
-Normalization: Accelerating Deep Network》</a>给出的算法如下</p>
-<img src="/6a40bfa5/bn_algo.png" class title="batch norm">
-<h2 id="cnn中的batchnorm">CNN中的batchnorm</h2>
-<p>batchnorm最主要的应用还是在CNN模型中。</p>
-<p>假设CNN中feature map的size是 <span class="math inline">\([B,C,H,W]\)</span> ，其中 <span class="math inline">\(B\)</span> 是batch size，<span class="math inline">\(C\)</span> 是channel数（也是卷积核数量），<span class="math inline">\(H\)</span> 和 <span class="math inline">\(W\)</span> 分别是特征图的高和宽。</p>
-<p>如果按照前面batchnorm的算法，那应该有 <span class="math inline">\(C\times H\times W\)</span> 组特征，每组特征有
-<span class="math inline">\(B\)</span> 个，对每组内的 <span class="math inline">\(B\)</span> 进行归一化，再进行放缩和平移。</p>
-<p>但是实际上，CNN中卷积是一个滑动窗口，对于同一个channel下的 <span class="math inline">\(H\times W\)</span>
-个特征值其实都来自于同一个卷积核的计算，这 <span class="math inline">\(H\times W\)</span>
-也属于一个“batch”，它们要放在一起进行归一化。</p>
-<p>也就是对于卷积核来说，真正的batch数是 <span class="math inline">\(B\times H\times W\)</span> ，而只有 <span class="math inline">\(C\)</span> 组特征值，因此也只有 <span class="math inline">\(C\)</span> 个 <span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 。</p>
-<p>batchnorm原文中，batchnorm放在了relu后面，作者认为这样使得进入激活函数的分布会更加稳定，顺便对于fc层，由于batchnorm和fc都有bias项，还可以省略掉其中一个而不影响效果。</p>
-<p>btw，一般来说，batchnorm初始化的时候，把 <span class="math inline">\(\gamma\)</span> 设为1（不缩放），把 <span class="math inline">\(\beta\)</span>
-设为0（不平移），在训练中让模型从相当于没有batchnorm开始慢慢学习这两个参数。</p>
-<h2 id="训练和推理">训练和推理</h2>
-<p>现在我们知道在训练时，batchnorm对一个mini-batch计算均值和方差来进行归一化，再进行缩放和移动。</p>
-<p><span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span>
-属于模型学出来的参数，只要训练结束这两个向量就固定了，在推理的时候直接使用即可。</p>
-<p>但是推理时，均值和方差怎么计算呢。推理的时候可能是一个sample，也可能是任意个sample作为一个batch，和训练的时候一样计算肯定不合适。</p>
-<p>我们需要在训练的时候就为推理做准备：训练的时候，模型会遍历整个训练集，因此理论上可以统计出整个训练集的均值和方差，然后把这个大量样本统计出来的均值和方差当做真实分布的均值和方差，在推理的时候使用。（回想i.i.d.）</p>
-<p>当时又有一个问题，训练集可能会很大，有百万甚至千万的数据，在训练的数据记录下所有层所有特征来计算均值和方差显然效率不高，因此用一个近似的方法：</p>
-<p>moving_mean = momentum × moving_mean + (1.0 − momentum) × mean</p>
-<p>moving_var = momentum × moving_var + (1.0 − momentum) × var</p>
-<p>通过把多个batch的均值和方差进行移动平均的方式来逼近整个训练集的均值和方差。</p>
-<p>momentum为动量参数，在 TF/Keras 中，该值为0.99，在 Pytorch
-中，这个值为0.9。</p>
-<p>小的momentum值对应快的更新速度，能够更快地向真实分布靠近，但是同时也会导致更大的波动。</p>
-<p>大的momentum值对应慢的更新速度，如果更新过慢，则可能导致训练结束时还没有统计到真实的分布，是欠拟合的状态。</p>
-<p>如果batch size比较小，每个mini
-batch和全局差异较大，就不应该用太大的momentum。</p>
-<p>理论上，训练步数越长是会越靠近真实分布的，实际上，因为每个batch并不能代表整个训练集的分布，所以最后的值是在真实分布附近波动。</p>
-<p>这里还引入另外一个问题，如果batch size太小，每个mini
-batch统计的均值和方差和全局的值偏差相对会比较大，对模型收敛的稳定性有影响，因此一般来说，使用batchnorm的话，batch
-size不能太小，如下图</p>
-<img src="/6a40bfa5/bs_bn.png" class title="batch size的影响">
-<p>小结一下，batchnorm的优点是解耦了上层输出和下层输入的分布，既缓解了进入激活函数饱和区带来的梯度消失的情况，又保留了模型的表达能力。每一层的输入尺度相对固定，提供了更好的尺度不变形，使模型训练更稳定。</p>
-<p>同时每个batch分别进行归一化，相当于引入了一些随机噪音，使得模型不容易过拟合到某些微小的特征上，相当于进行了一定的正则化，将损失平面变得相对平滑。</p>
-<p>但是同时也引入了新的超参（如momentum），另外也依赖batch
-size的大小，过小的batch size可能会带来问题。</p>
-<h2 id="batchnorm起作用的真正原因">batchnorm起作用的真正原因？</h2>
-<p>虽然batchnorm原文认为batchnorm在一定程度上是缓解了ICS，但是2018年的《How
-Does Batch Normalization Help Optimization?》提出了不同观点。</p>
-<p>为了探究batchnorm的效果，是否是因为优化了ICS（或者说和优化了ICS有多大关系），做了一个这样的实验：在batchnorm后面又通过加入随机噪音来引入“covariate
-shift”，并和没有加噪音，以及没有加batchnorm的模型效果进行对比，如下图</p>
-<img src="/6a40bfa5/bn_ics.png" class title="ICS">
-<p>结果发现，即使人工加强了ICS的情况，但是只要用了batchnorm，效果依然比不用好；而人工引入ICS的模型，在效果上并没有多大影响。</p>
-<p>这就说明缓解ICS并不是batchnorm有效的真正原因。</p>
-<p>那batchnorm到底有没有缓解到ICS呢？</p>
-<p>要测量ICS的变化，就要先定义ICS。</p>
-<p>对于网络中的每一层，ICS被定义为在前一层参数更新后，当前层输入分布的变化。这种变化可以通过比较更新前后的梯度来量化。</p>
-<img src="/6a40bfa5/ics_define.png" class title="ICS 定义">
-<p>具体来说，对于每一层i，作者们计算了以下两个梯度之间的L2范数差异：</p>
-<p><span class="math inline">\(G_{t,i}\)</span>
-，在时间t，使用当前所有层的参数（包括前一层的参数）计算的梯度。</p>
-<p><span class="math inline">\(G_{t,i}&#39;\)</span>
-，在时间t，使用更新后的前一层参数计算的梯度，而其他层的参数保持不变。</p>
-<p>这个差异直观上表明了「上一层参数变化，下一层需要在多大程度上来变化，以适应新的分布」。</p>
-<p>理想来说，ICS越小，上一层参数更新对当前层的分布影响越小，梯度变化程度应该越小。</p>
-<img src="/6a40bfa5/ics_measure.png" class title="ICS measure">
-<p>但是从结果上来看，使用了batchnorm并不能有效减少这个变化，甚至还有所增加。</p>
-<p>这也说明batchnorm实际上并不能真正缓解ICS的情况。</p>
-<p>那batchnorm起效果的真正原因是什么？</p>
-<p>作者认为主要是batchnorm使得损失函数更加平滑，直观上来说就是减少了很多坑坑洼洼的位置，使得训练更不容易陷入到局部最小值中去。</p>
-<h1 id="layernorm">layernorm</h1>
-<p>看完batchnorm，再来看layernorm。</p>
-<h2 id="理解layernorm">理解layernorm</h2>
-<p>layernorm，不要被名字骗了，这里的layer指的不是模型的层，而是数值的layer。</p>
-<p>对于二维的输入，batchnorm实在batch维度上做归一化，而layernorm是在特征维度做归一化</p>
-<img src="/6a40bfa5/bn_and_ln.png" class title="bn和ln">
-<p>对于非NLP数据而言，相比batchnorm，layernorm归一化的维度似乎解释性没那么强。batchnorm对同一个特征，比如身高计算均值是有意义的，而layernorm在不同的特征，比如身高、工资、温度做归一化，好像并没有可靠的物理意义。</p>
-<p>layernorm最主要的应用就是NLP的模型，包括RNN和transfomrer模型。</p>
-<p>在transformer中，一般输入的形状是 <span class="math inline">\([B,S,H]\)</span> ，<span class="math inline">\(S\)</span>
-是序列长度，每个样本的长度可能不同，因此在这个维度需要使用padding（一般是zero-padding）来把batch内的数据处理成一样长。</p>
-<p>比如这样一批文本输入</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我  爱  中  国</span><br><span class="line">你  好</span><br><span class="line">谢  谢  你</span><br></pre></td></tr></table></figure>
-<p>为了使模型能够统一处理，会pad成</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我  爱  中  国</span><br><span class="line">你  好  [P] [P]</span><br><span class="line">谢  谢  你  [P]</span><br></pre></td></tr></table></figure>
-<p>一般来说，我们认为由于有padding的存在，做batchnorm并不合适。</p>
-<p>比如上面的例子，对“中”，“[P]”，“你”做归一化，由于 [P]
-的存在，实际的batch size只有2，并且和 [P]
-做normalization也对训练没什么帮助。</p>
-<p>而且对于文本数据，batch内同一个位置上的字是不同的，对完全没有关系的字进行归一化也并没有什么意义。</p>
-<p>也就是说，哪怕没有 [P]
-的存在，比如对第一个token“我”，“你”，“谢”做归一化，似乎也没有说法。</p>
-<p>因此使用layernorm，在 <span class="math inline">\(S\)</span>
-维度上进行normalization，共有 <span class="math inline">\(H\)</span>
-个<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 需要学习。</p>
-<p>怎么来理解这样的normalization呢？</p>
-<p>对于 <span class="math inline">\([B,S,H]\)</span> 的输入，假设 <span class="math inline">\(H=1\)</span>
-，那就相当于退化成二维的情况，相当于每个token
-embedding的只有一个数字。</p>
-<p>相当于我们计算每一句输入内，所有token之间的均值和方差来进行归一化。</p>
-<p>比如对“我爱中国”这句话，计算“我”，“爱”，“中”，“国”四个token的均值方差来进行归一化。</p>
-<p>刚刚前面不是说对不同的字计算均值方差没有什么意义呢，为什么这里又可以了？</p>
-<p>回想一下，transformer里的attention也是计算各个输入token之间的相关性的。</p>
-<p>同一个batch内，相同位置的不同字是没有关联的，也就是替换掉其中一个sample并不影响其他sample的本来意思，因此这样计算这些字之间的均值方差就没有意义。</p>
-<p>但是对于同一句话中的不同字，他们本来就有很强的相关关系，不能随便替换其中的字，因此对这样一批数据计算均值方差是有意义的。</p>
-<p>再回到实际的情况，形状为 <span class="math inline">\([B,S,H]\)</span>
-的输入中，<span class="math inline">\(H\)</span>
-正常来说不为1，可能是256/512/768/1024等。我们还是可以按二维的情况来理解，每个字还是一个特征，只是原来是一个特征值，现在成了一个特征向量，因此共有
-<span class="math inline">\(H\)</span> 个<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 。</p>
-<h2 id="为什么transformer用layernorm">为什么transformer用layernorm</h2>
-<p>和batchnorm不同的是，由于layernorm不需要再batch维度上计算均值和方差，所以不存在训练和推理的时候不一样的地方，不用保存一个全局的均值和方差供推理的时候使用。</p>
-<p>而由于layernorm和batch无关，也就不会受到batch size大小的影响。</p>
-<p>除了以上的原因，也有一些工作深入探究了在nlp任务上layernorm和batchnorm的区别。</p>
-<p>如《PowerNorm: Rethinking Batch Normalization in
-Transformers》就研究了transformer中BN为啥表现不太好。</p>
-<p>研究了训练中的四个统计量：batch的均值和方差，以及他们的梯度的均值和方差。对于batch的均值和方差，计算了他们和running
-statistics（就是用移动平均法累积的均值和方差，见前面的文章）的欧氏距离。发现NLP任务上（IWSLT14）batch的均值和方差一直震荡，偏离全局的running
-statistics，而CV任务也相对稳定。</p>
-<p>对于他们梯度的均值和方差，研究了其magnitude（绝对值），在CV任务上震荡更小，且训练完成后，也没有离群点。</p>
-<p>总结来说，transformer中BN表现不太好的原因可能在于CV和NLP数据特性的不同，对于NLP数据，前向和反向传播中，batch统计量及其梯度都不太稳定。</p>
-<p>更重要的是，实际效果就是layernorm在NLP的效果比batchnorm好，效果好，这是最重要的原因。</p>
-<h2 id="rmsnorm">RMSnorm</h2>
-<p>19年《Root Mean Square Layer
-Normalization》提出了normalization变体RMSnorm，主要针对layernorm来改进。</p>
-<p>简单地说，RMSnorm就是在标准layernorm的基础上，省略了平移，只进行缩放。</p>
-<img src="/6a40bfa5/rmsnorm.png" class title="RMSnorm">
-<p>作者认为标准layernorm计算效率并不高</p>
-<img src="/6a40bfa5/rmsnorm_eff.png" class title="RMSnorm效率">
-<p>作者用一个GRU模型做实验，对比是否添加layernorm的结果，发现在相同时间和相同步骤下，有layernorm的模型，都没有无layernorm的模型收敛得快。</p>
-<p>并且layernorm的平移对梯度方差的减小没有贡献，因此作者直接舍弃了中心化和平移两步，只对数据进行方差归一化和缩放。</p>
-<p>更近一步，作者提出pRMSnorm，只对数据中前p%的数值进行处理，这样就能进一步加速训练，而效果也基本不太受影响。</p>
-<img src="/6a40bfa5/prmsnorm.png" class title="prmsnorm">
-<p>RMSnorm现在被很多主流的大模型所采样了。</p>
-<h1 id="post-norm-pre-norm">post-norm &amp; pre-norm</h1>
-<h2 id="二者对比">二者对比</h2>
-<p>layernorm在模型里放哪也有讲究。</p>
-<p>原始的transformer模型使用的post-norm，而《On Layer Normalization in
-the Transformer Architecture》则认为pre-norm更好。</p>
-<p>post-norm和pre-norm分别是下面这样</p>
-<img src="/6a40bfa5/postnorm_prenorm.png" class title="postnorm and prenorm">
-<p>post-norm是在残差和主干相加之后进行归一化，而pre-norm则是在主干先归一化再和残差相加。</p>
-<p>post-norm和pre-norm对比，目前大家比较接受的结论是，pre-norm更容易训练，因此可以叠加更多的层，但是在层数不是特别多的情况下，post-norm最终的收敛效果会比pre-norm要好。</p>
-<p>模型中，第 <span class="math inline">\(l\)</span> 层的输出是第 <span class="math inline">\(l+1\)</span> 层的输入，对于post-norm有</p>
-<p><span class="math display">\[
-x_{l+1}=\mathrm{Norm}(x_l+\mathrm{F}_t(x_l))
-\]</span></p>
-<p>而对于pre-norm则是</p>
-<p><span class="math display">\[
-x_{l+1}=x_l+\mathrm{F}_l(\mathrm{Norm}(x_l))
-\]</span></p>
-<p>参考苏剑林在《为什么Pre Norm的效果不如Post Norm？》中的分析，认为
-<span class="math inline">\(\mathrm{F}_l(\mathrm{Norm}(x_l))\)</span>
-的方差，由于有norm的存在，是不随层数变化的。</p>
-<p>当 <span class="math inline">\(l\)</span> 比较大时，<span class="math inline">\(x_{l}、x_{l+1}\)</span> 的差距较小，因此 <span class="math inline">\(\mathrm{F}_l(\mathrm{Norm}(x_l))\)</span> 和 <span class="math inline">\(\mathrm{F}_{l+1}(\mathrm{Norm}(x_{l+1}))\)</span>
-的差距也很小，这时有</p>
-<p><span class="math display">\[\begin{aligned}
-&amp;\mathrm{F}_l(\operatorname{Norm}(x_l))+\operatorname{F}_{l+1}(\operatorname{Norm}(x_{l+1}))
-\\
-&amp;{\approx}\mathrm{F}_l(\mathrm{Norm}(x_l))+\mathrm{F}_{l+1}\left(\mathrm{Norm}(x_l)\right)
-\\
-&amp;=(\mathrm{F}_l\oplus\mathrm{F}_{l+1})(\mathrm{Norm}(\pmb{x_l}))
-\end{aligned}\]</span></p>
-<p>相当于 <span class="math inline">\(l\)</span> 层和 <span class="math inline">\(l+1\)</span> 层的效果接近于一个更宽的 <span class="math inline">\(l\)</span> 层的效果。</p>
-<p>也就是使用pre-norm的时候，模型的深度有水分，表面看起来有 <span class="math inline">\(l\)</span>
-层，实际在效果上，等效于post-norm的浅层模型。</p>
-<p>从模型结构上看，恒等分支永远有一部分不用经过normalization，这部分能够直接把梯度回传到最前面，这也是pre-norm能够训练“层数更多”的模型的原因--缓解了梯度消失。</p>
-<p>正常来说，模型深度对最终效果的影响，是大于模型宽度的。</p>
-<p>而post-norm，在残差分支之后做归一化，对参数正则化的效果更好（loss平面更平滑），且它每norm一次就削弱一次恒等分支的权重，所以post-norm相对pre-norm，是更突出残差分支的，因此它的层数更加“足秤”，训练好之后效果更优。</p>
-<h2 id="和warmup的关系">和warmup的关系</h2>
-<p>《On Layer Normalization in the Transformer
-Architecture》（认为pre-norm更好）还分析指出，使用post-norm的transformer，在初始化时候，靠近输出层的部分梯度期望很大，所以模型在开始训练的时候很依赖warmup的策略，通过缓慢提升学习率来稳定训练过程。</p>
-<p>使用warmup引入了新的超参，调参更为麻烦点。</p>
-<p>而实验表明，使用pre-norm的transformer在不需要warmup的情况下，也能收敛到post-norm+warmup的相同水平，而post-norm不加warmup效果就差点了。</p>
-<img src="/6a40bfa5/warmup_effect.png" class title="warmup影响">
-<h2 id="deepnorm">Deepnorm</h2>
-<p>2022年，《DeepNet: Scaling Transformers to 1,000
-Layers》对transformer训练不稳定的原因进行了深入分析，发现模型更新过大是导致不稳定的主要原因。</p>
-<p>为了解决这个问题，他们提出了Deepnorm，可以限制模型更新的大小。</p>
-<img src="/6a40bfa5/deepnorm.png" class title="deepnorm">
-<p>其中 <span class="math inline">\(\alpha&gt;1\)</span>
-是根据模型参数定的常数。这里相比post-norm提升了恒等分支的权重，使训练更容易进行。</p>
-<p>另外，还用了一个 <span class="math inline">\(\beta\)</span> 参数，把
-<span class="math inline">\(G_{l}\)</span>
-中的模型参数进行了缩小，以此来稳定模型的训练。</p>
-<p>实验结果上，deepnorm结合了pre-norm的容易训练，和post-norm的收敛效果好的特点，能够把百层、浅层的模型训到比较好的效果。</p>
-<img src="/6a40bfa5/deepnorm_result.png" class title="deepnorm result">
-<p>参数过程相比post-norm稳定了很多。</p>
-<h2 id="realformer--residual-attention">Realformer--residual
-attention</h2>
-<p>post-norm和pre-norm实际上改变的是模型残差分支和恒等分支怎么排布的问题，而《RealFormer:
-Transformer Likes Residual Attention》则提出了另外一种做法</p>
-<img src="/6a40bfa5/realformer.png" class title="realformer">
-<p>RealFormer的核心是在其标准Transformer编码器的每一层中引入了残差连接。这些残差连接将前一层的原始注意力分数（即在应用Softmax之前的分数）与当前层计算出的注意力分数相结合。这样做的结果是，当前层的注意力分数在计算时会考虑到前一层的信息。</p>
-<p>每个多头注意力模块都会接收来自前一层的残差注意力分数作为额外输入。这意味着每个注意力头不仅考虑了当前层内的输入序列，而且还直接利用了前一层的注意力信息。</p>
-<img src="/6a40bfa5/realformer_attention.png" class title="realformer attention">
-<p>其中 <span class="math inline">\(Prev&#39;\)</span>
-是来自上一层softmax之前的权重矩阵（多头注意力的话，则是对应的头的值），而
-<span class="math inline">\(\frac{Q^{\prime}K^{\prime
-T}}{\sqrt{d_k}}+Prev&#39;\)</span> 则是传给下一层的attention的。</p>
-<h1 id="小结">小结</h1>
-<p>本篇粗略梳理了一下关于normalization，batchnorm，以及layernorm在transformer的一些使用情况。</p>
-<p>目前主流的大模型使用的是rmsnorm + prenorm，也有使用其他变体的。</p>
-<p>关于normalization，依然留有一些探索空间。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>往期文章</p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
-<hr>
-<h1 id="reference">Reference</h1>
-<p>【1】https://www.zhihu.com/question/487766088<br>
-【2】Towards Stabilizing Batch Statistics in Backward Propagation of
-Batch Normalization https://arxiv.org/abs/2001.06838<br>
-【3】Transformer中的归一化(一)：什么是归一化&amp;为什么要归一化
-https://zhuanlan.zhihu.com/p/476102712<br>
-【4】Batch Normalization: Accelerating Deep Network Training by Reducing
-Internal Covariate Shift https://arxiv.org/abs/1502.03167<br>
-【5】How Does Batch Normalization Help Optimization?
-https://arxiv.org/abs/1805.11604<br>
-【6】Batch Normalization: Accelerating Deep Network
-https://zhuanlan.zhihu.com/p/340856414<br>
-【7】Layer Normalization https://arxiv.org/abs/1607.06450<br>
-【8】详解深度学习中的Normalization，BN/LN/WN
-https://zhuanlan.zhihu.com/p/33173246<br>
-【9】Transformer中的归一化(四)：BatchNormalization的原理、作用和实现
-https://zhuanlan.zhihu.com/p/481277619<br>
-【10】Layer Normalization https://arxiv.org/abs/1607.06450<br>
-【11】PowerNorm: Rethinking Batch Normalization in Transformers
-https://arxiv.org/abs/2003.07845<br>
-【12】Root Mean Square Layer Normalization
-https://arxiv.org/abs/1910.07467<br>
-【13】On Layer Normalization in the Transformer Architecture
-https://arxiv.org/abs/2002.04745<br>
-【14】为什么Pre Norm的效果不如Post Norm？
-https://spaces.ac.cn/archives/9009<br>
-【15】Understanding the Difficulty of Training Transformers
-https://arxiv.org/abs/2004.08249<br>
-【16】RealFormer: Transformer Likes Residual Attention
-https://arxiv.org/abs/2012.11747<br>
-【17】DeepNet: Scaling Transformers to 1,000 Layers
-https://arxiv.org/abs/2203.00555</p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>layernorm</tag>
-        <tag>post-norm</tag>
-        <tag>pre-norm</tag>
-        <tag>normalization</tag>
-        <tag>batchnorm</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大模型算法题(2)</title>
-    <url>/ad0bba9d.html</url>
-    <content><![CDATA[<p><img src="/images/cover.png"></p>
-<p>往期文章</p>
-<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
-<hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错误，欢迎指正</sub></p>
-<hr>
-<h1 id="在bert中词向量token-embedding和绝对位置编码position-encoding为什么可以直接相加">1、在Bert中，词向量token
-embedding和(绝对)位置编码position encoding为什么可以直接相加？</h1>
-<p>1、两个向量相加，理论上其效果等价于维度拼接concat+线性变换，而相加的操作在实现上更为方便。</p>
-<p>2、高维空间中(如768维)，两个随机向量近似为正交关系。模型在高维度有能力区分出所有组合的情况。假设共有2万个词向量，500个位置，则模型需要在768维空间区分1000万个点，即使768维每个维度只能取1和-1也具备足够的区分能力。</p>
-<p>3、词向量和位置编码可以认为都是一个one-hot向量经过一层线性变换层得到的。两个向量相加等价于把它们的one-hot编码拼接后进行线性变换。</p>
-<p>4、没有使用相乘则是出于工程考虑。相加相比相乘结果更为稳定，方便训练。</p>
-<h1 id="lora和全参数训练在计算量和显存上相比如何为什么lora能提升大模型训练效率">2、LoRA和全参数训练在计算量和显存上相比如何？为什么LoRA能提升大模型训练效率？</h1>
-<p>1、计算量上：LoRA训练时，在主干模型的（部分）全连接层增加了LoRA旁路，前向和后向的计算量都在主干模型的基础上，增加了旁路部分的计算，因此相比全参数训练，略有增加。</p>
-<p>2、显存上：训练时，显存主要有①模型参数②梯度③中间激活值④优化器参数四个部分。模型参数/梯度/激活值相比全参数训练也略微增加；而优化器则不需要再存储原模型参数的部分，只需要存储LoRA旁路部分，这部分节省较多显存。</p>
-<p>3、使用LoRA能提升训练效率主要是因为（1）优化器部分的显存需要减少了，可以增大batch（2）优化器参数减少了，分布式训练中多卡之间的通信量减少了（3）（optional）主干模型由于不用更新，可以进一步量化到int8/int4等。</p>
-<h1 id="为什么模型需要normalizationbatchnormlayernorm等">3、为什么模型需要normalization（batchnorm/layernorm等）？</h1>
-<p>1、输入数据包含多个特征，特征之间有不同的量纲和范围（如身高180和年龄18岁），通过normalization进行归一化再经过模型进行线性/非线性组合，能够防止部分特征占据主导，部分特征被忽略。</p>
-<p>2、batchnorm论文认为：模型一般有多层，前一层的输出是后一层的输入，而训练中前一层的参数更新会导致后一层的输入数据分布变化导致ICS（internal
-covariate
-shift），这样后面的层就不得不频繁剧烈更新适应分布变化，导致分布偏移进入激活函数饱和区而出现梯度消失，另外分布变化也是对i.i.d.条件的破坏。使用normalization可以保持分布的稳定，减小方差，使模型训练可以正常进行。</p>
-<p>3.《How Does Batch Normalization Help
-Optimization?》设计了实验测量使用batchnorm前后的ICS，发现batchnorm实际上并没有缓解ICS，甚至有所增加。而batchnorm能优化模型训练的原因更多是使得损失函数平面更加光滑，而便于梯度下降收敛。</p>
-<h1 id="transformer中pre-norm和post-norm各有什么优缺点">4、Transformer中pre-norm和post-norm各有什么优缺点?</h1>
-<p>1.原始的Transformer用的是post-norm，它在残差之后进行归一化（add &amp;
-norm），对参数正则化的效果更强，模型更为鲁棒；post-norm对每个通路都进行了归一化，使得梯度在回传的时候容易出现消失。</p>
-<p>2.Pre-norm相对于post-norm，残差部分存在不经过归一化的通路，因此能够缓解梯度消失，能够训练更深的网络。但是模型的等效“深度”受到影响，L+1层网络近似于一个L层的宽网络。</p>
-<p>3.也就是说，在层数较少，post-norm和pre-norm都能正常收敛的情况下，post-norm的效果更好一些；但是pre-norm更适合用于训练更深的网络。</p>
-<h1 id="对于使用multi-head-attention的模型假设hidden-sized注意力头数量为h每个头维度为d假设有ddh输入上下文长度为sbatch-size1计算self-attention模块各个部分的计算量float-operations">5、对于使用Multi-Head
-Attention的模型，假设hidden
-size=D，注意力头数量为h，每个头维度为d（假设有D=d×h），输入上下文长度为s，batch
-size=1，计算self-attention模块各个部分的计算量（Float
-Operations）。</h1>
-<p>1.QKV线性变换：6 × s ×
-D^2（矩阵乘法，每个位置有加法和乘法两个运算，因此每个位置需要2D次计算）</p>
-<p>2.QK内积：h × 2 × d × s^2（h组矩阵分别计算）</p>
-<p>3.scaling：h × s^2</p>
-<p>4.softmax：h × 3 ×
-s^2（softmax是按列进行的，每列要计算s个exp，s个exp结果的求和，以及s次除法）</p>
-<p>5.reduction（权重矩阵乘以V）：h × 2 × d × s^2</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>往期文章</p>
-<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大规模对话模型：ChatGPT下的银牌选手们</title>
-    <url>/14e576c.html</url>
-    <content><![CDATA[<img src="/14e576c/1.png" class title="page_1">
-<img src="/14e576c/2.png" class title="page_2">
-<img src="/14e576c/3.png" class title="page_3">
-<img src="/14e576c/4.png" class title="page_4">
-<img src="/14e576c/5.png" class title="page_5">
-<img src="/14e576c/6.png" class title="page_6">
-<img src="/14e576c/7.png" class title="page_7">
-<img src="/14e576c/8.png" class title="page_8">
-<img src="/14e576c/9.png" class title="page_9">
-<img src="/14e576c/10.png" class title="page_10">
-<img src="/14e576c/11.png" class title="page_11">
-<img src="/14e576c/12.png" class title="page_12">
-<img src="/14e576c/13.png" class title="page_13">
-<img src="/14e576c/14.png" class title="page_14">
-<img src="/14e576c/15.png" class title="page_15">
-<img src="/14e576c/16.png" class title="page_16">
-<img src="/14e576c/17.png" class title="page_17">
-<img src="/14e576c/18.png" class title="page_18">
-<img src="/14e576c/19.png" class title="page_19">
-<img src="/14e576c/20.png" class title="page_20">
-<img src="/14e576c/21.png" class title="page_21">
-<img src="/14e576c/22.png" class title="page_22">
-<img src="/14e576c/23.png" class title="page_23">
-<img src="/14e576c/24.png" class title="page_24">
-<img src="/14e576c/25.png" class title="page_25">
-<img src="/14e576c/26.png" class title="page_26">
-<img src="/14e576c/27.png" class title="page_27">
-<img src="/14e576c/28.png" class title="page_28">
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>ChatGPT</tag>
-        <tag>Sparrow</tag>
-        <tag>LaMDA</tag>
-        <tag>GopherCite</tag>
-        <tag>WebGPT</tag>
-        <tag>InstructGPT</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>理解LLM位置编码:RoPE</title>
     <url>/a051710f.html</url>
     <content><![CDATA[<p>最近在做LLM窗口外推的相关工作，因此刚好也回顾一下目前最流行的位置编码RoPE。</p>
@@ -1324,389 +407,6 @@ https://zhuanlan.zhihu.com/p/647109286</p>
         <tag>transformer</tag>
         <tag>positional encoding</tag>
         <tag>RoPE</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>理解Attention:从起源到MHA,MQA和GQA</title>
-    <url>/3dc22f96.html</url>
-    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
-<p>Attention模块是现在几乎所有大模型的核心模块，因此也有很多工作致力于提升注意力计算的性能和效果。其中MHA（Multi-Head
-Attention）、MQA（Multi-Query Attention）和GQA（Grouped-Query
-Attention）这一路线的思路和做法被很多主流模型所采用，因此简单地梳理一些这几个变体的思路和做法，以及会涉及到的KV
-Cache相关内容。思路比较直白，但也有一些细节和原理值得思考。</p>
-<p>当然针对Attention优化，也有很多其他优秀的方案和思路，如线性注意力、FlashAttention和Sliding
-Window Attention等，这些在后续再开篇梳理。</p>
-<p>（应一些朋友的要求，会增加一些直观基础的内容，以及LLM应用的案例。也欢迎大家提出更多建议。）</p>
-<h1 id="关于attention从rnn到attention">关于Attention：从RNN到Attention</h1>
-<p>了解一个概念的诞生和演进，有助于我们更深入去理解它。我们先简单回顾下attention从起源到最初的实现。</p>
-<p>（熟悉attention的朋友可以跳过这一节）</p>
-<h2 id="从rnn说起">从RNN说起</h2>
-<blockquote>
-<p>Memory is attention through time. ~ Alex Graves 2020</p>
-</blockquote>
-<p>注意力机制最初起源是为了解决序列问题。回想在还没有Transformer的上一世代，使用RNN的Seq2Seq是这样的</p>
-<img src="/3dc22f96/seq2seq.png" class title="seq2seq">
-<img src="/3dc22f96/encoder.png" class title="encoder">
-<img src="/3dc22f96/decoder.png" class title="decoder">
-<p>（图来自<a href="https://theaisummer.com/attention/">AI
-Summer</a>）</p>
-<p>每个RNN cell接收两个输入，输出一个hidden state。比如在翻译任务中，RNN
-encoder把所有输入迭代地编码成context向量 <span class="math inline">\(z\)</span> ，然后由RNN decoder基于 <span class="math inline">\(z\)</span>
-迭代地解码。一般来说，这里decoder的第一个输入是一个特殊token，如[start]，表示解码开始。</p>
-<p>这样会有一个问题， <span class="math inline">\(z\)</span>
-能编码的长度显然有限，而且由于模型结构问题，会更加关注靠近尾部的输入。这样如果关键信息出现在开头，就容易被忽略。</p>
-<p>并且时间步骤上的传播由于有多次迭代相乘，梯度很容易就过小，导致梯度消失问题。</p>
-<p>当然我们有LSMT和GRU等变体来增强长距离记忆的能力，也缓解了梯度问题，但这些方案还是没有产生质变的能力。</p>
-<p>回到问题的核心，我们想要 <span class="math inline">\(z\)</span>
-能够编码所有前面的内容，但是显然， <span class="math inline">\(z\)</span>
-的生成方式天然会让它更容易注意到靠后的内容，而容易忽略靠前的输入。</p>
-<p>一个直觉的想法就是，我们需要想个办法跳过 <span class="math inline">\(z\)</span>
-，和前面的每个输入建立直接的联系。我们希望模型能够有机会学习到去“注意”关键的输入，不管这个输入是在前面还是后面。</p>
-<p>实际上神经网络天生就具有“注意力”的天赋。</p>
-<p>比如在CNN分类中，如果我们画出分类层前的heatmap，会是如下图这个样子</p>
-<img src="/3dc22f96/cnn_heatmap.png" class title="heatmap">
-<p>可以看到，值比较高的地方是在猫的鼻子胡子嘴巴区域，次之是身上和头上的花纹。直观来说，就是模型主要通过脸部的特征和身上的花纹，来识别出这是一只猫。这就是CNN学习到的注意力，这样的特征是神经网络implicitly学到的。</p>
-<p>回归到Seq2Seq，我们怎么来实现注意力，并且让这种implicit的机制变得explicit：单独抽离出来并具备一定可控制性？</p>
-<p>回想翻译场景，在RNN中，每一个时间步骤 <span class="math inline">\(i\)</span> 都会产生一个隐向量，<span class="math inline">\(h_i\)</span> 向量，我们把这些 <span class="math inline">\(h_i\)</span>
-保存起来，在最后要生成新的输出的时候，我们让模型回头看一下之前的这每一个
-<span class="math inline">\(h_i\)</span>
-，再决定要生成什么内容。相比原来只利用最后一个hidden
-state，现在我们可以访问之前所有的中间状态，如果发现前面有关键信息，就可以直接用上了，而不用担心输入太长而被覆盖了。</p>
-<p>那么问题又来了，我们怎么知道前面某一个中间状态对于当前的生成来说是否重要？如果我们不知道怎么定义是否重要，那我们就把这个问题交给模型自己解决好了
---
-通过网络参数来学习识别某个输入状态是否重要，学习是否要“注意”到它，要给予多少的“注意力”。</p>
-<p>具体来说，我们定义在解码第 <span class="math inline">\(i\)</span>
-个输出是，decoder当前隐状态 <span class="math inline">\(y_{i-1}\)</span>
-和encoder的所有隐状态 <span class="math inline">\(\mathbf{h}\)</span>
-之间的一个score计算</p>
-<p><span class="math display">\[\mathbf{e}_i=\text{attention}_{\mathrm{net}}\left(y_{i-1},\mathbf{h}\right)\in
-R^n\]</span></p>
-<p>其中</p>
-<p><span class="math display">\[e_{ij}=\text{attentiom}_{\text{net
-}(\mathbf{y}_{i-1},h_j)}\]</span></p>
-<p>注意力网络通过 <span class="math inline">\(\mathbf{y}_{i-1}\)</span>
-和 <span class="math inline">\(h_j\)</span> 来计算一个值 <span class="math inline">\(e_{ij}\)</span>，这里的注意力网络可以设计各种操作，比如对输入进行拼接再通过fc层进行计算等。</p>
-<p>这里 <span class="math inline">\(e_{ij}\)</span>
-是一个标量，但它还不是一个可用的权重值，还需要通过一个函数，把attention
-net对各个encoder hidden state的输出值转成一个分布：softmax。</p>
-<p><span class="math display">\[\alpha_{ij}=\frac{\exp\left(e_{ij}\right)}{\sum_{k=1}^{T_x}\exp\left(e_{ik}\right)}\]</span></p>
-<p>最后通过加权计算，获得最终输入给decoder的隐变量。</p>
-<p><span class="math display">\[z_i=\sum_{j=1}^T\alpha_{ij}\mathbf{h}_j\]</span></p>
-<img src="/3dc22f96/seq2seq_attention.png" class title="seq2seq attention">
-<p>可以看到，这里的attention net的任务就是找到decoder上一个hidden
-state和encoder hidden
-state之间的“相关”关系，使得模型能够将更多的注意力放在对应的输入信息上。</p>
-<p>实际上，上面这种attention的计算方式并不是唯一的，attention的计算方式有许多种</p>
-<img src="/3dc22f96/attention_calculation.png" class title="attention calculation">
-<p>这些attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(s, h)=\mathrm{Score}(s,h)\cdot
-h\)</span> 。这里的 <span class="math inline">\(s\)</span>
-就是decoder的hidden state（也就是前文的 <span class="math inline">\(y\)</span> ），<span class="math inline">\(h\)</span> 就是encoder的hidden state。</p>
-<p>（当然从结果上看，是scaled dot-product
-attention经受住了历史的考验，成为了主流。）</p>
-<h2 id="transformer的attention">Transformer的attention</h2>
-<p>从RNN attention到transformer
-attention，所做的事情就如论文题目所说：《Attention Is All You
-Need》，彻底抛弃RNN的在time
-step上的迭代计算，完全拥抱attention机制，只用最简单粗暴的方式同步计算出每个输入的hidden
-state，其他的就交给attention来解决。</p>
-<img src="/3dc22f96/transformer_structure.png" class title="transformer structure.png">
-<p>这里还是保留有encoder和decoder的结构，encoder中的attention都是self-attention，decoder则除了self-attention还有cross-attention。</p>
-<p>transformer结构下，attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(Q,K,V)=\mathrm{Score}(Q,K)V\)</span>，这里有
-<span class="math inline">\(Q=W_{Q}Y，K=W_{K}X，V=W_{V}X\)</span>
-。对于cross-attention， <span class="math inline">\(X\)</span>
-是encoder的hidden states，<span class="math inline">\(Y\)</span>
-是decoder的hidden states，而对于self-attention，则有 <span class="math inline">\(X=Y\)</span>。</p>
-<p>具体到我们熟悉的scaled dot-product attention，使用softmax计算，有</p>
-<p><span class="math display">\[\operatorname{Attention}(Q,K,V)=\operatorname{softmax}(\frac{QK^T}{\sqrt{d}})V\]</span></p>
-<p>到这里，终于见到我们熟悉的attention计算。</p>
-<p>用一张很直观的图来展示整个计算</p>
-<img src="/3dc22f96/Scaled-dot-product-self-attention.pbm" class title="self-attention">
-<p>这里的「query」，「key」和「value」的名称也暗示了整个attention计算的思路。</p>
-<p>类比到一个数据库查询+预测的例子。</p>
-<p>假设我们现在有一个“文章-阅读量”数据库，记录了每篇文章在发布30天内的阅读量。每篇文章就是一个key，对应的阅读量就是value。</p>
-<p>我们现在有一篇将要发布的文章，想要预测这篇文章在30天内的阅读量，那我们就把这篇新的文章，作为query，去和数据库里的文章（key）做一个相关性计算，取最相关的5篇文章。</p>
-<p>假设top5篇文章的相关性分别是 <span class="math inline">\([8,4,4,2,2]\)</span> ，对应阅读量是 <span class="math inline">\([5\text{w},2\text{w},8\text{w},3\text{w},6\text{w}]\)</span>
-。</p>
-<p>那我们把相关性得分归一化成和为1的概率值 <span class="math inline">\([0.4,0.2,0.2,0.1,0.1]\)</span>
-，那我们就可以预测新文章30天内的阅读量是 <span class="math inline">\(0.4\times5+0.2\times2+0.2\times8+0.1\times3+0.1\times6=4.9\text{w}\)</span>
-。</p>
-<p>这个例子中，我们计算相关性就相当于transformer attention中的 <span class="math inline">\(QK^T\)</span>
-，归一化就是softmax，然后通过加权求和取得最后的阅读量/特征向量。</p>
-<p>对于self-attention， <span class="math inline">\(Q、K、V\)</span>
-都来自输入 <span class="math inline">\(X\)</span>，sequence自己计算自己每个token的之间的相关性。而对于cross-attention，decoder中的输出sequence就是上面这个例子中的“将要发布的文章”，通过把这篇新的文章和数据库中的文章做相关计算，我们得到了新的预测结果。</p>
-<p>对于self-attention，由于 <span class="math inline">\(Q、K、V\)</span>
-都来自输入 <span class="math inline">\(X\)</span> ，在计算 <span class="math inline">\(QK^T\)</span>
-时，模型很容易关注到自身的位置上，也就是 <span class="math inline">\(QK^T\)</span>
-对角线上的激活值会明显比较大。这样的情况其实不是很好，因为这会削弱模型关注其他高价值位置的能力，也就限制模型的理解和表达能力。后面讲的MHA对这个问题会有一些缓解作用。</p>
-<p>顺着这样的思路梳理下来，会发现attention的大思路还是很好理解的。而计算上，怎么去获得更好的效果，就是接下来要分析的几个内容，MHA，MQA和GQA所关注的。</p>
-<p>代码上，实现也很容易，直接看<a href="https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention">pytorch
-forcasting</a>的代码</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ScaledDotProductAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, dropout: <span class="built_in">float</span> = <span class="literal">None</span>, scale: <span class="built_in">bool</span> = <span class="literal">True</span></span>):</span><br><span class="line">        <span class="built_in">super</span>(ScaledDotProductAttention, self).__init__()</span><br><span class="line">        <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            self.dropout = dropout</span><br><span class="line">        self.softmax = nn.Softmax(dim=<span class="number">2</span>)</span><br><span class="line">        self.scale = scale</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, q, k, v, mask=<span class="literal">None</span></span>):</span><br><span class="line">        attn = torch.bmm(q, k.permute(<span class="number">0</span>, <span class="number">2</span>, <span class="number">1</span>))  <span class="comment"># query-key overlap</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.scale:</span><br><span class="line">            dimension = torch.as_tensor(k.size(-<span class="number">1</span>), dtype=attn.dtype, device=attn.device).sqrt()</span><br><span class="line">            attn = attn / dimension</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = attn.masked_fill(mask, -<span class="number">1e9</span>)</span><br><span class="line">        attn = self.softmax(attn)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = self.dropout(attn)</span><br><span class="line">        output = torch.bmm(attn, v)</span><br><span class="line">        <span class="keyword">return</span> output, attn</span><br></pre></td></tr></table></figure>
-<h2 id="关于scaling">关于scaling</h2>
-<p>BTW，为什么计算中 <span class="math inline">\(QK^T\)</span>
-之后还要除以 <span class="math inline">\(\sqrt{d}\)</span> ？</p>
-<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。</p>
-<img src="/3dc22f96/softmax.png" class title="softmax">
-<p>苏剑林的<a href="https://spaces.ac.cn/archives/8620">博客</a>中也有详细分析，并提到如果不对attention值进行scaling，也可以通过在参数初始化是将方差除以一个
-<span class="math inline">\(\sqrt{d}\)</span>
-，同样可以起到预防softmax饱和的效果。类似地，通过normalization也可以做到类似的效果。不过实现上在attention里做scaling还是比较稳定高效的。</p>
-<h1 id="mha">MHA</h1>
-<p>只要理解了attention计算的细节，MHA（multi-head
-attention）其实就很好明白。</p>
-<p>MHA在2017年就随着《Attention Is All You
-Need》一起提出，主要干的就是一个事：把原来一个attention计算，拆成多个小份的attention，并行计算，分别得出结果，最后再合回原来的维度。</p>
-<p><span class="math display">\[\mathrm{MultiHeadAttention}(Q,K,V)=\mathrm{Concat}(head_1,\ldots,head_h)\]</span></p>
-<p><span class="math display">\[head_i=\text{Attention}(W_i^QQ,W_i^KK,W_i^VV)\]</span></p>
-<p>假设原来模型的hidden size是 <span class="math inline">\(d\)</span>
-，在MHA中，会把投影后的 <span class="math inline">\(Q、K、V\)</span>
-在hidden state的维度上切成 <span class="math inline">\(head_{num}\)</span> 份，每个头的维度是 <span class="math inline">\(d_{head}\)</span> 。这 <span class="math inline">\(head_{num}\)</span> 组小 <span class="math inline">\(Q、K、V\)</span>
-分别独立地进行attention计算，之后把得到的 <span class="math inline">\(head_{num}\)</span> 份维度 <span class="math inline">\(d_{head}\)</span> 的输出concat起来。</p>
-<p>直接看这个amazing的图，很直观</p>
-<img src="/3dc22f96/multihead_attention.png" class title="MHA">
-<p>操作是这么个操作，多头注意力相比单头有什么好处呢？</p>
-<p>《Attention Is All You Need》文章中给出的说法是</p>
-<blockquote>
-<p>Multi-head attention allows the model to jointly attend to
-information from different representation subspaces at different
-positions.</p>
-</blockquote>
-<p>我们希望多个头能够在训练中学会注意到不同的内容。例如在翻译任务里，一些attention
-head可以关注语法特征，另一些attention
-head可以关注单词特性。这样模型就可以从不同角度来分析和理解输入信息，获得更好的效果了。</p>
-<p>这有点类似CNN中，不同的卷积核来学习不同的信息。比如一个 <span class="math inline">\(3\times3\times128\)</span> 的卷积，有128个 <span class="math inline">\(3\times3\)</span>
-参数组，假设我们的输入是一个灰度图，其中一组 <span class="math inline">\(3\times3\)</span> 的参数是这样的</p>
-<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;0&amp;-1\\1&amp;0&amp;-1\\1&amp;0&amp;-1\end{matrix}\right.\right]\]</span></p>
-<p>那么这是一个检测纵向边界的卷积，而另外一组参数长这样</p>
-<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;1&amp;1\\0&amp;0&amp;0\\-1&amp;-1&amp;-1\end{matrix}\right.\right]\]</span></p>
-<p>这是一个检测横向边界的卷积。</p>
-<p>这128组 <span class="math inline">\(3\times3\)</span>
-就是128个不同特征的检测器，就同MHA中多个头一样，从不同的子空间学到不同的内容，最后再放到一起融合使用。</p>
-<p>但是这是我们expect模型能做到的事情，实际情况是否真的是这样？</p>
-<p>知乎上这篇<a href="https://zhuanlan.zhihu.com/p/626820422">文章</a>里对此做了一些实验和分析。简单来说就是（1）每个头确实学到东西有所不同，但大部分头之间的差异没有我们想的那么大（比如一个学句法，一个学词义这样明显的区分）（2）多个头的情况下，确实有少部分头可以比较好地捕捉到各种文本信息，而不会过分关注自身位置，一定程度缓解了上文提到的计算
-<span class="math inline">\(QK^T\)</span> 之后对角线元素过大的问题。</p>
-<p>我们可以把MHA的多个attention计算视为多个独立的小模型，那么最终整体的attention计算相当于把来自多个小模型的结果进行了融合，这样效果比较好也是比较符合直觉的。</p>
-<p>另外还有一个问题是，使用几个头比较好呢？</p>
-<p>实际上这个问题比较难有确定性的答案，首先可以确定的是头的数量不是越多约好（毕竟头的数量多了，各个子空间小了，子空间能表达的内容就少了），具体多少要视模型规模，任务而定。另外<a href="https://arxiv.org/pdf/1905.10650.pdf">《Are Sixteen Heads Really
-Better than One?》</a>中也指出MHA并不总是优于单头的情况。</p>
-<p>目前可以看到的趋势是，模型越大（也就是hidden
-size越大），头数的增多越能带来平均效果上的收益（或者说允许注意力头增大而不影响子空间的学习能力）。目前LLM主流的头数视乎模型结构和规模，大致有12、16、24、48、96这样一些主流设置。这里面又有比较多的方向和工作，在此暂时不展开，挖个坑，以后专门开一篇讲。</p>
-<p>最后看一下<a href="https://nlp.seas.harvard.edu/2018/04/03/attention.html">The
-Annotated Transformer</a>中的MHA代码实现</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">attention</span>(<span class="params">query, key, value, mask=<span class="literal">None</span>, dropout=<span class="literal">None</span></span>):</span><br><span class="line">    <span class="string">&quot;Compute &#x27;Scaled Dot Product Attention&#x27;&quot;</span></span><br><span class="line">    d_k = query.size(-<span class="number">1</span>)</span><br><span class="line">    scores = torch.matmul(query, key.transpose(-<span class="number">2</span>, -<span class="number">1</span>)) \</span><br><span class="line">             / math.sqrt(d_k)</span><br><span class="line">    <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        scores = scores.masked_fill(mask == <span class="number">0</span>, -<span class="number">1e9</span>)</span><br><span class="line">    p_attn = F.softmax(scores, dim = -<span class="number">1</span>)</span><br><span class="line">    <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        p_attn = dropout(p_attn)</span><br><span class="line">    <span class="keyword">return</span> torch.matmul(p_attn, value), p_attn</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MultiHeadedAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, h, d_model, dropout=<span class="number">0.1</span></span>):</span><br><span class="line">        <span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">        h: head number</span></span><br><span class="line"><span class="string">        &#x27;&#x27;&#x27;</span></span><br><span class="line">        <span class="built_in">super</span>(MultiHeadedAttention, self).__init__()</span><br><span class="line">        <span class="keyword">assert</span> d_model % h == <span class="number">0</span></span><br><span class="line">        <span class="comment"># We assume d_v always equals d</span></span><br><span class="line">        self.d = d_model // h</span><br><span class="line">        self.h = h</span><br><span class="line">        self.linears = clones(nn.Linear(d_model, d_model), <span class="number">4</span>)</span><br><span class="line">        self.attn = <span class="literal">None</span></span><br><span class="line">        self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, query, key, value, mask=<span class="literal">None</span></span>):</span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="comment"># Same mask applied to all h heads.</span></span><br><span class="line">            mask = mask.unsqueeze(<span class="number">1</span>)</span><br><span class="line">        nbatches = query.size(<span class="number">0</span>)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 1) Do all the linear projections in batch from d_model =&gt; h x d </span></span><br><span class="line">        query, key, value = \</span><br><span class="line">            [l(x).view(nbatches, -<span class="number">1</span>, self.h, self.d).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line">             <span class="keyword">for</span> l, x <span class="keyword">in</span> <span class="built_in">zip</span>(self.linears, (query, key, value))]</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2) Apply attention on all the projected vectors in batch. </span></span><br><span class="line">        x, self.attn = attention(query, key, value, mask=mask, </span><br><span class="line">                                 dropout=self.dropout)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 3) &quot;Concat&quot; using a view and apply a final linear. </span></span><br><span class="line">        x = x.transpose(<span class="number">1</span>, <span class="number">2</span>).contiguous() \</span><br><span class="line">             .view(nbatches, -<span class="number">1</span>, self.h * self.d)</span><br><span class="line">        <span class="keyword">return</span> self.linears[-<span class="number">1</span>](x)</span><br></pre></td></tr></table></figure>
-<p>（<a href="https://github.com/huggingface/transformers">transformers</a>中的写法就更为成熟一点，不过里面兼容了比较多的功能，代码太长就不放上来了）</p>
-<h1 id="解码中的kv-cache">解码中的KV Cache</h1>
-<p>在讲MQA和GQA之前，还需要了解一点背景，那就是解码的计算问题，以及KV
-Cache的方案。</p>
-<p>无论是encoder-decoder结构，还是现在我们最接近AGI的decoder-only的LLM，解码生成时都是自回归auto-regressive的方式。</p>
-<p>也就是，解码的时候，先根据当前输入 <span class="math inline">\(\text{input}_{i-1}\)</span> ，生成下一个 <span class="math inline">\(\text{token}_{i}\)</span> ，然后把新生成的 <span class="math inline">\(\text{token}_{i}\)</span> 拼接在 <span class="math inline">\(\text{input}_{i-1}\)</span> 后面，获得新的输入
-<span class="math inline">\(\text{input}_{i}\)</span> ，再用 <span class="math inline">\(\text{input}_{i}\)</span> 生成 <span class="math inline">\(\text{token}_{i+1}\)</span>
-，依此迭代，直到生成结束。</p>
-<p>比如我们输入“窗前明月光下一句是”，那么模型每次生成一个token，输入输出会是这样（方便起见，默认每个token都是一个字符）</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">step0: 输入=[BOS]窗前明月光下一句是；输出=疑</span><br><span class="line">step1: 输入=[BOS]窗前明月光下一句是疑；输出=是</span><br><span class="line">step2: 输入=[BOS]窗前明月光下一句是疑是；输出=地</span><br><span class="line">step3: 输入=[BOS]窗前明月光下一句是疑是地；输出=上</span><br><span class="line">step4: 输入=[BOS]窗前明月光下一句是疑是地上；输出=霜</span><br><span class="line">step5: 输入=[BOS]窗前明月光下一句是疑是地上霜；输出=[EOS]</span><br></pre></td></tr></table></figure>
-<p>（其中[BOS]和[EOS]分别是起始符号和终止符号）</p>
-<p>仔细想一下，我们在生成“疑”字的时候，用的是输入序列中“是”字的最后一层hidden
-state，通过最后的分类头预测出来的。以此类推，后面每生成一个字，使用的都是输入序列中最后一个字的输出。</p>
-<p>我们可以注意到，下一个step的输入其实包含了上一个step的内容，而且只在最后面多了一点点（一个token）。那么下一个step的计算应该也包含了上一个step的计算。</p>
-<p>从公式上来看是这样的：</p>
-<p>回想一下我们attention的计算</p>
-<p><span class="math display">\[
-\alpha_{i,j}=\text{softmax}(q_{i}k_{j}^\top)\\
-o_{i}=\sum_{j=0}^{i}{\alpha_{i,j}v_{j}}
-\]</span></p>
-<p>注意对于decoder的时候，由于mask
-attention的存在，每个输入只能看到自己和前面的内容，而看不到后面的内容</p>
-<p>假设我们当前输入的长度是3，预测第4个字，那每层attention所做的计算有</p>
-<p><span class="math display">\[
-\begin{aligned}
-o_{0}&amp;=\alpha_{0,0}v_{0}\\
-o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
-o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
-\end{aligned}
-\]</span></p>
-<p>预测完第4个字，放到输入里，继续预测第5个字，每层attention所做的计算有</p>
-<p><span class="math display">\[
-\begin{aligned}
-o_{0}&amp;=\alpha_{0,0}v_{0}\\
-o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
-o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
-o_{3}&amp;=\alpha_{3,0}v_{0}+\alpha_{3,1}v_{1}+\alpha_{3,2}v_{2}+\alpha_{3,3}v_{3}\\
-\end{aligned}
-\]</span></p>
-<p>可以看到，在预测第5个字时，只有最后一步引入了新的计算，而 <span class="math inline">\(o_{0}\)</span> 到 <span class="math inline">\(o_{2}\)</span> 的计算和前面是完全重复的。</p>
-<p>但是模型在推理的时候可不管这些，无论你是不是只要最后一个字的输出，它都把所有输入计算一遍，给出所有输出结果。</p>
-<p>也就是说中间有很多我们用不到的计算，这样就造成了浪费。</p>
-<p>而且随着生成的结果越来越多，输入的长度也越来越长。上面这个例子里，输入长度就从step0的10个，每步增长1，直到step5的15个。如果输入的instruction是让模型写高考作文，那可能就有800个step或者更多。这个情况下，step0被算了800次，step1被算了799次...</p>
-<p>有没有什么办法可以重复利用上一个step里已经计算过的结果，减少浪费呢？</p>
-<p>答案就是KV
-Cache。利用缓存空间，把需要重复利用的中间计算结果存下来，减少重复计算。</p>
-<p>而 <span class="math inline">\(k\)</span> 和 <span class="math inline">\(v\)</span> 就是要缓存的对象。</p>
-<p>想象一下，在上面的例子中，假设我们一开始的输入就是3个字，我们第一次预测就是预测第4个字，那么由于一开始没有任何缓存，所有我们每一层还是要踏踏实实地计算一遍。然后把
-<span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值缓存起来。</p>
-<p>则有</p>
-<p><span class="math display">\[
-\text{cache}_l=\text{None}\\
-\]</span></p>
-<center>
-↓
-</center>
-<p><span class="math display">\[
-\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
-v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
-\]</span></p>
-<p>kv_cache的下标 <span class="math inline">\(l\)</span>
-表示模型层数。</p>
-<p>在进行第二次预测，也就是预测第5个字的时候，在第 <span class="math inline">\(l\)</span>
-层的时候，由于前面我们缓存了<u><strong>每层</strong></u>的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，那本层就只需要算新的 <span class="math inline">\(o_{3}\)</span> ，而不用算 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span> 。</p>
-<p>因为第 <span class="math inline">\(l\)</span> 层的 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span>
-本来会经过FNN层之后进到 <span class="math inline">\(l+1\)</span>
-层，再经过新的投影变换，成为 <span class="math inline">\(l+1\)</span>
-层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，但是 <span class="math inline">\(l+1\)</span> 层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值我们已经缓存过了！</p>
-<p>然后我们把本次新增算出来的 <span class="math inline">\(k\)</span> 、
-<span class="math inline">\(v\)</span> 值也存入缓存。</p>
-<p><span class="math display">\[
-\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
-v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
-\]</span></p>
-<center>
-↓
-</center>
-<p><span class="math display">\[
-\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
-v_{1}^{l}),(k_{2}^{l}, v_{2}^{l}),(k_{3}^{l}, v_{3}^{l})]
-\]</span></p>
-<p>这样就节省了attention和FFN的很多重复计算。</p>
-<p>transformers中，生成的时候传入use_cache=True就会开启KV Cache。</p>
-<p>也可以简单看下GPT2中的实现，中文注释的部分就是使用缓存结果和更新缓存结果</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Class GPT2Attention(nn.Module):</span><br><span class="line">    ...</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params"></span></span><br><span class="line"><span class="params">        self,</span></span><br><span class="line"><span class="params">        hidden_states: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.FloatTensor]],</span></span><br><span class="line"><span class="params">        layer_past: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.Tensor]] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        head_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_hidden_states: <span class="type">Optional</span>[torch.Tensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        use_cache: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">        output_attentions: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">    </span>) -&gt; <span class="type">Tuple</span>[<span class="type">Union</span>[torch.Tensor, <span class="type">Tuple</span>[torch.Tensor]], ...]:</span><br><span class="line">        <span class="keyword">if</span> encoder_hidden_states <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">not</span> <span class="built_in">hasattr</span>(self, <span class="string">&quot;q_attn&quot;</span>):</span><br><span class="line">                <span class="keyword">raise</span> ValueError(</span><br><span class="line">                    <span class="string">&quot;If class is used as cross attention, the weights `q_attn` have to be defined. &quot;</span></span><br><span class="line">                    <span class="string">&quot;Please make sure to instantiate class with `GPT2Attention(..., is_cross_attention=True)`.&quot;</span></span><br><span class="line">                )</span><br><span class="line"></span><br><span class="line">            query = self.q_attn(hidden_states)</span><br><span class="line">            key, value = self.c_attn(encoder_hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line">            attention_mask = encoder_attention_mask</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            query, key, value = self.c_attn(hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">        query = self._split_heads(query, self.num_heads, self.head_dim)</span><br><span class="line">        key = self._split_heads(key, self.num_heads, self.head_dim)</span><br><span class="line">        value = self._split_heads(value, self.num_heads, self.head_dim)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 过去所存的值</span></span><br><span class="line">        <span class="keyword">if</span> layer_past <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            past_key, past_value = layer_past</span><br><span class="line">            key = torch.cat((past_key, key), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的key加入</span></span><br><span class="line">            value = torch.cat((past_value, value), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的value加入</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> use_cache <span class="keyword">is</span> <span class="literal">True</span>:</span><br><span class="line">            present = (key, value)  <span class="comment"># 输出用于保存</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            present = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.reorder_and_upcast_attn:</span><br><span class="line">            attn_output, attn_weights = self._upcast_and_reordered_attn(query, key, value, attention_mask, head_mask)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)</span><br><span class="line"></span><br><span class="line">        attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)</span><br><span class="line">        attn_output = self.c_proj(attn_output)</span><br><span class="line">        attn_output = self.resid_dropout(attn_output)</span><br><span class="line"></span><br><span class="line">        outputs = (attn_output, present)</span><br><span class="line">        <span class="keyword">if</span> output_attentions:</span><br><span class="line">            outputs += (attn_weights,)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> outputs  <span class="comment"># a, present, (attentions)</span></span><br></pre></td></tr></table></figure>
-<p>总的来说，KV
-Cache是以空间换时间的做法，通过使用快速的缓存存取，减少了重复计算。（注意，只有decoder结构的模型可用，因为有mask
-attention的存在，使得前面的token可以不用关注后面的token）</p>
-<p>但是，用了KV Cache之后也不是立刻万事大吉。</p>
-<p>我们简单算一下，对于输入长度为 <span class="math inline">\(s\)</span>
-，层数为 <span class="math inline">\(L\)</span> ，hidden size为 <span class="math inline">\(d\)</span> 的模型，需要缓存的参数量为</p>
-<p><span class="math display">\[
-2\times L\times s\times d
-\]</span></p>
-<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
-<p><span class="math display">\[
-2\times 2\times L\times s\times d
-\]</span></p>
-<p>以Llama2 7B为例，有 <span class="math inline">\(L=32\)</span> ，
-<span class="math inline">\(L=4096\)</span>
-，那么每个token所需的缓存空间就是524,288 bytes，约52K，当 <span class="math inline">\(s=1024\)</span> 时，则需要536,870,912
-bytes，超过500M的空间。</p>
-<p>这里考虑的还只是batch size=1的情况，如果batch
-size增大，这个值更是很容易就超过1G。</p>
-<p>（MHA相比单头的情况，相当于只是把 <span class="math inline">\(q、k、v\)</span>
-切成多份并行计算了，对于实际需要缓存的大小没有影响）</p>
-<p>看下现在主流的科学计算卡配置</p>
-<img src="/3dc22f96/gpu_cache.png" class title="gpu cache">
-<p>强如H100也只有50M的L2 Cache（L1
-Cache的大小更是可以忽略不计），大概只能支持Llama2
-7B总共100个token左右的输入。</p>
-<p>想想我们现在用的LLM动辄34B/70B的规模，长度更是以千为基础单位，这样明显是不够用的。</p>
-<p>那么超出L2 Cache的部分只能走到显存中去了，但是HBM速度比L2
-Cache慢多了。</p>
-<img src="/3dc22f96/sram_dram.png" class title="储存空间与速度">
-<p>看来还需要进一步优化。</p>
-<p>要保证模型的推理加速，要么增大Cache的大小，而且是需要一到两个数量级的增强，那这个只能靠黄老板了。</p>
-<p>要么就是减少需要缓存的量。</p>
-<h1 id="mqa">MQA</h1>
-<p>MQA就是来减少缓存所需要的量的。</p>
-<p>Google在2019年就在《Fast Transformer Decoding: One Write-Head is All
-You
-Need》提出了MQA，不过那时候主要到的人不多，那是大家主要还是关注在用Bert把榜刷出新高上。</p>
-<p>MQA的做法其实很简单。在MHA中，输入分别经过 <span class="math inline">\(W_{Q}、W_{K}、W_{V}\)</span>
-的变换之后，都切成了n份（n=头数），维度也从 <span class="math inline">\(d_{model}\)</span> 降到了 <span class="math inline">\(d_{head}\)</span>
-，分别进行attention计算再拼接。而MQA这里，在线性变换之后，只对 <span class="math inline">\(Q\)</span> 进行切分（和MHA一样），而 <span class="math inline">\(K、V\)</span> 则直接在线性变换的时候把维度降到了
-<span class="math inline">\(d_{head}\)</span>
-（而不是切分变小），然后这n个Query头分别和同一份 <span class="math inline">\(K、V\)</span>
-进行attention计算，之后把结果拼接起来。</p>
-<p>简单来说，就是MHA中，每个注意力头的 <span class="math inline">\(K、V\)</span>
-是不一样的，而MQA这里，每个注意力头的 <span class="math inline">\(K、V\)</span>
-是一样的，值是共享的。而其他步骤都和MHA一样。</p>
-<img src="/3dc22f96/MQA.webp" class title="MQA">
-<p>这样一来，需要缓存的 <span class="math inline">\(K、V\)</span>
-值一下就从所有头变成一个头的量。</p>
-<p>比如在Llama2
-7B中用的是32个头，那用MQA后，1024个token需要缓存的量就变成1/32，536,870,912
-bytes / 32 = 16,777,216 bytes，差不多是16M，这就能全塞进缓存中了。</p>
-<p>（实现上，就是改一下线性变换矩阵，然后把 <span class="math inline">\(K、V\)</span>
-的处理从切分变成复制，就不再赘述。）</p>
-<p>当然，由于共享了多个头的参数，限制了模型的表达能力，MQA虽然能好地支持推理加速，但是在效果上略略比MHA差一点，但是并不多，且相比其他修改hidden
-size或者head num的做法效果都好。</p>
-<img src="/3dc22f96/mqa_result_1.png" class title="MQA results 1">
-<img src="/3dc22f96/mqa_result_3.png" class title="MQA results 3">
-<h1 id="gqa">GQA</h1>
-<p>既然MQA对效果有点影响，MHA缓存又存不下，那GQA（Grouped-Query
-Attention）就提出了一个折中的办法，既能减少MQA效果的损失，又相比MHA需要更少的缓存。</p>
-<p>（文章：《GQA: Training Generalized Multi-Query Transformer Models
-from Multi-Head Checkpoints》，2023年）</p>
-<p>GQA里， <span class="math inline">\(Q\)</span>
-还是按原来MHA/MQA的做法不变。只使用一套共享的 <span class="math inline">\(K、V\)</span>
-不是效果不好吗，那就还是多弄几套。但是不要太多，数量还是比 <span class="math inline">\(Q\)</span> 的头数少一些。这样相当于把 <span class="math inline">\(Q\)</span> 的多个头给分了group，同一个group内的
-<span class="math inline">\(Q\)</span> 共享同一套 <span class="math inline">\(K、V\)</span> ，不同group的 <span class="math inline">\(Q\)</span> 所用的 <span class="math inline">\(K、V\)</span> 不同。</p>
-<p>MHA可以认为是 <span class="math inline">\(K、V\)</span>
-头数最大时的GQA，而MQA可以任务是 <span class="math inline">\(K、V\)</span> 头数最少时的GQA。</p>
-<p>看论文里的图就很直观</p>
-<img src="/3dc22f96/GQA.png" class title="GQA">
-<p>效果怎么样呢？</p>
-<img src="/3dc22f96/GQA_result_1.png" class title="GQA result">
-<p>看表中2/3/4行对比，GQA的速度相比MHA有明显提升，而效果上比MQA也好一些，能做到和MHA基本没差距。文中提到，这里的MQA和GQA都是通过average
-pooling从MHA初始化而来，然后进行了少量的训练得到的。如果我们想要把之前用MHA训练的模型改造成GQA，也可以通过这样的方法，增加少量训练来实现。当然如果从一开始就加上，从零开始训练，也是没有问题的。</p>
-<p>Llama2用的就是GQA，在tech
-report中也做了MHA、MQA、GQA的效果对比，可以看到效果确实很不错。</p>
-<img src="/3dc22f96/llama2_qga.png" class title="llama2 GQA result">
-<h1 id="小结">小结</h1>
-<p>MHA、MQA、GQA的实现其实并不复杂，效果也很好，理解上并没有太多困难。但是想要真正理解它们的出发点，还是需要深入每一个细节，去了解当时要解决的事什么问题。</p>
-<p>目前来看GQA是LLM比较好的方案，但未来肯定还会有针对不同方向的进一步优化方案，计算效率、推理速度、显存消耗这些方向都值得我们继续去探索优化。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<h1 id="reference">Reference</h1>
-<p>【1】The Annotated Transformer
-https://nlp.seas.harvard.edu/2018/04/03/attention.html<br>
-【2】Attention Is All You Need
-https://arxiv.org/pdf/1706.03762.pdf<br>
-【3】Fast Transformer Decoding: One Write-Head is All You Need
-https://arxiv.org/pdf/1911.02150.pdf<br>
-【4】https://www.researchgate.net/figure/Scaled-dot-product-self-attention-mechanism_fig1_363923096<br>
-【5】GQA: Training Generalized Multi-Query Transformer Models from
-Multi-Head Checkpoints https://arxiv.org/pdf/2305.13245.pdf<br>
-【6】How Attention works in Deep Learning: understanding the attention
-mechanism in sequence models https://theaisummer.com/attention/<br>
-【7】A simple overview of RNN, LSTM and Attention Mechanism
-https://medium.com/swlh/a-simple-overview-of-rnn-lstm-and-attention-mechanism-9e844763d07b<br>
-【8】https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention<br>
-【9】浅谈Transformer的初始化、参数化与标准化
-https://spaces.ac.cn/archives/8620<br>
-【10】https://theaisummer.com/self-attention/
-https://theaisummer.com/self-attention/<br>
-【11】https://zhuanlan.zhihu.com/p/626820422
-https://zhuanlan.zhihu.com/p/626820422<br>
-【12】Are Sixteen Heads Really Better than One?
-https://arxiv.org/pdf/1905.10650.pdf<br>
-【13】This post is all you need（上卷）——层层剥开Transformer
-https://zhuanlan.zhihu.com/p/420820453<br>
-【14】The Illustrated Transformer
-https://jalammar.github.io/illustrated-transformer/<br>
-【15】Multi-Query Attention is All You Need
-https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055</p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>attention</tag>
-        <tag>KV Cache</tag>
       </tags>
   </entry>
   <entry>
@@ -2144,6 +844,1649 @@ https://zhuanlan.zhihu.com/p/678755776 ***</p>
         <tag>transformer</tag>
         <tag>长上下文</tag>
         <tag>窗口外推</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>稀疏注意力计算:sliding window attention</title>
+    <url>/c61d17e3.html</url>
+    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
+<p>LLM的长文本能力现在已经是各个大模型巨头的必争之地。</p>
+<p>我们之前在<a href="http://www.linsight.cn/c4da56c0.html">《LLM长上下文的问题》</a>简单介绍了目前把大模型理解和生成能力推广到32k+/128k+的主流方法，在<a href="http://www.linsight.cn/3dc22f96.html">《理解Attention:从起源到MHA,MQA和GQA》</a>一文中也解析了MQA和GQA通过节省KV缓存的方式，支持模型在长上下文情况下推理加速的方案。</p>
+<p>在这讲一下另一种（理论有损）提升注意力计算效率的方法：SWA（sliding
+window attention）。</p>
+<p>一些效果受到广泛关注的模型，如Qwen系列和Mistral就使用了SWA。</p>
+<p>关于Mistral：</p>
+<p>Mistral
+AI是法国一家AI独角兽公司，2023年5月才成立，但是在2023年9月和12月就分别推出了Mistral
+7B和MoE模型Mistral 8x7B并开源。</p>
+<p>2024年2月，微软也投资了它。</p>
+<img src="/c61d17e3/ms_invest_mistral.png" class title="MS">
+<p>它在2024年2月发布的Mistral Large，支持多语言 &amp;
+32k的上下文长度，在MMLU上也是获得了直逼GPT4的效果</p>
+<img src="/c61d17e3/mistral_large_performance.jpeg" class title="Mistral Large MMLU Performance">
+<p>（大家也因此对Mistral寄予了厚望，希望它能成为大模型行业的鲶鱼，激活一下OPENAI和META加速一下开源。）</p>
+<h1 id="swa">SWA</h1>
+<p>虽然SWA的思路最早不是Mistral提出的，我们还是先以Mistral
+7B为例来看下SWA的具体做法。</p>
+<h2 id="mistral-7b">Mistral 7B</h2>
+<p>2023年10月，Mistral发布了Mistral 7B的<a href="https://arxiv.org/pdf/2310.06825.pdf">技术报告</a>。其中开篇就说到，相比Llama，Mistral在结构上做了一些改动，除了GQA，另一个用于支持长文本下高效推理的改动就是SWA。</p>
+<p>来看下Mistral 7B的模型结构参数</p>
+<img src="/c61d17e3/mistral_architechture.png" class title="Mistral Architechture">
+<p>Mistral使用了kv组数=8的GQA，intermediate
+size相比Llama2（11008）大一些，其他基本没有太大变化。</p>
+<h2 id="计算量和缓存">计算量和缓存</h2>
+<p>对于原始的causal
+attention，其注意力矩阵是一个下三角矩阵，这样每个token都能看到自己和在自己前面的token。</p>
+<p>这样随着输入长度 <span class="math inline">\(s\)</span>
+增大，这个下三角矩阵中1的元素数量以 <span class="math inline">\(s^2\)</span> 的速度增长，带来的是计算量和所需的KV
+Cache以平方的速度增长。</p>
+<p>（我们知道计算量/缓存和长度 <span class="math inline">\(s\)</span>
+成平方关系，这里放一些更具体的推算细节，已经熟悉的朋友可以跳过）</p>
+<p>（1）计算量</p>
+<p>对于两个这样大小的矩阵相乘： <span class="math inline">\([m,n]\times[n,p]\)</span> ，输出矩阵大小为 <span class="math inline">\([m,p]\)</span>，共有 <span class="math inline">\(m\times p\)</span> 个元素，每个元素需要 <span class="math inline">\(n\)</span> 次乘法和 <span class="math inline">\(n\)</span> 次加法，因此一次矩阵乘法有 <span class="math inline">\(2mpn\)</span> 个floating point
+operations（FLOPs）。</p>
+<p>计算量上，按<a href="https://arxiv.org/pdf/2203.15556.pdf">《Training
+Compute-Optimal Large Language Models》</a>的算法来。</p>
+<p>对于一般MHA，输入长度为 <span class="math inline">\(s\)</span>
+，层数为 <span class="math inline">\(L\)</span> ，模型hidden size为
+<span class="math inline">\(d_{model}\)</span> ，每个头的维度为 <span class="math inline">\(d_{q}\)</span> ， 头的数量为 <span class="math inline">\(n_{q}\)</span>（这里假设有 <span class="math inline">\(d_{model} = n_{q}\times d_{q}\)</span>
+），各个operation的FLOPs如下</p>
+<center>
+<table>
+<colgroup>
+<col style="width: 45%">
+<col style="width: 54%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Operation</th>
+<th style="text-align: center;">FLOPs（MHA）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Attention: QKV</td>
+<td style="text-align: center;"><span class="math inline">\(6\times
+s\times h_{model}^{2}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Attention: QK logits ( <span class="math inline">\(QK^T\)</span> )</td>
+<td style="text-align: center;"><span class="math inline">\(n_{q}\times
+2\times s^2\times h_{q}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Attention: Softmax</td>
+<td style="text-align: center;"><span class="math inline">\(n_{q}\times
+3\times s^2\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Attention: Reduction (apply to <span class="math inline">\(V\)</span>)</td>
+<td style="text-align: center;"><span class="math inline">\(n_{q}\times
+2\times s^2\times h_{q}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Attention: Outupt Linear Project</td>
+<td style="text-align: center;"><span class="math inline">\(2\times
+s\times h_{model}^{2}\)</span></td>
+</tr>
+</tbody>
+</table>
+</center>
+<p>Softmax项中，对一个 <span class="math inline">\([1,s]\)</span>
+的向量做softmax，计算量为 <span class="math inline">\(3s\)</span> （一个
+<span class="math inline">\(s\)</span> 是算每个元素的exp，一个 <span class="math inline">\(s\)</span> 是求和算分母，一个 <span class="math inline">\(s\)</span> 是算除法），而对 <span class="math inline">\([s,s]\)</span> 的矩阵做softmax，则计算量为 <span class="math inline">\(3s^2\)</span> ，每个头都要计算一遍，因此再乘以
+<span class="math inline">\(n_{q}\)</span> 。</p>
+<p>（这里忽略了其他一些operation，比如scaling，dropout等，有兴趣的朋友可以自己推算一下）</p>
+<p>顺便算下对于Mistral 7B这样使用了GQA的情况。</p>
+<p>其实只有第一项的KV有变化，其他都没变。假设kv头的数量为 <span class="math inline">\(n_{kv}\)</span>，则有</p>
+<center>
+<table>
+<colgroup>
+<col style="width: 45%">
+<col style="width: 54%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Operation</th>
+<th style="text-align: center;">FLOPs（GQA）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Attention: QKV</td>
+<td style="text-align: center;"><span class="math inline">\(2\times
+s\times h_{model}^{2}\\+4\times s\times h_{model}\times (h_{q}\times
+n_{kv})\)</span></td>
+</tr>
+</tbody>
+</table>
+</center>
+<p>从上面的推算可以看到QK logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span> 成平方关系的，其他则是线性关系。</p>
+<p>（2）缓存</p>
+<p>KV Cache需要缓存的参数量为</p>
+<p><span class="math display">\[
+2\times L\times s\times d_{q}\times n_{kv}
+\]</span></p>
+<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
+<p><span class="math display">\[
+2\times 2\times L\times s\times d_{q}\times n_{kv}
+\]</span></p>
+<p>对于Mistral 7B，在输入长度为16k的情况下，所需的KV_Cache约为2G。</p>
+<p>看来虽然用了GQA，但是在长文本（16k+）的情况下计算量和显存还是颇有压力。</p>
+<h2 id="swa思路">SWA思路</h2>
+<p>看来要提升attention计算效率，需要想办法减小上面推算中的 <span class="math inline">\(s\)</span> ，但是怎么在减小 <span class="math inline">\(s\)</span>
+的同时，还能保持模型长上下文的理解和生成能力呢？</p>
+<p>来看一下，CNN中的感受野</p>
+<img src="/c61d17e3/receptive_field_cnn.png" class title="CNN Receptive Field">
+<p>如上图，假设模型有3层，每层卷积核大小为 <span class="math inline">\(3\times 3\)</span>
+（实际上CNN里卷积操作就是一个sliding window）。</p>
+<p>那对于layer 3，每一个像素能看到layer 2中的一个 <span class="math inline">\(3\times 3\)</span> 的区域，layer
+2中其他较远的像素就看到不了。</p>
+<p>但我们再往前推，layer 2里的每个像素也可以看到layer 1中的一个 <span class="math inline">\(3\times 3\)</span> 区域，那么layer 2中的 <span class="math inline">\(3\times 3\)</span> 区域就可以看到layer 1中一个
+<span class="math inline">\(5\times 5\)</span> 的区域，相当于layer
+3中一个像素可以<u><strong>间接</strong></u>看到一个 <span class="math inline">\(5\times 5\)</span> 的输入。</p>
+<p>以此类推，如果我们再增加一层layer 4，那么layer
+4中一个像素就能获取输入层（layer 1） 一个 <span class="math inline">\(7\times 7\)</span> 区域的信息。</p>
+<p>虽然每层只能多看周围一格的信息，但是只要我们层数够多，理论上靠近输出端的层想看多远就能看多远。</p>
+<p>值得注意的一点是，我们一般认为模型低层部分提取比较基础的特征，而高层会提取高级的语义特征。</p>
+<p>在CNN里，前几层提取的可能更多是关于简单的边界、颜色、形状等基础特征，而后面的层则提取较复杂的语义特征，比如在分类任务中会是和分类类别相关的花纹、物体大小、风格等特征。</p>
+<p>如果我们把模型设计成，最后一层的一个像素刚好要到第一层才能接收到全局信息（在其它层都只能看到局部），那对于图像边缘的语义特征识别能力可能会受到一些限制。</p>
+<p>具体来说，假设我们做猫和狗的图像分类任务，如果这个时候决定性的特征出现在图像最边缘几个像素里，那这种情况下的错误率会比特征出现在图像中间时要高。</p>
+<p>而对于语言模型，一般情况下，越远距离的信息，对当前位置的重要性越低，因此只要我们的窗口大小不要太过极限小，问题应该都还不大。</p>
+<p>看下Mistral的SWA具体是怎么做的</p>
+<img src="/c61d17e3/mistral_swa.png" class title="Mistral SWA">
+<p>左边是正常的causal
+attention，每个位置能看到自己和前面的位置，attention
+mask是个下三角矩阵。</p>
+<p>中间则是SWA的attention
+mask，这里的窗口大小为3。包括自己在内，每个位置只能往前看3个输入。</p>
+<p>同CNN的感受野一样，随着层数的堆叠，模型理论上能处理的最远距离也逐层线性递增。只是LLM里递增的方向是单向的，只能往前。</p>
+<p>Mistral 7B使用了4096的窗口大小，模型层数为32，则最终输出的”感受野“为
+<span class="math inline">\(4096\times 32=131,072\)</span>
+达到131k的长度。</p>
+<p>前面我们推算了attention的计算量，其中QK
+logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span>
+成平方关系。在使用了SWA之后，理论上，这几个operation仅使用4k的计算量，就能获得131k的上下文效果。当输入长度为131k时，除去已经缓存部分的数值，新的输入计算量相差
+<span class="math inline">\(32\times 32=1024\)</span> 倍。</p>
+<p>而缓存和上下文长度 <span class="math inline">\(s\)</span>
+成线性关系，当上下文长度为131k时，最大也能节省 <span class="math inline">\(31/32\)</span> 的显存。</p>
+<p>即SWA在上下文长度在4k以下时，和普通causal
+attention一样；当上下文长度超过4k时，则相对节省资源，长度越大，节省的比例越高。</p>
+<blockquote>
+<p>In practice, for a sequence length of 16K and W = 4096, changes made
+to FlashAttention [11] and xFormers [18] yield a 2x speed improvement
+over a vanilla attention baseline.</p>
+</blockquote>
+<p>实际使用中，Mistral通过把SWA实现在FlashAttention和xFormers中，对于16k的上下文长度，获得了2倍的速度提升。</p>
+<h2 id="和kv-cache的配合实现">和KV Cache的配合实现</h2>
+<p>在不使用sliding window的情况下，随着自回归推理的进行，KV
+Cache是只增不减的。</p>
+<p>而在使用SWA的情况下，超出窗口长度的kv就可以不用再缓存了，因此使用一个轮转替换的策略。</p>
+<p>比如窗口大小 <span class="math inline">\(W=4\)</span>
+，则当第5个token需要缓存是，直接替换掉第1个token，这样就可以保持kv缓存有一个最大值（为窗口大小），而不会无限增长。</p>
+<img src="/c61d17e3/rolling_buffer.png" class title="swa rolling buffer">
+<p>这样便于我们估计硬件设备所能支持的throughput，也不会因为少量超长的case而造成堵塞，在工程上有利于提高硬件利用率，降低成本。</p>
+<h2 id="长prompt的分块">长Prompt的分块</h2>
+<p>更近一步，考虑到我们使用RAG或者funciton
+call的时候，都会使用比较长的，固定的prompt来知道模型的行为。</p>
+<p>比如GPT4就被诱导说出它接收到的长system
+prompt（当然未必真的就是OPENAI用的）</p>
+<blockquote>
+<p>Your user's user agent is "Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+and the user's locale is "en-US" Your knowledge cutoff date is 2023-04.
+The current date is 2024-02-07. Image input capabilities: Enabled</p>
+<p>Tools</p>
+<p>python</p>
+<p>When you send a message containing Python code to python, it will be
+executed in a stateful Jupyter notebook environment. python will respond
+with the output of the execution or time out after 60.0 seconds. The
+drive at '/mnt/data' can be used to save and persist user files.
+Internet access for this session is disabled. Do not make external web
+requests or API calls as they will fail.</p>
+<p>dalle</p>
+<p>Whenever a description of an image is given, create a prompt that
+dalle can use to generate the image and abide to the following policy:
+1. The prompt must be in English. Translate to English if needed. 2. DO
+NOT ask for permission to generate the image, just do it! 3. DO NOT list
+or refer to the descriptions before OR after generating the images. 4.
+Do not create more than 1 image, even if the user requests more. 5. Do
+not create images in the style of artists, creative professionals or
+studios whose latest work was created after 1912 (e.g. Picasso, Kahlo).
+- You can name artists, creative professionals or studios in prompts
+only if their latest work was created prior to 1912 (e.g. Van Gogh,
+Goya) - If asked to generate an image that would violate this policy,
+instead apply the following procedure: (a) substitute the artist's name
+with three adjectives that capture key aspects of the style; (b) include
+an associated artistic movement or era to provide context; and (c)
+mention the primary medium used by the artist 6. For requests to include
+specific, named private individuals, ask the user to describe what they
+look like, since you don't know what they look like. 7. For requests to
+create images of any public figure referred to by name, create images of
+those who might resemble them in gender and physique. But they shouldn't
+look like them. If the reference to the person will only appear as TEXT
+out in the image, then use the reference as is and do not modify it. 8.
+Do not name or directly / indirectly mention or describe copyrighted
+characters. Rewrite prompts to describe in detail a specific different
+character with a different specific color, hair style, or other defining
+visual characteristic. Do not discuss copyright policies in responses.
+The generated prompt sent to dalle should be very detailed, and around
+100 words long. Example dalle invocation: { "prompt":
+"<insert prompt here>" } namespace dalle {</insert></p>
+<p>Create images from a text-only prompt. type text2im = (_: { The size
+of the requested image. Use 1024x1024 (square) as the default, 1792x1024
+if the user requests a wide image, and 1024x1792 for full-body
+portraits. Always include this parameter in the request. n?: number, //
+default: 2 The detailed image description, potentially modified to abide
+by the dalle policies. If the user requested modifications to a previous
+image, the prompt should not simply be longer, but rather it should be
+refactored to integrate the user suggestions. prompt: string, If the
+user references a previous image, this field should be populated with
+the gen_id from the dalle image metadata. referenced_image_ids?:
+string[], }) =&gt; any; } // namespace dalle</p>
+<p>voice_mode Voice mode functions are not available in text
+conversations. namespace voice_mode { } // namespace voice_mode</p>
+<p>browser</p>
+<p>You have the tool <code>browser</code>. Use <code>browser</code> in
+the following circumstances: - User is asking about current events or
+something that requires real-time information (weather, sports scores,
+etc.) - User is asking about some term you are totally unfamiliar with
+(it might be new) - User explicitly asks you to browse or provide links
+to references</p>
+<p>Given a query that requires retrieval, your turn will consist of
+three steps: 1. Call the search function to get a list of results. 2.
+Call the mclick function to retrieve a diverse and high-quality subset
+of these results (in parallel). Remember to SELECT AT LEAST 3 sources
+when using <code>mclick</code>. 3. Write a response to the user based on
+these results. In your response, cite sources using the citation format
+below.</p>
+<p>In some cases, you should repeat step 1 twice, if the initial results
+are unsatisfactory, and you believe that you can refine the query to get
+better results.</p>
+<p>You can also open a url directly if one is provided by the user. Only
+use the <code>open_url</code> command for this purpose; do not open urls
+returned by the search function or found on webpages.</p>
+<p>The <code>browser</code> tool has the following commands:
+<code>search(query: str, recency_days: int)</code> Issues a query to a
+search engine and displays the results.
+<code>mclick(ids: list[str])</code>. Retrieves the contents of the
+webpages with provided IDs (indices). You should ALWAYS SELECT AT LEAST
+3 and at most 10 pages. Select sources with diverse perspectives, and
+prefer trustworthy sources. Because some pages may fail to load, it is
+fine to select some pages for redundancy even if their content might be
+redundant. <code>open_url(url: str)</code> Opens the given URL and
+displays it.</p>
+<p>For citing quotes from the 'browser' tool: please render in this
+format: 【{message idx}†{link text}】. For long citations: please render
+in this format: <a href="message%20idx">link text</a>. Otherwise do not
+render links.</p>
+</blockquote>
+<p>除了预先计算好system
+prompt的kv值，并保存在缓存中方便每次用户输入使用外，如果system
+prompt很长（比sliding window大），还可以通过对system
+prompt的kv值进行切分来进一步优化计算。</p>
+<p>比如窗口大小 <span class="math inline">\(W=4\)</span>，system
+prompt大小为9时，就可以把system prompt的kv缓存切成 [4,4,1] 三块。</p>
+<p>第一块由于和当前的输入距离超过了一个window的大小，所以是完全看不见的，对应的attention
+mask全为0，因此可以完全忽略。</p>
+<p>第二块的attention
+mask则是一个上三角矩阵，当前的输入需要用到这部分信息。</p>
+<p>第三块是一个下三角矩阵（的左边部分），包含了当前的输入在内。</p>
+<p>在推理的时候，我们只需要用到第二块和第三块的内容，这就节省了缓存的操作。</p>
+<p>而且无论prompt有多长，只要我们按窗口大小分块，一定只会用到最后两块。</p>
+<img src="/c61d17e3/prefill_and_chunking.png" class title="prefill and chunking">
+<p>（实际上现在推理框架基本上都有FlashAttention/PagedAttention等技术加持，能够进一步节省资源，提高效率，这个后续再开一篇讲）</p>
+<p>Mistral
+7B整体的效果上的效果相比Llama是有优势的，部分任务甚至超过了Llama
+34B。</p>
+<img src="/c61d17e3/mistral_perf.png" class title="mistral performance">
+<p>Mistral认为大语言模型压缩知识的能力实际超过我们的认知，7B这个规模的效果还有提升空间。</p>
+<h1 id="sparse-attention">Sparse Attention</h1>
+<p>SWA实际上是一种sparse attention，而sparse
+attention也有许多工作做了深入探索。</p>
+<p>这里简单说一小部分，有机会再完整梳理一遍sparse
+attention的理论和实践。</p>
+<h2 id="longformer">Longformer</h2>
+<p>前面提到，Mistral并不是第一个使用SWA的。</p>
+<p>2020年，<a href="https://arxiv.org/pdf/2004.05150.pdf">《Longformer:
+The Long-Document Transformer》</a>就提出包含SWA在内的一系列sparse
+attention的做法。</p>
+<p>从文章名字就看到出来，Longformer主要目的也是为了解决长上下文的问题。</p>
+<img src="/c61d17e3/longformer_attention.png" class title="longformer">
+<p>上图中的（b）就是SWA，只是用在Bert中的时候它是双向的。</p>
+<p>在SWA的基础上，还可以进行空洞滑窗（dilated sliding
+window），在不增加计算量的情况下，提升感受野。这也是从空洞卷积（下图）来的灵感了。</p>
+<img src="/c61d17e3/dilated_conv.png" class title="dilated convolution">
+<p>还可以更进一步优化attention。无论是SWA还是dilated sliding
+window，每个位置都只能看到局部的信息。</p>
+<p>但是实际上有些位置就是对全局信息有很高的需求。</p>
+<p>在Bert中，[CLS]
+token就常常作为分类token或者相似度向量使用，这种情况下就需要它能获取整个上下文的完整信息。</p>
+<p>而在GPT中，instruction，或者说prompt的部分也对全局信息有更高要求，因为我们希望在整个对话过程中，模型都能遵循我们给出的规则。</p>
+<p>对于这些token，我们让它可以看到其他所有位置，使用完整的global
+attention，而其他位置则使用sliding window，如（d）中所示。</p>
+<h2 id="big-bird">Big Bird</h2>
+<p>无独有偶，同样在2020年，和Longformer差不多在同一时期，也有另外一个通过sparse
+attention来优化长文本效果的工作，<a href="https://arxiv.org/abs/2007.14062">《Big Bird: Transformers for
+Longer Sequences》</a>。</p>
+<p>其中sliding window和global attention结合的思路和Longformer相似。Big
+Bird还额外加入了一个random attention的做法。</p>
+<img src="/c61d17e3/big_bird_attention.png" class title="big bird attention">
+<p>上图中 <span class="math inline">\(r=2\)</span>
+即每个位置使用2个随机注意力。</p>
+<h1 id="小结">小结</h1>
+<p>SWA在优化长上下文的计算效率上有明显的收益。而在模型效果上，目前基本没有看到不可接受的损失。对长上下文有需求的业务，值得探索。</p>
+<p>除了SWA，sparse
+attention还有许多其他探索。目前来看，这些做法都有一定的理论基础，效果也不错。但是阻碍这些方案大规模使用的一个原因就是<big><strong>工程实现</strong></big>，比如如何高效计算global
++ local attention，在flash attention中能够支持random
+attention，这都是要考虑的内容。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Mistral 7B https://arxiv.org/pdf/2310.06825.pdf<br>
+【2】Longformer: The Long-Document Transformer
+https://arxiv.org/pdf/2004.05150.pdf<br>
+【3】Training Compute-Optimal Large Language Models
+https://arxiv.org/pdf/2203.15556.pdf<br>
+【4】GPT-4 System Prompt Revealed
+https://patmcguinness.substack.com/p/gpt-4-system-prompt-revealed<br>
+【5】Big Bird: Transformers for Longer Sequences
+https://arxiv.org/abs/2007.14062</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>attention</tag>
+        <tag>sliding window attention</tag>
+        <tag>sparse attention</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Yi技术报告-划重点看细节</title>
+    <url>/41b6a819.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>01.AI（零一万物），是李开复带队孵化的AI公司。2023年11月初，01.AI发布并开源了Yi-6B、Yi-34B
+base模型，同一周内，又开源了Yi-6B-200K和Yi-34B-200K
+base模型。Yi号称是从零预训练的双语模型。接下来的几个月，01.AI陆续推出了chat模型、多模态能力，Yi-9B、长上下文的记忆和检索能力等优化。</p>
+<p>从2023年11发布起，个人就有测试和使用Yi的模型。在SuperCLUE/CMMLU等一些榜单数据的实测上，发现Yi的效果确实不错。实际工作使用里，Yi的效果基本也都能排在同时期中文（开源）大模型里的第一梯队。</p>
+<p>2024年3月，Yi终于发布了技术报告，在此来梳理一下报告中的重点内容和值得关注的细节信息。</p>
+<h1 id="tldr">TL;DR</h1>
+<p>先给出核心内容的总结：</p>
+<ul>
+<li>Yi-34B模型int4量化之后，相比float16损失&lt;1%，可以跑在RTX4090上（24G显存）</li>
+<li>模型结构不需要太多变化，LLAMA2标准结构已经足够训出很好的效果</li>
+<li>3.1T的预训练数据远比scaling
+law建议的1T大，但是效果更好，并且模型还没饱和，继续增大数据量还能提升</li>
+<li>微调数据质量很重要，由算法人员直接标注，只要&lt;10k的数据量就足够了</li>
+<li>4k长度的基础预训练模型已经具备长文本能力，只需用长文本数据继续预训练，更新百步就有很好效果</li>
+<li>总之，数据要精心设计，数据质量要高，数据量要大</li>
+</ul>
+<h1 id="模型">模型</h1>
+<h2 id="规模选择">规模选择</h2>
+<p>Yi目前有6B、9B、34B三个规模，其中34B是主力模型。</p>
+<p>选择34B，而不是更大规模的原因，是这个规模能在24G显存的消费级显卡（如RTX4090）上运行。</p>
+<p>使用int4量化之后的34B模型可以运行在24G显存的GPU上。</p>
+<p>参考<a href="https://arxiv.org/abs/2301.12017">《Understanding INT4
+Quantization for Language Models: Latency Speedup, Composability, and
+Failure
+Cases》</a>的量化方法，Yi-34B的int8量化模型相比bf16模型，几乎可以做到效果无损（差距&lt;1%），而int4量化模型在大部分任务的损失也完全可以接受，具体效果如下表。</p>
+<img src="/41b6a819/eval.png" class title="Yi效果">
+<p>训练数据总共是3.1T token，这比DeepMind的scaling
+law所建议的1TB要大不少。目前能接触到的这个规模的模型，数据量基本都&lt;2T。</p>
+<p>（即提出Chinchilla模型的<a href="https://arxiv.org/abs/2203.15556">《Training Compute-Optimal Large
+Language Models》</a>的scaling law）</p>
+<p>也就是从scaling law的角度来说，Yi是overtrain的。</p>
+<p><big><strong>但是Yi实践结果证明，较小模型+更大规模的高质量数据，是可以获得进一步效果提升的，这也就让我们获得了高性价比的推理模型--34B推理成本+大训练投入，就能得到接近普通70B规模的推理效果。</strong></big></p>
+<h2 id="模型结构">模型结构</h2>
+<p>结构上，基于标准LLAMA2模型，做了一些变化</p>
+<ul>
+<li>注意力机制：LLAMA2只在70B用了GQA，Yi全系列都用了GQA，具体参数如下表<br>
+</li>
+<li>位置编码：RoPE，参考RoPE ABF（《Effective long-context scaling of
+foundation models》），base扩大到10M，用于支持长上下文。<br>
+</li>
+<li>激活函数：使用SwiGLU，参考《GLU Variants Improve Transformer》</li>
+</ul>
+<p>并且把activation
+size从4h降为8/3h，这里的说法是补偿了GQA带来的参数下降</p>
+<blockquote>
+<p>We use SwiGLU as Yi’s post-attention layer, reducing its activation
+size from 4h to 8/3h (h denotes hidden size) to be consistent with the
+normal post-attention layer. This adjustment also compensates for the
+reduction in parameter resulted from GQA, making the overall parameter
+count comparible of existing 7B and 34B models.</p>
+</blockquote>
+<img src="/41b6a819/model.png" class title="Yi模型结构">
+<p>关于模型结构，一个结论就是<big><strong>“虽然做了很多模型结构上的实验，但是最终发现，标准的结构就足以训出足够好的模型”</strong></big></p>
+<h2 id="tokenizer">tokenizer</h2>
+<ul>
+<li>用BPE，词表大小为64000，这个大小平衡了计算效率和表达能力；<br>
+</li>
+<li>其中数字全是单个的digit，让模型能更好地理解数字数据；<br>
+</li>
+<li>对于OOV的词，会降级用unicode编码 ；</li>
+<li>保留全角标点符号，不转为半角；</li>
+</ul>
+<p>另外，优先考虑英语的LLM在tokenizer会使用虚拟前缀（文本开头的空格）来泛化句子不同位置相同的单词。Yi不这么做，因为即使是在英语语境中，这种假设并不总是成立，比如对于以引号开头的句子，而且在中文语境中，这么做没有明显效果。</p>
+<h1 id="数据">数据</h1>
+<p>数据，是LLM最核心的部分，没有之一。Yi最核心的工作之一就是提升数据数量和质量。</p>
+<img src="/41b6a819/cover.png" class title="数据">
+<h2 id="预训练数据">预训练数据</h2>
+<p>预训练数据整体处理流程如下</p>
+<img src="/41b6a819/pretrain_data_pipeline.png" class title="预训练数据处理流程">
+<ol type="1">
+<li>语料获取 &amp; 语言分类</li>
+</ol>
+<p>从网络爬虫开始，爬取中英文这两种语言的网站，对网站内容进行解析。</p>
+<p>并参考CCNeT（《CCNet: Extracting High Quality Monolingual Datasets
+from Web Crawl Data》）的做法，进行语言识别。</p>
+<ol start="2" type="1">
+<li>规则过滤器 Heuristic Rule Filters</li>
+</ol>
+<p>目的是快速过滤掉明显的低质量数据。基于这些规则来过滤掉：</p>
+<ul>
+<li>URL、域名、单词黑名单和乱码文本；<br>
+</li>
+<li>文档长度、特殊符号的比例，以及短行、连续行或不完整行的比例；<br>
+</li>
+<li>重复的单词模式、n-gram或段落，参考《Scaling Language Models:
+Methods, Analysis &amp; Insights from Training
+Gopher》的做法，阈值则是来参考《CulturaX: A Cleaned, Enormous, and
+Multilingual Dataset for Large Language Models in 167 Languages》；</li>
+<li>数据脱敏：识别并匿名化个人信息（Personal Identifiable
+Information，PII），如电子邮件地址和电话号码。</li>
+</ul>
+<ol start="3" type="1">
+<li>可训练过滤器 Learned Filters</li>
+</ol>
+<p>对于不好用规则处理的，就用模型来学习模式，并进行清洗。共有4个scorer：</p>
+<ul>
+<li>Perplexity Scorer：参照《CCNet: Extracting High Quality Monolingual
+Datasets from Web Crawl
+Data》，用kenlm库，把高于平均perplexity的内容丢弃；</li>
+<li>Quality
+Scorer：识别如维基百科这样的高质量内容，丢弃低质量内容；</li>
+<li>Document Coherence
+Scorer：用于发现句子、段落零散不连贯的文本，要么分割，要么直接丢弃；</li>
+<li>Safety Scorer：识别并删除暴力、色情、涉政内容</li>
+</ul>
+<ol start="4" type="1">
+<li>基于聚类的过滤 Cluster-based Filters</li>
+</ol>
+<p>用聚类的方法，把所有文档进行分类。一方面用于给数据混合策略做参考，一方面如果整个类别的质量太差，就直接抛弃类别内的所有数据。</p>
+<ol start="5" type="1">
+<li>去重</li>
+</ol>
+<p>参考《The RefinedWeb Dataset for Falcon LLM: Outperforming Curated
+Corpora with Web Data, and Web Data
+Only》，做文档级的minhash去重，以及子文档级的完全匹配去重。</p>
+<p>最终获得的数据分布如下</p>
+<img src="/41b6a819/pretrain_data_dist.png" class title="预训练数据分布">
+<p>虽然数据规模一定要够，但是也不能因此就放弃数据质量，否则只能是garbage
+in，garbage out</p>
+<blockquote>
+<p>we prefer 3T tokens over sophasticated engineering over 10T tokens
+without extensive filtering</p>
+</blockquote>
+<p>这句话大概表示清洗前的数据有10T，这也是一个信息，符合质量的数据可能只有3成</p>
+<h2 id="微调数据">微调数据</h2>
+<p>对于微调数据，一句话：Quality is All You Need。</p>
+<p>一共只有&lt;10k条SFT数据，每条数据都通过人工多次打磨，这比大数量但质量一般的数据的效果好。</p>
+<p>这思路和《Gemini: A family of highly capable multimodal
+models.》、《Llama 2: Open Foundation and Fine-Tuned Chat
+Models》、《Lima: Less is more for alignment》一致，而和FLAN（《Scaling
+instruction-finetuned language models》）以及UltraChat（《Enhancing chat
+language models by scaling high-quality instructional
+conversations》）这样更关注数据量的做法不同。</p>
+<p>具体做法上有：</p>
+<ul>
+<li>对于<big><strong>prompt distribution
+selection</strong></big>：参考《Wizardlm: Empowering large language
+models to follow complex
+instructions》，开发复合指令，并通过指令进化，逐步增加指令的复杂度。这种做法显著减少了SFT数据量。<br>
+</li>
+<li>对于<big><strong>CoT data formatting</strong></big>：参考《Take a
+step back: Evoking reasoning via abstraction in large language
+models》，采用了“Step-Back”的模式。即通过抽象化处理，让模型学习在深入探讨原始、具体的问题之前，制定更高层次的解决方案。<br>
+</li>
+<li>对于<big><strong>response formatting</strong></big>：使用从《Lima:
+Less is more for
+alignment》扩展的默认样式。总体而言，response的结构为introduction-body-conclusion的格式，“where
+the body is usually a list of bullet point”。<br>
+</li>
+<li>在缓解<big><strong>幻觉</strong></big>问题上，思路是确保response中的知识不由模型内部产生，对应的做法是把会导致模型进行记忆的response删掉。（但是这个具体标准是什么，有没有了解的朋友说下看法？）<br>
+</li>
+<li>在缓解<big><strong>生成重复</strong></big>的问题上，则是直接把response中包含重复的部分都重写了。（核心还是洗数据，一条条打磨）<br>
+</li>
+<li>数据<big><strong>多样性</strong></big>很重要，因此参考《#instag:
+Instruction tagging for analyzing supervised fine-tuning of large
+language
+models》建立了一个打标系统，并设计一个注重多样性的采样算法，平衡了各个领域数据的分布。<br>
+</li>
+<li>为了找到最佳的数据<big><strong>配比</strong></big>，参考《How
+abilities in large language models are affected by supervised
+fine-tuning data composition》，使用近似网络搜索（approximate grid
+search），对每个领域以{1, 1/2, 1/4, 1/8, 1/16, 1/32,
+1/64}的比例进行实验和人工测评，找到最佳的组合方式。<br>
+</li>
+<li>除了内容，<big><strong>数据格式</strong></big>对效果也有很大影响。参OPENAI的ChatML格式（<a href="https://github.com/openai/openai-python/blob/e389823ba013a24b4c32ce38fa0bd87e6bccae94/chatml.md">https://github.com/openai/openai-python/blob/e389823ba013a24b4c32ce38fa0bd87e6bccae94/chatml.md</a>），这种结构化的格式使模型能够区分各种信息类型，如system
+prompt、user input和bot response。</li>
+</ul>
+<p>SFT数据质量能极大影响模型的效果，随着数据量的增加，高质量数据能带来更多提升，如下图</p>
+<img src="/41b6a819/sft.png" class title="SFT">
+<h1 id="训练">训练</h1>
+<h2 id="infra">infra</h2>
+<p>从数据处理到模型训练都需要大集群大算力的支持。Yi构建了支持全栈数据处理、预训练、微调和服务的基础设施。包括：</p>
+<ol type="1">
+<li>自动管理和监控计算资源的能力；</li>
+<li>通过优化并行策略、内核效率和长上下文支持提高训练速度；</li>
+<li>统一微调框架，支持异构分布式训练后端，例如在DPO中同时使用Megatron和DeepSpeed进行多个模型的训练；</li>
+<li>通过各种LLM服务加速技术（如量化、continuous batching 和 paged
+attention）降低部署成本。</li>
+</ol>
+<p>总之这部分工作还是很多的，比如由于经常有硬件坏，坏的硬件会被自动从资源池移除；任务失败时，会自动跟踪重启。给算法人员考法UI等。</p>
+<h2 id="预训练">预训练</h2>
+<p>训了4k基础模型。（暂时没有给出更多细节）</p>
+<h2 id="微调">微调</h2>
+<p>超参如下</p>
+<ul>
+<li>AdamW：beta=[0.9,0.999]，epsilon = 1e-8<br>
+</li>
+<li>seq_len = 4096<br>
+</li>
+<li>batch size = 64<br>
+</li>
+<li>constant lr = 1e-5，weight decay = 0.1<br>
+</li>
+<li>gradient clip = 1.0<br>
+</li>
+<li>max step = 300</li>
+<li>参考《Neftune: Noisy embeddings improve instruction
+finetuning》，对于6B模型 noise scale = 5，对于34B模型 noise scale =
+45</li>
+</ul>
+<h1 id="模型评测">模型评测</h1>
+<h2 id="基模型评测">基模型评测</h2>
+<ol type="1">
+<li>基础能力评测</li>
+</ol>
+<p>对其他开源模型，保持和公开的设置相同做法获取结果。Yi使用贪婪解码，没有进行任何后处理，结果如下表</p>
+<img src="/41b6a819/base_model_eval.png" class title="Base模型效果">
+<p>在数学和代码能力上，和GPT3.5、GPT4还存在一些差距，而这些能力是可以通过继续预训练和微调来持续提升的。Yi最初的设计并没有针对这些能力，因此没有在预训练数据中包含特别多相关数据，后续会有计划增加这部分能力的提升。</p>
+<p>而和其他开源模型相比，在代码和数学以外的任务，Yi基本上做到了跟大一倍模型的效果相近，甚至更好的水平。</p>
+<ol start="2" type="1">
+<li>观察</li>
+</ol>
+<ul>
+<li>模型规模带来的增益：尽管Yi-34B和Yi-6B使用了相同的预训练语料，但Yi-34B的性能相比Yi-6B有了质的提升。更大的模型尺寸在代码和数学基准测试上带来了明显的增益。<br>
+</li>
+<li>数据质量：高质量预训练数据的小型模型，如Yi-34B或Qwen-14B，通常表现优于尺寸更大但（可能）数据质量较低的模型，例如Falcon-180B。</li>
+<li>GPT-4与开源LLM之间的差距：开源LLM在多种基准测试上的性能仍然落后于GPT-4和GPT-3.5。然而，具有代表性的双语LLM，例如Qwen-14B和Yi-34B，可以在包括C-Eval、CMMLU和Gaokao在内的中文知识相关基准测试上匹配甚至超过GPT-4的性能。然而，在BBH、代码（HumanEval）和数学（MATH）等推理相关基准测试上，仍然存在巨大的差距。</li>
+</ul>
+<ol start="3" type="1">
+<li>In-Context Learning能力的测试</li>
+</ol>
+<p>Yi进一步研究了in-context
+learning的能力，即根据少数展示的输入-输出示例，推断underlying
+function的能力。</p>
+<p>考虑的任务是推断加权和的线性系数。具体来说，定义 y = w1x1 + w2x2 +
+... + wnxn。</p>
+<p>少量示例展示是 x1, x2, ..., xn, y，要求模型预测给定一组新输入 x 的
+y。</p>
+<p>这就要求模型隐式地推断出 w1, w2, ..., wn。</p>
+<p>评测上，使用（a）模型预测的 y 与真实值 y∗ 之间的绝对差，即 |y − y∗|
+作为连续度量，以及使用（b）精确匹配 y == y∗ 作为不连续度量。</p>
+<p>模型在算术上的效果正常，因此可以认为这样的测试不受算术能力的影响，而能直接看模型是否具备根据给定的实例进行underlying
+function推理的能力。</p>
+<p>实验发现，当问题比较简单时（系数是[1,-1]），Yi-34B和LLAMA-70B效果比较好（看下图）。</p>
+<p>当问题更复杂点（系数是[1，1，1，1，1]），只有LLAMA-70B和Mistral
+8*7B这样的大模型表现出了涌现的能力。</p>
+<img src="/41b6a819/ict.png" class title="ICT">
+<h2 id="chat模型评测">Chat模型评测</h2>
+<ol type="1">
+<li>自动评测</li>
+</ol>
+<p>评测的任务和base模型相同，分别采用zero-shot和few-shot，效果依然不错，具体结果如下</p>
+<img src="/41b6a819/eval.png" class title="Yi效果">
+<p>报告强调，如Goodhart’s
+principle所说，当一个指标变成目标，就不再是一个好指标。因此这里的测试只是为了确认微调没有使得模型的知识能力下降，而不会专门去针对任务做优化。</p>
+<p>结果上，Yi-34B-Chat数学能力不错，而Yi-6B-Chat并没有展现出强大的数学能力。推测较小的模型可能需要更多的数据在SFT阶段激活其相应的能力。</p>
+<ol start="2" type="1">
+<li>人工评测</li>
+</ol>
+<img src="/41b6a819/third_party.png" class title="三方评测">
+<h1 id="能力扩展">能力扩展</h1>
+<p>base模型的基础上，做了3个能力扩展：长上下文、多模态、深度扩展。</p>
+<h2 id="长上下文能力">长上下文能力</h2>
+<p>报告中认为，4k的base模型已经具备了长文本（200k）的能力。只要用少量数据，进行继续预训练来释放这个能力，再用轻量级的SFT来调整格式，就能获得足够好的长文本能力。</p>
+<p>长文本的继续预训练中，依然使用完整的attention，而不是线性attention或者sparse
+attention。</p>
+<p>继续预训练的数据，混合了（1）原始预训练数据（2）length-upsampled
+long-context
+data长文本数据，长文本数据主要来自书籍（3）多文档问答的人造数据。</p>
+<p>多文档问答数据的应答中，在最终答案之前会对和答案相关的段落进行复述（recitation），以此来提升模型长文本关联的能力。</p>
+<p>这部分的数据工作主要参考《Data engineering for scaling language
+models to 128k context》和《Paraphrasing the original text makes high
+accuracy long-context qa》。</p>
+<p>最终用了5B token的长文本数据，batch
+size=4M（token），只更新了100个step（这里没明白100步是怎么来，不应该是5B/4M=1250？有没有明白的朋友指点一下）。</p>
+<blockquote>
+<p>We continue pretrain the model on 5B tokens with 4M batch size, which
+translate to 100 optimization steps. Aligning with the concurrent work
+from Fu et al. [22], we observe that such light-weight continue
+pretraining is already able to enable a strong performance on
+Needle-in-a-Haystack test, as we will show in Figure 6.</p>
+</blockquote>
+<p>这个做法与《Data engineering for scaling language models to 128k
+context》一致，这样轻量级的微调已经足够在“大海捞针”任务做得很好。</p>
+<p>而微调的数据，也混合了短的SFT数据，以及长的文本问答数据。</p>
+<p>这些文本问答数据都是人工用模型造出来的。</p>
+<p>具体的做法是，随机抽一些文档，然后从中随机选择一个或者多个段落，让一个训练好的模型根据这些段落造出问题和答案。</p>
+<p>一个重要的细节是复述和改写：在给出答案之前，我们要求模型复述或改写原文段落。这种数据格式鼓励模型的检索行为，从而抑制其虚构行为：面对一个问题，模型更倾向于使用输入中的信息来构建答案，而不是使用其内部知识，后者可能与问题相关但不准确。</p>
+<p>使用以上所述的轻量级训练，已经可以在“大海捞针”任务做得很好，几乎能够做到全绿。</p>
+<img src="/41b6a819/long_context_result.png" class title="大海捞针效果">
+<h2 id="多模态">多模态</h2>
+<p>ViT部分由CLIP ViT-H/14
+model初始化，后面的transformer由Yi-Chat初始化</p>
+<img src="/41b6a819/multimodal.png" class title="多模态">
+<p>3步训练：</p>
+<p>（1）使用224^2的图像来训练ViT和projection模块的参数。这一训练利用了包含1亿个图像-文本对的数据集，这些数据来自LAION-400M。主要目标是增强ViT在架构中的知识获取能力，并实现ViT与LLM之间更好的对齐。</p>
+<p>（2）将ViT的图像分辨率提升到448^2，目的是进一步推动模型识别复杂视觉细节的能力。在这个阶段使用的数据集包括从LAION-400M中提取的2000万个图像-文本对。此外，还融入了来自不同来源的大约480万个图像-文本对，例如CLLaVA、LLaVAR、Flickr、VQAv2、RefCOCO、Visual7w等。</p>
+<p>（3）整个模型的参数一起训练。主要目标是提高模型在多模态聊天交互方面的熟练度，从而赋予它能够无缝融合和解释视觉与语言输入的能力。为此，训练数据集涵盖了多种来源，总共大约有100万张图像-文本对，包括GQA、VizWiz
+VQA、TextCaps、OCR-VQA、Visual
+Genome、ShareGPT4V等等。为了确保数据平衡，对任何单一来源的最大数据量设定了上限，将其限制在不超过50,000对。</p>
+<p>使用128张A100，6B训了3天，34B训10天。</p>
+<h2 id="depth-upscaling-深度扩展">Depth Upscaling 深度扩展</h2>
+<p>目标是把32层的6B扩展到48层的9B模型。</p>
+<p>参考《Scaling large language models with simple yet effective depth
+up-scaling》，通过复制中间的12-28层共16层，把层数扩展为48层。</p>
+<p>实验表明，要确定复制哪些层，可以通过测量输入和每层输出的cosine
+similarity来衡量。</p>
+<p>这种方法使得模型能在不额外训练的情况下，和原模型性能最接近，损失最少。</p>
+<img src="/41b6a819/9B.png" class title="9B模型">
+<p>这说明复制的这些层并不会很大地改变原模型的激活值。</p>
+<p>除了层数增加，Depth Upscaling还要做继续预训练，才能提升效果。</p>
+<p>继续预训练使用约800B token，训练过程分为两个阶段。</p>
+<p>其中约70%的数据是最近收集并精心挑选的。在最后阶段增强了代码的比例以提高代码性能。</p>
+<p>训练保持constant lr = 3e-5，并在模型损失达到平台期时，从4M
+token开始逐渐增加batch size大小。</p>
+<p>这种增加batch
+size的方法，以及保持所有其他参数与Yi-6B基础模型配置一致，继续预训练很重要。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期文章</p>
+<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+<p><a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>长上下文</tag>
+        <tag>技术报告</tag>
+        <tag>多模态</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>transformer中normalization的二三事</title>
+    <url>/6a40bfa5.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>Normalization在模型中，相对于attention这种经常被魔改的结构，受到的关注度似乎没那么高，但它对模型能否顺利训练，却有很关键的作用。</p>
+<p>在此简单梳理下normalization相关的背景和内容，也分析一下在transformer发展上的相关内容。</p>
+<p>这部分内容感觉目前还有些存在争议的地方，如果有不同意见欢迎讨论。</p>
+<h1 id="why-normalization">why normalization</h1>
+<p>normalization，也叫「归一化」、「正则化」、「规范化」、「标准化」等，可以说已经是神经网络不可以或缺的一环。</p>
+<p>使用的话，现在基本只需几行代码就能实现。但要用得好，还是需要了解一下它作用的机制。</p>
+<h2 id="从输入数据看normalization">从输入数据看normalization</h2>
+<p>假设我们有一个二元损失函数 <span class="math inline">\(Loss(x_1,x_2)=x_1^2+x_2^2+b\)</span>
+，那在三维空间画出来的损失平面大概是这样</p>
+<img src="/6a40bfa5/lossfunc_surface.jpeg" class title="loss function surface">
+<p>在这样一个平面上，使用梯度下降法，梯度方向是垂直于当前位置等高线的切线方向的。</p>
+<p>如果这个损失函数的等高线是一系列完美的同心圆，那么无论我们起点在哪里，梯度下降的时候都会以垂直切线方向，沿着圆心一路奔去。</p>
+<p>这种情况下优化很快，控制好学习率不要跳过minimum就可以（也可以用自适应优化器来控制速度）。</p>
+<p>但是实际上我们的损失平面很难那么完美。损失函数的等高线更可能是个椭圆（或者更复杂的形状）。</p>
+<img src="/6a40bfa5/ellipse_1.png" class title="ellipse">
+<p>这样我们梯度下降是方向就要经常修正，训练效率就会受影响。</p>
+<p>如果这个椭圆很扁或者我们的训练参数不太好，可能会出现反复震荡收敛缓慢的情况。</p>
+<img src="/6a40bfa5/ellipse_2.png" class title="ellipse">
+<p>损失在这个狭窄的山谷中反复横跳。</p>
+<p>那损失函数等高线什么时候会是椭圆形？</p>
+<p>假设我们现在有两个输入变量，以米为单位的身高 <span class="math inline">\(x_{1}\)</span>，和以元为单位的月工资收入 <span class="math inline">\(x_{2}\)</span>。（这里对量纲的使用也会改变数值，如米-&gt;厘米）</p>
+<p>如果我们用这两个自变量训练模型，我们会发现，身高取值范围基本是在0.x米~2.x米，而工资的取值范围是0到几百几千几万或者几十万以及更多。</p>
+<p>而模型的一个主要操作就是对输入特征进行线性组合。</p>
+<p>这时模型的输出值会更大地受到 <span class="math inline">\(x_{2}\)</span>
+的影响，因为它的变化更大，取值范围也更大。</p>
+<p>这时损失函数在不同变量维度的变化速度相差很多，损失函数就会出现椭圆形等高线的情况。</p>
+<p>既然由于量纲和取值范围的问题，会导致训练困难，那最直接方法就是规定一个标准范围，所有输入变量，不管原来是什么范围，现在都归一化到标准范围里来。</p>
+<p>这就是最朴素的输入normalization的思想。</p>
+<p>输入的normalization有很多种做法<br>
+<span class="math display">\[x^{\prime}=\frac{x-\min(\mathrm{x})}{\max(\mathrm{x})-\min(\mathrm{x})}\]</span></p>
+<p><span class="math display">\[x^{\prime}=\frac{x-\mu}{\max(\mathrm{x})-\min(\mathrm{x})}\]</span></p>
+<p><span class="math display">\[x^{\prime}=\frac{x-\mu}\sigma\]</span></p>
+<p>其中 <span class="math inline">\(\mu\)</span> 为均值，<span class="math inline">\(\sigma\)</span> 为方差。</p>
+<p>第三种，均值方差归一化，也叫Z-score
+normalization，应该是我们用得比较多的。</p>
+<p>这样我们通过对输入进行一些操作，把「椭圆」拉成了「圆」，解决输入参数范围带来的一些训练问题。</p>
+<p>除了针对均值、方差、最大值、最小值的归一化，对输入还有一些其他的处理，如PCA等，就暂不展开。</p>
+<h2 id="缓解ics...吗">缓解ICS...吗？</h2>
+<p>机器学习里有一个叫i.i.d.（independent and identical
+distribution，独立同分布）的假设：独立，每次抽样之间是没有关系的，不会相互影响；同分布，即每次抽样，样本都服从同样的一个分布。</p>
+<p>为什么需要i.i.d.？</p>
+<p>由于机器学习依赖于使用现有数据来训练模型，进而对未来的数据做出预测和模拟，因此这一过程本质上是在历史数据的基础上，通过模型来推测未来的数据走向。</p>
+<p>这就要求我们使用的历史数据必须具备整体的代表性。以便从现有数据（经验）中提炼出规律，对未知数据进行决策。</p>
+<p>如果用于训练的数据缺乏总体代表性，即仅代表特殊情况，那么得出的规律可能不准确或错误，因为这些规律是基于个别案例推测出来的，就不具备泛化性。</p>
+<p>当然并不是所有机器学习都需要i.i.d.，但是有i.i.d.的话，可以简化很多事情，让模型学习起来更容易快速。</p>
+<p>对于输入，通过合理的抽样和处理（前面提到的PCA就可以用来解耦特征间的关联，达到“独立”的效果），我们可以得到输入的i.i.d.的条件，但这只是针对输入。</p>
+<p>在多层的神经网络中，上一层的输出会作为下一层的输入。</p>
+<p>而在训练过程中，由于上层的模型参数在不断学习变化，则上层输出的分布也在不断变化，靠后的层实际上要学习不断的变化的分布，这就很不i.i.d.，那靠后面的层的学习速度和效果就会收到影响，调参也变得困难，模型也难以加深。</p>
+<p>这个问题就是ICS，internal covariate shift。</p>
+<p>那有没有办法保证上一层的分布不要变化呢？</p>
+<p>一个「可能」的方案就是normalization。我们通过把上一层的输出映射到一个固定的分布上，来稳定给下一层的输入，这样就降低了学习难度。</p>
+<p>但也有一些工作表明normalization（batchnorm）的作用机制和ICS的关系并不大，这个观点下面在batchnorm部分说。</p>
+<p>当然ICS的问题也可以通过改变初始化策略、调控训练超参如学习率等方法来优化，但是这样做的效率并不是很高。</p>
+<h2 id="远离激活函数饱和区">远离激活函数饱和区</h2>
+<p>神经网络中还有一个重要组件，非线性激活函数，比如常用的sigmoid。</p>
+<img src="/6a40bfa5/sigmoid.png" class title="sigmoid">
+<p>当输入 &gt; 6 或者 &lt; -6
+的时候，sigmoid函数的梯度已经变得非常小，也就是进入了饱和区。</p>
+<p>这种情况下训练就变得困难。</p>
+<p>ICS就会加剧梯度消失的情况。在没有normalization的情况下，分布不断变化，后面层的参数变化激烈，导致输出值更容易进入到左右两端，更容易进入到激活函数的饱和区。</p>
+<p>而normalization能把部分输出值拉回到梯度正常的范围内，一定程度缓解了梯度消失的问题，使训练可以正常进行下去。</p>
+<h1 id="batchnorm">batchnorm</h1>
+<p>神经网络中使用的normalization有很多种，这里不一一展开，只梳理一下最重要的batchnorm和layernorm两类。</p>
+<h2 id="batchnorm算法">batchnorm算法</h2>
+<p>假设输入数据的形状是 <span class="math inline">\([B,C]\)</span>
+，其中 <span class="math inline">\(B\)</span> 是batch size，<span class="math inline">\(C\)</span> 是特征向量维度。</p>
+<p>这 <span class="math inline">\(C\)</span>
+个输入特征每个都有不同的含义，如我们前面的例子，第一个元素可能是身高，第二个元素可能是月收入，因此做normalization的时候这
+<span class="math inline">\(C\)</span> 个特征分别来做。</p>
+<p>具体来说，对于第 <span class="math inline">\(i\)</span>
+个特征维度，首先计算整个batch内的均值</p>
+<p><span class="math display">\[
+\mu_{i}=\frac{1}{B}\sum_{j=1}^{B}x_{i,j}
+\]</span></p>
+<p>再计算这个维度上的方差</p>
+<p><span class="math display">\[
+\sigma_{i}^{2}=\frac{1}{B}\sum_{j=1}^{B}(x_{i,j}-\mu_{i})^2
+\]</span></p>
+<p>得到均值和方差之后，对batch内维度上的所有值进行Z-score
+normalization</p>
+<p><span class="math display">\[
+x_{i,j}&#39;=\frac{x_{i,j}-\mu_{i}}{\sqrt{\sigma_{i}^{2}+\epsilon}}
+\]</span></p>
+<p>其中 <span class="math inline">\(\epsilon\)</span>
+是为了防止分母为0。这个在实际代码中挺重要的，忘记加可能会出问题。</p>
+<p>经过这样的变换之后，在 <span class="math inline">\(C\)</span>
+个特征维度上就是均值为0，方差为1的分布了。</p>
+<p>但是到这还没结束。</p>
+<p>每个维度的数值全部归一化之后，对于激活函数来说，更集中在中间的部分，而这部分的非线性特征并不强（比如上面的sigmoid），这样非线性激活层近似了一个线性变换，这样就降低了模型的学习能力。</p>
+<p>且无论输入是什么，最终输出都会被强行拉到这样一个“平均”的值，也极大抑制了模型的表达能力。</p>
+<p>所以为了保证模型的能力，也保证非线性能力的获得，对每个特征，又增加两个可学习的参数，
+缩放参数 <span class="math inline">\(\gamma\)</span> 和位移参数 <span class="math inline">\(\beta\)</span> 。</p>
+<p><span class="math display">\[
+y_{i,j} = \gamma_{i} x_{i,j}&#39; + \beta_{i}
+\]</span></p>
+<p>这样每个特征值就有机会从“线性区”移动到“非线性区”，把被归一化削弱的非线性能力找了回来。</p>
+<p>并且通过这样一个归一化再重新缩放移动的操作，解耦了上层输出分布和下层输入，本来下层参数要去适应上层分布变化，现在只需要通过每个batchnorm层中的
+<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span>
+直接学习就行了，训练变得简单了。</p>
+<p><a href="https://zhuanlan.zhihu.com/p/340856414">《Batch
+Normalization: Accelerating Deep Network》</a>给出的算法如下</p>
+<img src="/6a40bfa5/bn_algo.png" class title="batch norm">
+<h2 id="cnn中的batchnorm">CNN中的batchnorm</h2>
+<p>batchnorm最主要的应用还是在CNN模型中。</p>
+<p>假设CNN中feature map的size是 <span class="math inline">\([B,C,H,W]\)</span> ，其中 <span class="math inline">\(B\)</span> 是batch size，<span class="math inline">\(C\)</span> 是channel数（也是卷积核数量），<span class="math inline">\(H\)</span> 和 <span class="math inline">\(W\)</span> 分别是特征图的高和宽。</p>
+<p>如果按照前面batchnorm的算法，那应该有 <span class="math inline">\(C\times H\times W\)</span> 组特征，每组特征有
+<span class="math inline">\(B\)</span> 个，对每组内的 <span class="math inline">\(B\)</span> 进行归一化，再进行放缩和平移。</p>
+<p>但是实际上，CNN中卷积是一个滑动窗口，对于同一个channel下的 <span class="math inline">\(H\times W\)</span>
+个特征值其实都来自于同一个卷积核的计算，这 <span class="math inline">\(H\times W\)</span>
+也属于一个“batch”，它们要放在一起进行归一化。</p>
+<p>也就是对于卷积核来说，真正的batch数是 <span class="math inline">\(B\times H\times W\)</span> ，而只有 <span class="math inline">\(C\)</span> 组特征值，因此也只有 <span class="math inline">\(C\)</span> 个 <span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 。</p>
+<p>batchnorm原文中，batchnorm放在了relu后面，作者认为这样使得进入激活函数的分布会更加稳定，顺便对于fc层，由于batchnorm和fc都有bias项，还可以省略掉其中一个而不影响效果。</p>
+<p>btw，一般来说，batchnorm初始化的时候，把 <span class="math inline">\(\gamma\)</span> 设为1（不缩放），把 <span class="math inline">\(\beta\)</span>
+设为0（不平移），在训练中让模型从相当于没有batchnorm开始慢慢学习这两个参数。</p>
+<h2 id="训练和推理">训练和推理</h2>
+<p>现在我们知道在训练时，batchnorm对一个mini-batch计算均值和方差来进行归一化，再进行缩放和移动。</p>
+<p><span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span>
+属于模型学出来的参数，只要训练结束这两个向量就固定了，在推理的时候直接使用即可。</p>
+<p>但是推理时，均值和方差怎么计算呢。推理的时候可能是一个sample，也可能是任意个sample作为一个batch，和训练的时候一样计算肯定不合适。</p>
+<p>我们需要在训练的时候就为推理做准备：训练的时候，模型会遍历整个训练集，因此理论上可以统计出整个训练集的均值和方差，然后把这个大量样本统计出来的均值和方差当做真实分布的均值和方差，在推理的时候使用。（回想i.i.d.）</p>
+<p>当时又有一个问题，训练集可能会很大，有百万甚至千万的数据，在训练的数据记录下所有层所有特征来计算均值和方差显然效率不高，因此用一个近似的方法：</p>
+<p>moving_mean = momentum × moving_mean + (1.0 − momentum) × mean</p>
+<p>moving_var = momentum × moving_var + (1.0 − momentum) × var</p>
+<p>通过把多个batch的均值和方差进行移动平均的方式来逼近整个训练集的均值和方差。</p>
+<p>momentum为动量参数，在 TF/Keras 中，该值为0.99，在 Pytorch
+中，这个值为0.9。</p>
+<p>小的momentum值对应快的更新速度，能够更快地向真实分布靠近，但是同时也会导致更大的波动。</p>
+<p>大的momentum值对应慢的更新速度，如果更新过慢，则可能导致训练结束时还没有统计到真实的分布，是欠拟合的状态。</p>
+<p>如果batch size比较小，每个mini
+batch和全局差异较大，就不应该用太大的momentum。</p>
+<p>理论上，训练步数越长是会越靠近真实分布的，实际上，因为每个batch并不能代表整个训练集的分布，所以最后的值是在真实分布附近波动。</p>
+<p>这里还引入另外一个问题，如果batch size太小，每个mini
+batch统计的均值和方差和全局的值偏差相对会比较大，对模型收敛的稳定性有影响，因此一般来说，使用batchnorm的话，batch
+size不能太小，如下图</p>
+<img src="/6a40bfa5/bs_bn.png" class title="batch size的影响">
+<p>小结一下，batchnorm的优点是解耦了上层输出和下层输入的分布，既缓解了进入激活函数饱和区带来的梯度消失的情况，又保留了模型的表达能力。每一层的输入尺度相对固定，提供了更好的尺度不变形，使模型训练更稳定。</p>
+<p>同时每个batch分别进行归一化，相当于引入了一些随机噪音，使得模型不容易过拟合到某些微小的特征上，相当于进行了一定的正则化，将损失平面变得相对平滑。</p>
+<p>但是同时也引入了新的超参（如momentum），另外也依赖batch
+size的大小，过小的batch size可能会带来问题。</p>
+<h2 id="batchnorm起作用的真正原因">batchnorm起作用的真正原因？</h2>
+<p>虽然batchnorm原文认为batchnorm在一定程度上是缓解了ICS，但是2018年的《How
+Does Batch Normalization Help Optimization?》提出了不同观点。</p>
+<p>为了探究batchnorm的效果，是否是因为优化了ICS（或者说和优化了ICS有多大关系），做了一个这样的实验：在batchnorm后面又通过加入随机噪音来引入“covariate
+shift”，并和没有加噪音，以及没有加batchnorm的模型效果进行对比，如下图</p>
+<img src="/6a40bfa5/bn_ics.png" class title="ICS">
+<p>结果发现，即使人工加强了ICS的情况，但是只要用了batchnorm，效果依然比不用好；而人工引入ICS的模型，在效果上并没有多大影响。</p>
+<p>这就说明缓解ICS并不是batchnorm有效的真正原因。</p>
+<p>那batchnorm到底有没有缓解到ICS呢？</p>
+<p>要测量ICS的变化，就要先定义ICS。</p>
+<p>对于网络中的每一层，ICS被定义为在前一层参数更新后，当前层输入分布的变化。这种变化可以通过比较更新前后的梯度来量化。</p>
+<img src="/6a40bfa5/ics_define.png" class title="ICS 定义">
+<p>具体来说，对于每一层i，作者们计算了以下两个梯度之间的L2范数差异：</p>
+<p><span class="math inline">\(G_{t,i}\)</span>
+，在时间t，使用当前所有层的参数（包括前一层的参数）计算的梯度。</p>
+<p><span class="math inline">\(G_{t,i}&#39;\)</span>
+，在时间t，使用更新后的前一层参数计算的梯度，而其他层的参数保持不变。</p>
+<p>这个差异直观上表明了「上一层参数变化，下一层需要在多大程度上来变化，以适应新的分布」。</p>
+<p>理想来说，ICS越小，上一层参数更新对当前层的分布影响越小，梯度变化程度应该越小。</p>
+<img src="/6a40bfa5/ics_measure.png" class title="ICS measure">
+<p>但是从结果上来看，使用了batchnorm并不能有效减少这个变化，甚至还有所增加。</p>
+<p>这也说明batchnorm实际上并不能真正缓解ICS的情况。</p>
+<p>那batchnorm起效果的真正原因是什么？</p>
+<p>作者认为主要是batchnorm使得损失函数更加平滑，直观上来说就是减少了很多坑坑洼洼的位置，使得训练更不容易陷入到局部最小值中去。</p>
+<h1 id="layernorm">layernorm</h1>
+<p>看完batchnorm，再来看layernorm。</p>
+<h2 id="理解layernorm">理解layernorm</h2>
+<p>layernorm，不要被名字骗了，这里的layer指的不是模型的层，而是数值的layer。</p>
+<p>对于二维的输入，batchnorm实在batch维度上做归一化，而layernorm是在特征维度做归一化</p>
+<img src="/6a40bfa5/bn_and_ln.png" class title="bn和ln">
+<p>对于非NLP数据而言，相比batchnorm，layernorm归一化的维度似乎解释性没那么强。batchnorm对同一个特征，比如身高计算均值是有意义的，而layernorm在不同的特征，比如身高、工资、温度做归一化，好像并没有可靠的物理意义。</p>
+<p>layernorm最主要的应用就是NLP的模型，包括RNN和transfomrer模型。</p>
+<p>在transformer中，一般输入的形状是 <span class="math inline">\([B,S,H]\)</span> ，<span class="math inline">\(S\)</span>
+是序列长度，每个样本的长度可能不同，因此在这个维度需要使用padding（一般是zero-padding）来把batch内的数据处理成一样长。</p>
+<p>比如这样一批文本输入</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我  爱  中  国</span><br><span class="line">你  好</span><br><span class="line">谢  谢  你</span><br></pre></td></tr></table></figure>
+<p>为了使模型能够统一处理，会pad成</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我  爱  中  国</span><br><span class="line">你  好  [P] [P]</span><br><span class="line">谢  谢  你  [P]</span><br></pre></td></tr></table></figure>
+<p>一般来说，我们认为由于有padding的存在，做batchnorm并不合适。</p>
+<p>比如上面的例子，对“中”，“[P]”，“你”做归一化，由于 [P]
+的存在，实际的batch size只有2，并且和 [P]
+做normalization也对训练没什么帮助。</p>
+<p>而且对于文本数据，batch内同一个位置上的字是不同的，对完全没有关系的字进行归一化也并没有什么意义。</p>
+<p>也就是说，哪怕没有 [P]
+的存在，比如对第一个token“我”，“你”，“谢”做归一化，似乎也没有说法。</p>
+<p>因此使用layernorm，在 <span class="math inline">\(S\)</span>
+维度上进行normalization，共有 <span class="math inline">\(H\)</span>
+个<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 需要学习。</p>
+<p>怎么来理解这样的normalization呢？</p>
+<p>对于 <span class="math inline">\([B,S,H]\)</span> 的输入，假设 <span class="math inline">\(H=1\)</span>
+，那就相当于退化成二维的情况，相当于每个token
+embedding的只有一个数字。</p>
+<p>相当于我们计算每一句输入内，所有token之间的均值和方差来进行归一化。</p>
+<p>比如对“我爱中国”这句话，计算“我”，“爱”，“中”，“国”四个token的均值方差来进行归一化。</p>
+<p>刚刚前面不是说对不同的字计算均值方差没有什么意义呢，为什么这里又可以了？</p>
+<p>回想一下，transformer里的attention也是计算各个输入token之间的相关性的。</p>
+<p>同一个batch内，相同位置的不同字是没有关联的，也就是替换掉其中一个sample并不影响其他sample的本来意思，因此这样计算这些字之间的均值方差就没有意义。</p>
+<p>但是对于同一句话中的不同字，他们本来就有很强的相关关系，不能随便替换其中的字，因此对这样一批数据计算均值方差是有意义的。</p>
+<p>再回到实际的情况，形状为 <span class="math inline">\([B,S,H]\)</span>
+的输入中，<span class="math inline">\(H\)</span>
+正常来说不为1，可能是256/512/768/1024等。我们还是可以按二维的情况来理解，每个字还是一个特征，只是原来是一个特征值，现在成了一个特征向量，因此共有
+<span class="math inline">\(H\)</span> 个<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 。</p>
+<h2 id="为什么transformer用layernorm">为什么transformer用layernorm</h2>
+<p>和batchnorm不同的是，由于layernorm不需要再batch维度上计算均值和方差，所以不存在训练和推理的时候不一样的地方，不用保存一个全局的均值和方差供推理的时候使用。</p>
+<p>而由于layernorm和batch无关，也就不会受到batch size大小的影响。</p>
+<p>除了以上的原因，也有一些工作深入探究了在nlp任务上layernorm和batchnorm的区别。</p>
+<p>如《PowerNorm: Rethinking Batch Normalization in
+Transformers》就研究了transformer中BN为啥表现不太好。</p>
+<p>研究了训练中的四个统计量：batch的均值和方差，以及他们的梯度的均值和方差。对于batch的均值和方差，计算了他们和running
+statistics（就是用移动平均法累积的均值和方差，见前面的文章）的欧氏距离。发现NLP任务上（IWSLT14）batch的均值和方差一直震荡，偏离全局的running
+statistics，而CV任务也相对稳定。</p>
+<p>对于他们梯度的均值和方差，研究了其magnitude（绝对值），在CV任务上震荡更小，且训练完成后，也没有离群点。</p>
+<p>总结来说，transformer中BN表现不太好的原因可能在于CV和NLP数据特性的不同，对于NLP数据，前向和反向传播中，batch统计量及其梯度都不太稳定。</p>
+<p>更重要的是，实际效果就是layernorm在NLP的效果比batchnorm好，效果好，这是最重要的原因。</p>
+<h2 id="rmsnorm">RMSnorm</h2>
+<p>19年《Root Mean Square Layer
+Normalization》提出了normalization变体RMSnorm，主要针对layernorm来改进。</p>
+<p>简单地说，RMSnorm就是在标准layernorm的基础上，省略了平移，只进行缩放。</p>
+<img src="/6a40bfa5/rmsnorm.png" class title="RMSnorm">
+<p>作者认为标准layernorm计算效率并不高</p>
+<img src="/6a40bfa5/rmsnorm_eff.png" class title="RMSnorm效率">
+<p>作者用一个GRU模型做实验，对比是否添加layernorm的结果，发现在相同时间和相同步骤下，有layernorm的模型，都没有无layernorm的模型收敛得快。</p>
+<p>并且layernorm的平移对梯度方差的减小没有贡献，因此作者直接舍弃了中心化和平移两步，只对数据进行方差归一化和缩放。</p>
+<p>更近一步，作者提出pRMSnorm，只对数据中前p%的数值进行处理，这样就能进一步加速训练，而效果也基本不太受影响。</p>
+<img src="/6a40bfa5/prmsnorm.png" class title="prmsnorm">
+<p>RMSnorm现在被很多主流的大模型所采样了。</p>
+<h1 id="post-norm-pre-norm">post-norm &amp; pre-norm</h1>
+<h2 id="二者对比">二者对比</h2>
+<p>layernorm在模型里放哪也有讲究。</p>
+<p>原始的transformer模型使用的post-norm，而《On Layer Normalization in
+the Transformer Architecture》则认为pre-norm更好。</p>
+<p>post-norm和pre-norm分别是下面这样</p>
+<img src="/6a40bfa5/postnorm_prenorm.png" class title="postnorm and prenorm">
+<p>post-norm是在残差和主干相加之后进行归一化，而pre-norm则是在主干先归一化再和残差相加。</p>
+<p>post-norm和pre-norm对比，目前大家比较接受的结论是，pre-norm更容易训练，因此可以叠加更多的层，但是在层数不是特别多的情况下，post-norm最终的收敛效果会比pre-norm要好。</p>
+<p>模型中，第 <span class="math inline">\(l\)</span> 层的输出是第 <span class="math inline">\(l+1\)</span> 层的输入，对于post-norm有</p>
+<p><span class="math display">\[
+x_{l+1}=\mathrm{Norm}(x_l+\mathrm{F}_t(x_l))
+\]</span></p>
+<p>而对于pre-norm则是</p>
+<p><span class="math display">\[
+x_{l+1}=x_l+\mathrm{F}_l(\mathrm{Norm}(x_l))
+\]</span></p>
+<p>参考苏剑林在《为什么Pre Norm的效果不如Post Norm？》中的分析，认为
+<span class="math inline">\(\mathrm{F}_l(\mathrm{Norm}(x_l))\)</span>
+的方差，由于有norm的存在，是不随层数变化的。</p>
+<p>当 <span class="math inline">\(l\)</span> 比较大时，<span class="math inline">\(x_{l}、x_{l+1}\)</span> 的差距较小，因此 <span class="math inline">\(\mathrm{F}_l(\mathrm{Norm}(x_l))\)</span> 和 <span class="math inline">\(\mathrm{F}_{l+1}(\mathrm{Norm}(x_{l+1}))\)</span>
+的差距也很小，这时有</p>
+<p><span class="math display">\[\begin{aligned}
+&amp;\mathrm{F}_l(\operatorname{Norm}(x_l))+\operatorname{F}_{l+1}(\operatorname{Norm}(x_{l+1}))
+\\
+&amp;{\approx}\mathrm{F}_l(\mathrm{Norm}(x_l))+\mathrm{F}_{l+1}\left(\mathrm{Norm}(x_l)\right)
+\\
+&amp;=(\mathrm{F}_l\oplus\mathrm{F}_{l+1})(\mathrm{Norm}(\pmb{x_l}))
+\end{aligned}\]</span></p>
+<p>相当于 <span class="math inline">\(l\)</span> 层和 <span class="math inline">\(l+1\)</span> 层的效果接近于一个更宽的 <span class="math inline">\(l\)</span> 层的效果。</p>
+<p>也就是使用pre-norm的时候，模型的深度有水分，表面看起来有 <span class="math inline">\(l\)</span>
+层，实际在效果上，等效于post-norm的浅层模型。</p>
+<p>从模型结构上看，恒等分支永远有一部分不用经过normalization，这部分能够直接把梯度回传到最前面，这也是pre-norm能够训练“层数更多”的模型的原因--缓解了梯度消失。</p>
+<p>正常来说，模型深度对最终效果的影响，是大于模型宽度的。</p>
+<p>而post-norm，在残差分支之后做归一化，对参数正则化的效果更好（loss平面更平滑），且它每norm一次就削弱一次恒等分支的权重，所以post-norm相对pre-norm，是更突出残差分支的，因此它的层数更加“足秤”，训练好之后效果更优。</p>
+<h2 id="和warmup的关系">和warmup的关系</h2>
+<p>《On Layer Normalization in the Transformer
+Architecture》（认为pre-norm更好）还分析指出，使用post-norm的transformer，在初始化时候，靠近输出层的部分梯度期望很大，所以模型在开始训练的时候很依赖warmup的策略，通过缓慢提升学习率来稳定训练过程。</p>
+<p>使用warmup引入了新的超参，调参更为麻烦点。</p>
+<p>而实验表明，使用pre-norm的transformer在不需要warmup的情况下，也能收敛到post-norm+warmup的相同水平，而post-norm不加warmup效果就差点了。</p>
+<img src="/6a40bfa5/warmup_effect.png" class title="warmup影响">
+<h2 id="deepnorm">Deepnorm</h2>
+<p>2022年，《DeepNet: Scaling Transformers to 1,000
+Layers》对transformer训练不稳定的原因进行了深入分析，发现模型更新过大是导致不稳定的主要原因。</p>
+<p>为了解决这个问题，他们提出了Deepnorm，可以限制模型更新的大小。</p>
+<img src="/6a40bfa5/deepnorm.png" class title="deepnorm">
+<p>其中 <span class="math inline">\(\alpha&gt;1\)</span>
+是根据模型参数定的常数。这里相比post-norm提升了恒等分支的权重，使训练更容易进行。</p>
+<p>另外，还用了一个 <span class="math inline">\(\beta\)</span> 参数，把
+<span class="math inline">\(G_{l}\)</span>
+中的模型参数进行了缩小，以此来稳定模型的训练。</p>
+<p>实验结果上，deepnorm结合了pre-norm的容易训练，和post-norm的收敛效果好的特点，能够把百层、浅层的模型训到比较好的效果。</p>
+<img src="/6a40bfa5/deepnorm_result.png" class title="deepnorm result">
+<p>参数过程相比post-norm稳定了很多。</p>
+<h2 id="realformer--residual-attention">Realformer--residual
+attention</h2>
+<p>post-norm和pre-norm实际上改变的是模型残差分支和恒等分支怎么排布的问题，而《RealFormer:
+Transformer Likes Residual Attention》则提出了另外一种做法</p>
+<img src="/6a40bfa5/realformer.png" class title="realformer">
+<p>RealFormer的核心是在其标准Transformer编码器的每一层中引入了残差连接。这些残差连接将前一层的原始注意力分数（即在应用Softmax之前的分数）与当前层计算出的注意力分数相结合。这样做的结果是，当前层的注意力分数在计算时会考虑到前一层的信息。</p>
+<p>每个多头注意力模块都会接收来自前一层的残差注意力分数作为额外输入。这意味着每个注意力头不仅考虑了当前层内的输入序列，而且还直接利用了前一层的注意力信息。</p>
+<img src="/6a40bfa5/realformer_attention.png" class title="realformer attention">
+<p>其中 <span class="math inline">\(Prev&#39;\)</span>
+是来自上一层softmax之前的权重矩阵（多头注意力的话，则是对应的头的值），而
+<span class="math inline">\(\frac{Q^{\prime}K^{\prime
+T}}{\sqrt{d_k}}+Prev&#39;\)</span> 则是传给下一层的attention的。</p>
+<h1 id="小结">小结</h1>
+<p>本篇粗略梳理了一下关于normalization，batchnorm，以及layernorm在transformer的一些使用情况。</p>
+<p>目前主流的大模型使用的是rmsnorm + prenorm，也有使用其他变体的。</p>
+<p>关于normalization，依然留有一些探索空间。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期文章</p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】https://www.zhihu.com/question/487766088<br>
+【2】Towards Stabilizing Batch Statistics in Backward Propagation of
+Batch Normalization https://arxiv.org/abs/2001.06838<br>
+【3】Transformer中的归一化(一)：什么是归一化&amp;为什么要归一化
+https://zhuanlan.zhihu.com/p/476102712<br>
+【4】Batch Normalization: Accelerating Deep Network Training by Reducing
+Internal Covariate Shift https://arxiv.org/abs/1502.03167<br>
+【5】How Does Batch Normalization Help Optimization?
+https://arxiv.org/abs/1805.11604<br>
+【6】Batch Normalization: Accelerating Deep Network
+https://zhuanlan.zhihu.com/p/340856414<br>
+【7】Layer Normalization https://arxiv.org/abs/1607.06450<br>
+【8】详解深度学习中的Normalization，BN/LN/WN
+https://zhuanlan.zhihu.com/p/33173246<br>
+【9】Transformer中的归一化(四)：BatchNormalization的原理、作用和实现
+https://zhuanlan.zhihu.com/p/481277619<br>
+【10】Layer Normalization https://arxiv.org/abs/1607.06450<br>
+【11】PowerNorm: Rethinking Batch Normalization in Transformers
+https://arxiv.org/abs/2003.07845<br>
+【12】Root Mean Square Layer Normalization
+https://arxiv.org/abs/1910.07467<br>
+【13】On Layer Normalization in the Transformer Architecture
+https://arxiv.org/abs/2002.04745<br>
+【14】为什么Pre Norm的效果不如Post Norm？
+https://spaces.ac.cn/archives/9009<br>
+【15】Understanding the Difficulty of Training Transformers
+https://arxiv.org/abs/2004.08249<br>
+【16】RealFormer: Transformer Likes Residual Attention
+https://arxiv.org/abs/2012.11747<br>
+【17】DeepNet: Scaling Transformers to 1,000 Layers
+https://arxiv.org/abs/2203.00555</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>layernorm</tag>
+        <tag>post-norm</tag>
+        <tag>pre-norm</tag>
+        <tag>normalization</tag>
+        <tag>batchnorm</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(1)</title>
+    <url>/3345028a.html</url>
+    <content><![CDATA[<p><img src="/images/cover.png"></p>
+<p>往期回顾</p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<hr>
+<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
+<p>本系列将整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错误，欢迎指正</sub></p>
+<h1 id="在transformer模型中为什么scaled-dot-product-attention在计算qk内积之后要除以根号d">1、在Transformer模型中，为什么scaled
+dot-product attention在计算QK内积之后要除以根号d？</h1>
+<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。如果不对attention值进行scaling，也可以通过在参数初始化时将方差除以根号d
+，同样可以起到预防softmax饱和的效果。</p>
+<h1 id="transformer自注意力计算中为什么q和k要使用不同的权重矩阵进行线性变换投影为什么不使用同一个变换矩阵或者不进行变换">2、Transformer自注意力计算中，为什么Q和K要使用不同的权重矩阵进行线性变换投影，为什么不使用同一个变换矩阵，或者不进行变换？</h1>
+<p>1、如果Q和K一样，则矩阵乘积的结果是一个对称矩阵，这样减弱了模型的表达能力。</p>
+<p>2、如果Q和K一样，乘积结果的对称矩阵中，对角线的值会比较大，导致每个位置过分关注自己。</p>
+<p>3、使用不同的投影矩阵，参数增多，可以增强模型表达能力。</p>
+<h1 id="transformer模型中注意力计算后面使用了两个ffn层为什么第一个ffn层先把维度提升第二个ffn层再把维度降回原大小">3、Transformer模型中，注意力计算后面使用了两个FFN层，为什么第一个FFN层先把维度提升，第二个FFN层再把维度降回原大小？</h1>
+<p>1、提升维度：类似SVM
+kernel，通过提升维度可以识别一些在低维无法识别的特征。</p>
+<p>2、提升维度：更大的可训练参数，提升模型的容量。</p>
+<p>3、降回原维度：方便多层注意力层和残差模块进行拼接，而无需进行额外的处理。</p>
+<h1 id="mqamulti-query-attention和gqagrouped-query-attention相比mhamulti-head-attention计算量变化如何主要带来了什么优化">4、MQA(Multi-Query
+Attention)和GQA(Grouped-Query Attention)相比MHA(Multi-Head
+Attention)，计算量变化如何，主要带来了什么优化？</h1>
+<p>1、MQA和GQA虽然可训练参数量比MHA少，但是计算量和MHA相比变化不大，主要在生成KV时有少量降低。</p>
+<p>2、Decoder-only的大模型由于causal
+attention的存在，使用了KV缓存加速推理。MQA和GQA能减少KV头的数量，节省了缓存，使得在输入长度较长时也能把KV放进缓存。</p>
+<h1 id="为什么现在主流的llm模型基本都是decoder-only的结构单向注意力模型为什么效果比双向注意力效果好">5、为什么现在主流的LLM模型基本都是Decoder-only的结构？单向注意力模型为什么效果比双向注意力效果好？</h1>
+<p>1、双向Attention在多层模型训练中容易退化成低秩矩阵，限制了模型容量；而Decoder-only模型使用了下三角注意力矩阵，使得训练过程中矩阵是满秩，建模能力更强。</p>
+<p>2、单向注意力模型相比双向注意力模型在训练的时候难度更大，能迫使模型学到更多信息。</p>
+<p>3、Causal
+Attention天然具有位置编码的功能，而双向Attention即使交换两个token的位置也基本不影响表示，对语序区分能力较弱。</p>
+<p>4、工程上，单向模型支持KV Cache等，对于对话场景效率友好。</p>
+<p>5、轨迹依赖，基模型训练成本高，业界倾向于沿着已经成功的模型继续开发。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期回顾</p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(2)</title>
+    <url>/ad0bba9d.html</url>
+    <content><![CDATA[<p><img src="/images/cover.png"></p>
+<p>往期文章</p>
+<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+<hr>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错误，欢迎指正</sub></p>
+<hr>
+<h1 id="在bert中词向量token-embedding和绝对位置编码position-encoding为什么可以直接相加">1、在Bert中，词向量token
+embedding和(绝对)位置编码position encoding为什么可以直接相加？</h1>
+<p>1、两个向量相加，理论上其效果等价于维度拼接concat+线性变换，而相加的操作在实现上更为方便。</p>
+<p>2、高维空间中(如768维)，两个随机向量近似为正交关系。模型在高维度有能力区分出所有组合的情况。假设共有2万个词向量，500个位置，则模型需要在768维空间区分1000万个点，即使768维每个维度只能取1和-1也具备足够的区分能力。</p>
+<p>3、词向量和位置编码可以认为都是一个one-hot向量经过一层线性变换层得到的。两个向量相加等价于把它们的one-hot编码拼接后进行线性变换。</p>
+<p>4、没有使用相乘则是出于工程考虑。相加相比相乘结果更为稳定，方便训练。</p>
+<h1 id="lora和全参数训练在计算量和显存上相比如何为什么lora能提升大模型训练效率">2、LoRA和全参数训练在计算量和显存上相比如何？为什么LoRA能提升大模型训练效率？</h1>
+<p>1、计算量上：LoRA训练时，在主干模型的（部分）全连接层增加了LoRA旁路，前向和后向的计算量都在主干模型的基础上，增加了旁路部分的计算，因此相比全参数训练，略有增加。</p>
+<p>2、显存上：训练时，显存主要有①模型参数②梯度③中间激活值④优化器参数四个部分。模型参数/梯度/激活值相比全参数训练也略微增加；而优化器则不需要再存储原模型参数的部分，只需要存储LoRA旁路部分，这部分节省较多显存。</p>
+<p>3、使用LoRA能提升训练效率主要是因为（1）优化器部分的显存需要减少了，可以增大batch（2）优化器参数减少了，分布式训练中多卡之间的通信量减少了（3）（optional）主干模型由于不用更新，可以进一步量化到int8/int4等。</p>
+<h1 id="为什么模型需要normalizationbatchnormlayernorm等">3、为什么模型需要normalization（batchnorm/layernorm等）？</h1>
+<p>1、输入数据包含多个特征，特征之间有不同的量纲和范围（如身高180和年龄18岁），通过normalization进行归一化再经过模型进行线性/非线性组合，能够防止部分特征占据主导，部分特征被忽略。</p>
+<p>2、batchnorm论文认为：模型一般有多层，前一层的输出是后一层的输入，而训练中前一层的参数更新会导致后一层的输入数据分布变化导致ICS（internal
+covariate
+shift），这样后面的层就不得不频繁剧烈更新适应分布变化，导致分布偏移进入激活函数饱和区而出现梯度消失，另外分布变化也是对i.i.d.条件的破坏。使用normalization可以保持分布的稳定，减小方差，使模型训练可以正常进行。</p>
+<p>3.《How Does Batch Normalization Help
+Optimization?》设计了实验测量使用batchnorm前后的ICS，发现batchnorm实际上并没有缓解ICS，甚至有所增加。而batchnorm能优化模型训练的原因更多是使得损失函数平面更加光滑，而便于梯度下降收敛。</p>
+<h1 id="transformer中pre-norm和post-norm各有什么优缺点">4、Transformer中pre-norm和post-norm各有什么优缺点?</h1>
+<p>1.原始的Transformer用的是post-norm，它在残差之后进行归一化（add &amp;
+norm），对参数正则化的效果更强，模型更为鲁棒；post-norm对每个通路都进行了归一化，使得梯度在回传的时候容易出现消失。</p>
+<p>2.Pre-norm相对于post-norm，残差部分存在不经过归一化的通路，因此能够缓解梯度消失，能够训练更深的网络。但是模型的等效“深度”受到影响，L+1层网络近似于一个L层的宽网络。</p>
+<p>3.也就是说，在层数较少，post-norm和pre-norm都能正常收敛的情况下，post-norm的效果更好一些；但是pre-norm更适合用于训练更深的网络。</p>
+<h1 id="对于使用multi-head-attention的模型假设hidden-sized注意力头数量为h每个头维度为d假设有ddh输入上下文长度为sbatch-size1计算self-attention模块各个部分的计算量float-operations">5、对于使用Multi-Head
+Attention的模型，假设hidden
+size=D，注意力头数量为h，每个头维度为d（假设有D=d×h），输入上下文长度为s，batch
+size=1，计算self-attention模块各个部分的计算量（Float
+Operations）。</h1>
+<p>1.QKV线性变换：6 × s ×
+D^2（矩阵乘法，每个位置有加法和乘法两个运算，因此每个位置需要2D次计算）</p>
+<p>2.QK内积：h × 2 × d × s^2（h组矩阵分别计算）</p>
+<p>3.scaling：h × s^2</p>
+<p>4.softmax：h × 3 ×
+s^2（softmax是按列进行的，每列要计算s个exp，s个exp结果的求和，以及s次除法）</p>
+<p>5.reduction（权重矩阵乘以V）：h × 2 × d × s^2</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期文章</p>
+<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大规模对话模型：ChatGPT下的银牌选手们</title>
+    <url>/14e576c.html</url>
+    <content><![CDATA[<img src="/14e576c/1.png" class title="page_1">
+<img src="/14e576c/2.png" class title="page_2">
+<img src="/14e576c/3.png" class title="page_3">
+<img src="/14e576c/4.png" class title="page_4">
+<img src="/14e576c/5.png" class title="page_5">
+<img src="/14e576c/6.png" class title="page_6">
+<img src="/14e576c/7.png" class title="page_7">
+<img src="/14e576c/8.png" class title="page_8">
+<img src="/14e576c/9.png" class title="page_9">
+<img src="/14e576c/10.png" class title="page_10">
+<img src="/14e576c/11.png" class title="page_11">
+<img src="/14e576c/12.png" class title="page_12">
+<img src="/14e576c/13.png" class title="page_13">
+<img src="/14e576c/14.png" class title="page_14">
+<img src="/14e576c/15.png" class title="page_15">
+<img src="/14e576c/16.png" class title="page_16">
+<img src="/14e576c/17.png" class title="page_17">
+<img src="/14e576c/18.png" class title="page_18">
+<img src="/14e576c/19.png" class title="page_19">
+<img src="/14e576c/20.png" class title="page_20">
+<img src="/14e576c/21.png" class title="page_21">
+<img src="/14e576c/22.png" class title="page_22">
+<img src="/14e576c/23.png" class title="page_23">
+<img src="/14e576c/24.png" class title="page_24">
+<img src="/14e576c/25.png" class title="page_25">
+<img src="/14e576c/26.png" class title="page_26">
+<img src="/14e576c/27.png" class title="page_27">
+<img src="/14e576c/28.png" class title="page_28">
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>ChatGPT</tag>
+        <tag>Sparrow</tag>
+        <tag>LaMDA</tag>
+        <tag>GopherCite</tag>
+        <tag>WebGPT</tag>
+        <tag>InstructGPT</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>理解Attention:从起源到MHA,MQA和GQA</title>
+    <url>/3dc22f96.html</url>
+    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
+<p>Attention模块是现在几乎所有大模型的核心模块，因此也有很多工作致力于提升注意力计算的性能和效果。其中MHA（Multi-Head
+Attention）、MQA（Multi-Query Attention）和GQA（Grouped-Query
+Attention）这一路线的思路和做法被很多主流模型所采用，因此简单地梳理一些这几个变体的思路和做法，以及会涉及到的KV
+Cache相关内容。思路比较直白，但也有一些细节和原理值得思考。</p>
+<p>当然针对Attention优化，也有很多其他优秀的方案和思路，如线性注意力、FlashAttention和Sliding
+Window Attention等，这些在后续再开篇梳理。</p>
+<p>（应一些朋友的要求，会增加一些直观基础的内容，以及LLM应用的案例。也欢迎大家提出更多建议。）</p>
+<h1 id="关于attention从rnn到attention">关于Attention：从RNN到Attention</h1>
+<p>了解一个概念的诞生和演进，有助于我们更深入去理解它。我们先简单回顾下attention从起源到最初的实现。</p>
+<p>（熟悉attention的朋友可以跳过这一节）</p>
+<h2 id="从rnn说起">从RNN说起</h2>
+<blockquote>
+<p>Memory is attention through time. ~ Alex Graves 2020</p>
+</blockquote>
+<p>注意力机制最初起源是为了解决序列问题。回想在还没有Transformer的上一世代，使用RNN的Seq2Seq是这样的</p>
+<img src="/3dc22f96/seq2seq.png" class title="seq2seq">
+<img src="/3dc22f96/encoder.png" class title="encoder">
+<img src="/3dc22f96/decoder.png" class title="decoder">
+<p>（图来自<a href="https://theaisummer.com/attention/">AI
+Summer</a>）</p>
+<p>每个RNN cell接收两个输入，输出一个hidden state。比如在翻译任务中，RNN
+encoder把所有输入迭代地编码成context向量 <span class="math inline">\(z\)</span> ，然后由RNN decoder基于 <span class="math inline">\(z\)</span>
+迭代地解码。一般来说，这里decoder的第一个输入是一个特殊token，如[start]，表示解码开始。</p>
+<p>这样会有一个问题， <span class="math inline">\(z\)</span>
+能编码的长度显然有限，而且由于模型结构问题，会更加关注靠近尾部的输入。这样如果关键信息出现在开头，就容易被忽略。</p>
+<p>并且时间步骤上的传播由于有多次迭代相乘，梯度很容易就过小，导致梯度消失问题。</p>
+<p>当然我们有LSMT和GRU等变体来增强长距离记忆的能力，也缓解了梯度问题，但这些方案还是没有产生质变的能力。</p>
+<p>回到问题的核心，我们想要 <span class="math inline">\(z\)</span>
+能够编码所有前面的内容，但是显然， <span class="math inline">\(z\)</span>
+的生成方式天然会让它更容易注意到靠后的内容，而容易忽略靠前的输入。</p>
+<p>一个直觉的想法就是，我们需要想个办法跳过 <span class="math inline">\(z\)</span>
+，和前面的每个输入建立直接的联系。我们希望模型能够有机会学习到去“注意”关键的输入，不管这个输入是在前面还是后面。</p>
+<p>实际上神经网络天生就具有“注意力”的天赋。</p>
+<p>比如在CNN分类中，如果我们画出分类层前的heatmap，会是如下图这个样子</p>
+<img src="/3dc22f96/cnn_heatmap.png" class title="heatmap">
+<p>可以看到，值比较高的地方是在猫的鼻子胡子嘴巴区域，次之是身上和头上的花纹。直观来说，就是模型主要通过脸部的特征和身上的花纹，来识别出这是一只猫。这就是CNN学习到的注意力，这样的特征是神经网络implicitly学到的。</p>
+<p>回归到Seq2Seq，我们怎么来实现注意力，并且让这种implicit的机制变得explicit：单独抽离出来并具备一定可控制性？</p>
+<p>回想翻译场景，在RNN中，每一个时间步骤 <span class="math inline">\(i\)</span> 都会产生一个隐向量，<span class="math inline">\(h_i\)</span> 向量，我们把这些 <span class="math inline">\(h_i\)</span>
+保存起来，在最后要生成新的输出的时候，我们让模型回头看一下之前的这每一个
+<span class="math inline">\(h_i\)</span>
+，再决定要生成什么内容。相比原来只利用最后一个hidden
+state，现在我们可以访问之前所有的中间状态，如果发现前面有关键信息，就可以直接用上了，而不用担心输入太长而被覆盖了。</p>
+<p>那么问题又来了，我们怎么知道前面某一个中间状态对于当前的生成来说是否重要？如果我们不知道怎么定义是否重要，那我们就把这个问题交给模型自己解决好了
+--
+通过网络参数来学习识别某个输入状态是否重要，学习是否要“注意”到它，要给予多少的“注意力”。</p>
+<p>具体来说，我们定义在解码第 <span class="math inline">\(i\)</span>
+个输出是，decoder当前隐状态 <span class="math inline">\(y_{i-1}\)</span>
+和encoder的所有隐状态 <span class="math inline">\(\mathbf{h}\)</span>
+之间的一个score计算</p>
+<p><span class="math display">\[\mathbf{e}_i=\text{attention}_{\mathrm{net}}\left(y_{i-1},\mathbf{h}\right)\in
+R^n\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[e_{ij}=\text{attentiom}_{\text{net
+}(\mathbf{y}_{i-1},h_j)}\]</span></p>
+<p>注意力网络通过 <span class="math inline">\(\mathbf{y}_{i-1}\)</span>
+和 <span class="math inline">\(h_j\)</span> 来计算一个值 <span class="math inline">\(e_{ij}\)</span>，这里的注意力网络可以设计各种操作，比如对输入进行拼接再通过fc层进行计算等。</p>
+<p>这里 <span class="math inline">\(e_{ij}\)</span>
+是一个标量，但它还不是一个可用的权重值，还需要通过一个函数，把attention
+net对各个encoder hidden state的输出值转成一个分布：softmax。</p>
+<p><span class="math display">\[\alpha_{ij}=\frac{\exp\left(e_{ij}\right)}{\sum_{k=1}^{T_x}\exp\left(e_{ik}\right)}\]</span></p>
+<p>最后通过加权计算，获得最终输入给decoder的隐变量。</p>
+<p><span class="math display">\[z_i=\sum_{j=1}^T\alpha_{ij}\mathbf{h}_j\]</span></p>
+<img src="/3dc22f96/seq2seq_attention.png" class title="seq2seq attention">
+<p>可以看到，这里的attention net的任务就是找到decoder上一个hidden
+state和encoder hidden
+state之间的“相关”关系，使得模型能够将更多的注意力放在对应的输入信息上。</p>
+<p>实际上，上面这种attention的计算方式并不是唯一的，attention的计算方式有许多种</p>
+<img src="/3dc22f96/attention_calculation.png" class title="attention calculation">
+<p>这些attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(s, h)=\mathrm{Score}(s,h)\cdot
+h\)</span> 。这里的 <span class="math inline">\(s\)</span>
+就是decoder的hidden state（也就是前文的 <span class="math inline">\(y\)</span> ），<span class="math inline">\(h\)</span> 就是encoder的hidden state。</p>
+<p>（当然从结果上看，是scaled dot-product
+attention经受住了历史的考验，成为了主流。）</p>
+<h2 id="transformer的attention">Transformer的attention</h2>
+<p>从RNN attention到transformer
+attention，所做的事情就如论文题目所说：《Attention Is All You
+Need》，彻底抛弃RNN的在time
+step上的迭代计算，完全拥抱attention机制，只用最简单粗暴的方式同步计算出每个输入的hidden
+state，其他的就交给attention来解决。</p>
+<img src="/3dc22f96/transformer_structure.png" class title="transformer structure.png">
+<p>这里还是保留有encoder和decoder的结构，encoder中的attention都是self-attention，decoder则除了self-attention还有cross-attention。</p>
+<p>transformer结构下，attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(Q,K,V)=\mathrm{Score}(Q,K)V\)</span>，这里有
+<span class="math inline">\(Q=W_{Q}Y，K=W_{K}X，V=W_{V}X\)</span>
+。对于cross-attention， <span class="math inline">\(X\)</span>
+是encoder的hidden states，<span class="math inline">\(Y\)</span>
+是decoder的hidden states，而对于self-attention，则有 <span class="math inline">\(X=Y\)</span>。</p>
+<p>具体到我们熟悉的scaled dot-product attention，使用softmax计算，有</p>
+<p><span class="math display">\[\operatorname{Attention}(Q,K,V)=\operatorname{softmax}(\frac{QK^T}{\sqrt{d}})V\]</span></p>
+<p>到这里，终于见到我们熟悉的attention计算。</p>
+<p>用一张很直观的图来展示整个计算</p>
+<img src="/3dc22f96/Scaled-dot-product-self-attention.pbm" class title="self-attention">
+<p>这里的「query」，「key」和「value」的名称也暗示了整个attention计算的思路。</p>
+<p>类比到一个数据库查询+预测的例子。</p>
+<p>假设我们现在有一个“文章-阅读量”数据库，记录了每篇文章在发布30天内的阅读量。每篇文章就是一个key，对应的阅读量就是value。</p>
+<p>我们现在有一篇将要发布的文章，想要预测这篇文章在30天内的阅读量，那我们就把这篇新的文章，作为query，去和数据库里的文章（key）做一个相关性计算，取最相关的5篇文章。</p>
+<p>假设top5篇文章的相关性分别是 <span class="math inline">\([8,4,4,2,2]\)</span> ，对应阅读量是 <span class="math inline">\([5\text{w},2\text{w},8\text{w},3\text{w},6\text{w}]\)</span>
+。</p>
+<p>那我们把相关性得分归一化成和为1的概率值 <span class="math inline">\([0.4,0.2,0.2,0.1,0.1]\)</span>
+，那我们就可以预测新文章30天内的阅读量是 <span class="math inline">\(0.4\times5+0.2\times2+0.2\times8+0.1\times3+0.1\times6=4.9\text{w}\)</span>
+。</p>
+<p>这个例子中，我们计算相关性就相当于transformer attention中的 <span class="math inline">\(QK^T\)</span>
+，归一化就是softmax，然后通过加权求和取得最后的阅读量/特征向量。</p>
+<p>对于self-attention， <span class="math inline">\(Q、K、V\)</span>
+都来自输入 <span class="math inline">\(X\)</span>，sequence自己计算自己每个token的之间的相关性。而对于cross-attention，decoder中的输出sequence就是上面这个例子中的“将要发布的文章”，通过把这篇新的文章和数据库中的文章做相关计算，我们得到了新的预测结果。</p>
+<p>对于self-attention，由于 <span class="math inline">\(Q、K、V\)</span>
+都来自输入 <span class="math inline">\(X\)</span> ，在计算 <span class="math inline">\(QK^T\)</span>
+时，模型很容易关注到自身的位置上，也就是 <span class="math inline">\(QK^T\)</span>
+对角线上的激活值会明显比较大。这样的情况其实不是很好，因为这会削弱模型关注其他高价值位置的能力，也就限制模型的理解和表达能力。后面讲的MHA对这个问题会有一些缓解作用。</p>
+<p>顺着这样的思路梳理下来，会发现attention的大思路还是很好理解的。而计算上，怎么去获得更好的效果，就是接下来要分析的几个内容，MHA，MQA和GQA所关注的。</p>
+<p>代码上，实现也很容易，直接看<a href="https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention">pytorch
+forcasting</a>的代码</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ScaledDotProductAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, dropout: <span class="built_in">float</span> = <span class="literal">None</span>, scale: <span class="built_in">bool</span> = <span class="literal">True</span></span>):</span><br><span class="line">        <span class="built_in">super</span>(ScaledDotProductAttention, self).__init__()</span><br><span class="line">        <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            self.dropout = dropout</span><br><span class="line">        self.softmax = nn.Softmax(dim=<span class="number">2</span>)</span><br><span class="line">        self.scale = scale</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, q, k, v, mask=<span class="literal">None</span></span>):</span><br><span class="line">        attn = torch.bmm(q, k.permute(<span class="number">0</span>, <span class="number">2</span>, <span class="number">1</span>))  <span class="comment"># query-key overlap</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.scale:</span><br><span class="line">            dimension = torch.as_tensor(k.size(-<span class="number">1</span>), dtype=attn.dtype, device=attn.device).sqrt()</span><br><span class="line">            attn = attn / dimension</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = attn.masked_fill(mask, -<span class="number">1e9</span>)</span><br><span class="line">        attn = self.softmax(attn)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = self.dropout(attn)</span><br><span class="line">        output = torch.bmm(attn, v)</span><br><span class="line">        <span class="keyword">return</span> output, attn</span><br></pre></td></tr></table></figure>
+<h2 id="关于scaling">关于scaling</h2>
+<p>BTW，为什么计算中 <span class="math inline">\(QK^T\)</span>
+之后还要除以 <span class="math inline">\(\sqrt{d}\)</span> ？</p>
+<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。</p>
+<img src="/3dc22f96/softmax.png" class title="softmax">
+<p>苏剑林的<a href="https://spaces.ac.cn/archives/8620">博客</a>中也有详细分析，并提到如果不对attention值进行scaling，也可以通过在参数初始化是将方差除以一个
+<span class="math inline">\(\sqrt{d}\)</span>
+，同样可以起到预防softmax饱和的效果。类似地，通过normalization也可以做到类似的效果。不过实现上在attention里做scaling还是比较稳定高效的。</p>
+<h1 id="mha">MHA</h1>
+<p>只要理解了attention计算的细节，MHA（multi-head
+attention）其实就很好明白。</p>
+<p>MHA在2017年就随着《Attention Is All You
+Need》一起提出，主要干的就是一个事：把原来一个attention计算，拆成多个小份的attention，并行计算，分别得出结果，最后再合回原来的维度。</p>
+<p><span class="math display">\[\mathrm{MultiHeadAttention}(Q,K,V)=\mathrm{Concat}(head_1,\ldots,head_h)\]</span></p>
+<p><span class="math display">\[head_i=\text{Attention}(W_i^QQ,W_i^KK,W_i^VV)\]</span></p>
+<p>假设原来模型的hidden size是 <span class="math inline">\(d\)</span>
+，在MHA中，会把投影后的 <span class="math inline">\(Q、K、V\)</span>
+在hidden state的维度上切成 <span class="math inline">\(head_{num}\)</span> 份，每个头的维度是 <span class="math inline">\(d_{head}\)</span> 。这 <span class="math inline">\(head_{num}\)</span> 组小 <span class="math inline">\(Q、K、V\)</span>
+分别独立地进行attention计算，之后把得到的 <span class="math inline">\(head_{num}\)</span> 份维度 <span class="math inline">\(d_{head}\)</span> 的输出concat起来。</p>
+<p>直接看这个amazing的图，很直观</p>
+<img src="/3dc22f96/multihead_attention.png" class title="MHA">
+<p>操作是这么个操作，多头注意力相比单头有什么好处呢？</p>
+<p>《Attention Is All You Need》文章中给出的说法是</p>
+<blockquote>
+<p>Multi-head attention allows the model to jointly attend to
+information from different representation subspaces at different
+positions.</p>
+</blockquote>
+<p>我们希望多个头能够在训练中学会注意到不同的内容。例如在翻译任务里，一些attention
+head可以关注语法特征，另一些attention
+head可以关注单词特性。这样模型就可以从不同角度来分析和理解输入信息，获得更好的效果了。</p>
+<p>这有点类似CNN中，不同的卷积核来学习不同的信息。比如一个 <span class="math inline">\(3\times3\times128\)</span> 的卷积，有128个 <span class="math inline">\(3\times3\)</span>
+参数组，假设我们的输入是一个灰度图，其中一组 <span class="math inline">\(3\times3\)</span> 的参数是这样的</p>
+<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;0&amp;-1\\1&amp;0&amp;-1\\1&amp;0&amp;-1\end{matrix}\right.\right]\]</span></p>
+<p>那么这是一个检测纵向边界的卷积，而另外一组参数长这样</p>
+<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;1&amp;1\\0&amp;0&amp;0\\-1&amp;-1&amp;-1\end{matrix}\right.\right]\]</span></p>
+<p>这是一个检测横向边界的卷积。</p>
+<p>这128组 <span class="math inline">\(3\times3\)</span>
+就是128个不同特征的检测器，就同MHA中多个头一样，从不同的子空间学到不同的内容，最后再放到一起融合使用。</p>
+<p>但是这是我们expect模型能做到的事情，实际情况是否真的是这样？</p>
+<p>知乎上这篇<a href="https://zhuanlan.zhihu.com/p/626820422">文章</a>里对此做了一些实验和分析。简单来说就是（1）每个头确实学到东西有所不同，但大部分头之间的差异没有我们想的那么大（比如一个学句法，一个学词义这样明显的区分）（2）多个头的情况下，确实有少部分头可以比较好地捕捉到各种文本信息，而不会过分关注自身位置，一定程度缓解了上文提到的计算
+<span class="math inline">\(QK^T\)</span> 之后对角线元素过大的问题。</p>
+<p>我们可以把MHA的多个attention计算视为多个独立的小模型，那么最终整体的attention计算相当于把来自多个小模型的结果进行了融合，这样效果比较好也是比较符合直觉的。</p>
+<p>另外还有一个问题是，使用几个头比较好呢？</p>
+<p>实际上这个问题比较难有确定性的答案，首先可以确定的是头的数量不是越多约好（毕竟头的数量多了，各个子空间小了，子空间能表达的内容就少了），具体多少要视模型规模，任务而定。另外<a href="https://arxiv.org/pdf/1905.10650.pdf">《Are Sixteen Heads Really
+Better than One?》</a>中也指出MHA并不总是优于单头的情况。</p>
+<p>目前可以看到的趋势是，模型越大（也就是hidden
+size越大），头数的增多越能带来平均效果上的收益（或者说允许注意力头增大而不影响子空间的学习能力）。目前LLM主流的头数视乎模型结构和规模，大致有12、16、24、48、96这样一些主流设置。这里面又有比较多的方向和工作，在此暂时不展开，挖个坑，以后专门开一篇讲。</p>
+<p>最后看一下<a href="https://nlp.seas.harvard.edu/2018/04/03/attention.html">The
+Annotated Transformer</a>中的MHA代码实现</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">attention</span>(<span class="params">query, key, value, mask=<span class="literal">None</span>, dropout=<span class="literal">None</span></span>):</span><br><span class="line">    <span class="string">&quot;Compute &#x27;Scaled Dot Product Attention&#x27;&quot;</span></span><br><span class="line">    d_k = query.size(-<span class="number">1</span>)</span><br><span class="line">    scores = torch.matmul(query, key.transpose(-<span class="number">2</span>, -<span class="number">1</span>)) \</span><br><span class="line">             / math.sqrt(d_k)</span><br><span class="line">    <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        scores = scores.masked_fill(mask == <span class="number">0</span>, -<span class="number">1e9</span>)</span><br><span class="line">    p_attn = F.softmax(scores, dim = -<span class="number">1</span>)</span><br><span class="line">    <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        p_attn = dropout(p_attn)</span><br><span class="line">    <span class="keyword">return</span> torch.matmul(p_attn, value), p_attn</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MultiHeadedAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, h, d_model, dropout=<span class="number">0.1</span></span>):</span><br><span class="line">        <span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">        h: head number</span></span><br><span class="line"><span class="string">        &#x27;&#x27;&#x27;</span></span><br><span class="line">        <span class="built_in">super</span>(MultiHeadedAttention, self).__init__()</span><br><span class="line">        <span class="keyword">assert</span> d_model % h == <span class="number">0</span></span><br><span class="line">        <span class="comment"># We assume d_v always equals d</span></span><br><span class="line">        self.d = d_model // h</span><br><span class="line">        self.h = h</span><br><span class="line">        self.linears = clones(nn.Linear(d_model, d_model), <span class="number">4</span>)</span><br><span class="line">        self.attn = <span class="literal">None</span></span><br><span class="line">        self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, query, key, value, mask=<span class="literal">None</span></span>):</span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="comment"># Same mask applied to all h heads.</span></span><br><span class="line">            mask = mask.unsqueeze(<span class="number">1</span>)</span><br><span class="line">        nbatches = query.size(<span class="number">0</span>)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 1) Do all the linear projections in batch from d_model =&gt; h x d </span></span><br><span class="line">        query, key, value = \</span><br><span class="line">            [l(x).view(nbatches, -<span class="number">1</span>, self.h, self.d).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line">             <span class="keyword">for</span> l, x <span class="keyword">in</span> <span class="built_in">zip</span>(self.linears, (query, key, value))]</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2) Apply attention on all the projected vectors in batch. </span></span><br><span class="line">        x, self.attn = attention(query, key, value, mask=mask, </span><br><span class="line">                                 dropout=self.dropout)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 3) &quot;Concat&quot; using a view and apply a final linear. </span></span><br><span class="line">        x = x.transpose(<span class="number">1</span>, <span class="number">2</span>).contiguous() \</span><br><span class="line">             .view(nbatches, -<span class="number">1</span>, self.h * self.d)</span><br><span class="line">        <span class="keyword">return</span> self.linears[-<span class="number">1</span>](x)</span><br></pre></td></tr></table></figure>
+<p>（<a href="https://github.com/huggingface/transformers">transformers</a>中的写法就更为成熟一点，不过里面兼容了比较多的功能，代码太长就不放上来了）</p>
+<h1 id="解码中的kv-cache">解码中的KV Cache</h1>
+<p>在讲MQA和GQA之前，还需要了解一点背景，那就是解码的计算问题，以及KV
+Cache的方案。</p>
+<p>无论是encoder-decoder结构，还是现在我们最接近AGI的decoder-only的LLM，解码生成时都是自回归auto-regressive的方式。</p>
+<p>也就是，解码的时候，先根据当前输入 <span class="math inline">\(\text{input}_{i-1}\)</span> ，生成下一个 <span class="math inline">\(\text{token}_{i}\)</span> ，然后把新生成的 <span class="math inline">\(\text{token}_{i}\)</span> 拼接在 <span class="math inline">\(\text{input}_{i-1}\)</span> 后面，获得新的输入
+<span class="math inline">\(\text{input}_{i}\)</span> ，再用 <span class="math inline">\(\text{input}_{i}\)</span> 生成 <span class="math inline">\(\text{token}_{i+1}\)</span>
+，依此迭代，直到生成结束。</p>
+<p>比如我们输入“窗前明月光下一句是”，那么模型每次生成一个token，输入输出会是这样（方便起见，默认每个token都是一个字符）</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">step0: 输入=[BOS]窗前明月光下一句是；输出=疑</span><br><span class="line">step1: 输入=[BOS]窗前明月光下一句是疑；输出=是</span><br><span class="line">step2: 输入=[BOS]窗前明月光下一句是疑是；输出=地</span><br><span class="line">step3: 输入=[BOS]窗前明月光下一句是疑是地；输出=上</span><br><span class="line">step4: 输入=[BOS]窗前明月光下一句是疑是地上；输出=霜</span><br><span class="line">step5: 输入=[BOS]窗前明月光下一句是疑是地上霜；输出=[EOS]</span><br></pre></td></tr></table></figure>
+<p>（其中[BOS]和[EOS]分别是起始符号和终止符号）</p>
+<p>仔细想一下，我们在生成“疑”字的时候，用的是输入序列中“是”字的最后一层hidden
+state，通过最后的分类头预测出来的。以此类推，后面每生成一个字，使用的都是输入序列中最后一个字的输出。</p>
+<p>我们可以注意到，下一个step的输入其实包含了上一个step的内容，而且只在最后面多了一点点（一个token）。那么下一个step的计算应该也包含了上一个step的计算。</p>
+<p>从公式上来看是这样的：</p>
+<p>回想一下我们attention的计算</p>
+<p><span class="math display">\[
+\alpha_{i,j}=\text{softmax}(q_{i}k_{j}^\top)\\
+o_{i}=\sum_{j=0}^{i}{\alpha_{i,j}v_{j}}
+\]</span></p>
+<p>注意对于decoder的时候，由于mask
+attention的存在，每个输入只能看到自己和前面的内容，而看不到后面的内容</p>
+<p>假设我们当前输入的长度是3，预测第4个字，那每层attention所做的计算有</p>
+<p><span class="math display">\[
+\begin{aligned}
+o_{0}&amp;=\alpha_{0,0}v_{0}\\
+o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
+o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
+\end{aligned}
+\]</span></p>
+<p>预测完第4个字，放到输入里，继续预测第5个字，每层attention所做的计算有</p>
+<p><span class="math display">\[
+\begin{aligned}
+o_{0}&amp;=\alpha_{0,0}v_{0}\\
+o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
+o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
+o_{3}&amp;=\alpha_{3,0}v_{0}+\alpha_{3,1}v_{1}+\alpha_{3,2}v_{2}+\alpha_{3,3}v_{3}\\
+\end{aligned}
+\]</span></p>
+<p>可以看到，在预测第5个字时，只有最后一步引入了新的计算，而 <span class="math inline">\(o_{0}\)</span> 到 <span class="math inline">\(o_{2}\)</span> 的计算和前面是完全重复的。</p>
+<p>但是模型在推理的时候可不管这些，无论你是不是只要最后一个字的输出，它都把所有输入计算一遍，给出所有输出结果。</p>
+<p>也就是说中间有很多我们用不到的计算，这样就造成了浪费。</p>
+<p>而且随着生成的结果越来越多，输入的长度也越来越长。上面这个例子里，输入长度就从step0的10个，每步增长1，直到step5的15个。如果输入的instruction是让模型写高考作文，那可能就有800个step或者更多。这个情况下，step0被算了800次，step1被算了799次...</p>
+<p>有没有什么办法可以重复利用上一个step里已经计算过的结果，减少浪费呢？</p>
+<p>答案就是KV
+Cache。利用缓存空间，把需要重复利用的中间计算结果存下来，减少重复计算。</p>
+<p>而 <span class="math inline">\(k\)</span> 和 <span class="math inline">\(v\)</span> 就是要缓存的对象。</p>
+<p>想象一下，在上面的例子中，假设我们一开始的输入就是3个字，我们第一次预测就是预测第4个字，那么由于一开始没有任何缓存，所有我们每一层还是要踏踏实实地计算一遍。然后把
+<span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值缓存起来。</p>
+<p>则有</p>
+<p><span class="math display">\[
+\text{cache}_l=\text{None}\\
+\]</span></p>
+<center>
+↓
+</center>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
+\]</span></p>
+<p>kv_cache的下标 <span class="math inline">\(l\)</span>
+表示模型层数。</p>
+<p>在进行第二次预测，也就是预测第5个字的时候，在第 <span class="math inline">\(l\)</span>
+层的时候，由于前面我们缓存了<u><strong>每层</strong></u>的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，那本层就只需要算新的 <span class="math inline">\(o_{3}\)</span> ，而不用算 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span> 。</p>
+<p>因为第 <span class="math inline">\(l\)</span> 层的 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span>
+本来会经过FNN层之后进到 <span class="math inline">\(l+1\)</span>
+层，再经过新的投影变换，成为 <span class="math inline">\(l+1\)</span>
+层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，但是 <span class="math inline">\(l+1\)</span> 层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值我们已经缓存过了！</p>
+<p>然后我们把本次新增算出来的 <span class="math inline">\(k\)</span> 、
+<span class="math inline">\(v\)</span> 值也存入缓存。</p>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
+\]</span></p>
+<center>
+↓
+</center>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l}),(k_{3}^{l}, v_{3}^{l})]
+\]</span></p>
+<p>这样就节省了attention和FFN的很多重复计算。</p>
+<p>transformers中，生成的时候传入use_cache=True就会开启KV Cache。</p>
+<p>也可以简单看下GPT2中的实现，中文注释的部分就是使用缓存结果和更新缓存结果</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Class GPT2Attention(nn.Module):</span><br><span class="line">    ...</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params"></span></span><br><span class="line"><span class="params">        self,</span></span><br><span class="line"><span class="params">        hidden_states: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.FloatTensor]],</span></span><br><span class="line"><span class="params">        layer_past: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.Tensor]] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        head_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_hidden_states: <span class="type">Optional</span>[torch.Tensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        use_cache: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">        output_attentions: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">    </span>) -&gt; <span class="type">Tuple</span>[<span class="type">Union</span>[torch.Tensor, <span class="type">Tuple</span>[torch.Tensor]], ...]:</span><br><span class="line">        <span class="keyword">if</span> encoder_hidden_states <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">not</span> <span class="built_in">hasattr</span>(self, <span class="string">&quot;q_attn&quot;</span>):</span><br><span class="line">                <span class="keyword">raise</span> ValueError(</span><br><span class="line">                    <span class="string">&quot;If class is used as cross attention, the weights `q_attn` have to be defined. &quot;</span></span><br><span class="line">                    <span class="string">&quot;Please make sure to instantiate class with `GPT2Attention(..., is_cross_attention=True)`.&quot;</span></span><br><span class="line">                )</span><br><span class="line"></span><br><span class="line">            query = self.q_attn(hidden_states)</span><br><span class="line">            key, value = self.c_attn(encoder_hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line">            attention_mask = encoder_attention_mask</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            query, key, value = self.c_attn(hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">        query = self._split_heads(query, self.num_heads, self.head_dim)</span><br><span class="line">        key = self._split_heads(key, self.num_heads, self.head_dim)</span><br><span class="line">        value = self._split_heads(value, self.num_heads, self.head_dim)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 过去所存的值</span></span><br><span class="line">        <span class="keyword">if</span> layer_past <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            past_key, past_value = layer_past</span><br><span class="line">            key = torch.cat((past_key, key), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的key加入</span></span><br><span class="line">            value = torch.cat((past_value, value), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的value加入</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> use_cache <span class="keyword">is</span> <span class="literal">True</span>:</span><br><span class="line">            present = (key, value)  <span class="comment"># 输出用于保存</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            present = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.reorder_and_upcast_attn:</span><br><span class="line">            attn_output, attn_weights = self._upcast_and_reordered_attn(query, key, value, attention_mask, head_mask)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)</span><br><span class="line"></span><br><span class="line">        attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)</span><br><span class="line">        attn_output = self.c_proj(attn_output)</span><br><span class="line">        attn_output = self.resid_dropout(attn_output)</span><br><span class="line"></span><br><span class="line">        outputs = (attn_output, present)</span><br><span class="line">        <span class="keyword">if</span> output_attentions:</span><br><span class="line">            outputs += (attn_weights,)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> outputs  <span class="comment"># a, present, (attentions)</span></span><br></pre></td></tr></table></figure>
+<p>总的来说，KV
+Cache是以空间换时间的做法，通过使用快速的缓存存取，减少了重复计算。（注意，只有decoder结构的模型可用，因为有mask
+attention的存在，使得前面的token可以不用关注后面的token）</p>
+<p>但是，用了KV Cache之后也不是立刻万事大吉。</p>
+<p>我们简单算一下，对于输入长度为 <span class="math inline">\(s\)</span>
+，层数为 <span class="math inline">\(L\)</span> ，hidden size为 <span class="math inline">\(d\)</span> 的模型，需要缓存的参数量为</p>
+<p><span class="math display">\[
+2\times L\times s\times d
+\]</span></p>
+<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
+<p><span class="math display">\[
+2\times 2\times L\times s\times d
+\]</span></p>
+<p>以Llama2 7B为例，有 <span class="math inline">\(L=32\)</span> ，
+<span class="math inline">\(L=4096\)</span>
+，那么每个token所需的缓存空间就是524,288 bytes，约52K，当 <span class="math inline">\(s=1024\)</span> 时，则需要536,870,912
+bytes，超过500M的空间。</p>
+<p>这里考虑的还只是batch size=1的情况，如果batch
+size增大，这个值更是很容易就超过1G。</p>
+<p>（MHA相比单头的情况，相当于只是把 <span class="math inline">\(q、k、v\)</span>
+切成多份并行计算了，对于实际需要缓存的大小没有影响）</p>
+<p>看下现在主流的科学计算卡配置</p>
+<img src="/3dc22f96/gpu_cache.png" class title="gpu cache">
+<p>强如H100也只有50M的L2 Cache（L1
+Cache的大小更是可以忽略不计），大概只能支持Llama2
+7B总共100个token左右的输入。</p>
+<p>想想我们现在用的LLM动辄34B/70B的规模，长度更是以千为基础单位，这样明显是不够用的。</p>
+<p>那么超出L2 Cache的部分只能走到显存中去了，但是HBM速度比L2
+Cache慢多了。</p>
+<img src="/3dc22f96/sram_dram.png" class title="储存空间与速度">
+<p>看来还需要进一步优化。</p>
+<p>要保证模型的推理加速，要么增大Cache的大小，而且是需要一到两个数量级的增强，那这个只能靠黄老板了。</p>
+<p>要么就是减少需要缓存的量。</p>
+<h1 id="mqa">MQA</h1>
+<p>MQA就是来减少缓存所需要的量的。</p>
+<p>Google在2019年就在《Fast Transformer Decoding: One Write-Head is All
+You
+Need》提出了MQA，不过那时候主要到的人不多，那是大家主要还是关注在用Bert把榜刷出新高上。</p>
+<p>MQA的做法其实很简单。在MHA中，输入分别经过 <span class="math inline">\(W_{Q}、W_{K}、W_{V}\)</span>
+的变换之后，都切成了n份（n=头数），维度也从 <span class="math inline">\(d_{model}\)</span> 降到了 <span class="math inline">\(d_{head}\)</span>
+，分别进行attention计算再拼接。而MQA这里，在线性变换之后，只对 <span class="math inline">\(Q\)</span> 进行切分（和MHA一样），而 <span class="math inline">\(K、V\)</span> 则直接在线性变换的时候把维度降到了
+<span class="math inline">\(d_{head}\)</span>
+（而不是切分变小），然后这n个Query头分别和同一份 <span class="math inline">\(K、V\)</span>
+进行attention计算，之后把结果拼接起来。</p>
+<p>简单来说，就是MHA中，每个注意力头的 <span class="math inline">\(K、V\)</span>
+是不一样的，而MQA这里，每个注意力头的 <span class="math inline">\(K、V\)</span>
+是一样的，值是共享的。而其他步骤都和MHA一样。</p>
+<img src="/3dc22f96/MQA.webp" class title="MQA">
+<p>这样一来，需要缓存的 <span class="math inline">\(K、V\)</span>
+值一下就从所有头变成一个头的量。</p>
+<p>比如在Llama2
+7B中用的是32个头，那用MQA后，1024个token需要缓存的量就变成1/32，536,870,912
+bytes / 32 = 16,777,216 bytes，差不多是16M，这就能全塞进缓存中了。</p>
+<p>（实现上，就是改一下线性变换矩阵，然后把 <span class="math inline">\(K、V\)</span>
+的处理从切分变成复制，就不再赘述。）</p>
+<p>当然，由于共享了多个头的参数，限制了模型的表达能力，MQA虽然能好地支持推理加速，但是在效果上略略比MHA差一点，但是并不多，且相比其他修改hidden
+size或者head num的做法效果都好。</p>
+<img src="/3dc22f96/mqa_result_1.png" class title="MQA results 1">
+<img src="/3dc22f96/mqa_result_3.png" class title="MQA results 3">
+<h1 id="gqa">GQA</h1>
+<p>既然MQA对效果有点影响，MHA缓存又存不下，那GQA（Grouped-Query
+Attention）就提出了一个折中的办法，既能减少MQA效果的损失，又相比MHA需要更少的缓存。</p>
+<p>（文章：《GQA: Training Generalized Multi-Query Transformer Models
+from Multi-Head Checkpoints》，2023年）</p>
+<p>GQA里， <span class="math inline">\(Q\)</span>
+还是按原来MHA/MQA的做法不变。只使用一套共享的 <span class="math inline">\(K、V\)</span>
+不是效果不好吗，那就还是多弄几套。但是不要太多，数量还是比 <span class="math inline">\(Q\)</span> 的头数少一些。这样相当于把 <span class="math inline">\(Q\)</span> 的多个头给分了group，同一个group内的
+<span class="math inline">\(Q\)</span> 共享同一套 <span class="math inline">\(K、V\)</span> ，不同group的 <span class="math inline">\(Q\)</span> 所用的 <span class="math inline">\(K、V\)</span> 不同。</p>
+<p>MHA可以认为是 <span class="math inline">\(K、V\)</span>
+头数最大时的GQA，而MQA可以任务是 <span class="math inline">\(K、V\)</span> 头数最少时的GQA。</p>
+<p>看论文里的图就很直观</p>
+<img src="/3dc22f96/GQA.png" class title="GQA">
+<p>效果怎么样呢？</p>
+<img src="/3dc22f96/GQA_result_1.png" class title="GQA result">
+<p>看表中2/3/4行对比，GQA的速度相比MHA有明显提升，而效果上比MQA也好一些，能做到和MHA基本没差距。文中提到，这里的MQA和GQA都是通过average
+pooling从MHA初始化而来，然后进行了少量的训练得到的。如果我们想要把之前用MHA训练的模型改造成GQA，也可以通过这样的方法，增加少量训练来实现。当然如果从一开始就加上，从零开始训练，也是没有问题的。</p>
+<p>Llama2用的就是GQA，在tech
+report中也做了MHA、MQA、GQA的效果对比，可以看到效果确实很不错。</p>
+<img src="/3dc22f96/llama2_qga.png" class title="llama2 GQA result">
+<h1 id="小结">小结</h1>
+<p>MHA、MQA、GQA的实现其实并不复杂，效果也很好，理解上并没有太多困难。但是想要真正理解它们的出发点，还是需要深入每一个细节，去了解当时要解决的事什么问题。</p>
+<p>目前来看GQA是LLM比较好的方案，但未来肯定还会有针对不同方向的进一步优化方案，计算效率、推理速度、显存消耗这些方向都值得我们继续去探索优化。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<h1 id="reference">Reference</h1>
+<p>【1】The Annotated Transformer
+https://nlp.seas.harvard.edu/2018/04/03/attention.html<br>
+【2】Attention Is All You Need
+https://arxiv.org/pdf/1706.03762.pdf<br>
+【3】Fast Transformer Decoding: One Write-Head is All You Need
+https://arxiv.org/pdf/1911.02150.pdf<br>
+【4】https://www.researchgate.net/figure/Scaled-dot-product-self-attention-mechanism_fig1_363923096<br>
+【5】GQA: Training Generalized Multi-Query Transformer Models from
+Multi-Head Checkpoints https://arxiv.org/pdf/2305.13245.pdf<br>
+【6】How Attention works in Deep Learning: understanding the attention
+mechanism in sequence models https://theaisummer.com/attention/<br>
+【7】A simple overview of RNN, LSTM and Attention Mechanism
+https://medium.com/swlh/a-simple-overview-of-rnn-lstm-and-attention-mechanism-9e844763d07b<br>
+【8】https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention<br>
+【9】浅谈Transformer的初始化、参数化与标准化
+https://spaces.ac.cn/archives/8620<br>
+【10】https://theaisummer.com/self-attention/
+https://theaisummer.com/self-attention/<br>
+【11】https://zhuanlan.zhihu.com/p/626820422
+https://zhuanlan.zhihu.com/p/626820422<br>
+【12】Are Sixteen Heads Really Better than One?
+https://arxiv.org/pdf/1905.10650.pdf<br>
+【13】This post is all you need（上卷）——层层剥开Transformer
+https://zhuanlan.zhihu.com/p/420820453<br>
+【14】The Illustrated Transformer
+https://jalammar.github.io/illustrated-transformer/<br>
+【15】Multi-Query Attention is All You Need
+https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>attention</tag>
+        <tag>KV Cache</tag>
       </tags>
   </entry>
 </search>
