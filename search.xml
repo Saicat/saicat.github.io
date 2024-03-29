@@ -1,415 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>理解LLM位置编码:RoPE</title>
-    <url>/a051710f.html</url>
-    <content><![CDATA[<p>最近在做LLM窗口外推的相关工作，因此刚好也回顾一下目前最流行的位置编码RoPE。</p>
-<h1 id="关于rope">关于RoPE</h1>
-<p>RoPE（Rotary Position
-Embedding），是苏剑林大神在2021年就提出的一种Transformer模型的位置编码。RoPE是一种可以<big><u><strong>以绝对位置编码形式实现的相对位置编码</strong></u></big>，兼顾了模型性能和效率。</p>
-<p>2023年上半年的时候，大模型位置编码尚有Alibi和RoPE在相互比拼，而到了2023年下半年，及今2024年，新开源出来的模型，大部分都是使用RoPE了。当然Alibi也有其优势，这个在讲Alibi的时候来说。</p>
-<p>苏神在他的个人网站科学空间中对RoPE有相关文章进行了介绍，本篇是在这个基础上，对RoPE进行理解（公式和符号上也会沿用苏神的写法）。</p>
-<h1 id="以绝对位置编码的方式实现相对位置编码">以绝对位置编码的方式实现相对位置编码</h1>
-<p>前面提到，RoPE是一种一绝对位置编码的方式实现的相对位置编码，那么这么做能带来什么收益？</p>
-<p>先说原因：</p>
-<p>在文本长度不长的情况下（比如Bert时代基本都是256/512token的长度），相对位置编码和绝对位置编码在使用效果上可以说没有显著差别。<br>
-如果要处理更大长度的输入输出，使用绝对位置编码就需要把训练数据也加长到推理所需长度，否则对于没训练过的长度（训练时没见过的位置编码），效果多少会打些折扣。<br>
-而使用相对位置编码则<u><strong>更容易外推</strong></u>，毕竟token-2和token-1的距离，与token-10002和token-10001的距离是一样的，也因此可以缓解对巨量长文本数据的需求。<br>
-但是传统相对位置编码的实现相对<u><strong>复杂</strong></u>，有些也会有<u><strong>计算效率低</strong></u>的问题。由于修改了self-attention的计算方式，也比较难推广到<u><strong>线性注意力</strong></u>计算法模型中。<br>
-总结来说，就是绝对位置编码<u><strong>好实现</strong></u>，<u><strong>效率高</strong></u>，<u><strong>适用线性注意力</strong></u>，而相对位置编码<u><strong>易外推</strong></u>，因此就有了对“绝对位置编码的方式实现相对位置编码”的追求，去把二者的优点结合起来。</p>
-<p>下面简单回顾一下绝对位置编码和相对位置编码。</p>
-<p>（对位置编码比较熟悉的朋友可以直接跳到第3节。）</p>
-<h2 id="绝对位置编码">绝对位置编码</h2>
-<p>先回顾一下带绝对位置编码的self-attention。</p>
-<p><span class="math display">\[\left.\left\{\begin{array}{l}q_\mathrm{i}=(x_\mathrm{i}+p_\mathrm{i})W_\mathrm{Q}\\k_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{K}\\\nu_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{V}\\\mathrm{a_\mathrm{i,j}}=\mathrm{softmax}\left(q_\mathrm{i}k_\mathrm{j}^\top\right)\\o_\mathrm{i}=\sum_\mathrm{j}a_\mathrm{i,j}\nu_\mathrm{j}\end{array}\right.\right.\tag{1}\]</span></p>
-<p><span class="math inline">\(x_i\)</span> 和 <span class="math inline">\(x_j\)</span> 分别是位置 <span class="math inline">\(i\)</span> 和 <span class="math inline">\(j\)</span> 的输入，<span class="math inline">\(p\)</span> 是对应位置的位置编码向量。</p>
-<p>这里的位置编码<span class="math inline">\(p\)</span>可以是三角函数式，或者直接训练式。但是无论是哪种，其实现方式都很简单，就是在输入端把词向量
-<span class="math inline">\(x\)</span> 和位置向量 <span class="math inline">\(p\)</span>
-相加即可，相比attention中的softmax计算，element-wise
-addition操作的计算量非常小，是可以忽略不计的。</p>
-<p>大部分绝对位置编码使用的是这样向量相加的形式，即加性编码，也有一些用乘性编码的工作，把
-<span class="math inline">\(x + p\)</span> 变成 <span class="math inline">\(x * p\)</span> 这样，效果上也是大差不差。</p>
-<h2 id="相对位置编码">相对位置编码</h2>
-<p>在绝对位置编码中，可以在输入阶段就把 <span class="math inline">\(x\)</span> 和 <span class="math inline">\(p\)</span>
-直接相加，是因为这里把位置信息当做是这个位置的词的固有特征。</p>
-<p>比如“我”这个词放在位置1时，形成一个 <span class="math inline">\(e_1 =
-x_我 + p_1\)</span>
-这么一个向量来代表【“我”在位置1】这一个情况；而当同样的词“我”放在位置8时，形成了另一个向量
-<span class="math inline">\(e_8 = x_我 + p_8\)</span> 。两个向量 <span class="math inline">\(e_1\)</span> 和 <span class="math inline">\(e_8\)</span>
-虽然包含同一个词，但是对于模型来说，这两个输入是不同的（因为每个数值都包含了位置向量），词向量和位置向量<u><strong>耦合</strong></u>在一起共同构成了一个完整的输入。</p>
-<p>直观来说，比如词表大小是1万，模型训练窗口最大长度是512，那么对于模型来说，实际上要区分的输入是1万×512=512万个。看起来虽然不少，但是在海量的数据和训练量下，这也不算什么事儿，模型确实能handle。</p>
-<p>扯远了，现在回来看一下相对位置编码。把公式（1）中的 <span class="math inline">\(q_{i}k_{j}^{T}\)</span>展开来</p>
-<p><span class="math display">\[\begin{align*}q_1k_j^\top&amp;=\left(x_i+p_j\right)W_\mathbb{Q}W_K^\top\left(x_j+p_j\right)^\top\\&amp;=\left(x_iW_\mathbb{Q}+{\color{red}p_iW_\mathbb{Q}}\right)\left(W_K^\top
-x_j^\top+{\color{red}W_K^\top
-p_j^\top}\right)\end{align*}\tag{2}\]</span></p>
-<p>和位置相关的有 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
-和 <span class="math inline">\(W_K^\top p_j^\top\)</span> 两项。</p>
-<h3 id="google式">Google式</h3>
-<p>在最早引入相对位置编码的Google的论文《Self-Attention with Relative
-Position Representations》中，把第一项 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
-去掉了（因为要搞相对位置编码，只要能把相对位置信息加到其中一项输入就可以了，这里加在了位置
-<span class="math inline">\(j\)</span>），把第二项 <span class="math inline">\(W_K^\top p_j^\top\)</span> 改成和位置 <span class="math inline">\(i\)</span>、<span class="math inline">\(j\)</span>
-都相关的位置向量 <span class="math inline">\(R_{ij}^K\)</span>，于是在这个使用相对位置编码的attention计算中，<u><strong>不再是直接计算input
-projection的内积来获取权重</strong></u>，而变成</p>
-<p><span class="math display">\[
-\mathrm{a_{ij}=softmax}\left(x_{i}W_{\mathbb{Q}}\left(x_{j}W_{\mathbb{K}}+R_{\mathbf{i,j}}^{\mathbf{K}}\right)^{\top}\right)\tag{3}
-\]</span></p>
-<p><span class="math inline">\(R_{ij}^K\)</span>
-是什么呢？可以是可训练式的向量，也可以是类似三角函数式的，在这个基础上增加了一个clip操作。</p>
-<p><span class="math display">\[
-R_{\mathrm{i,j}}^\mathrm{K}=p_\mathrm{K}\left[\mathrm{clip(i-j,p_{min},p_{max})}\right]
-\]</span></p>
-<p>其中 <span class="math inline">\(p_\mathrm{K}\)</span>
-就是可训练的向量或者三角函数向量。</p>
-<p>为什么要增加一个clip操作？因为直观上，一个词对其左右附近的其他词的位置关系<strong>理应</strong>更加敏感，比如“我请你吃饭”中，“吃饭”这个词需要以高分辨率明确区分出前面三个词“我”、“请”、“你”的位置，以免理解成了“你请我吃饭”；而随着距离越来越远，这种高分辨率的需求也就越来越低，十万个token之前的内容顺序对于当前token来说，影响比较小了，在位置向量上可以一视同仁。另外这也是方便了位置信息的外推，比如我们可以只训练256个相对位置编码信息，而在应用是可以外推到&gt;256的长度。</p>
-<p>本来到这里就可以了，相对位置信息已经加入了，但是Google除了在input端增加了相对位置信息，在输出端也增加了相对位置信息。本来输出端的计算是</p>
-<p><span class="math display">\[\begin{align*}
-o_\mathrm{i}&amp;=\sum_\mathrm{j}a_\mathrm{i,j}\nu_\mathrm{j}\\
-&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}(x_{j} + p_{j})W_{\mathrm{V}}\\
-&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}(x_{j}W_{\mathrm{V}} +
-{\color{red}p_{j}W_{\mathrm{V}}})\\
-\end{align*}\tag{4}\]</span></p>
-<p>Google的方法把 <span class="math inline">\(p_{j}W_{\mathrm{V}}\)</span>
-也改成了包含相对位置信息的向量</p>
-<p><span class="math display">\[\begin{align*}
-o_{\mathrm{i}}=\sum_{\mathrm{j}}\mathrm{a_{i,j}}\left(x_{j}W_{\mathrm{V}}+R_{\mathrm{i,j}}^{\mathrm{V}}\right)\tag{5}
-\end{align*}\]</span></p>
-<p><span class="math inline">\(R_{\mathrm{i,j}}^{\mathrm{V}}\)</span> 和
-<span class="math inline">\(R_{ij}^K\)</span> 相似，都是一个相对位置向量
-+ clip操作。</p>
-<h3 id="xlnet式">XLNET式</h3>
-<p>XLNET也使用了相对位置编码，思路类似Google，只是具体的操作不同。</p>
-<p>在公式（2）的基础上继续展开</p>
-<p><span class="math display">\[\begin{align*}
-q_ik_j^T
-&amp;= \left(x_iW_\mathbb{Q}+{p_iW_\mathbb{Q}}\right)\left(W_K^\top
-x_j^\top+{W_K^\top p_j^\top}\right)\\
-&amp;=
-x_iW_\mathbb{Q}W_\mathbb{K}^Tx_j^T
-+x_iW_\mathbb{Q}W_\mathbb{K}^T{\color{red}p_j^T}
-+{\color{red}p_i}W_\mathbb{Q}W_\mathbb{K}^T{x_j^T}
-+{\color{red}p_i}W_\mathbb{Q}W_\mathbb{K}^T{\color{red}p_j^T}\\
-\end{align*}\tag{6}
-\]</span></p>
-<p>把绝对位置相关的几个参数改成相对位置相关的参数，变成：</p>
-<p><span class="math display">\[
-\mathrm{a_{ij}=softmax}\left
-(x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+x_iW_\mathrm{Q}W_\mathrm{K}^\top {\color{red}R_\mathrm{i-j}^\top}
-+{\color{red}u}W_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+{\color{red}\nu}
-W_\mathrm{Q}W_\mathrm{K}^\top{\color{red}R_\mathrm{i-j}^\top}\right)
-\tag{7}
-\]</span></p>
-<p>把 <span class="math inline">\(p_i\)</span> 变成了两个可训练的向量
-<span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span> ，把 <span class="math inline">\(p_j\)</span> 变成相对位置向量 <span class="math inline">\(R_{i-j}^\top\)</span> 。</p>
-<p>实际实现上可以把 <span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span>
-后面跟着的矩阵省掉了，去掉这个线性变化不影响 <span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span> 的训练，变成</p>
-<p><span class="math display">\[
-x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+x_iW_\mathrm{Q}W_\mathrm{K}^\top {\color{red}R_\mathrm{i-j}^\top}
-+{\color{red}u}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+{\color{red}\nu} W_\mathrm{K}^\top{\color{red}R_\mathrm{i-j}^\top}
-\tag{8}
-\]</span></p>
-<p>此外，XLNET只对输入端做了处理，输出端则直接把位置相关的计算去掉了，即</p>
-<p><span class="math display">\[\begin{align*}
-o_\mathrm{i}
-&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}x_{j}W_{\mathrm{V}}\\
-\end{align*}\tag{9}\]</span></p>
-<p>可以看到，Google式和XLNET式的相对位置编码在权重 <span class="math inline">\(\mathrm{a_{i,j}}\)</span>
-的计算上都变得比较复杂了（相对绝对位置编码而言），并且到这里可以看到，获取相对位置信息的思路其实就是想办法把原来公式（2）中的绝对位置向量替换成和位置
-<span class="math inline">\(i\)</span> 、 <span class="math inline">\(j\)</span>
-都相关的向量。很多其他变体其实都大差不差，基本就是在怎么加入相对位置向量、怎么clip上下功夫。</p>
-<p>当然，也有简单一点的实现，比如T5的方法。</p>
-<h3 id="t5式">T5式</h3>
-<p>公式（6）中展开了内积计算，一共有四项，第一项完全没有位置信息，只和词向量本身有关，第二三项分别包含了位置
-<span class="math inline">\(i\)</span> 和位置 <span class="math inline">\(j\)</span>
-的信息，而第四项只和位置相关，和词向量本身是什么内容无关。也就是说，位置相关的信息都是在后面三项引入的，那简单点，直接把后面三项替换成一个位置向量：</p>
-<p><span class="math display">\[
-\mathrm{a_{ij}=softmax}\left
-(x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+ \beta_{i,j}\right)
-\tag{10}
-\]</span></p>
-<p>（从最早提出，到XLNET，以及DeBerta，T5等，可以看到相对位置编码的实现有一个简化的趋势，而效果也越来越好，正所谓大道至简，有时候有用的东西未必需要很复杂）</p>
-<h2 id="对比">对比</h2>
-<p>看来相对位置编码确实比较复杂，说个大概需要这么多篇幅；并且相对绝对位置编码，也没有那么直接明了，需要对attention计算做一些改造。</p>
-<p>公式（1）的绝对位置编码中，可以看到在进softmax操作前需要做3次矩阵加法，3次矩阵乘法</p>
-<p>从公式（8）可以看到，共有4组矩阵计算要做，每组要做3次矩阵乘法，相对会比较复杂。公式（3）也有类似的情况。当然同时也有一些针对相对位置编码的高效计算被提出，这些就需要针对不同的计算方案来优化了。</p>
-<p>总之在实现方式上和计算效率上，绝对位置编码具有一些优势。</p>
-<p>而在输入输出窗口外推方面，相对位置编码有着天然的优势。</p>
-<p>另外，绝对位置编码保持self-attention的经典形式，使得应用面更广，如可以使用到linear
-attention方案中去，这个以后再展开讲（又挖了个坑）。</p>
-<h1 id="rope的设计思路">RoPE的设计思路</h1>
-<h2 id="保持attention计算形式">保持attention计算形式</h2>
-<p>回顾完经典的绝对位置编码和相对位置编码，回到RoPE上来。</p>
-<p>先说设计思路：</p>
-<p>首先我们想要保持经典self-attention的计算方式，即公式（1）中的形式，输入端
-= 内积 +
-softmax，至于输出端则保持完全不变。softmax我们不去动，那这里留给我们操作的就是内积。</p>
-<p>也就说，现在问题是，我们怎么在只做内积的情况下，把内积结果变成只和相对位置有关，而和绝对位置无关的结果。写成公式就是</p>
-<p><span class="math display">\[
-\langle
-f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle=g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)
-\tag{11}
-\]</span></p>
-<p>其中 <span class="math inline">\(q_m\)</span> 是在位置 <span class="math inline">\(m\)</span> 的query向量，<span class="math inline">\(k_n\)</span> 是在位置 <span class="math inline">\(n\)</span> 的key向量，<span class="math inline">\(f_q\)</span> 和 <span class="math inline">\(f_k\)</span>
-是分别针对这query和key向量的操作函数。</p>
-<p>我们的任务就是要找到一组 <span class="math inline">\(f_q\)</span> 、
-<span class="math inline">\(f_k\)</span> 和 <span class="math inline">\(g\)</span> ，使得公式（11）恒成立。</p>
-<p>当然理论上这里是存在无数多组答案的，那么RoPE怎么找到一组好实现的组合呢？</p>
-<h2 id="借用复数寻找组合">借用复数寻找组合</h2>
-<p>式（11）中， <span class="math inline">\(g\)</span>
-的结果是一个标量，我们需要一个能连接向量内积和标量的桥梁，这个桥梁就是复数。</p>
-<p>这里先回顾一下复数的知识。任意复数都可以表示成复平面的一个2维向量</p>
-<img src="/a051710f/complex_number.png" class width="282" height="401" title="复数平面">
-<p>现在考虑query和key向量都是2维的情况，那么可以代入复数的操作<br>
-（先把 hidden size = 2 的情况推理清楚，后续再推广到更高维的情况）</p>
-<p>那么在2维复数平面上有什么操作可以满足公式（11）的要求呢？Roformer论文中提出的是这组：</p>
-<p><span class="math display">\[
-\begin{aligned}
-f_q(\boldsymbol{q}_m,m)&amp;=\boldsymbol{q}_me^{im\theta}=\left(\boldsymbol{W}_q\boldsymbol{x}_m\right)e^{im\theta}
-\\
-f_k(\boldsymbol{k}_n,n)&amp;=\boldsymbol{k}_ne^{in\theta}=(\boldsymbol{W}_k\boldsymbol{x}_n)e^{in\theta}
-\\
-g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)&amp;=\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
-=\mathrm{Re}\left[(\boldsymbol{W}_q\boldsymbol{x}_m)(\boldsymbol{W}_k\boldsymbol{x}_n)^*e^{i(m-n)\theta}\right]\\
-\end{aligned} \\
-\tag{12}
-\]</span></p>
-<p>其中 <span class="math inline">\(\boldsymbol{k}_n^*\)</span> 是 <span class="math inline">\(\boldsymbol{k}_n\)</span> 的共轭复数。</p>
-<p>（如果暂时理解不了是怎么想出这个组合来满足要求的的，先把它放一边，毕竟数学就是这么神奇）</p>
-<p>共轭复数是这样的关系</p>
-<p><span class="math display">\[
-\begin{gathered}
-z=a+ib \\
-z^*=a-ib
-\end{gathered}
-\tag{13}
-\]</span></p>
-<p>先证明一下这个组合的正确性，是不是真的满足公式（11）。</p>
-<p>（也可以先跳过证明，选择先相信这个组合）</p>
-<p>回顾一下欧拉公式</p>
-<p><span class="math display">\[
-e^{ix}=\cos x+i\sin x
-\tag{14}
-\]</span></p>
-<p>因为现在我们讨论的是2维的情况，那2维向量 <span class="math inline">\(q_m\)</span> 可以用一个复数来表示</p>
-<p><span class="math display">\[
-q_m = q_m^{(1)} + iq_m^{(2)}
-\tag{15}
-\]</span></p>
-<p>那从复数角度来看，就有</p>
-<p><span class="math display">\[
-\begin{aligned}
-f_q(\boldsymbol{q}_m,m)
-&amp;= \boldsymbol{q}_me^{im\theta} \\
-&amp;= (q_m^{(1)} + iq_m^{(2)})(\cos (m\theta)+i\sin (m\theta)) \\
-&amp;=
-(q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta))+i(q_m^{(1)}\sin(m\theta)
-+ q_m^{(2)}\cos(m\theta))
-\end{aligned}
-\tag{16}
-\]</span></p>
-<p>式（16）的结果也是一个复数，那也可以用复平面上的一个向量来表示：</p>
-<p><span class="math display">\[
-f_q(\boldsymbol{q}_m,m) =
-\left.\left[\begin{matrix}{q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta)}\\{q_m^{(1)}\sin(m\theta)
-+ q_m^{(2)}\cos(m\theta)}\end{matrix}\right.\right]^\top
-\tag{17}
-\]</span></p>
-<p>（这里沿用式（1）中，默认向量为行向量的设定，所有有个transpose，实际上是行向量还是列向量都没关系，只是推算的时候写法问题）</p>
-<p>类似地，有</p>
-<p><span class="math display">\[
-\begin{aligned}
-f_k(\boldsymbol{k}_n,n)
-&amp;=
-(k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta))+i(k_n^{(1)}\sin(n\theta)
-+ k_n^{(2)}\cos(n\theta))
-\end{aligned}
-\tag{18}
-\]</span></p>
-<p>和</p>
-<p><span class="math display">\[
-f_k(\boldsymbol{k}_n,n) =
-\left.\left[\begin{matrix}{k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta)}\\{k_n^{(1)}\sin(n\theta)
-+ k_n^{(2)}\cos(n\theta)}\end{matrix}\right.\right]^\top
-\tag{19}
-\]</span></p>
-<p>则有<br>
-<span class="math display">\[
-\begin{aligned}
-&amp;\langle
-f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle\\=&amp;(q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta))(k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta))
-\\&amp;+ (q_m^{(1)}\sin(m\theta) +
-q_m^{(2)}\cos(m\theta))(k_n^{(1)}\sin(n\theta) +
-k_n^{(2)}\cos(n\theta))\\
-=&amp;q_m^{(1)}k_n^{(1)}\left(\cos(m\theta)\cos(n\theta)+\sin(m\theta)\sin(n\theta)\right)
-\\
-&amp;+q_m^{(1)}k_n^{(2)}\left(-\cos(m\theta)\sin(n\theta)+\sin(m\theta)\cos(n\theta)\right)
-\\
-&amp;+q_m^{(2)}k_n^{(1)}(-\sin(m\theta)\cos(n\theta)+\cos(m\theta)\sin(n\theta))
-\\
-&amp;+q_m^{(2)}k_n^{(2)}(\sin(m\theta)\sin(n\theta)+\cos(m\theta)\cos(n\theta))
-\\
-=&amp;q_m^{(1)}k_n^{(1)}\cos((m-n)\theta)+q_m^{(1)}k_n^{(2)}\sin((m-n)\theta)
-\\
-&amp;-\left.q_m^{(2)}k_n^{(1)}\right.\sin((m-n)\theta)
-+q_m^{(2)}k_n^{(2)}\cos((m-n)\theta)\\
-= &amp;(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)})\cos((m - n)\theta) +
-(q_m^{(1)}k_n^2 - q_m^{(2)}k_n^{(1)})\sin((m-n)\theta)
-\end{aligned}
-\tag{20}
-\]</span></p>
-<p>用了三角函数和差公式 <span class="math display">\[
-\sin(\alpha\pm\beta)=\sin\alpha\cos\beta\pm\cos\alpha\sin\beta\\
-{\cos(\alpha\pm\beta)=\cos\alpha\cos\beta\mp\sin\alpha\sin\beta}
-\]</span></p>
-<p>再看 <span class="math inline">\(g\)</span></p>
-<p><span class="math display">\[
-\begin{aligned}
-&amp;g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)\\
-=
-&amp;\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
-\\
-= &amp;\mathrm{Re}\left[[(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)}) -
-i(q_m^{(1)}k_n^2 - q_m^{(2)}k_n^{(1)})](\cos((m -
-n)\theta) + i\sin((m-n)\theta))\right] \\
-= &amp;(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)})\cos((m - n)\theta) +
-(q_m^{(1)}k_n^2 -
-q_m^{(2)}k_n^{(1)})\sin((m-n)\theta)\\
-= &amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle
-\end{aligned}
-\tag{21}
-\]</span></p>
-<p>证毕。</p>
-<h2 id="旋转位置编码">“旋转”位置编码</h2>
-<p>发现式（17）可以写成这样</p>
-<p><span class="math display">\[
-f_q(\boldsymbol{q}_m,m)^\top =
-\left.\left[\begin{matrix}{\cos(m\theta)}&amp;{-\sin(m\theta)}\\{\sin(m\theta)}&amp;{\cos(m\theta)}\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{q_m^{(1)}}\\{q_m^{(2)}}\end{matrix}\right.\right]}
-\tag{22}
-\]</span></p>
-<p>同样地</p>
-<p><span class="math display">\[
-f_k(\boldsymbol{k}_n,n)^\top =
-\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}
-\tag{23}
-\]</span></p>
-<p>如果从向量视角来看，则有</p>
-<p><span class="math display">\[
-\begin{aligned}
-&amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle\\
-=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}
-\left.\left[\begin{matrix}{\cos(m\theta)}&amp;{\sin(m\theta)}\\{-\sin(m\theta)}&amp;{\cos(m\theta)}\end{matrix}\right.\right]
-\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}\\
-=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}\left.\left[\begin{matrix}{\cos(m\theta)\cos(n\theta)
-+ \sin(m\theta)\sin(n\theta)}&amp;
-{-\cos(m\theta)\sin(n\theta) + \sin(m\theta)\cos(n\theta)}\\
-{-\cos(n\theta)\sin(m\theta) + \cos(m\theta)\sin(n\theta)}&amp;
-{\sin(m\theta)\sin(n\theta) + \cos(m\theta)\cos(n\theta)}
-\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}\\
-=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}
-\left.\left[\begin{matrix}{\cos((m-n)\theta)}&amp;{\sin((m-n)\theta)}\\{-\sin((m-n)\theta)}&amp;{\cos((m-n)\theta)}\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}
-\end{aligned}
-\tag{24}
-\]</span></p>
-<p>看式（22）和（23），可以看到等号右边都有</p>
-<p><span class="math display">\[
-\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
-\]</span></p>
-<p>这正是一个二维平面的旋转矩阵。 <span class="math inline">\(f_q\)</span> 、 <span class="math inline">\(f_k\)</span>
-的操作相当于对输入向量进行了一次不改变大小，只改变方向的旋转。</p>
-<p>这也是为什么叫做“旋转”位置编码。</p>
-<h2 id="从2维推广到高维">从2维推广到高维</h2>
-<p>我们现在已经确认，对于2维的情况，经过 <span class="math inline">\(f_q\)</span> 、 <span class="math inline">\(f_k\)</span> 和 <span class="math inline">\(g\)</span>
-这么一波操作，能够满足式（11）的要求，但是实际上怎么在高维模型里实现呢？</p>
-<p>答案是把高维输入拆分成两个两个一组（这要求输入是偶数维，目前的模型也都是偶数维，所以没问题），则高维的“旋转”矩阵有多个小旋转矩阵组成</p>
-<p><span class="math display">\[
-\boldsymbol{R}_{\Theta,m}^d=\begin{pmatrix}\cos m\theta_0&amp;-\sin
-m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\\sin m\theta_0&amp;\cos
-m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\cos
-m\theta_1&amp;-\sin m\theta_1&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\sin
-m\theta_1&amp;\cos
-m\theta_1&amp;\cdots&amp;0&amp;0\\\vdots&amp;\vdots&amp;\vdots&amp;\vdots&amp;\ddots&amp;\vdots&amp;\vdots\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\cos
-m\theta_{d/2-1}&amp;-\sin
-m\theta_{d/2-1}\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\sin
-m\theta_{d/2-1}&amp;\cos n\theta_{d/2-1}\end{pmatrix}
-\tag{25}
-\]</span></p>
-<p><span class="math inline">\(d\)</span>
-是的输入向量的维度，由于是两个两个一组，所以一共有 <span class="math inline">\(d/2\)</span> 组小旋转矩阵，这 <span class="math inline">\(d/2\)</span> 组矩阵为了区分，设计使用了不同的
-<span class="math inline">\(\theta\)</span></p>
-<p><span class="math display">\[
-\Theta=\left\{\theta_i=10000^{-2(i-1)/d},i\in[1,2,\ldots,d/2]\right\}
-\tag{26}
-\]</span></p>
-<p>那么在实际操作的时候，给位置 <span class="math inline">\(m\)</span>
-和位置 <span class="math inline">\(n\)</span> 的输入向量分别乘以 <span class="math inline">\(R_m\)</span> 和 <span class="math inline">\(R_n\)</span>，再进行self-attention，就能获得仅使用相对位置信息编码的效果。</p>
-<p>另外 <span class="math inline">\(\theta\)</span>
-是怎么来的呢？这里是参考了Google最初在《Attention is All You
-Need》中提出的，这里就先不展开了，可以看看论文原文。</p>
-<h2 id="高效率实现">高效率实现</h2>
-<p>式（25）中的矩阵在高维的情况下很稀疏，直接使用这么个矩阵来计算效率并不高，可以使用一个这样的高效率实现方式</p>
-<p><span class="math display">\[
-\boldsymbol{R}_{
-m}\boldsymbol{q}=\begin{pmatrix}q_0\\q_1\\q_2\\q_3\\q_4\\\vdots\\q_{d-2}\\q_{d-1}\end{pmatrix}\otimes\begin{pmatrix}\cos
-m\theta_0\\\cos m\theta_0\\\cos m\theta_1\\\cos m\theta_1\\\cos
-m\theta_1\\\vdots\\\cos m\theta_{d/2-1}\\\cos
-m\theta_{d/2-1}\end{pmatrix}
-+\begin{pmatrix}-q_1\\q_0\\-q_3\\\vdots\\-q_{d-1}\\q_{d-2}\end{pmatrix}\otimes\begin{pmatrix}\sin
-m\theta_0\\\sin m\theta_0\\\sin m\theta_1\\\sin m\theta_1\\\sin
-m\theta_1\\\vdots\\\sin m\theta_{d/2-1}\\\sin
-m\theta_{d/2-1}\end{pmatrix}
-\tag{27}
-\]</span></p>
-<p>只需进行两组element-wise乘法即可。形式上看起来是类似乘性绝对位置编码的做法。</p>
-<p>另外，看LLAMA中的实现，可以看到旋转位置编码是在每一个decoder层的输入都加了的。每次都强化一次位置信息，也有助于模型更好识别不同距离的内容。</p>
-<h2 id="远程衰减的特性">远程衰减的特性</h2>
-<p>至此，旋转位置编码已经完备，具备了计算高效，实现容易，便于外推，适用于线性注意力的特性。实际上它还具备另一项优点：有远程衰减的特性。</p>
-<p>直观看起来远程衰减很符合直觉，毕竟注意力机制随着距离的衰减而降低，这个机制和人类也很像。</p>
-<p>回顾训练式的绝对位置编码，由于每个位置的位置向量是模型在训练中自我学习的，所以并不保证能具备这样的特性。而这个
-<span class="math inline">\(\theta\)</span>
-的选择沿用了三角函数式编码的做法，就使得整体具有远程衰减的特性。</p>
-<p>证明过程这里就偷偷懒略过了，具体可以看<a href="https://arxiv.org/abs/2104.09864">Roformer的论文</a>或者<a href="https://spaces.ac.cn/archives/8265">苏神的博客</a>。</p>
-<p>当 <span class="math inline">\(d = 128\)</span>
-时，画出来的图像如下</p>
-<img src="/a051710f/remote_attenuation.png" class width="775" height="457" title="远程衰减">
-<h1 id="小结">小结</h1>
-<p>总之，RoPE在设计和实现上还是挺巧妙的，性质上也很有很多优势，所以被广泛应用到transformer模型中去了。</p>
-<h1 id="reference">Reference</h1>
-<p>【1】让研究人员绞尽脑汁的Transformer位置编码，https://spaces.ac.cn/archives/8130<br>
-【2】Transformer升级之路：2、博采众长的旋转式位置编码，https://spaces.ac.cn/archives/8265<br>
-【3】RoFormer: Enhanced Transformer with Rotary Position Embedding
-https://arxiv.org/abs/2104.09864<br>
-【4】十分钟读懂旋转编码（RoPE）
-https://zhuanlan.zhihu.com/p/647109286</p>
-<hr>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>positional encoding</tag>
-        <tag>RoPE</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>LLM长上下文的问题</title>
     <url>/c4da56c0.html</url>
     <content><![CDATA[<p>最近长上下文的业务需求越来越多，刚好把这个能力现状和主流方案的基础内容简单梳理一下。</p>
@@ -847,355 +438,400 @@ https://zhuanlan.zhihu.com/p/678755776 ***</p>
       </tags>
   </entry>
   <entry>
-    <title>稀疏注意力计算:sliding window attention</title>
-    <url>/c61d17e3.html</url>
-    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
-<p>LLM的长文本能力现在已经是各个大模型巨头的必争之地。</p>
-<p>我们之前在<a href="http://www.linsight.cn/c4da56c0.html">《LLM长上下文的问题》</a>简单介绍了目前把大模型理解和生成能力推广到32k+/128k+的主流方法，在<a href="http://www.linsight.cn/3dc22f96.html">《理解Attention:从起源到MHA,MQA和GQA》</a>一文中也解析了MQA和GQA通过节省KV缓存的方式，支持模型在长上下文情况下推理加速的方案。</p>
-<p>在这讲一下另一种（理论有损）提升注意力计算效率的方法：SWA（sliding
-window attention）。</p>
-<p>一些效果受到广泛关注的模型，如Qwen系列和Mistral就使用了SWA。</p>
-<p>关于Mistral：</p>
-<p>Mistral
-AI是法国一家AI独角兽公司，2023年5月才成立，但是在2023年9月和12月就分别推出了Mistral
-7B和MoE模型Mistral 8x7B并开源。</p>
-<p>2024年2月，微软也投资了它。</p>
-<img src="/c61d17e3/ms_invest_mistral.png" class title="MS">
-<p>它在2024年2月发布的Mistral Large，支持多语言 &amp;
-32k的上下文长度，在MMLU上也是获得了直逼GPT4的效果</p>
-<img src="/c61d17e3/mistral_large_performance.jpeg" class title="Mistral Large MMLU Performance">
-<p>（大家也因此对Mistral寄予了厚望，希望它能成为大模型行业的鲶鱼，激活一下OPENAI和META加速一下开源。）</p>
-<h1 id="swa">SWA</h1>
-<p>虽然SWA的思路最早不是Mistral提出的，我们还是先以Mistral
-7B为例来看下SWA的具体做法。</p>
-<h2 id="mistral-7b">Mistral 7B</h2>
-<p>2023年10月，Mistral发布了Mistral 7B的<a href="https://arxiv.org/pdf/2310.06825.pdf">技术报告</a>。其中开篇就说到，相比Llama，Mistral在结构上做了一些改动，除了GQA，另一个用于支持长文本下高效推理的改动就是SWA。</p>
-<p>来看下Mistral 7B的模型结构参数</p>
-<img src="/c61d17e3/mistral_architechture.png" class title="Mistral Architechture">
-<p>Mistral使用了kv组数=8的GQA，intermediate
-size相比Llama2（11008）大一些，其他基本没有太大变化。</p>
-<h2 id="计算量和缓存">计算量和缓存</h2>
-<p>对于原始的causal
-attention，其注意力矩阵是一个下三角矩阵，这样每个token都能看到自己和在自己前面的token。</p>
-<p>这样随着输入长度 <span class="math inline">\(s\)</span>
-增大，这个下三角矩阵中1的元素数量以 <span class="math inline">\(s^2\)</span> 的速度增长，带来的是计算量和所需的KV
-Cache以平方的速度增长。</p>
-<p>（我们知道计算量/缓存和长度 <span class="math inline">\(s\)</span>
-成平方关系，这里放一些更具体的推算细节，已经熟悉的朋友可以跳过）</p>
-<p>（1）计算量</p>
-<p>对于两个这样大小的矩阵相乘： <span class="math inline">\([m,n]\times[n,p]\)</span> ，输出矩阵大小为 <span class="math inline">\([m,p]\)</span>，共有 <span class="math inline">\(m\times p\)</span> 个元素，每个元素需要 <span class="math inline">\(n\)</span> 次乘法和 <span class="math inline">\(n\)</span> 次加法，因此一次矩阵乘法有 <span class="math inline">\(2mpn\)</span> 个floating point
-operations（FLOPs）。</p>
-<p>计算量上，按<a href="https://arxiv.org/pdf/2203.15556.pdf">《Training
-Compute-Optimal Large Language Models》</a>的算法来。</p>
-<p>对于一般MHA，输入长度为 <span class="math inline">\(s\)</span>
-，层数为 <span class="math inline">\(L\)</span> ，模型hidden size为
-<span class="math inline">\(d_{model}\)</span> ，每个头的维度为 <span class="math inline">\(d_{q}\)</span> ， 头的数量为 <span class="math inline">\(n_{q}\)</span>（这里假设有 <span class="math inline">\(d_{model} = n_{q}\times d_{q}\)</span>
-），各个operation的FLOPs如下</p>
-<center>
-<table>
-<colgroup>
-<col style="width: 45%">
-<col style="width: 54%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Operation</th>
-<th style="text-align: center;">FLOPs（MHA）</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Attention: QKV</td>
-<td style="text-align: center;"><span class="math inline">\(6\times
-s\times h_{model}^{2}\)</span></td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Attention: QK logits ( <span class="math inline">\(QK^T\)</span> )</td>
-<td style="text-align: center;"><span class="math inline">\(n_{q}\times
-2\times s^2\times h_{q}\)</span></td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Attention: Softmax</td>
-<td style="text-align: center;"><span class="math inline">\(n_{q}\times
-3\times s^2\)</span></td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Attention: Reduction (apply to <span class="math inline">\(V\)</span>)</td>
-<td style="text-align: center;"><span class="math inline">\(n_{q}\times
-2\times s^2\times h_{q}\)</span></td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Attention: Outupt Linear Project</td>
-<td style="text-align: center;"><span class="math inline">\(2\times
-s\times h_{model}^{2}\)</span></td>
-</tr>
-</tbody>
-</table>
-</center>
-<p>Softmax项中，对一个 <span class="math inline">\([1,s]\)</span>
-的向量做softmax，计算量为 <span class="math inline">\(3s\)</span> （一个
-<span class="math inline">\(s\)</span> 是算每个元素的exp，一个 <span class="math inline">\(s\)</span> 是求和算分母，一个 <span class="math inline">\(s\)</span> 是算除法），而对 <span class="math inline">\([s,s]\)</span> 的矩阵做softmax，则计算量为 <span class="math inline">\(3s^2\)</span> ，每个头都要计算一遍，因此再乘以
-<span class="math inline">\(n_{q}\)</span> 。</p>
-<p>（这里忽略了其他一些operation，比如scaling，dropout等，有兴趣的朋友可以自己推算一下）</p>
-<p>顺便算下对于Mistral 7B这样使用了GQA的情况。</p>
-<p>其实只有第一项的KV有变化，其他都没变。假设kv头的数量为 <span class="math inline">\(n_{kv}\)</span>，则有</p>
-<center>
-<table>
-<colgroup>
-<col style="width: 45%">
-<col style="width: 54%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Operation</th>
-<th style="text-align: center;">FLOPs（GQA）</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Attention: QKV</td>
-<td style="text-align: center;"><span class="math inline">\(2\times
-s\times h_{model}^{2}\\+4\times s\times h_{model}\times (h_{q}\times
-n_{kv})\)</span></td>
-</tr>
-</tbody>
-</table>
-</center>
-<p>从上面的推算可以看到QK logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span> 成平方关系的，其他则是线性关系。</p>
-<p>（2）缓存</p>
-<p>KV Cache需要缓存的参数量为</p>
+    <title>理解LLM位置编码:RoPE</title>
+    <url>/a051710f.html</url>
+    <content><![CDATA[<p>最近在做LLM窗口外推的相关工作，因此刚好也回顾一下目前最流行的位置编码RoPE。</p>
+<h1 id="关于rope">关于RoPE</h1>
+<p>RoPE（Rotary Position
+Embedding），是苏剑林大神在2021年就提出的一种Transformer模型的位置编码。RoPE是一种可以<big><u><strong>以绝对位置编码形式实现的相对位置编码</strong></u></big>，兼顾了模型性能和效率。</p>
+<p>2023年上半年的时候，大模型位置编码尚有Alibi和RoPE在相互比拼，而到了2023年下半年，及今2024年，新开源出来的模型，大部分都是使用RoPE了。当然Alibi也有其优势，这个在讲Alibi的时候来说。</p>
+<p>苏神在他的个人网站科学空间中对RoPE有相关文章进行了介绍，本篇是在这个基础上，对RoPE进行理解（公式和符号上也会沿用苏神的写法）。</p>
+<h1 id="以绝对位置编码的方式实现相对位置编码">以绝对位置编码的方式实现相对位置编码</h1>
+<p>前面提到，RoPE是一种一绝对位置编码的方式实现的相对位置编码，那么这么做能带来什么收益？</p>
+<p>先说原因：</p>
+<p>在文本长度不长的情况下（比如Bert时代基本都是256/512token的长度），相对位置编码和绝对位置编码在使用效果上可以说没有显著差别。<br>
+如果要处理更大长度的输入输出，使用绝对位置编码就需要把训练数据也加长到推理所需长度，否则对于没训练过的长度（训练时没见过的位置编码），效果多少会打些折扣。<br>
+而使用相对位置编码则<u><strong>更容易外推</strong></u>，毕竟token-2和token-1的距离，与token-10002和token-10001的距离是一样的，也因此可以缓解对巨量长文本数据的需求。<br>
+但是传统相对位置编码的实现相对<u><strong>复杂</strong></u>，有些也会有<u><strong>计算效率低</strong></u>的问题。由于修改了self-attention的计算方式，也比较难推广到<u><strong>线性注意力</strong></u>计算法模型中。<br>
+总结来说，就是绝对位置编码<u><strong>好实现</strong></u>，<u><strong>效率高</strong></u>，<u><strong>适用线性注意力</strong></u>，而相对位置编码<u><strong>易外推</strong></u>，因此就有了对“绝对位置编码的方式实现相对位置编码”的追求，去把二者的优点结合起来。</p>
+<p>下面简单回顾一下绝对位置编码和相对位置编码。</p>
+<p>（对位置编码比较熟悉的朋友可以直接跳到第3节。）</p>
+<h2 id="绝对位置编码">绝对位置编码</h2>
+<p>先回顾一下带绝对位置编码的self-attention。</p>
+<p><span class="math display">\[\left.\left\{\begin{array}{l}q_\mathrm{i}=(x_\mathrm{i}+p_\mathrm{i})W_\mathrm{Q}\\k_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{K}\\\nu_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{V}\\\mathrm{a_\mathrm{i,j}}=\mathrm{softmax}\left(q_\mathrm{i}k_\mathrm{j}^\top\right)\\o_\mathrm{i}=\sum_\mathrm{j}a_\mathrm{i,j}\nu_\mathrm{j}\end{array}\right.\right.\tag{1}\]</span></p>
+<p><span class="math inline">\(x_i\)</span> 和 <span class="math inline">\(x_j\)</span> 分别是位置 <span class="math inline">\(i\)</span> 和 <span class="math inline">\(j\)</span> 的输入，<span class="math inline">\(p\)</span> 是对应位置的位置编码向量。</p>
+<p>这里的位置编码<span class="math inline">\(p\)</span>可以是三角函数式，或者直接训练式。但是无论是哪种，其实现方式都很简单，就是在输入端把词向量
+<span class="math inline">\(x\)</span> 和位置向量 <span class="math inline">\(p\)</span>
+相加即可，相比attention中的softmax计算，element-wise
+addition操作的计算量非常小，是可以忽略不计的。</p>
+<p>大部分绝对位置编码使用的是这样向量相加的形式，即加性编码，也有一些用乘性编码的工作，把
+<span class="math inline">\(x + p\)</span> 变成 <span class="math inline">\(x * p\)</span> 这样，效果上也是大差不差。</p>
+<h2 id="相对位置编码">相对位置编码</h2>
+<p>在绝对位置编码中，可以在输入阶段就把 <span class="math inline">\(x\)</span> 和 <span class="math inline">\(p\)</span>
+直接相加，是因为这里把位置信息当做是这个位置的词的固有特征。</p>
+<p>比如“我”这个词放在位置1时，形成一个 <span class="math inline">\(e_1 =
+x_我 + p_1\)</span>
+这么一个向量来代表【“我”在位置1】这一个情况；而当同样的词“我”放在位置8时，形成了另一个向量
+<span class="math inline">\(e_8 = x_我 + p_8\)</span> 。两个向量 <span class="math inline">\(e_1\)</span> 和 <span class="math inline">\(e_8\)</span>
+虽然包含同一个词，但是对于模型来说，这两个输入是不同的（因为每个数值都包含了位置向量），词向量和位置向量<u><strong>耦合</strong></u>在一起共同构成了一个完整的输入。</p>
+<p>直观来说，比如词表大小是1万，模型训练窗口最大长度是512，那么对于模型来说，实际上要区分的输入是1万×512=512万个。看起来虽然不少，但是在海量的数据和训练量下，这也不算什么事儿，模型确实能handle。</p>
+<p>扯远了，现在回来看一下相对位置编码。把公式（1）中的 <span class="math inline">\(q_{i}k_{j}^{T}\)</span>展开来</p>
+<p><span class="math display">\[\begin{align*}q_1k_j^\top&amp;=\left(x_i+p_j\right)W_\mathbb{Q}W_K^\top\left(x_j+p_j\right)^\top\\&amp;=\left(x_iW_\mathbb{Q}+{\color{red}p_iW_\mathbb{Q}}\right)\left(W_K^\top
+x_j^\top+{\color{red}W_K^\top
+p_j^\top}\right)\end{align*}\tag{2}\]</span></p>
+<p>和位置相关的有 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
+和 <span class="math inline">\(W_K^\top p_j^\top\)</span> 两项。</p>
+<h3 id="google式">Google式</h3>
+<p>在最早引入相对位置编码的Google的论文《Self-Attention with Relative
+Position Representations》中，把第一项 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
+去掉了（因为要搞相对位置编码，只要能把相对位置信息加到其中一项输入就可以了，这里加在了位置
+<span class="math inline">\(j\)</span>），把第二项 <span class="math inline">\(W_K^\top p_j^\top\)</span> 改成和位置 <span class="math inline">\(i\)</span>、<span class="math inline">\(j\)</span>
+都相关的位置向量 <span class="math inline">\(R_{ij}^K\)</span>，于是在这个使用相对位置编码的attention计算中，<u><strong>不再是直接计算input
+projection的内积来获取权重</strong></u>，而变成</p>
 <p><span class="math display">\[
-2\times L\times s\times d_{q}\times n_{kv}
+\mathrm{a_{ij}=softmax}\left(x_{i}W_{\mathbb{Q}}\left(x_{j}W_{\mathbb{K}}+R_{\mathbf{i,j}}^{\mathbf{K}}\right)^{\top}\right)\tag{3}
 \]</span></p>
-<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
+<p><span class="math inline">\(R_{ij}^K\)</span>
+是什么呢？可以是可训练式的向量，也可以是类似三角函数式的，在这个基础上增加了一个clip操作。</p>
 <p><span class="math display">\[
-2\times 2\times L\times s\times d_{q}\times n_{kv}
+R_{\mathrm{i,j}}^\mathrm{K}=p_\mathrm{K}\left[\mathrm{clip(i-j,p_{min},p_{max})}\right]
 \]</span></p>
-<p>对于Mistral 7B，在输入长度为16k的情况下，所需的KV_Cache约为2G。</p>
-<p>看来虽然用了GQA，但是在长文本（16k+）的情况下计算量和显存还是颇有压力。</p>
-<h2 id="swa思路">SWA思路</h2>
-<p>看来要提升attention计算效率，需要想办法减小上面推算中的 <span class="math inline">\(s\)</span> ，但是怎么在减小 <span class="math inline">\(s\)</span>
-的同时，还能保持模型长上下文的理解和生成能力呢？</p>
-<p>来看一下，CNN中的感受野</p>
-<img src="/c61d17e3/receptive_field_cnn.png" class title="CNN Receptive Field">
-<p>如上图，假设模型有3层，每层卷积核大小为 <span class="math inline">\(3\times 3\)</span>
-（实际上CNN里卷积操作就是一个sliding window）。</p>
-<p>那对于layer 3，每一个像素能看到layer 2中的一个 <span class="math inline">\(3\times 3\)</span> 的区域，layer
-2中其他较远的像素就看到不了。</p>
-<p>但我们再往前推，layer 2里的每个像素也可以看到layer 1中的一个 <span class="math inline">\(3\times 3\)</span> 区域，那么layer 2中的 <span class="math inline">\(3\times 3\)</span> 区域就可以看到layer 1中一个
-<span class="math inline">\(5\times 5\)</span> 的区域，相当于layer
-3中一个像素可以<u><strong>间接</strong></u>看到一个 <span class="math inline">\(5\times 5\)</span> 的输入。</p>
-<p>以此类推，如果我们再增加一层layer 4，那么layer
-4中一个像素就能获取输入层（layer 1） 一个 <span class="math inline">\(7\times 7\)</span> 区域的信息。</p>
-<p>虽然每层只能多看周围一格的信息，但是只要我们层数够多，理论上靠近输出端的层想看多远就能看多远。</p>
-<p>值得注意的一点是，我们一般认为模型低层部分提取比较基础的特征，而高层会提取高级的语义特征。</p>
-<p>在CNN里，前几层提取的可能更多是关于简单的边界、颜色、形状等基础特征，而后面的层则提取较复杂的语义特征，比如在分类任务中会是和分类类别相关的花纹、物体大小、风格等特征。</p>
-<p>如果我们把模型设计成，最后一层的一个像素刚好要到第一层才能接收到全局信息（在其它层都只能看到局部），那对于图像边缘的语义特征识别能力可能会受到一些限制。</p>
-<p>具体来说，假设我们做猫和狗的图像分类任务，如果这个时候决定性的特征出现在图像最边缘几个像素里，那这种情况下的错误率会比特征出现在图像中间时要高。</p>
-<p>而对于语言模型，一般情况下，越远距离的信息，对当前位置的重要性越低，因此只要我们的窗口大小不要太过极限小，问题应该都还不大。</p>
-<p>看下Mistral的SWA具体是怎么做的</p>
-<img src="/c61d17e3/mistral_swa.png" class title="Mistral SWA">
-<p>左边是正常的causal
-attention，每个位置能看到自己和前面的位置，attention
-mask是个下三角矩阵。</p>
-<p>中间则是SWA的attention
-mask，这里的窗口大小为3。包括自己在内，每个位置只能往前看3个输入。</p>
-<p>同CNN的感受野一样，随着层数的堆叠，模型理论上能处理的最远距离也逐层线性递增。只是LLM里递增的方向是单向的，只能往前。</p>
-<p>Mistral 7B使用了4096的窗口大小，模型层数为32，则最终输出的”感受野“为
-<span class="math inline">\(4096\times 32=131,072\)</span>
-达到131k的长度。</p>
-<p>前面我们推算了attention的计算量，其中QK
-logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span>
-成平方关系。在使用了SWA之后，理论上，这几个operation仅使用4k的计算量，就能获得131k的上下文效果。当输入长度为131k时，除去已经缓存部分的数值，新的输入计算量相差
-<span class="math inline">\(32\times 32=1024\)</span> 倍。</p>
-<p>而缓存和上下文长度 <span class="math inline">\(s\)</span>
-成线性关系，当上下文长度为131k时，最大也能节省 <span class="math inline">\(31/32\)</span> 的显存。</p>
-<p>即SWA在上下文长度在4k以下时，和普通causal
-attention一样；当上下文长度超过4k时，则相对节省资源，长度越大，节省的比例越高。</p>
-<blockquote>
-<p>In practice, for a sequence length of 16K and W = 4096, changes made
-to FlashAttention [11] and xFormers [18] yield a 2x speed improvement
-over a vanilla attention baseline.</p>
-</blockquote>
-<p>实际使用中，Mistral通过把SWA实现在FlashAttention和xFormers中，对于16k的上下文长度，获得了2倍的速度提升。</p>
-<h2 id="和kv-cache的配合实现">和KV Cache的配合实现</h2>
-<p>在不使用sliding window的情况下，随着自回归推理的进行，KV
-Cache是只增不减的。</p>
-<p>而在使用SWA的情况下，超出窗口长度的kv就可以不用再缓存了，因此使用一个轮转替换的策略。</p>
-<p>比如窗口大小 <span class="math inline">\(W=4\)</span>
-，则当第5个token需要缓存是，直接替换掉第1个token，这样就可以保持kv缓存有一个最大值（为窗口大小），而不会无限增长。</p>
-<img src="/c61d17e3/rolling_buffer.png" class title="swa rolling buffer">
-<p>这样便于我们估计硬件设备所能支持的throughput，也不会因为少量超长的case而造成堵塞，在工程上有利于提高硬件利用率，降低成本。</p>
-<h2 id="长prompt的分块">长Prompt的分块</h2>
-<p>更近一步，考虑到我们使用RAG或者funciton
-call的时候，都会使用比较长的，固定的prompt来知道模型的行为。</p>
-<p>比如GPT4就被诱导说出它接收到的长system
-prompt（当然未必真的就是OPENAI用的）</p>
-<blockquote>
-<p>Your user's user agent is "Mozilla/5.0 (Windows NT 10.0; Win64; x64)
-AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-and the user's locale is "en-US" Your knowledge cutoff date is 2023-04.
-The current date is 2024-02-07. Image input capabilities: Enabled</p>
-<p>Tools</p>
-<p>python</p>
-<p>When you send a message containing Python code to python, it will be
-executed in a stateful Jupyter notebook environment. python will respond
-with the output of the execution or time out after 60.0 seconds. The
-drive at '/mnt/data' can be used to save and persist user files.
-Internet access for this session is disabled. Do not make external web
-requests or API calls as they will fail.</p>
-<p>dalle</p>
-<p>Whenever a description of an image is given, create a prompt that
-dalle can use to generate the image and abide to the following policy:
-1. The prompt must be in English. Translate to English if needed. 2. DO
-NOT ask for permission to generate the image, just do it! 3. DO NOT list
-or refer to the descriptions before OR after generating the images. 4.
-Do not create more than 1 image, even if the user requests more. 5. Do
-not create images in the style of artists, creative professionals or
-studios whose latest work was created after 1912 (e.g. Picasso, Kahlo).
-- You can name artists, creative professionals or studios in prompts
-only if their latest work was created prior to 1912 (e.g. Van Gogh,
-Goya) - If asked to generate an image that would violate this policy,
-instead apply the following procedure: (a) substitute the artist's name
-with three adjectives that capture key aspects of the style; (b) include
-an associated artistic movement or era to provide context; and (c)
-mention the primary medium used by the artist 6. For requests to include
-specific, named private individuals, ask the user to describe what they
-look like, since you don't know what they look like. 7. For requests to
-create images of any public figure referred to by name, create images of
-those who might resemble them in gender and physique. But they shouldn't
-look like them. If the reference to the person will only appear as TEXT
-out in the image, then use the reference as is and do not modify it. 8.
-Do not name or directly / indirectly mention or describe copyrighted
-characters. Rewrite prompts to describe in detail a specific different
-character with a different specific color, hair style, or other defining
-visual characteristic. Do not discuss copyright policies in responses.
-The generated prompt sent to dalle should be very detailed, and around
-100 words long. Example dalle invocation: { "prompt":
-"<insert prompt here>" } namespace dalle {</insert></p>
-<p>Create images from a text-only prompt. type text2im = (_: { The size
-of the requested image. Use 1024x1024 (square) as the default, 1792x1024
-if the user requests a wide image, and 1024x1792 for full-body
-portraits. Always include this parameter in the request. n?: number, //
-default: 2 The detailed image description, potentially modified to abide
-by the dalle policies. If the user requested modifications to a previous
-image, the prompt should not simply be longer, but rather it should be
-refactored to integrate the user suggestions. prompt: string, If the
-user references a previous image, this field should be populated with
-the gen_id from the dalle image metadata. referenced_image_ids?:
-string[], }) =&gt; any; } // namespace dalle</p>
-<p>voice_mode Voice mode functions are not available in text
-conversations. namespace voice_mode { } // namespace voice_mode</p>
-<p>browser</p>
-<p>You have the tool <code>browser</code>. Use <code>browser</code> in
-the following circumstances: - User is asking about current events or
-something that requires real-time information (weather, sports scores,
-etc.) - User is asking about some term you are totally unfamiliar with
-(it might be new) - User explicitly asks you to browse or provide links
-to references</p>
-<p>Given a query that requires retrieval, your turn will consist of
-three steps: 1. Call the search function to get a list of results. 2.
-Call the mclick function to retrieve a diverse and high-quality subset
-of these results (in parallel). Remember to SELECT AT LEAST 3 sources
-when using <code>mclick</code>. 3. Write a response to the user based on
-these results. In your response, cite sources using the citation format
-below.</p>
-<p>In some cases, you should repeat step 1 twice, if the initial results
-are unsatisfactory, and you believe that you can refine the query to get
-better results.</p>
-<p>You can also open a url directly if one is provided by the user. Only
-use the <code>open_url</code> command for this purpose; do not open urls
-returned by the search function or found on webpages.</p>
-<p>The <code>browser</code> tool has the following commands:
-<code>search(query: str, recency_days: int)</code> Issues a query to a
-search engine and displays the results.
-<code>mclick(ids: list[str])</code>. Retrieves the contents of the
-webpages with provided IDs (indices). You should ALWAYS SELECT AT LEAST
-3 and at most 10 pages. Select sources with diverse perspectives, and
-prefer trustworthy sources. Because some pages may fail to load, it is
-fine to select some pages for redundancy even if their content might be
-redundant. <code>open_url(url: str)</code> Opens the given URL and
-displays it.</p>
-<p>For citing quotes from the 'browser' tool: please render in this
-format: 【{message idx}†{link text}】. For long citations: please render
-in this format: <a href="message%20idx">link text</a>. Otherwise do not
-render links.</p>
-</blockquote>
-<p>除了预先计算好system
-prompt的kv值，并保存在缓存中方便每次用户输入使用外，如果system
-prompt很长（比sliding window大），还可以通过对system
-prompt的kv值进行切分来进一步优化计算。</p>
-<p>比如窗口大小 <span class="math inline">\(W=4\)</span>，system
-prompt大小为9时，就可以把system prompt的kv缓存切成 [4,4,1] 三块。</p>
-<p>第一块由于和当前的输入距离超过了一个window的大小，所以是完全看不见的，对应的attention
-mask全为0，因此可以完全忽略。</p>
-<p>第二块的attention
-mask则是一个上三角矩阵，当前的输入需要用到这部分信息。</p>
-<p>第三块是一个下三角矩阵（的左边部分），包含了当前的输入在内。</p>
-<p>在推理的时候，我们只需要用到第二块和第三块的内容，这就节省了缓存的操作。</p>
-<p>而且无论prompt有多长，只要我们按窗口大小分块，一定只会用到最后两块。</p>
-<img src="/c61d17e3/prefill_and_chunking.png" class title="prefill and chunking">
-<p>（实际上现在推理框架基本上都有FlashAttention/PagedAttention等技术加持，能够进一步节省资源，提高效率，这个后续再开一篇讲）</p>
-<p>Mistral
-7B整体的效果上的效果相比Llama是有优势的，部分任务甚至超过了Llama
-34B。</p>
-<img src="/c61d17e3/mistral_perf.png" class title="mistral performance">
-<p>Mistral认为大语言模型压缩知识的能力实际超过我们的认知，7B这个规模的效果还有提升空间。</p>
-<h1 id="sparse-attention">Sparse Attention</h1>
-<p>SWA实际上是一种sparse attention，而sparse
-attention也有许多工作做了深入探索。</p>
-<p>这里简单说一小部分，有机会再完整梳理一遍sparse
-attention的理论和实践。</p>
-<h2 id="longformer">Longformer</h2>
-<p>前面提到，Mistral并不是第一个使用SWA的。</p>
-<p>2020年，<a href="https://arxiv.org/pdf/2004.05150.pdf">《Longformer:
-The Long-Document Transformer》</a>就提出包含SWA在内的一系列sparse
-attention的做法。</p>
-<p>从文章名字就看到出来，Longformer主要目的也是为了解决长上下文的问题。</p>
-<img src="/c61d17e3/longformer_attention.png" class title="longformer">
-<p>上图中的（b）就是SWA，只是用在Bert中的时候它是双向的。</p>
-<p>在SWA的基础上，还可以进行空洞滑窗（dilated sliding
-window），在不增加计算量的情况下，提升感受野。这也是从空洞卷积（下图）来的灵感了。</p>
-<img src="/c61d17e3/dilated_conv.png" class title="dilated convolution">
-<p>还可以更进一步优化attention。无论是SWA还是dilated sliding
-window，每个位置都只能看到局部的信息。</p>
-<p>但是实际上有些位置就是对全局信息有很高的需求。</p>
-<p>在Bert中，[CLS]
-token就常常作为分类token或者相似度向量使用，这种情况下就需要它能获取整个上下文的完整信息。</p>
-<p>而在GPT中，instruction，或者说prompt的部分也对全局信息有更高要求，因为我们希望在整个对话过程中，模型都能遵循我们给出的规则。</p>
-<p>对于这些token，我们让它可以看到其他所有位置，使用完整的global
-attention，而其他位置则使用sliding window，如（d）中所示。</p>
-<h2 id="big-bird">Big Bird</h2>
-<p>无独有偶，同样在2020年，和Longformer差不多在同一时期，也有另外一个通过sparse
-attention来优化长文本效果的工作，<a href="https://arxiv.org/abs/2007.14062">《Big Bird: Transformers for
-Longer Sequences》</a>。</p>
-<p>其中sliding window和global attention结合的思路和Longformer相似。Big
-Bird还额外加入了一个random attention的做法。</p>
-<img src="/c61d17e3/big_bird_attention.png" class title="big bird attention">
-<p>上图中 <span class="math inline">\(r=2\)</span>
-即每个位置使用2个随机注意力。</p>
+<p>其中 <span class="math inline">\(p_\mathrm{K}\)</span>
+就是可训练的向量或者三角函数向量。</p>
+<p>为什么要增加一个clip操作？因为直观上，一个词对其左右附近的其他词的位置关系<strong>理应</strong>更加敏感，比如“我请你吃饭”中，“吃饭”这个词需要以高分辨率明确区分出前面三个词“我”、“请”、“你”的位置，以免理解成了“你请我吃饭”；而随着距离越来越远，这种高分辨率的需求也就越来越低，十万个token之前的内容顺序对于当前token来说，影响比较小了，在位置向量上可以一视同仁。另外这也是方便了位置信息的外推，比如我们可以只训练256个相对位置编码信息，而在应用是可以外推到&gt;256的长度。</p>
+<p>本来到这里就可以了，相对位置信息已经加入了，但是Google除了在input端增加了相对位置信息，在输出端也增加了相对位置信息。本来输出端的计算是</p>
+<p><span class="math display">\[\begin{align*}
+o_\mathrm{i}&amp;=\sum_\mathrm{j}a_\mathrm{i,j}\nu_\mathrm{j}\\
+&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}(x_{j} + p_{j})W_{\mathrm{V}}\\
+&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}(x_{j}W_{\mathrm{V}} +
+{\color{red}p_{j}W_{\mathrm{V}}})\\
+\end{align*}\tag{4}\]</span></p>
+<p>Google的方法把 <span class="math inline">\(p_{j}W_{\mathrm{V}}\)</span>
+也改成了包含相对位置信息的向量</p>
+<p><span class="math display">\[\begin{align*}
+o_{\mathrm{i}}=\sum_{\mathrm{j}}\mathrm{a_{i,j}}\left(x_{j}W_{\mathrm{V}}+R_{\mathrm{i,j}}^{\mathrm{V}}\right)\tag{5}
+\end{align*}\]</span></p>
+<p><span class="math inline">\(R_{\mathrm{i,j}}^{\mathrm{V}}\)</span> 和
+<span class="math inline">\(R_{ij}^K\)</span> 相似，都是一个相对位置向量
++ clip操作。</p>
+<h3 id="xlnet式">XLNET式</h3>
+<p>XLNET也使用了相对位置编码，思路类似Google，只是具体的操作不同。</p>
+<p>在公式（2）的基础上继续展开</p>
+<p><span class="math display">\[\begin{align*}
+q_ik_j^T
+&amp;= \left(x_iW_\mathbb{Q}+{p_iW_\mathbb{Q}}\right)\left(W_K^\top
+x_j^\top+{W_K^\top p_j^\top}\right)\\
+&amp;=
+x_iW_\mathbb{Q}W_\mathbb{K}^Tx_j^T
++x_iW_\mathbb{Q}W_\mathbb{K}^T{\color{red}p_j^T}
++{\color{red}p_i}W_\mathbb{Q}W_\mathbb{K}^T{x_j^T}
++{\color{red}p_i}W_\mathbb{Q}W_\mathbb{K}^T{\color{red}p_j^T}\\
+\end{align*}\tag{6}
+\]</span></p>
+<p>把绝对位置相关的几个参数改成相对位置相关的参数，变成：</p>
+<p><span class="math display">\[
+\mathrm{a_{ij}=softmax}\left
+(x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
++x_iW_\mathrm{Q}W_\mathrm{K}^\top {\color{red}R_\mathrm{i-j}^\top}
++{\color{red}u}W_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
++{\color{red}\nu}
+W_\mathrm{Q}W_\mathrm{K}^\top{\color{red}R_\mathrm{i-j}^\top}\right)
+\tag{7}
+\]</span></p>
+<p>把 <span class="math inline">\(p_i\)</span> 变成了两个可训练的向量
+<span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span> ，把 <span class="math inline">\(p_j\)</span> 变成相对位置向量 <span class="math inline">\(R_{i-j}^\top\)</span> 。</p>
+<p>实际实现上可以把 <span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span>
+后面跟着的矩阵省掉了，去掉这个线性变化不影响 <span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span> 的训练，变成</p>
+<p><span class="math display">\[
+x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
++x_iW_\mathrm{Q}W_\mathrm{K}^\top {\color{red}R_\mathrm{i-j}^\top}
++{\color{red}u}W_\mathrm{K}^\top x_\mathrm{j}^\top
++{\color{red}\nu} W_\mathrm{K}^\top{\color{red}R_\mathrm{i-j}^\top}
+\tag{8}
+\]</span></p>
+<p>此外，XLNET只对输入端做了处理，输出端则直接把位置相关的计算去掉了，即</p>
+<p><span class="math display">\[\begin{align*}
+o_\mathrm{i}
+&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}x_{j}W_{\mathrm{V}}\\
+\end{align*}\tag{9}\]</span></p>
+<p>可以看到，Google式和XLNET式的相对位置编码在权重 <span class="math inline">\(\mathrm{a_{i,j}}\)</span>
+的计算上都变得比较复杂了（相对绝对位置编码而言），并且到这里可以看到，获取相对位置信息的思路其实就是想办法把原来公式（2）中的绝对位置向量替换成和位置
+<span class="math inline">\(i\)</span> 、 <span class="math inline">\(j\)</span>
+都相关的向量。很多其他变体其实都大差不差，基本就是在怎么加入相对位置向量、怎么clip上下功夫。</p>
+<p>当然，也有简单一点的实现，比如T5的方法。</p>
+<h3 id="t5式">T5式</h3>
+<p>公式（6）中展开了内积计算，一共有四项，第一项完全没有位置信息，只和词向量本身有关，第二三项分别包含了位置
+<span class="math inline">\(i\)</span> 和位置 <span class="math inline">\(j\)</span>
+的信息，而第四项只和位置相关，和词向量本身是什么内容无关。也就是说，位置相关的信息都是在后面三项引入的，那简单点，直接把后面三项替换成一个位置向量：</p>
+<p><span class="math display">\[
+\mathrm{a_{ij}=softmax}\left
+(x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
++ \beta_{i,j}\right)
+\tag{10}
+\]</span></p>
+<p>（从最早提出，到XLNET，以及DeBerta，T5等，可以看到相对位置编码的实现有一个简化的趋势，而效果也越来越好，正所谓大道至简，有时候有用的东西未必需要很复杂）</p>
+<h2 id="对比">对比</h2>
+<p>看来相对位置编码确实比较复杂，说个大概需要这么多篇幅；并且相对绝对位置编码，也没有那么直接明了，需要对attention计算做一些改造。</p>
+<p>公式（1）的绝对位置编码中，可以看到在进softmax操作前需要做3次矩阵加法，3次矩阵乘法</p>
+<p>从公式（8）可以看到，共有4组矩阵计算要做，每组要做3次矩阵乘法，相对会比较复杂。公式（3）也有类似的情况。当然同时也有一些针对相对位置编码的高效计算被提出，这些就需要针对不同的计算方案来优化了。</p>
+<p>总之在实现方式上和计算效率上，绝对位置编码具有一些优势。</p>
+<p>而在输入输出窗口外推方面，相对位置编码有着天然的优势。</p>
+<p>另外，绝对位置编码保持self-attention的经典形式，使得应用面更广，如可以使用到linear
+attention方案中去，这个以后再展开讲（又挖了个坑）。</p>
+<h1 id="rope的设计思路">RoPE的设计思路</h1>
+<h2 id="保持attention计算形式">保持attention计算形式</h2>
+<p>回顾完经典的绝对位置编码和相对位置编码，回到RoPE上来。</p>
+<p>先说设计思路：</p>
+<p>首先我们想要保持经典self-attention的计算方式，即公式（1）中的形式，输入端
+= 内积 +
+softmax，至于输出端则保持完全不变。softmax我们不去动，那这里留给我们操作的就是内积。</p>
+<p>也就说，现在问题是，我们怎么在只做内积的情况下，把内积结果变成只和相对位置有关，而和绝对位置无关的结果。写成公式就是</p>
+<p><span class="math display">\[
+\langle
+f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle=g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)
+\tag{11}
+\]</span></p>
+<p>其中 <span class="math inline">\(q_m\)</span> 是在位置 <span class="math inline">\(m\)</span> 的query向量，<span class="math inline">\(k_n\)</span> 是在位置 <span class="math inline">\(n\)</span> 的key向量，<span class="math inline">\(f_q\)</span> 和 <span class="math inline">\(f_k\)</span>
+是分别针对这query和key向量的操作函数。</p>
+<p>我们的任务就是要找到一组 <span class="math inline">\(f_q\)</span> 、
+<span class="math inline">\(f_k\)</span> 和 <span class="math inline">\(g\)</span> ，使得公式（11）恒成立。</p>
+<p>当然理论上这里是存在无数多组答案的，那么RoPE怎么找到一组好实现的组合呢？</p>
+<h2 id="借用复数寻找组合">借用复数寻找组合</h2>
+<p>式（11）中， <span class="math inline">\(g\)</span>
+的结果是一个标量，我们需要一个能连接向量内积和标量的桥梁，这个桥梁就是复数。</p>
+<p>这里先回顾一下复数的知识。任意复数都可以表示成复平面的一个2维向量</p>
+<img src="/a051710f/complex_number.png" class width="282" height="401" title="复数平面">
+<p>现在考虑query和key向量都是2维的情况，那么可以代入复数的操作<br>
+（先把 hidden size = 2 的情况推理清楚，后续再推广到更高维的情况）</p>
+<p>那么在2维复数平面上有什么操作可以满足公式（11）的要求呢？Roformer论文中提出的是这组：</p>
+<p><span class="math display">\[
+\begin{aligned}
+f_q(\boldsymbol{q}_m,m)&amp;=\boldsymbol{q}_me^{im\theta}=\left(\boldsymbol{W}_q\boldsymbol{x}_m\right)e^{im\theta}
+\\
+f_k(\boldsymbol{k}_n,n)&amp;=\boldsymbol{k}_ne^{in\theta}=(\boldsymbol{W}_k\boldsymbol{x}_n)e^{in\theta}
+\\
+g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)&amp;=\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
+=\mathrm{Re}\left[(\boldsymbol{W}_q\boldsymbol{x}_m)(\boldsymbol{W}_k\boldsymbol{x}_n)^*e^{i(m-n)\theta}\right]\\
+\end{aligned} \\
+\tag{12}
+\]</span></p>
+<p>其中 <span class="math inline">\(\boldsymbol{k}_n^*\)</span> 是 <span class="math inline">\(\boldsymbol{k}_n\)</span> 的共轭复数。</p>
+<p>（如果暂时理解不了是怎么想出这个组合来满足要求的的，先把它放一边，毕竟数学就是这么神奇）</p>
+<p>共轭复数是这样的关系</p>
+<p><span class="math display">\[
+\begin{gathered}
+z=a+ib \\
+z^*=a-ib
+\end{gathered}
+\tag{13}
+\]</span></p>
+<p>先证明一下这个组合的正确性，是不是真的满足公式（11）。</p>
+<p>（也可以先跳过证明，选择先相信这个组合）</p>
+<p>回顾一下欧拉公式</p>
+<p><span class="math display">\[
+e^{ix}=\cos x+i\sin x
+\tag{14}
+\]</span></p>
+<p>因为现在我们讨论的是2维的情况，那2维向量 <span class="math inline">\(q_m\)</span> 可以用一个复数来表示</p>
+<p><span class="math display">\[
+q_m = q_m^{(1)} + iq_m^{(2)}
+\tag{15}
+\]</span></p>
+<p>那从复数角度来看，就有</p>
+<p><span class="math display">\[
+\begin{aligned}
+f_q(\boldsymbol{q}_m,m)
+&amp;= \boldsymbol{q}_me^{im\theta} \\
+&amp;= (q_m^{(1)} + iq_m^{(2)})(\cos (m\theta)+i\sin (m\theta)) \\
+&amp;=
+(q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta))+i(q_m^{(1)}\sin(m\theta)
++ q_m^{(2)}\cos(m\theta))
+\end{aligned}
+\tag{16}
+\]</span></p>
+<p>式（16）的结果也是一个复数，那也可以用复平面上的一个向量来表示：</p>
+<p><span class="math display">\[
+f_q(\boldsymbol{q}_m,m) =
+\left.\left[\begin{matrix}{q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta)}\\{q_m^{(1)}\sin(m\theta)
++ q_m^{(2)}\cos(m\theta)}\end{matrix}\right.\right]^\top
+\tag{17}
+\]</span></p>
+<p>（这里沿用式（1）中，默认向量为行向量的设定，所有有个transpose，实际上是行向量还是列向量都没关系，只是推算的时候写法问题）</p>
+<p>类似地，有</p>
+<p><span class="math display">\[
+\begin{aligned}
+f_k(\boldsymbol{k}_n,n)
+&amp;=
+(k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta))+i(k_n^{(1)}\sin(n\theta)
++ k_n^{(2)}\cos(n\theta))
+\end{aligned}
+\tag{18}
+\]</span></p>
+<p>和</p>
+<p><span class="math display">\[
+f_k(\boldsymbol{k}_n,n) =
+\left.\left[\begin{matrix}{k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta)}\\{k_n^{(1)}\sin(n\theta)
++ k_n^{(2)}\cos(n\theta)}\end{matrix}\right.\right]^\top
+\tag{19}
+\]</span></p>
+<p>则有<br>
+<span class="math display">\[
+\begin{aligned}
+&amp;\langle
+f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle\\=&amp;(q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta))(k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta))
+\\&amp;+ (q_m^{(1)}\sin(m\theta) +
+q_m^{(2)}\cos(m\theta))(k_n^{(1)}\sin(n\theta) +
+k_n^{(2)}\cos(n\theta))\\
+=&amp;q_m^{(1)}k_n^{(1)}\left(\cos(m\theta)\cos(n\theta)+\sin(m\theta)\sin(n\theta)\right)
+\\
+&amp;+q_m^{(1)}k_n^{(2)}\left(-\cos(m\theta)\sin(n\theta)+\sin(m\theta)\cos(n\theta)\right)
+\\
+&amp;+q_m^{(2)}k_n^{(1)}(-\sin(m\theta)\cos(n\theta)+\cos(m\theta)\sin(n\theta))
+\\
+&amp;+q_m^{(2)}k_n^{(2)}(\sin(m\theta)\sin(n\theta)+\cos(m\theta)\cos(n\theta))
+\\
+=&amp;q_m^{(1)}k_n^{(1)}\cos((m-n)\theta)+q_m^{(1)}k_n^{(2)}\sin((m-n)\theta)
+\\
+&amp;-\left.q_m^{(2)}k_n^{(1)}\right.\sin((m-n)\theta)
++q_m^{(2)}k_n^{(2)}\cos((m-n)\theta)\\
+= &amp;(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)})\cos((m - n)\theta) +
+(q_m^{(1)}k_n^2 - q_m^{(2)}k_n^{(1)})\sin((m-n)\theta)
+\end{aligned}
+\tag{20}
+\]</span></p>
+<p>用了三角函数和差公式 <span class="math display">\[
+\sin(\alpha\pm\beta)=\sin\alpha\cos\beta\pm\cos\alpha\sin\beta\\
+{\cos(\alpha\pm\beta)=\cos\alpha\cos\beta\mp\sin\alpha\sin\beta}
+\]</span></p>
+<p>再看 <span class="math inline">\(g\)</span></p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)\\
+=
+&amp;\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
+\\
+= &amp;\mathrm{Re}\left[[(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)}) -
+i(q_m^{(1)}k_n^2 - q_m^{(2)}k_n^{(1)})](\cos((m -
+n)\theta) + i\sin((m-n)\theta))\right] \\
+= &amp;(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)})\cos((m - n)\theta) +
+(q_m^{(1)}k_n^2 -
+q_m^{(2)}k_n^{(1)})\sin((m-n)\theta)\\
+= &amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle
+\end{aligned}
+\tag{21}
+\]</span></p>
+<p>证毕。</p>
+<h2 id="旋转位置编码">“旋转”位置编码</h2>
+<p>发现式（17）可以写成这样</p>
+<p><span class="math display">\[
+f_q(\boldsymbol{q}_m,m)^\top =
+\left.\left[\begin{matrix}{\cos(m\theta)}&amp;{-\sin(m\theta)}\\{\sin(m\theta)}&amp;{\cos(m\theta)}\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{q_m^{(1)}}\\{q_m^{(2)}}\end{matrix}\right.\right]}
+\tag{22}
+\]</span></p>
+<p>同样地</p>
+<p><span class="math display">\[
+f_k(\boldsymbol{k}_n,n)^\top =
+\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}
+\tag{23}
+\]</span></p>
+<p>如果从向量视角来看，则有</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle\\
+=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}
+\left.\left[\begin{matrix}{\cos(m\theta)}&amp;{\sin(m\theta)}\\{-\sin(m\theta)}&amp;{\cos(m\theta)}\end{matrix}\right.\right]
+\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}\\
+=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}\left.\left[\begin{matrix}{\cos(m\theta)\cos(n\theta)
++ \sin(m\theta)\sin(n\theta)}&amp;
+{-\cos(m\theta)\sin(n\theta) + \sin(m\theta)\cos(n\theta)}\\
+{-\cos(n\theta)\sin(m\theta) + \cos(m\theta)\sin(n\theta)}&amp;
+{\sin(m\theta)\sin(n\theta) + \cos(m\theta)\cos(n\theta)}
+\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}\\
+=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}
+\left.\left[\begin{matrix}{\cos((m-n)\theta)}&amp;{\sin((m-n)\theta)}\\{-\sin((m-n)\theta)}&amp;{\cos((m-n)\theta)}\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}
+\end{aligned}
+\tag{24}
+\]</span></p>
+<p>看式（22）和（23），可以看到等号右边都有</p>
+<p><span class="math display">\[
+\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
+\]</span></p>
+<p>这正是一个二维平面的旋转矩阵。 <span class="math inline">\(f_q\)</span> 、 <span class="math inline">\(f_k\)</span>
+的操作相当于对输入向量进行了一次不改变大小，只改变方向的旋转。</p>
+<p>这也是为什么叫做“旋转”位置编码。</p>
+<h2 id="从2维推广到高维">从2维推广到高维</h2>
+<p>我们现在已经确认，对于2维的情况，经过 <span class="math inline">\(f_q\)</span> 、 <span class="math inline">\(f_k\)</span> 和 <span class="math inline">\(g\)</span>
+这么一波操作，能够满足式（11）的要求，但是实际上怎么在高维模型里实现呢？</p>
+<p>答案是把高维输入拆分成两个两个一组（这要求输入是偶数维，目前的模型也都是偶数维，所以没问题），则高维的“旋转”矩阵有多个小旋转矩阵组成</p>
+<p><span class="math display">\[
+\boldsymbol{R}_{\Theta,m}^d=\begin{pmatrix}\cos m\theta_0&amp;-\sin
+m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\\sin m\theta_0&amp;\cos
+m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\cos
+m\theta_1&amp;-\sin m\theta_1&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\sin
+m\theta_1&amp;\cos
+m\theta_1&amp;\cdots&amp;0&amp;0\\\vdots&amp;\vdots&amp;\vdots&amp;\vdots&amp;\ddots&amp;\vdots&amp;\vdots\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\cos
+m\theta_{d/2-1}&amp;-\sin
+m\theta_{d/2-1}\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\sin
+m\theta_{d/2-1}&amp;\cos n\theta_{d/2-1}\end{pmatrix}
+\tag{25}
+\]</span></p>
+<p><span class="math inline">\(d\)</span>
+是的输入向量的维度，由于是两个两个一组，所以一共有 <span class="math inline">\(d/2\)</span> 组小旋转矩阵，这 <span class="math inline">\(d/2\)</span> 组矩阵为了区分，设计使用了不同的
+<span class="math inline">\(\theta\)</span></p>
+<p><span class="math display">\[
+\Theta=\left\{\theta_i=10000^{-2(i-1)/d},i\in[1,2,\ldots,d/2]\right\}
+\tag{26}
+\]</span></p>
+<p>那么在实际操作的时候，给位置 <span class="math inline">\(m\)</span>
+和位置 <span class="math inline">\(n\)</span> 的输入向量分别乘以 <span class="math inline">\(R_m\)</span> 和 <span class="math inline">\(R_n\)</span>，再进行self-attention，就能获得仅使用相对位置信息编码的效果。</p>
+<p>另外 <span class="math inline">\(\theta\)</span>
+是怎么来的呢？这里是参考了Google最初在《Attention is All You
+Need》中提出的，这里就先不展开了，可以看看论文原文。</p>
+<h2 id="高效率实现">高效率实现</h2>
+<p>式（25）中的矩阵在高维的情况下很稀疏，直接使用这么个矩阵来计算效率并不高，可以使用一个这样的高效率实现方式</p>
+<p><span class="math display">\[
+\boldsymbol{R}_{
+m}\boldsymbol{q}=\begin{pmatrix}q_0\\q_1\\q_2\\q_3\\q_4\\\vdots\\q_{d-2}\\q_{d-1}\end{pmatrix}\otimes\begin{pmatrix}\cos
+m\theta_0\\\cos m\theta_0\\\cos m\theta_1\\\cos m\theta_1\\\cos
+m\theta_1\\\vdots\\\cos m\theta_{d/2-1}\\\cos
+m\theta_{d/2-1}\end{pmatrix}
++\begin{pmatrix}-q_1\\q_0\\-q_3\\\vdots\\-q_{d-1}\\q_{d-2}\end{pmatrix}\otimes\begin{pmatrix}\sin
+m\theta_0\\\sin m\theta_0\\\sin m\theta_1\\\sin m\theta_1\\\sin
+m\theta_1\\\vdots\\\sin m\theta_{d/2-1}\\\sin
+m\theta_{d/2-1}\end{pmatrix}
+\tag{27}
+\]</span></p>
+<p>只需进行两组element-wise乘法即可。形式上看起来是类似乘性绝对位置编码的做法。</p>
+<p>另外，看LLAMA中的实现，可以看到旋转位置编码是在每一个decoder层的输入都加了的。每次都强化一次位置信息，也有助于模型更好识别不同距离的内容。</p>
+<h2 id="远程衰减的特性">远程衰减的特性</h2>
+<p>至此，旋转位置编码已经完备，具备了计算高效，实现容易，便于外推，适用于线性注意力的特性。实际上它还具备另一项优点：有远程衰减的特性。</p>
+<p>直观看起来远程衰减很符合直觉，毕竟注意力机制随着距离的衰减而降低，这个机制和人类也很像。</p>
+<p>回顾训练式的绝对位置编码，由于每个位置的位置向量是模型在训练中自我学习的，所以并不保证能具备这样的特性。而这个
+<span class="math inline">\(\theta\)</span>
+的选择沿用了三角函数式编码的做法，就使得整体具有远程衰减的特性。</p>
+<p>证明过程这里就偷偷懒略过了，具体可以看<a href="https://arxiv.org/abs/2104.09864">Roformer的论文</a>或者<a href="https://spaces.ac.cn/archives/8265">苏神的博客</a>。</p>
+<p>当 <span class="math inline">\(d = 128\)</span>
+时，画出来的图像如下</p>
+<img src="/a051710f/remote_attenuation.png" class width="775" height="457" title="远程衰减">
 <h1 id="小结">小结</h1>
-<p>SWA在优化长上下文的计算效率上有明显的收益。而在模型效果上，目前基本没有看到不可接受的损失。对长上下文有需求的业务，值得探索。</p>
-<p>除了SWA，sparse
-attention还有许多其他探索。目前来看，这些做法都有一定的理论基础，效果也不错。但是阻碍这些方案大规模使用的一个原因就是<big><strong>工程实现</strong></big>，比如如何高效计算global
-+ local attention，在flash attention中能够支持random
-attention，这都是要考虑的内容。</p>
+<p>总之，RoPE在设计和实现上还是挺巧妙的，性质上也很有很多优势，所以被广泛应用到transformer模型中去了。</p>
+<h1 id="reference">Reference</h1>
+<p>【1】让研究人员绞尽脑汁的Transformer位置编码，https://spaces.ac.cn/archives/8130<br>
+【2】Transformer升级之路：2、博采众长的旋转式位置编码，https://spaces.ac.cn/archives/8265<br>
+【3】RoFormer: Enhanced Transformer with Rotary Position Embedding
+https://arxiv.org/abs/2104.09864<br>
+【4】十分钟读懂旋转编码（RoPE）
+https://zhuanlan.zhihu.com/p/647109286</p>
 <hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
 知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
 微信公众号：Linsight<br>
 <img src="/images/qrcode.jpg"></p>
-<h1 id="reference">Reference</h1>
-<p>【1】Mistral 7B https://arxiv.org/pdf/2310.06825.pdf<br>
-【2】Longformer: The Long-Document Transformer
-https://arxiv.org/pdf/2004.05150.pdf<br>
-【3】Training Compute-Optimal Large Language Models
-https://arxiv.org/pdf/2203.15556.pdf<br>
-【4】GPT-4 System Prompt Revealed
-https://patmcguinness.substack.com/p/gpt-4-system-prompt-revealed<br>
-【5】Big Bird: Transformers for Longer Sequences
-https://arxiv.org/abs/2007.14062</p>
 ]]></content>
       <categories>
         <category>CS</category>
@@ -1206,9 +842,8 @@ https://arxiv.org/abs/2007.14062</p>
         <tag>NLP</tag>
         <tag>LLM</tag>
         <tag>transformer</tag>
-        <tag>attention</tag>
-        <tag>sliding window attention</tag>
-        <tag>sparse attention</tag>
+        <tag>positional encoding</tag>
+        <tag>RoPE</tag>
       </tags>
   </entry>
   <entry>
@@ -1280,7 +915,7 @@ count comparible of existing 7B and 34B models.</p>
 </ul>
 <p>另外，优先考虑英语的LLM在tokenizer会使用虚拟前缀（文本开头的空格）来泛化句子不同位置相同的单词。Yi不这么做，因为即使是在英语语境中，这种假设并不总是成立，比如对于以引号开头的句子，而且在中文语境中，这么做没有明显效果。</p>
 <h1 id="数据">数据</h1>
-<p>数据，是LLM最核心的部分，没有之一。Yi最核心的工作之一就是提升数据数量和质量。</p>
+<p>数据，是LLM最核心的部分，没有之一。Yi最核心的工作就是提升数据数量和质量。</p>
 <img src="/41b6a819/cover.png" class title="数据">
 <h2 id="预训练数据">预训练数据</h2>
 <p>预训练数据整体处理流程如下</p>
@@ -1918,6 +1553,54 @@ https://arxiv.org/abs/2203.00555</p>
       </tags>
   </entry>
   <entry>
+    <title>大规模对话模型：ChatGPT下的银牌选手们</title>
+    <url>/14e576c.html</url>
+    <content><![CDATA[<img src="/14e576c/1.png" class title="page_1">
+<img src="/14e576c/2.png" class title="page_2">
+<img src="/14e576c/3.png" class title="page_3">
+<img src="/14e576c/4.png" class title="page_4">
+<img src="/14e576c/5.png" class title="page_5">
+<img src="/14e576c/6.png" class title="page_6">
+<img src="/14e576c/7.png" class title="page_7">
+<img src="/14e576c/8.png" class title="page_8">
+<img src="/14e576c/9.png" class title="page_9">
+<img src="/14e576c/10.png" class title="page_10">
+<img src="/14e576c/11.png" class title="page_11">
+<img src="/14e576c/12.png" class title="page_12">
+<img src="/14e576c/13.png" class title="page_13">
+<img src="/14e576c/14.png" class title="page_14">
+<img src="/14e576c/15.png" class title="page_15">
+<img src="/14e576c/16.png" class title="page_16">
+<img src="/14e576c/17.png" class title="page_17">
+<img src="/14e576c/18.png" class title="page_18">
+<img src="/14e576c/19.png" class title="page_19">
+<img src="/14e576c/20.png" class title="page_20">
+<img src="/14e576c/21.png" class title="page_21">
+<img src="/14e576c/22.png" class title="page_22">
+<img src="/14e576c/23.png" class title="page_23">
+<img src="/14e576c/24.png" class title="page_24">
+<img src="/14e576c/25.png" class title="page_25">
+<img src="/14e576c/26.png" class title="page_26">
+<img src="/14e576c/27.png" class title="page_27">
+<img src="/14e576c/28.png" class title="page_28">
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>ChatGPT</tag>
+        <tag>Sparrow</tag>
+        <tag>LaMDA</tag>
+        <tag>GopherCite</tag>
+        <tag>WebGPT</tag>
+        <tag>InstructGPT</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>大模型算法题(1)</title>
     <url>/3345028a.html</url>
     <content><![CDATA[<p><img src="/images/cover.png"></p>
@@ -2056,54 +1739,6 @@ window attention</a></p>
         <tag>NLP</tag>
         <tag>LLM</tag>
         <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大规模对话模型：ChatGPT下的银牌选手们</title>
-    <url>/14e576c.html</url>
-    <content><![CDATA[<img src="/14e576c/1.png" class title="page_1">
-<img src="/14e576c/2.png" class title="page_2">
-<img src="/14e576c/3.png" class title="page_3">
-<img src="/14e576c/4.png" class title="page_4">
-<img src="/14e576c/5.png" class title="page_5">
-<img src="/14e576c/6.png" class title="page_6">
-<img src="/14e576c/7.png" class title="page_7">
-<img src="/14e576c/8.png" class title="page_8">
-<img src="/14e576c/9.png" class title="page_9">
-<img src="/14e576c/10.png" class title="page_10">
-<img src="/14e576c/11.png" class title="page_11">
-<img src="/14e576c/12.png" class title="page_12">
-<img src="/14e576c/13.png" class title="page_13">
-<img src="/14e576c/14.png" class title="page_14">
-<img src="/14e576c/15.png" class title="page_15">
-<img src="/14e576c/16.png" class title="page_16">
-<img src="/14e576c/17.png" class title="page_17">
-<img src="/14e576c/18.png" class title="page_18">
-<img src="/14e576c/19.png" class title="page_19">
-<img src="/14e576c/20.png" class title="page_20">
-<img src="/14e576c/21.png" class title="page_21">
-<img src="/14e576c/22.png" class title="page_22">
-<img src="/14e576c/23.png" class title="page_23">
-<img src="/14e576c/24.png" class title="page_24">
-<img src="/14e576c/25.png" class title="page_25">
-<img src="/14e576c/26.png" class title="page_26">
-<img src="/14e576c/27.png" class title="page_27">
-<img src="/14e576c/28.png" class title="page_28">
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>ChatGPT</tag>
-        <tag>Sparrow</tag>
-        <tag>LaMDA</tag>
-        <tag>GopherCite</tag>
-        <tag>WebGPT</tag>
-        <tag>InstructGPT</tag>
       </tags>
   </entry>
   <entry>
@@ -2487,6 +2122,371 @@ https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055</p>
         <tag>transformer</tag>
         <tag>attention</tag>
         <tag>KV Cache</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>稀疏注意力计算:sliding window attention</title>
+    <url>/c61d17e3.html</url>
+    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
+<p>LLM的长文本能力现在已经是各个大模型巨头的必争之地。</p>
+<p>我们之前在<a href="http://www.linsight.cn/c4da56c0.html">《LLM长上下文的问题》</a>简单介绍了目前把大模型理解和生成能力推广到32k+/128k+的主流方法，在<a href="http://www.linsight.cn/3dc22f96.html">《理解Attention:从起源到MHA,MQA和GQA》</a>一文中也解析了MQA和GQA通过节省KV缓存的方式，支持模型在长上下文情况下推理加速的方案。</p>
+<p>在这讲一下另一种（理论有损）提升注意力计算效率的方法：SWA（sliding
+window attention）。</p>
+<p>一些效果受到广泛关注的模型，如Qwen系列和Mistral就使用了SWA。</p>
+<p>关于Mistral：</p>
+<p>Mistral
+AI是法国一家AI独角兽公司，2023年5月才成立，但是在2023年9月和12月就分别推出了Mistral
+7B和MoE模型Mistral 8x7B并开源。</p>
+<p>2024年2月，微软也投资了它。</p>
+<img src="/c61d17e3/ms_invest_mistral.png" class title="MS">
+<p>它在2024年2月发布的Mistral Large，支持多语言 &amp;
+32k的上下文长度，在MMLU上也是获得了直逼GPT4的效果</p>
+<img src="/c61d17e3/mistral_large_performance.jpeg" class title="Mistral Large MMLU Performance">
+<p>（大家也因此对Mistral寄予了厚望，希望它能成为大模型行业的鲶鱼，激活一下OPENAI和META加速一下开源。）</p>
+<h1 id="swa">SWA</h1>
+<p>虽然SWA的思路最早不是Mistral提出的，我们还是先以Mistral
+7B为例来看下SWA的具体做法。</p>
+<h2 id="mistral-7b">Mistral 7B</h2>
+<p>2023年10月，Mistral发布了Mistral 7B的<a href="https://arxiv.org/pdf/2310.06825.pdf">技术报告</a>。其中开篇就说到，相比Llama，Mistral在结构上做了一些改动，除了GQA，另一个用于支持长文本下高效推理的改动就是SWA。</p>
+<p>来看下Mistral 7B的模型结构参数</p>
+<img src="/c61d17e3/mistral_architechture.png" class title="Mistral Architechture">
+<p>Mistral使用了kv组数=8的GQA，intermediate
+size相比Llama2（11008）大一些，其他基本没有太大变化。</p>
+<h2 id="计算量和缓存">计算量和缓存</h2>
+<p>对于原始的causal
+attention，其注意力矩阵是一个下三角矩阵，这样每个token都能看到自己和在自己前面的token。</p>
+<p>这样随着输入长度 <span class="math inline">\(s\)</span>
+增大，这个下三角矩阵中1的元素数量以 <span class="math inline">\(s^2\)</span> 的速度增长，带来的是计算量和所需的KV
+Cache以平方的速度增长。</p>
+<p>（我们知道计算量/缓存和长度 <span class="math inline">\(s\)</span>
+成平方关系，这里放一些更具体的推算细节，已经熟悉的朋友可以跳过）</p>
+<p>（1）计算量</p>
+<p>对于两个这样大小的矩阵相乘： <span class="math inline">\([m,n]\times[n,p]\)</span> ，输出矩阵大小为 <span class="math inline">\([m,p]\)</span>，共有 <span class="math inline">\(m\times p\)</span> 个元素，每个元素需要 <span class="math inline">\(n\)</span> 次乘法和 <span class="math inline">\(n\)</span> 次加法，因此一次矩阵乘法有 <span class="math inline">\(2mpn\)</span> 个floating point
+operations（FLOPs）。</p>
+<p>计算量上，按<a href="https://arxiv.org/pdf/2203.15556.pdf">《Training
+Compute-Optimal Large Language Models》</a>的算法来。</p>
+<p>对于一般MHA，输入长度为 <span class="math inline">\(s\)</span>
+，层数为 <span class="math inline">\(L\)</span> ，模型hidden size为
+<span class="math inline">\(d_{model}\)</span> ，每个头的维度为 <span class="math inline">\(d_{q}\)</span> ， 头的数量为 <span class="math inline">\(n_{q}\)</span>（这里假设有 <span class="math inline">\(d_{model} = n_{q}\times d_{q}\)</span>
+），各个operation的FLOPs如下</p>
+<center>
+<table>
+<colgroup>
+<col style="width: 45%">
+<col style="width: 54%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Operation</th>
+<th style="text-align: center;">FLOPs（MHA）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Attention: QKV</td>
+<td style="text-align: center;"><span class="math inline">\(6\times
+s\times h_{model}^{2}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Attention: QK logits ( <span class="math inline">\(QK^T\)</span> )</td>
+<td style="text-align: center;"><span class="math inline">\(n_{q}\times
+2\times s^2\times h_{q}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Attention: Softmax</td>
+<td style="text-align: center;"><span class="math inline">\(n_{q}\times
+3\times s^2\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Attention: Reduction (apply to <span class="math inline">\(V\)</span>)</td>
+<td style="text-align: center;"><span class="math inline">\(n_{q}\times
+2\times s^2\times h_{q}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Attention: Outupt Linear Project</td>
+<td style="text-align: center;"><span class="math inline">\(2\times
+s\times h_{model}^{2}\)</span></td>
+</tr>
+</tbody>
+</table>
+</center>
+<p>Softmax项中，对一个 <span class="math inline">\([1,s]\)</span>
+的向量做softmax，计算量为 <span class="math inline">\(3s\)</span> （一个
+<span class="math inline">\(s\)</span> 是算每个元素的exp，一个 <span class="math inline">\(s\)</span> 是求和算分母，一个 <span class="math inline">\(s\)</span> 是算除法），而对 <span class="math inline">\([s,s]\)</span> 的矩阵做softmax，则计算量为 <span class="math inline">\(3s^2\)</span> ，每个头都要计算一遍，因此再乘以
+<span class="math inline">\(n_{q}\)</span> 。</p>
+<p>（这里忽略了其他一些operation，比如scaling，dropout等，有兴趣的朋友可以自己推算一下）</p>
+<p>顺便算下对于Mistral 7B这样使用了GQA的情况。</p>
+<p>其实只有第一项的KV有变化，其他都没变。假设kv头的数量为 <span class="math inline">\(n_{kv}\)</span>，则有</p>
+<center>
+<table>
+<colgroup>
+<col style="width: 45%">
+<col style="width: 54%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Operation</th>
+<th style="text-align: center;">FLOPs（GQA）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Attention: QKV</td>
+<td style="text-align: center;"><span class="math inline">\(2\times
+s\times h_{model}^{2}\\+4\times s\times h_{model}\times (h_{q}\times
+n_{kv})\)</span></td>
+</tr>
+</tbody>
+</table>
+</center>
+<p>从上面的推算可以看到QK logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span> 成平方关系的，其他则是线性关系。</p>
+<p>（2）缓存</p>
+<p>KV Cache需要缓存的参数量为</p>
+<p><span class="math display">\[
+2\times L\times s\times d_{q}\times n_{kv}
+\]</span></p>
+<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
+<p><span class="math display">\[
+2\times 2\times L\times s\times d_{q}\times n_{kv}
+\]</span></p>
+<p>对于Mistral 7B，在输入长度为16k的情况下，所需的KV_Cache约为2G。</p>
+<p>看来虽然用了GQA，但是在长文本（16k+）的情况下计算量和显存还是颇有压力。</p>
+<h2 id="swa思路">SWA思路</h2>
+<p>看来要提升attention计算效率，需要想办法减小上面推算中的 <span class="math inline">\(s\)</span> ，但是怎么在减小 <span class="math inline">\(s\)</span>
+的同时，还能保持模型长上下文的理解和生成能力呢？</p>
+<p>来看一下，CNN中的感受野</p>
+<img src="/c61d17e3/receptive_field_cnn.png" class title="CNN Receptive Field">
+<p>如上图，假设模型有3层，每层卷积核大小为 <span class="math inline">\(3\times 3\)</span>
+（实际上CNN里卷积操作就是一个sliding window）。</p>
+<p>那对于layer 3，每一个像素能看到layer 2中的一个 <span class="math inline">\(3\times 3\)</span> 的区域，layer
+2中其他较远的像素就看到不了。</p>
+<p>但我们再往前推，layer 2里的每个像素也可以看到layer 1中的一个 <span class="math inline">\(3\times 3\)</span> 区域，那么layer 2中的 <span class="math inline">\(3\times 3\)</span> 区域就可以看到layer 1中一个
+<span class="math inline">\(5\times 5\)</span> 的区域，相当于layer
+3中一个像素可以<u><strong>间接</strong></u>看到一个 <span class="math inline">\(5\times 5\)</span> 的输入。</p>
+<p>以此类推，如果我们再增加一层layer 4，那么layer
+4中一个像素就能获取输入层（layer 1） 一个 <span class="math inline">\(7\times 7\)</span> 区域的信息。</p>
+<p>虽然每层只能多看周围一格的信息，但是只要我们层数够多，理论上靠近输出端的层想看多远就能看多远。</p>
+<p>值得注意的一点是，我们一般认为模型低层部分提取比较基础的特征，而高层会提取高级的语义特征。</p>
+<p>在CNN里，前几层提取的可能更多是关于简单的边界、颜色、形状等基础特征，而后面的层则提取较复杂的语义特征，比如在分类任务中会是和分类类别相关的花纹、物体大小、风格等特征。</p>
+<p>如果我们把模型设计成，最后一层的一个像素刚好要到第一层才能接收到全局信息（在其它层都只能看到局部），那对于图像边缘的语义特征识别能力可能会受到一些限制。</p>
+<p>具体来说，假设我们做猫和狗的图像分类任务，如果这个时候决定性的特征出现在图像最边缘几个像素里，那这种情况下的错误率会比特征出现在图像中间时要高。</p>
+<p>而对于语言模型，一般情况下，越远距离的信息，对当前位置的重要性越低，因此只要我们的窗口大小不要太过极限小，问题应该都还不大。</p>
+<p>看下Mistral的SWA具体是怎么做的</p>
+<img src="/c61d17e3/mistral_swa.png" class title="Mistral SWA">
+<p>左边是正常的causal
+attention，每个位置能看到自己和前面的位置，attention
+mask是个下三角矩阵。</p>
+<p>中间则是SWA的attention
+mask，这里的窗口大小为3。包括自己在内，每个位置只能往前看3个输入。</p>
+<p>同CNN的感受野一样，随着层数的堆叠，模型理论上能处理的最远距离也逐层线性递增。只是LLM里递增的方向是单向的，只能往前。</p>
+<p>Mistral 7B使用了4096的窗口大小，模型层数为32，则最终输出的”感受野“为
+<span class="math inline">\(4096\times 32=131,072\)</span>
+达到131k的长度。</p>
+<p>前面我们推算了attention的计算量，其中QK
+logits、Softmax和Reduction三项是和长度 <span class="math inline">\(s\)</span>
+成平方关系。在使用了SWA之后，理论上，这几个operation仅使用4k的计算量，就能获得131k的上下文效果。当输入长度为131k时，除去已经缓存部分的数值，新的输入计算量相差
+<span class="math inline">\(32\times 32=1024\)</span> 倍。</p>
+<p>而缓存和上下文长度 <span class="math inline">\(s\)</span>
+成线性关系，当上下文长度为131k时，最大也能节省 <span class="math inline">\(31/32\)</span> 的显存。</p>
+<p>即SWA在上下文长度在4k以下时，和普通causal
+attention一样；当上下文长度超过4k时，则相对节省资源，长度越大，节省的比例越高。</p>
+<blockquote>
+<p>In practice, for a sequence length of 16K and W = 4096, changes made
+to FlashAttention [11] and xFormers [18] yield a 2x speed improvement
+over a vanilla attention baseline.</p>
+</blockquote>
+<p>实际使用中，Mistral通过把SWA实现在FlashAttention和xFormers中，对于16k的上下文长度，获得了2倍的速度提升。</p>
+<h2 id="和kv-cache的配合实现">和KV Cache的配合实现</h2>
+<p>在不使用sliding window的情况下，随着自回归推理的进行，KV
+Cache是只增不减的。</p>
+<p>而在使用SWA的情况下，超出窗口长度的kv就可以不用再缓存了，因此使用一个轮转替换的策略。</p>
+<p>比如窗口大小 <span class="math inline">\(W=4\)</span>
+，则当第5个token需要缓存是，直接替换掉第1个token，这样就可以保持kv缓存有一个最大值（为窗口大小），而不会无限增长。</p>
+<img src="/c61d17e3/rolling_buffer.png" class title="swa rolling buffer">
+<p>这样便于我们估计硬件设备所能支持的throughput，也不会因为少量超长的case而造成堵塞，在工程上有利于提高硬件利用率，降低成本。</p>
+<h2 id="长prompt的分块">长Prompt的分块</h2>
+<p>更近一步，考虑到我们使用RAG或者funciton
+call的时候，都会使用比较长的，固定的prompt来知道模型的行为。</p>
+<p>比如GPT4就被诱导说出它接收到的长system
+prompt（当然未必真的就是OPENAI用的）</p>
+<blockquote>
+<p>Your user's user agent is "Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+and the user's locale is "en-US" Your knowledge cutoff date is 2023-04.
+The current date is 2024-02-07. Image input capabilities: Enabled</p>
+<p>Tools</p>
+<p>python</p>
+<p>When you send a message containing Python code to python, it will be
+executed in a stateful Jupyter notebook environment. python will respond
+with the output of the execution or time out after 60.0 seconds. The
+drive at '/mnt/data' can be used to save and persist user files.
+Internet access for this session is disabled. Do not make external web
+requests or API calls as they will fail.</p>
+<p>dalle</p>
+<p>Whenever a description of an image is given, create a prompt that
+dalle can use to generate the image and abide to the following policy:
+1. The prompt must be in English. Translate to English if needed. 2. DO
+NOT ask for permission to generate the image, just do it! 3. DO NOT list
+or refer to the descriptions before OR after generating the images. 4.
+Do not create more than 1 image, even if the user requests more. 5. Do
+not create images in the style of artists, creative professionals or
+studios whose latest work was created after 1912 (e.g. Picasso, Kahlo).
+- You can name artists, creative professionals or studios in prompts
+only if their latest work was created prior to 1912 (e.g. Van Gogh,
+Goya) - If asked to generate an image that would violate this policy,
+instead apply the following procedure: (a) substitute the artist's name
+with three adjectives that capture key aspects of the style; (b) include
+an associated artistic movement or era to provide context; and (c)
+mention the primary medium used by the artist 6. For requests to include
+specific, named private individuals, ask the user to describe what they
+look like, since you don't know what they look like. 7. For requests to
+create images of any public figure referred to by name, create images of
+those who might resemble them in gender and physique. But they shouldn't
+look like them. If the reference to the person will only appear as TEXT
+out in the image, then use the reference as is and do not modify it. 8.
+Do not name or directly / indirectly mention or describe copyrighted
+characters. Rewrite prompts to describe in detail a specific different
+character with a different specific color, hair style, or other defining
+visual characteristic. Do not discuss copyright policies in responses.
+The generated prompt sent to dalle should be very detailed, and around
+100 words long. Example dalle invocation: { "prompt":
+"<insert prompt here>" } namespace dalle {</insert></p>
+<p>Create images from a text-only prompt. type text2im = (_: { The size
+of the requested image. Use 1024x1024 (square) as the default, 1792x1024
+if the user requests a wide image, and 1024x1792 for full-body
+portraits. Always include this parameter in the request. n?: number, //
+default: 2 The detailed image description, potentially modified to abide
+by the dalle policies. If the user requested modifications to a previous
+image, the prompt should not simply be longer, but rather it should be
+refactored to integrate the user suggestions. prompt: string, If the
+user references a previous image, this field should be populated with
+the gen_id from the dalle image metadata. referenced_image_ids?:
+string[], }) =&gt; any; } // namespace dalle</p>
+<p>voice_mode Voice mode functions are not available in text
+conversations. namespace voice_mode { } // namespace voice_mode</p>
+<p>browser</p>
+<p>You have the tool <code>browser</code>. Use <code>browser</code> in
+the following circumstances: - User is asking about current events or
+something that requires real-time information (weather, sports scores,
+etc.) - User is asking about some term you are totally unfamiliar with
+(it might be new) - User explicitly asks you to browse or provide links
+to references</p>
+<p>Given a query that requires retrieval, your turn will consist of
+three steps: 1. Call the search function to get a list of results. 2.
+Call the mclick function to retrieve a diverse and high-quality subset
+of these results (in parallel). Remember to SELECT AT LEAST 3 sources
+when using <code>mclick</code>. 3. Write a response to the user based on
+these results. In your response, cite sources using the citation format
+below.</p>
+<p>In some cases, you should repeat step 1 twice, if the initial results
+are unsatisfactory, and you believe that you can refine the query to get
+better results.</p>
+<p>You can also open a url directly if one is provided by the user. Only
+use the <code>open_url</code> command for this purpose; do not open urls
+returned by the search function or found on webpages.</p>
+<p>The <code>browser</code> tool has the following commands:
+<code>search(query: str, recency_days: int)</code> Issues a query to a
+search engine and displays the results.
+<code>mclick(ids: list[str])</code>. Retrieves the contents of the
+webpages with provided IDs (indices). You should ALWAYS SELECT AT LEAST
+3 and at most 10 pages. Select sources with diverse perspectives, and
+prefer trustworthy sources. Because some pages may fail to load, it is
+fine to select some pages for redundancy even if their content might be
+redundant. <code>open_url(url: str)</code> Opens the given URL and
+displays it.</p>
+<p>For citing quotes from the 'browser' tool: please render in this
+format: 【{message idx}†{link text}】. For long citations: please render
+in this format: <a href="message%20idx">link text</a>. Otherwise do not
+render links.</p>
+</blockquote>
+<p>除了预先计算好system
+prompt的kv值，并保存在缓存中方便每次用户输入使用外，如果system
+prompt很长（比sliding window大），还可以通过对system
+prompt的kv值进行切分来进一步优化计算。</p>
+<p>比如窗口大小 <span class="math inline">\(W=4\)</span>，system
+prompt大小为9时，就可以把system prompt的kv缓存切成 [4,4,1] 三块。</p>
+<p>第一块由于和当前的输入距离超过了一个window的大小，所以是完全看不见的，对应的attention
+mask全为0，因此可以完全忽略。</p>
+<p>第二块的attention
+mask则是一个上三角矩阵，当前的输入需要用到这部分信息。</p>
+<p>第三块是一个下三角矩阵（的左边部分），包含了当前的输入在内。</p>
+<p>在推理的时候，我们只需要用到第二块和第三块的内容，这就节省了缓存的操作。</p>
+<p>而且无论prompt有多长，只要我们按窗口大小分块，一定只会用到最后两块。</p>
+<img src="/c61d17e3/prefill_and_chunking.png" class title="prefill and chunking">
+<p>（实际上现在推理框架基本上都有FlashAttention/PagedAttention等技术加持，能够进一步节省资源，提高效率，这个后续再开一篇讲）</p>
+<p>Mistral
+7B整体的效果上的效果相比Llama是有优势的，部分任务甚至超过了Llama
+34B。</p>
+<img src="/c61d17e3/mistral_perf.png" class title="mistral performance">
+<p>Mistral认为大语言模型压缩知识的能力实际超过我们的认知，7B这个规模的效果还有提升空间。</p>
+<h1 id="sparse-attention">Sparse Attention</h1>
+<p>SWA实际上是一种sparse attention，而sparse
+attention也有许多工作做了深入探索。</p>
+<p>这里简单说一小部分，有机会再完整梳理一遍sparse
+attention的理论和实践。</p>
+<h2 id="longformer">Longformer</h2>
+<p>前面提到，Mistral并不是第一个使用SWA的。</p>
+<p>2020年，<a href="https://arxiv.org/pdf/2004.05150.pdf">《Longformer:
+The Long-Document Transformer》</a>就提出包含SWA在内的一系列sparse
+attention的做法。</p>
+<p>从文章名字就看到出来，Longformer主要目的也是为了解决长上下文的问题。</p>
+<img src="/c61d17e3/longformer_attention.png" class title="longformer">
+<p>上图中的（b）就是SWA，只是用在Bert中的时候它是双向的。</p>
+<p>在SWA的基础上，还可以进行空洞滑窗（dilated sliding
+window），在不增加计算量的情况下，提升感受野。这也是从空洞卷积（下图）来的灵感了。</p>
+<img src="/c61d17e3/dilated_conv.png" class title="dilated convolution">
+<p>还可以更进一步优化attention。无论是SWA还是dilated sliding
+window，每个位置都只能看到局部的信息。</p>
+<p>但是实际上有些位置就是对全局信息有很高的需求。</p>
+<p>在Bert中，[CLS]
+token就常常作为分类token或者相似度向量使用，这种情况下就需要它能获取整个上下文的完整信息。</p>
+<p>而在GPT中，instruction，或者说prompt的部分也对全局信息有更高要求，因为我们希望在整个对话过程中，模型都能遵循我们给出的规则。</p>
+<p>对于这些token，我们让它可以看到其他所有位置，使用完整的global
+attention，而其他位置则使用sliding window，如（d）中所示。</p>
+<h2 id="big-bird">Big Bird</h2>
+<p>无独有偶，同样在2020年，和Longformer差不多在同一时期，也有另外一个通过sparse
+attention来优化长文本效果的工作，<a href="https://arxiv.org/abs/2007.14062">《Big Bird: Transformers for
+Longer Sequences》</a>。</p>
+<p>其中sliding window和global attention结合的思路和Longformer相似。Big
+Bird还额外加入了一个random attention的做法。</p>
+<img src="/c61d17e3/big_bird_attention.png" class title="big bird attention">
+<p>上图中 <span class="math inline">\(r=2\)</span>
+即每个位置使用2个随机注意力。</p>
+<h1 id="小结">小结</h1>
+<p>SWA在优化长上下文的计算效率上有明显的收益。而在模型效果上，目前基本没有看到不可接受的损失。对长上下文有需求的业务，值得探索。</p>
+<p>除了SWA，sparse
+attention还有许多其他探索。目前来看，这些做法都有一定的理论基础，效果也不错。但是阻碍这些方案大规模使用的一个原因就是<big><strong>工程实现</strong></big>，比如如何高效计算global
++ local attention，在flash attention中能够支持random
+attention，这都是要考虑的内容。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Mistral 7B https://arxiv.org/pdf/2310.06825.pdf<br>
+【2】Longformer: The Long-Document Transformer
+https://arxiv.org/pdf/2004.05150.pdf<br>
+【3】Training Compute-Optimal Large Language Models
+https://arxiv.org/pdf/2203.15556.pdf<br>
+【4】GPT-4 System Prompt Revealed
+https://patmcguinness.substack.com/p/gpt-4-system-prompt-revealed<br>
+【5】Big Bird: Transformers for Longer Sequences
+https://arxiv.org/abs/2007.14062</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>attention</tag>
+        <tag>sliding window attention</tag>
+        <tag>sparse attention</tag>
       </tags>
   </entry>
 </search>
