@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  2024年3、4月这段时间，很多MoE模型扎堆发布，包括Qwen1.5-MoE，DBRX和Jamba等。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MoE模型的前世今生">
+<meta property="og:url" content="https://saicat.github.io/44e38c1b.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  2024年3、4月这段时间，很多MoE模型扎堆发布，包括Qwen1.5-MoE，DBRX和Jamba等。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/xiaomi_moe.jpg">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/vanilla_moe.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/rnn_moe.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/softplus.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/rnn_moe_load_function.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/rnn_moe_perf.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/rnn_moe_137b.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/rnn_moe_specilized.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/gshard_moe_family.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/gshard_model.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/gshard_algo_1.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_structure.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_diff_expert_capacity.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_capacity_effect.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_init.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_dropout.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_scaling_step.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_scaling_time.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_scaling_dense.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_sft_result.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_distill.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_distill_diff_model.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/switch_transformer_distill_sft.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/glam_compare_gpt3.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/glam_compare_gpt3_2.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/glam_model.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/glam_family.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/glam_perf.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_perf.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_structure.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_comparison.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_upper_bound_2b.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_upper_bound_13b.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_ablation.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_expert_specialization.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_less_activated_expert.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_sft.png">
+<meta property="og:image" content="https://saicat.github.io/44e38c1b/ds_moe_145b.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-03-30T01:56:05.000Z">
+<meta property="article:modified_time" content="2024-04-20T08:56:17.731Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="MoE">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/44e38c1b/xiaomi_moe.jpg">
+
+
+<link rel="canonical" href="https://saicat.github.io/44e38c1b.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/44e38c1b.html","path":"44e38c1b.html","title":"MoE模型的前世今生"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>MoE模型的前世今生 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%97%B6%E9%97%B4%E7%BA%BF"><span class="nav-number">1.</span> <span class="nav-text">时间线</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%8A%E5%8F%A4%E6%97%B6%E4%BB%A3"><span class="nav-number">1.1.</span> <span class="nav-text">上古时代</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rnn%E6%97%B6%E4%BB%A3"><span class="nav-number">1.2.</span> <span class="nav-text">RNN时代</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#transformer%E6%97%B6%E4%BB%A3"><span class="nav-number">1.3.</span> <span class="nav-text">Transformer时代</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gpt%E6%97%B6%E4%BB%A3"><span class="nav-number">1.4.</span> <span class="nav-text">GPT时代</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A5%A0%E5%9F%BA%E5%B7%A5%E4%BD%9C"><span class="nav-number">2.</span> <span class="nav-text">奠基工作</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#lstm-moe"><span class="nav-number">3.</span> <span class="nav-text">LSTM MoE</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%AE%BE%E8%AE%A1"><span class="nav-number">3.1.</span> <span class="nav-text">模型设计</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E5%B7%A5%E7%A8%8B%E9%97%AE%E9%A2%98"><span class="nav-number">3.2.</span> <span class="nav-text">解决工程问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1"><span class="nav-number">3.3.</span> <span class="nav-text">负载均衡</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">3.4.</span> <span class="nav-text">实验</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#gshard"><span class="nav-number">4.</span> <span class="nav-text">GShard</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#switch-transformer"><span class="nav-number">5.</span> <span class="nav-text">Switch Transformer</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%AE%BE%E8%AE%A1-1"><span class="nav-number">5.1.</span> <span class="nav-text">模型设计</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1-1"><span class="nav-number">5.2.</span> <span class="nav-text">负载均衡</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C-1"><span class="nav-number">5.3.</span> <span class="nav-text">实验</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#glam"><span class="nav-number">6.</span> <span class="nav-text">GLaM</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#st-moe"><span class="nav-number">7.</span> <span class="nav-text">ST-MoE</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#deepseekmoe"><span class="nav-number">8.</span> <span class="nav-text">DeepseekMoE</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%AE%BE%E8%AE%A1-2"><span class="nav-number">8.1.</span> <span class="nav-text">模型设计</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C-2"><span class="nav-number">8.2.</span> <span class="nav-text">实验</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#qwen1.5-moe"><span class="nav-number">9.</span> <span class="nav-text">Qwen1.5-MoE</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#dbrx"><span class="nav-number">10.</span> <span class="nav-text">DBRX</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">11.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">12.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">27</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/44e38c1b.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="MoE模型的前世今生 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MoE模型的前世今生
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-03-30 09:56:05" itemprop="dateCreated datePublished" datetime="2024-03-30T09:56:05+08:00">2024-03-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-04-20 16:56:17" itemprop="dateModified" datetime="2024-04-20T16:56:17+08:00">2024-04-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>22k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>41 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>2024年3、4月这段时间，很多MoE模型扎堆发布，包括Qwen1.5-MoE，DBRX和Jamba等。</p>
+<p>下面这个表格收集了一部分近期的MoE工作</p>
+<center>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;">模型</th>
+<th style="text-align: center;">发布时间</th>
+<th style="text-align: center;">备注</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">GPT4</td>
+<td style="text-align: center;">2023年3月</td>
+<td style="text-align: center;">23年6月George
+Hotz爆料GPT4是8×220B模型</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">Mistral-8×7B</td>
+<td style="text-align: center;">2023年12月</td>
+<td style="text-align: center;">Mistral AI，开源</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">LLAMA-MoE</td>
+<td style="text-align: center;">2023年12月</td>
+<td style="text-align: center;">github开源项目</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">DeepSeek-MoE</td>
+<td style="text-align: center;">2024年1月</td>
+<td style="text-align: center;">幻方量化，国内首个开源MoE模型，有技术报告</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">abab6</td>
+<td style="text-align: center;">2024年1月</td>
+<td style="text-align: center;">MiniMax，号称千亿MoE，无开源，无细节发布</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">天工2.0</td>
+<td style="text-align: center;">2024年2月</td>
+<td style="text-align: center;">昆仑万维，无开源，无细节发布</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">Step-2</td>
+<td style="text-align: center;">2024年3月</td>
+<td style="text-align: center;">阶跃星辰，无开源，无细节发布</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MM1</td>
+<td style="text-align: center;">2024年3月</td>
+<td style="text-align: center;">苹果，多模态MoE，无开源，有技术报告</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">Grok-1</td>
+<td style="text-align: center;">2024年3月</td>
+<td style="text-align: center;">X，开源</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">Qwen1.5-MoE-A2.7B</td>
+<td style="text-align: center;">2024年3月</td>
+<td style="text-align: center;">阿里，开源</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">DBRX</td>
+<td style="text-align: center;">2024年3月</td>
+<td style="text-align: center;">Databricks，开源</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">Jamba</td>
+<td style="text-align: center;">2024年3月</td>
+<td style="text-align: center;">AI21，开源</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">Mistral-8×22B</td>
+<td style="text-align: center;">2024年4月</td>
+<td style="text-align: center;">Mistral AI，开源</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">WizardLM-2-8×22B</td>
+<td style="text-align: center;">2024年4月</td>
+<td style="text-align: center;">微软，开源</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">天工3.0</td>
+<td style="text-align: center;">2024年4月</td>
+<td style="text-align: center;">昆仑万维，4000亿MoE</td>
+</tr>
+</tbody>
+</table>
+</center>
+<p>就连前不久小米汽车发布会上，雷总也弄了个多模态MoE大模型做汽车智能中控</p>
+<img src="/44e38c1b/xiaomi_moe.jpg" class title="小米汽车多模态MoE模型">
+<p>相信接下来的这段时间，MoE还会给我们带来更多的大新闻，因此也有必要详细了解一下这个很有前途的架构。</p>
+<p>本篇将初步梳理MoE相关的一些工作，从背景、动机、思路和效果的来理解MoE。</p>
+<p>到文章发出的2024年4月为止，个人认为DeepSeek-MoE和Qwen1.5-MoE是国内做得比较好的两个工作，赶时间的朋友可以直接跳到相关篇章，优先关注这两个工作。</p>
+<h1 id="时间线">时间线</h1>
+<p>先对MoE相关的工作，按时间线梳理一下（然后发现早期的MoE工作基本是Google在引领）。</p>
+<h2 id="上古时代">上古时代</h2>
+<p>首先是大部分17年后的MoE工作都会引用的，1991年的论文<a target="_blank" rel="noopener" href="https://www.cs.toronto.edu/~hinton/absps/jjnh91.pdf">《Adaptive
+Mixtures of Local Experts》</a>，这篇文章出自Geoffrey Hinton和Michael I.
+Jordan两尊大神之手。</p>
+<p>虽然在更早的时候就有MoE相关概念的工作，如原文所说</p>
+<blockquote>
+<p>This idea was first presented by Jacobs and Hinton at the
+Connectionist Summer School in Pittsburg in 1988.</p>
+</blockquote>
+<p>但是大部分MoE文章还是认为是这个工作奠定了MoE的基础。</p>
+<h2 id="rnn时代">RNN时代</h2>
+<p>时隔二十多年，Google在2017年1月的<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1701.06538">《Outrageously Large Neural
+Networks: The Sparsely-Gated Mixture-of-Experts
+Layer》</a>把MoE带进了LSTM，训出了137B参数的LSTM模型。</p>
+<h2 id="transformer时代">Transformer时代</h2>
+<ol type="1">
+<li><p>2020年6月，依然是Google，<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2006.16668">《GShard: Scaling Giant Models
+with Conditional Computation and Automatic
+Sharding》</a>把MoE应用在encoder-decoder结构的transformer模型上，完成600B参数模型的训练。</p></li>
+<li><p>2021年1月，还是Google，发表了<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2101.03961">《Switch Transformers: Scaling
+to Trillion Parameter Models with Simple and Efficient Sparsity》</a>
+，在T5（encoder-decoder结构）的基础上训出了1.6T参数量的switch
+transformer。</p></li>
+<li><p>2022年4月，Google发布<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2202.08906">《ST-MoE: Designing Stable and
+Transferable Sparse Expert
+Models》</a>，也是一个基于encoder-decoder结构的MoE模型，269B的总参数，32B的激活参数。</p></li>
+</ol>
+<h2 id="gpt时代">GPT时代</h2>
+<ol type="1">
+<li><p>21年12月，Google继续搞出了GLaM，<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2112.06905">《GLaM: Efficient Scaling of
+Language Models with
+Mixture-of-Experts》</a>，一个1.2T参数量的Decoder-only模型。</p></li>
+<li><p>2024年1月，幻方量化发出技术报告<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.06066">《DeepSeekMoE: Towards Ultimate
+Expert Specialization in Mixture-of-Experts Language
+Models》</a>，给出了DeepSeek-MoE的一些细节。</p></li>
+</ol>
+<h1 id="奠基工作">奠基工作</h1>
+<p>Geoffrey Hinton和Michael I. Jordan的<a target="_blank" rel="noopener" href="https://www.cs.toronto.edu/~hinton/absps/jjnh91.pdf">《Adaptive
+Mixtures of Local Experts》</a>是大多数MoE论文都会引用的最早工作。</p>
+<p>这篇文章大致的思路是这样的：对于比较复杂的任务，一般可以拆分为多个子任务。比如要求计算输入文本中有多少个动词和名词，那就可以拆分为“数动词”和“数名词”这两个子任务。</p>
+<p>而一个模型如果要同时学习多个子任务，多个子任务相互之间就会互相影响，模型的学习就会比较缓慢、困难。</p>
+<p>因此这篇文章提出了一种由多个分开的子网络组成的监督学习方法。这些分开的网络，在训练过程中，分别学习处理训练数据中的一个子集，也就是一个子任务。这个思路就是现代MoE的思路，每个子网络（也就是一个expert）学习处理一部分内容。（大神就是大神，几十年前就把框架都搭好了）</p>
+<p>文章里把这个MoE的方法应用于vowel discrimination
+task元音辨别任务，验证了效果。元音辨别指的是语音学中区分不同元音的能力，在语音学中，模型需要学习辨别不同的元音因素，以便准确地理解和识别语音输入。通过让多个子模型分别学习分别学习元音辨别的子任务，最终效果得到了提升。</p>
+<p>下图展示的就是这个MoE的思路：各个expert network和gating
+network接收同样的输入，每个expert给出各自的处理结果，而gating
+network输出每个expert的权重，就像一个开关一样，控制着每个expert对当前输入的打开程度，只是这个开关不是离散的，而是stochastic的。</p>
+<img src="/44e38c1b/vanilla_moe.png" class title="Vanilla MoE">
+<p>实际上，MoE这个idea在这篇文章之前就有了。如论文中所提，Jacobs和Hinton在1988就讨论过。但是之前的工作在loss的设计上，和ensemble更相近，多个expert之间更倾向于合作，每个expert会学习其他expert的residual部分。</p>
+<p>具体来说，对于case <span class="math inline">\(c\)</span>，假设第
+<span class="math inline">\(d^c\)</span> 是ground truth，第 <span class="math inline">\(i\)</span> 个expert的输出是 <span class="math inline">\(o_{i}^c\)</span>，<span class="math inline">\(p_{i}^c\)</span> 是gating network给第 <span class="math inline">\(i\)</span>
+个expert分配的权重，那么以前的工作所使用的损失函数 <span class="math inline">\(E^{c}\)</span> 计算如下</p>
+<p><span class="math display">\[E^{c}=\left|\left|d^{c}-\sum_{i}p_{i}^{c}o_{i}^{c}\right|\right|^{2}\]</span></p>
+<p>这样的损失计算方式，是把期望输出和所有expert输出的混合结果进行比较。</p>
+<p>这样做的结果是，在训练过程中，每个expert学习的其实是其他expert的组合结果所剩下的残差。这样的学习目标并不能很好迫使每个expert单独输出好的结果，因此不能得到稀疏的模型。</p>
+<p>从另一个角度来看，这个损失计算把所有专家耦合在了一起。即当一个expert的输出发生了变化，所有expert的组合结果也会变化，其他所有的expert也需要做相应的改动来适应这个变化。各个expert之间更加倾向于合作，而不是相互竞争并单独给出好的结果。</p>
+<p>虽然可以使用如增加辅助损失函数的做法，迫使模型给出稀疏激活的结果，但是这样对模型最终效果也是有损害的。</p>
+<p>而Hinton和Jordan在这个工作里，提出更简单的做法是对loss计算进行修改，使得各个expert之间的关系从合作变成竞争。</p>
+<p>假设gating network每次随机选择一个expert，损失计算如下</p>
+<p><span class="math display">\[E^{c}=\langle\|\mathbf{d}^c-\mathbf{o}_i^c\|^2\rangle=\sum_{i}p_{i}^{c}\left|\left|d^{c}-o_{i}^{c}\right|\right|^{2}\]</span></p>
+<p>在这个损失函数中，每个expert的输出结果会单独和期望结果进行对比，这就要求每个expert给出完整的结果，而不是仅学习其他expert的残差。</p>
+<p>这样的loss计算具有localization的特性，即如果一个训练case错了，那么会被修改的主要是对应的expert，以及负责分配权重的gating
+network，而不会很大地影响其他expert。</p>
+<p>此外，localization还体现在，每个expert只会负责处理输入空间中某个特定子空间的向量，而不是完整的输入空间。</p>
+<p>这样一来，不同的expert之间不会直接相互影响，虽然还是有间接的影响，比如某个expert的输出变了，gating
+network可能会分配新的权重，但是至少不会改变其他expert
+error的符号（+，-）。</p>
+<p>最终的结果是，对于给定的输入，这样的系统会倾向于分配单一一个expert来预测结果。</p>
+<p>上面提出的这个loss计算，理论上没有问题，实际上也能训练，但是为了得到更好的效果，作者把原loss计算作了如下变化：先指数化再求和，最后再取对数，得到了优化loss。看下变化前后的对比</p>
+<p><span class="math display">\[\text{原loss：}E^{c}=\sum_{i}p_{i}^{c}\left|\left|d^{c}-o_{i}^{c}\right|\right|^{2}\]</span></p>
+<p><span class="math display">\[\text{优化loss：}E^c=-log\sum_ip_i^ce^{-\frac12\|\mathbf{d}^c-\mathbf{o}_i^c\|^2}\]</span></p>
+<p>这样做有什么好处呢？来对比一下原loss函数和优化后的loss函数的求导结果</p>
+<p><span class="math display">\[\text{原loss导数：}\frac{\partial
+E^c}{\partial\mathbf{o}_i^c}=-2p_i^c(\mathbf{d}^c-\mathbf{o}_i^c)\]</span></p>
+<p><span class="math display">\[\text{优化loss导数：}\frac{\partial
+E^c}{\partial\mathbf{o}_i^c}=-\left[\frac{p_i^ce^{-\frac{1}{2}\|\mathbf{d}^c-\mathbf{o}_i^c\|^2}}{\sum_jp_j^ce^{-\frac{1}{2}\|\mathbf{d}^c-\mathbf{o}_j^c\|^2}}\right](\mathbf{d}^c-\mathbf{o}_i^c)\]</span></p>
+<p>相比原loss函数的导数，优化后的loss函数的导数，把当前第 <span class="math inline">\(i\)</span>
+个expert的表现，和其他expert联系起来了。这样能够更好地衡量expert <span class="math inline">\(i\)</span>
+对当前case的处理结果好坏。特别是在训练初期，gating
+network的权重是近似平均分配的，那么使用原loss函数的结果是，对当前case效果最好的expert，学习速度是最慢的（因为loss最小）；而优化的loss函数则可以让当前最好的expert的学习速度最快。</p>
+<p>这样就能强化localization的特征，使得各个expert更快拟合到自己擅长的部分，加速训练。</p>
+<p>BTW，优化后的这个loss导数，和现在的对比学习形式上看起来也很相似。</p>
+<p>这个工作在今天看来不很复杂，但是思路还是很踏实有效的，给MoE奠定了很好的基础。</p>
+<h1 id="lstm-moe">LSTM MoE</h1>
+<p>Google在2017年1月发布 <a target="_blank" rel="noopener" href="https://arxiv.org/abs/1701.06538">《OUTRAGEOUSLY LARGE NEURAL
+NETWORKS: THE SPARSELY-GATED MIXTURE-OF-EXPERTS
+LAYER》</a>，把MoE应用到了LSTM上，训出了137B的LSTM模型。（模型强者，竟恐怖如斯）</p>
+<p>虽然当时Transformer还没出来，大模型的竞赛也还不像今天这么可怕，但是在多个领域中（文本、图像、音频），已经有不少工作反复证实了一件事：模型容量越大，能训出来的效果越好。但是模型越大，需要的训练数据就越多，这就造成了训练开销基本是随着模型增大，以平方关系在增长。</p>
+<p>在这个背景下就有一些conditional
+computation，条件计算的工作来解决这个问题。conditional
+computation，就是根据输入，有选择地只激活部分网络模块。那么这里所使用的MoE其实就可以算是条件计算的一种。由于不用激活全部参数，训练所需的计算量就大大减小，不用按平方增加。</p>
+<p>虽说理论上计算量下来了，不过实操起来还是会遇到几个问题：</p>
+<ul>
+<li>训练的时候，在MoE结构下，每个expert的batch size比整个模型的batch
+size小了。<br>
+比如模型的batch
+size是32，一共有16个expert，那实际上一次迭代平均每个expert只能分到2个训练样本。而batch
+size对训练效率影响是很大的，大的batch
+size摊小了参数传输和更新的成本。如果直接增大模型的batch
+size，又会受显存和通讯效率的限制。<br>
+</li>
+<li>训练数据量不足。<br>
+要训大模型就需要大量的数据，让模型参数充分学习。在当时的背景下，大规模的NLP数据是比较缺的。当然如今数据集多了很多，特别是预训练数据，这个问题现在来看没有那么突出了。<br>
+</li>
+<li>损失函数的设计。<br>
+如何使用合适的损失函数来训练模型，提升效果，并且使得模型的负载比较均衡，这是一个不容易解决的问题。<br>
+</li>
+<li>集群通讯问题。<br>
+一个GPU集群的计算能力可能比设备间网络带宽的总和高出数千倍，因此设备间的通讯很可能成为训练效率的瓶颈。为了计算效率，就要使得设备内计算量和所需的通讯量的比值，达到相应的比例。<br>
+</li>
+<li>GPU计算特点。<br>
+GPU做数学计算很快，但是并不擅长做branching（if/else），因此MoE的工作基本上都是用gating
+network来控制参数的激活。这个严格来说不算是新的挑战了，应该说是根据计算设备沿用下来的设计。</li>
+</ul>
+<p>这些问题要能解决好，才能训出比较好的模型来。</p>
+<h2 id="模型设计">模型设计</h2>
+<p>在解决工程问题之前，先看下模型结构的设计。</p>
+<p>这里使用的是两个LSTM层，中间夹着一个MoE，最上面和最下面分别还有一个embedding层和一个任务输出层，如下图</p>
+<img src="/44e38c1b/rnn_moe.png" class title="LSTM MoE">
+<p>每个expert是一个简单的feed-forward neural
+network。一共有n个expert，gating network输出是一个稀疏的n维向量</p>
+<p><span class="math display">\[\begin{aligned}y=\sum_{i=1}^nG(x)_iE_i(x)\end{aligned}\]</span></p>
+<p><span class="math inline">\(E_{i}(x)\)</span> 是第 <span class="math inline">\(i\)</span> 个expert的输出，<span class="math inline">\(G(x)_{i}\)</span> 是gating network给出的第 <span class="math inline">\(i\)</span> 个expert的权重。如果 <span class="math inline">\(G(x)_{i}\)</span>
+为0，就不用计算对应的那个expert了，节省了计算。</p>
+<p>这里还提到了，如果expert的数量特别多，可以用two-level hierarchical
+MoE，即使用两层gating network，第一层的gating
+network先选择一批expert，每批expert分支又有一个单独的gating
+network来选择具体的expert。</p>
+<p>那具体gating network怎么设计呢？</p>
+<p>如果对输入进行线性变换，再加上一个softmax，那得到的是一个非稀疏的gating
+function</p>
+<p><span class="math display">\[\begin{aligned}G_\sigma(x)=Softmax(x\cdot
+W_g)\end{aligned}\]</span></p>
+<p>在这个基础上，使用一个topk函数，只保留最大的k个值，其他都设为﹣∞（softmax之后变成0），这样就能只选择部分expert，得到了稀疏性。文章指出，虽然理论上这个形式的sparsity会造成gating
+function的不连续，不过在实操中暂时没有遇到问题。</p>
+<p>在这个基础上，在输入再加上一个Gaussian
+noise，这个noise的大小由另外一个可学习的参数来控制。整体的计算公式如下</p>
+<p><span class="math display">\[\begin{aligned}G(x)=Softmax(KeepTopK(H(x),k))\end{aligned}\]</span></p>
+<p><span class="math display">\[KeepTopK(v,k)_i=\begin{cases}v_i&amp;\text{if
+}v_i\text{ is in the top }k\text{ elements of
+}v.\\-\infty&amp;\text{otherwise.}\end{cases}\]</span></p>
+<p><span class="math display">\[\begin{aligned}H(x)_i=(x\cdot
+W_g)_i+StandardNormal()\cdot Softplus((x\cdot
+W_{noise})_i)\end{aligned}\]</span></p>
+<p>其中用来调整noise的非线性函数是个类似ReLU的激活函数，但是更为光滑，函数图像如下</p>
+<img src="/44e38c1b/softplus.png" class title="softplus">
+<p>这里添加噪声的原因是要做负载平衡，具体的分析后面来说。</p>
+<h2 id="解决工程问题">解决工程问题</h2>
+<p>前面提到了由于稀疏激活的原因，每个expert的batch
+size会变小。假设每次在n个expert中选择k个，模型训练的batch
+size为b，那么每个expert的batch
+size就是kb/n。文章通过一下这几种方法来提升每个expert的batch size：</p>
+<ul>
+<li>混合使用数据并行和模型并行。本来在使用数据并行的情况，每个模型副本是异步处理各自的数据的。而这里做了优化，各个副本的batch是同步处理的，这样就可以把多个模型副本的batch组合起来。对于非MoE部分的参数，依然使用标准的数据并行机制；而对于每个expert，则在整个集群中只保留一个副本。如果模型分布在d个设备上，那每个expert就能得到一个kbd/n的batch
+size。</li>
+<li>对于LSTM模型，在时间步上展开，就能把batch size提升相应的倍数。</li>
+</ul>
+<p>另一个挑战就是平衡集群计算量和通讯量的关系。</p>
+<p>对于每个expert来说，主要的通讯就是input和output的传输，而计算量就是每个专家的两个全连接层，大小分别为[input_size,
+hidden_size]和[hidden_size,
+output_size]。对于GPU来说，计算速度可能是通讯速度的1000倍，那我们就需要把计算量设计得足够大。最简单的做法就是把hidden_size提高，使得每个expert的内部计算量比通讯录大1000倍。</p>
+<h2 id="负载均衡">负载均衡</h2>
+<p>实验中观察到，如果不对gating进行干预，那么模型倾向于收敛到“总是选固定的几个expert”的状态，而其他expert几乎不会被使用。而且这种状态会自我加强，因为经常被选到的expert会得到更充分的训练，从而又提升被选中激活的概率。</p>
+<p>之前有一些工作使用hard
+constraint来缓解这种状况，比如到某个expert激活次数达到上限，就把它从候选集合中移除。在这里使用的是一种soft
+constraint。</p>
+<p>具体来说，对于每个expert，定义了一个它在当前batch数据里的重要性指标。这个重要性指标的计算方式是对这个batch里所有数据，分配到这个expert的总和，如以下公式所示</p>
+<p><span class="math display">\[Importance(X)=\sum_{x\in
+X}G(x)\]</span></p>
+<p><span class="math inline">\(G(x)\)</span> 是gating
+network给出的权重，是一个维度等于expert数量的向量。</p>
+<p>基于这个重要性指标，定义了一个额外的损失 <span class="math inline">\(L_{importance}\)</span>，这个额外损失会和模型训练的损失加到一起。<span class="math inline">\(L_{importance}\)</span> 的计算方式如下</p>
+<p><span class="math display">\[L_{importance}(X)=w_{importance}\cdot
+CV(Importance(X))^2\]</span></p>
+<p>其中<span class="math inline">\(w_{importance}\)</span>
+是手动调整的超参，CV是coefficient of variation。</p>
+<p>coefficient of
+variation离散系数，是概率分布离散程度的一个归一化量度，定义为标准差
+<span class="math inline">\(\sigma\)</span> 和 均值 <span class="math inline">\(\mu\)</span>
+的比值。对于MoE来说，均值是固定的，如果expert的gating很不平衡，则标准差会很大，离散系数也会很大，使得
+<span class="math inline">\(L_{importance}\)</span> 变大。</p>
+<p>但是这里还是有问题，虽然均衡的负载可以推导出 <span class="math inline">\(L_{importance}\)</span> 较小的结论，但是 <span class="math inline">\(L_{importance}\)</span>
+较小却不能保证负载均衡。也就是说 <span class="math inline">\(L_{importance}\)</span>
+较小只是负载均衡一个必要不充分条件。比如一个expert可能以很高的权重被分配到一个样本，而另一个expert可能以不太高的权重被分配到好几个样本。这种情况下在整个batch内对权重进行求和，仍然可以呈现出均匀的表象（离散系数比较小），但这并不符合我们的要求。</p>
+<p>为了解决这个问题，额外再加上一个损失 <span class="math inline">\(L_{load}\)</span>
+。这里就要用到添加在每个expert输出上的随机噪音了。</p>
+<p>我们想要各个expert的负载均衡，但是分配到各个expert的样本数是个离散值，因此没有办法直接用于back
+propagation，而 <span class="math inline">\(L_{load}\)</span>
+就是对各个expert负载的一个平滑评估。</p>
+<p>前面在设计MoE的时候，定义了 <span class="math inline">\(H(x)\)</span>
+为KeepTopK函数的输入</p>
+<p><span class="math display">\[\begin{aligned}G(x)=Softmax(KeepTopK(H(x),k))\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}H(x)_i=(x\cdot
+W_g)_i+StandardNormal()\cdot Softplus((x\cdot
+W_{noise})_i)\end{aligned}\]</span></p>
+<p>那么这里先定义一个 <span class="math inline">\(kth\_excluding(H(x),k,i)\)</span>，表示在除去
+<span class="math inline">\(H(x)\)</span> 中的第 <span class="math inline">\(i\)</span> 个分量之后，排在第 <span class="math inline">\(k\)</span> 大的值。基于这个，再定义 <span class="math inline">\(P(x,i)\)</span>
+为，固定其他分量已经选取好的noise，重新给第 <span class="math inline">\(i\)</span> 个分量再添加一次noise，结果比 <span class="math inline">\(kth\_excluding(H(x),k,i)\)</span> 大的概率</p>
+<p><span class="math display">\[\begin{aligned}P(x,i)=Pr\Big((x\cdot
+W_g)_i+StandardNormal()\cdot Softplus((x\cdot
+W_{noise})_i)\\&gt;kth\_excluding(H(x),k,i)\Big)\end{aligned}\]</span></p>
+<p>这个概率可以简化写成</p>
+<p><span class="math display">\[\begin{aligned}P(x,i)&amp;=\Phi\Big(\frac{(x\cdot
+W_g)_i-kth\_excluding(H(x),k,i)}{Softplus((x\cdot
+W_{noise})_i)}\Big)\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\Phi\)</span>
+是标准正态分布的CDF。</p>
+<p>接下来就可以把第 <span class="math inline">\(i\)</span>
+个expert的负载定义为</p>
+<p><span class="math display">\[\begin{aligned}Load(X)_i=\sum_{x\in
+X}P(x,i)\end{aligned}\]</span></p>
+<p>有了每个expert的负载衡量，就可以和前面第一个负载均衡损失一样，计算新的负载均衡损失了</p>
+<p><span class="math display">\[L_{load}(X)=w_{load}\cdot
+CV(Load(X))^2\]</span></p>
+<p>文中提到一个细节，在刚开始训练的时候，希望模型分配的expert尽量均衡，因此把
+<span class="math inline">\(W_g\)</span> 和 <span class="math inline">\(W_noise\)</span>
+都设为0，这样相当于没有信号，也没有噪音。</p>
+<p>最终使用负载均衡之后的效果如下</p>
+<img src="/44e38c1b/rnn_moe_load_function.png" class title="负载平衡效果">
+<h2 id="实验">实验</h2>
+<ol type="1">
+<li>模型容量 &amp; 参数效率</li>
+</ol>
+<p>为了验证模型容量提升带来的收益，以及MoE模型的参数效率（即同样推理计算量下能达到的效果），训了总共包含4/32/256个expert的flat
+MoE模型，和总共包含256/1024/4096个expert的4、32、256，hierarchical
+MoE模型。每个expert大约是1M参数量，对于所有模型都是激活4个expert。</p>
+<p>效果如下图</p>
+<img src="/44e38c1b/rnn_moe_perf.png" class title="效果">
+<p>左边：参数越多，最终效果越好</p>
+<p>右边：同样推理计算量下，MoE模型效果更好</p>
+<ol start="2" type="1">
+<li>更大的模型</li>
+</ol>
+<p>前面几个模型训练用的数据量不是很大，训练不久就diminishing
+returns，为了验证更大数据集 + 更大模型的收益，在100B
+token的语料上，分别训了包含32, 256, 1024，4096, 16384, 65536,
+和131072个expert的MoE模型，最大的达到了137B参数量。</p>
+<p>各个模型对比如下表</p>
+<img src="/44e38c1b/rnn_moe_137b.png" class title="137模型效果">
+<ol type="1">
+<li>Expert Specialization</li>
+</ol>
+<p>把模型中不同的expert分配到token拿出看，发现确实有比较强的specialization效果，不同的专家处理不同的内容</p>
+<img src="/44e38c1b/rnn_moe_specilized.png" class title="RNN MoE 专门化">
+<h1 id="gshard">GShard</h1>
+<p>2018年，随着Bert的发布，transformer结构彻底火了起来。2020年6月，Google发布《GShard:
+Scaling Giant Models with Conditional Computation and Automatic
+Sharding》，把MoE用到了encoder-decoder结构的transformer上。至此，MoE终于变成我们熟悉的样子。</p>
+<p>GShard做了很多的实验，训了很多规模巨大的MoE模型，最大达到了600B。这样的规模放到2024年的今天依然是很巨大的。</p>
+<img src="/44e38c1b/gshard_moe_family.png" class title="GShard MoE family">
+<p>在expert数量的设计上，延续上面LSMT MoE工作的思路 --
+expert越多，效果越好，，这个思路和如今很多新发布的模型就不太相同。</p>
+<p>GShard论文中很大的篇幅在介绍工程实现和优化，这也是MoE模型最大的痛点之一。关于工程实现的内容比较硬核，因此这里不会展开讲太多，感兴趣的朋友可以看下原文。</p>
+<p>细节上，先来看下模型设计。</p>
+<p>Google在那段时间走的是encoder-decoder
+transfomer的技术路线，因此GShard也是基于encoder-decoder
+transfomer的模型结构。在encoder和decoder中，每两层把其中一个FFN层替换成MoE层。对于总共有N层的模型，则有N/2个MoE层，如下图</p>
+<img src="/44e38c1b/gshard_model.png" class title="GShard模型结构">
+<p>每层会最多选择top-2 expert激活。为什么是最多，后面来解释。</p>
+<p>GShard在上面这篇《Outrageously Large Neural Networks: The
+Sparsely-Gated Mixture-of-Experts Layer》的基础上，改进了gating
+function和auxiliary loss function。</p>
+<p>MoE层的具体计算如下</p>
+<p><span class="math display">\[\begin{aligned}
+\mathcal{G}_{s,E}&amp; =\mathrm{GATE}(x_s)  \\
+\mathrm{FFN}_e(x_s)&amp; =wo_e\cdot\text{ReLU}(wi_e\cdot x_s)  \\
+y_{s}&amp; =\sum_{e=1}^E\mathcal{G}_{s,e}\cdot\mathrm{FFN}_e(x_s)
+\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(x_s\)</span> 是MoE的输入token，<span class="math inline">\(w_i\)</span> 和 <span class="math inline">\(w_o\)</span>
+分别是输入输出的线性变换矩阵。向量<span class="math inline">\(\mathcal{G}_{s}\)</span> 就是gating
+function的输出。</p>
+<p>GShard在gating function的设计上提出了两个要求</p>
+<ul>
+<li>负载均衡<br>
+</li>
+<li>高效扩展。要对N个token分别进行E个expert的分配，N能达到百万甚至千万级别，而E也有几百上千，因此需要一个高效的分布式实现，以免其他计算资源等待gating
+function。</li>
+</ul>
+<p>为了满足这些要求，gating function设计了以下机制</p>
+<ul>
+<li>专家容量 expert capacity。<br>
+为了确保负载平衡，我们不希望有少量expert需要处理很多token，因此强制规定每一个expert所处理的token有一个最大值，这个最大值就叫专家容量（这里设置为2N/E），通过GATE(·)给每个expert维护一个计数器
+<span class="math inline">\(c_e\)</span>
+来监控。如果一个token所选的两个专家当前处理量都已经超过设定的专家容量，那么这个token就不会被当前层的任何expert处理，而是直接通过残差链接透传到下一层。<br>
+</li>
+<li>分组分配 Local group dispatching。
+给所有输入token分成了G组，不同的组并行处理，每个组相应地也把组内专家容量变成2N/EG。<br>
+</li>
+<li>辅助损失 Auxiliary loss。
+光设置专家容量会导致大量溢出，还需要让gating
+function本身的选择能平衡。参考前面17年LSTM
+MoE的工作，定义了一个辅助损失函数来帮助平衡分配。 <span class="math inline">\(\ell_{aux}=\frac1E\sum_{e=1}^E\frac{c_e}S\cdot
+m_e\)</span>。<span class="math inline">\(S\)</span>
+是token数。思路是，本来是要算 <span class="math inline">\(\frac{c_e}S\)</span>
+的平方的，但是不可导，因此把平方中的一个 <span class="math inline">\(\frac{c_e}S\)</span> 换成了 <span class="math inline">\(m_e\)</span> ， <span class="math inline">\(m_e\)</span> 是第 <span class="math inline">\(e\)</span> 个expert在 <span class="math inline">\(S\)</span> 个token中获得的平均权重。</li>
+</ul>
+<img src="/44e38c1b/gshard_algo_1.png" class title="GShard gating 算法">
+<ul>
+<li>Random routing。 如果2nd
+expert权值很小，就认为它可以被忽略。具体来说，会以与g2成比例的概率分配给第二个专家。</li>
+</ul>
+<h1 id="switch-transformer">Switch Transformer</h1>
+<p>2022年4月，距离ChatGPT发布还有半年，Google发布了《Switch
+Transformers: Scaling to Trillion Parameter Models with Simple and
+Efficient Sparsity》，不过实际上2021年Google就提出Switch
+Transformer了。</p>
+<p>Switch
+Transformer和GShard一样，是encoder-decoder结构，基于T5开发的，具有1.6T的参数，2048个expert。</p>
+<p>和前面的很多工作一样，Switch
+Transformer相信一个基础的前提，那就是“参数量越大，模型效果越好”。但是相比其他工作，Switch
+Transformer提出一个新的想法，那就是模型参数量可以是一个独立于总计算量的，单独的缩放轴。也就是说，在改变参数量的同时，（几乎）不改变训练和推理的计算量，就可以带来效果的提升。因此Switch
+Transformer关注在“同样的FLOPS/token的计算量”下，扩大模型，提升效果。</p>
+<p>Switch Transformer文章里提到的工作还是比较多的，包括：</p>
+<ul>
+<li>模型结构简化：简化了Transformer上的MoE架构，提出Switch
+Transformer架构。<br>
+</li>
+<li>MoE to
+dense：把训出来的效果较好的MoE模型蒸馏到dense模型，在压缩MoE模型99%的参数的情况下，效果还是比直接训练dense模型好。<br>
+</li>
+<li>训练和微调技术：（1）首次使用bf16成功训练MoE模型（2）更适合MoE结构的模型初始化（3）增加的专家正则化，改善了稀疏模型的微调和多任务训练。<br>
+</li>
+<li>训练框架：结合数据、模型和专家并行性，训练了超过1T参数的MoE模型。<br>
+</li>
+<li>多语言：在多语言数据集上训练，发现101种语言效果普遍有提升。<br>
+</li>
+<li>训练效率：在同样的FLOPS/token的计算量下，Switch
+Transformer训练速度有数倍的提升。</li>
+</ul>
+<p>Switch Transformer原文很值得一看，有时间的朋友应该精读一遍原文。</p>
+<h2 id="模型设计-1">模型设计</h2>
+<p>Switch
+Transformer的模型结构如下图，类似GShard，把transformer每层替换成MoE层</p>
+<img src="/44e38c1b/switch_transformer_structure.png" class title="Switch Transformer 模型结构">
+<p>Switch Transformer一个重要的改进点就是简化了gating
+function的做法（这里叫routing）。</p>
+<p>之前的工作大多探索了选择k个expert的做法，Switch
+Transformer则直接简化为只选择1个expert，即k=1。这样的MoE层叫做Switch
+layer。这样简化有3个好处：</p>
+<ul>
+<li>routing的实现简单，通讯量减少了</li>
+<li>router的计算量小了<br>
+</li>
+<li>每个expert的batch size（也就是expert capacity）减小了，</li>
+</ul>
+<h2 id="负载均衡-1">负载均衡</h2>
+<p>同GShard一样，每个expert都规定了一个专家容量expert
+capacity，来限制每个expert在一个batch里能处理的最大token数。如果一个token被分配到了一个已经满载的expert，就会出现overflow，那这个token在本层就不会被处理，而是直接通过残差链接，透传给下一层。</p>
+<p>专家容量通过容量系数capacity factor来控制。</p>
+<p><span class="math display">\[\text{expert
+capacity}=\left(\frac{\text{tokens per batch}}{\text{number of
+experts}}\right)\times\text{capacity factor}.\]</span></p>
+<p>一个大的capacity
+factor意味着一个expert能够处理更多token，从而减少overflow的发生，但是同时计算量和通讯量的压力也会增大，所以这是一个需要权衡的参数。</p>
+<p>下图给出了一个不同capacity factor下的例子</p>
+<img src="/44e38c1b/switch_transformer_diff_expert_capacity.png" class title="不同的expert capacity">
+<p>如何设定expert capacity？</p>
+<p>如果capacity
+factor为1的话，只有在完美平均分配的时候，才不会出现overflow的情况。</p>
+<p>实验中发现expert的数量和overflow的数量之间没有什么关系，所有所有模型都用128个expert。</p>
+<p>实验中上发现低的token丢弃率对模型的扩展性很重要</p>
+<img src="/44e38c1b/switch_transformer_capacity_effect.png" class title="expert capacity的效果">
+<p>通过负载平衡loss可以确保良好的平衡。 （moe额expert
+capacity从2变为1.25，以外地还变慢了）
+（3个发现：我们从表1中强调了三个关键发现：(1) 在速度和质量基础上，Switch
+Transformers的表现优于精心调整的密集模型和MoE
+Transformers。对于固定的计算量和实际运行时间，Switch
+Transformers取得了最好的结果。(2) Switch
+Transformer的计算占用空间比MoE对应项小。如果我们增加其大小以匹配MoE
+Transformer的训练速度，我们发现这在每步基础上也优于所有MoE和Dense模型。(3)
+Switch
+Transformers在较低的容量因子（1.0，1.25）下表现更好。较小的专家容量预示着在大型模型领域中模型内存非常稀缺的情况，因此希望将容量因子尽可能减小。）</p>
+<p>负载平和loss怎么设计。给定 <span class="math inline">\(N\)</span>
+个expert，和包含 <span class="math inline">\(T\)</span> 个token的batch
+<span class="math inline">\(\mathcal{B}\)</span>，负载均衡损失是这么计算的</p>
+<p><span class="math display">\[\begin{aligned}\text{loss}&amp;=\alpha\cdot
+N\cdot\sum_{i=1}^Nf_i\cdot P_i\end{aligned}\]</span></p>
+<p><span class="math inline">\(f_{i}\)</span> 表示被分配到第 <span class="math inline">\(i\)</span> 个expert的token数，这个不可导</p>
+<p><span class="math display">\[\begin{aligned}f_i=\frac{1}{T}\sum_{x\in\mathcal{B}}\mathbb{1}\{\text{argmax
+}p(x)=i\}\end{aligned}\]</span></p>
+<p><span class="math inline">\(P_i\)</span>
+表示整个batch每个token分配给第<span class="math inline">\(i\)</span>
+expert的概率的总和，这个可导</p>
+<p><span class="math display">\[\begin{aligned}P_i=\frac{1}{T}\sum_{x\in\mathcal{B}}p_i(x).\end{aligned}\]</span></p>
+<p>在完美负载均衡的情况下，<span class="math inline">\(f\)</span> 和
+<span class="math inline">\(P\)</span> 这两个向量都是 <span class="math inline">\(1/N\)</span>，这个时候负载均衡loss是最小的。</p>
+<p><span class="math inline">\(\alpha\)</span>
+扫描了1e-5到1e-1，发现设为1e-2，已经足够大保持负载平衡，同时不过分影响模型收敛</p>
+<h2 id="实验-1">实验</h2>
+<ol type="1">
+<li>训练的trick 训练上的困难和方法，使用了一些trick<br>
+</li>
+</ol>
+<ul>
+<li>半精度会带来一些训练不稳定。选择性地使用bf16。路由函数内部使用单精度，其他使用半精度，不影响通讯，也提高效果。<br>
+</li>
+<li>较小的参数初始化。从截断正态分布中抽取元素来初始化我们的权重矩阵，其中平均值
+<span class="math inline">\(\mu=0\)</span>，标准差<span class="math inline">\(\sigma=\sqrt{s}/n\)</span>，其中s是超参，n是权重张量中的输入单元数量（e.g.
+fan-in）。作为对不稳定性的额外补救措施，我们建议将默认的Transformer初始化尺度s=1.0减少10倍。这在我们的实验中既提高了质量又降低了训练不稳定性的可能性。初始化实验对比如下表<br>
+<img src="/44e38c1b/switch_transformer_init.png" class title="初始化对比"><br>
+</li>
+<li>由于switch
+transformer参数很大，在微调的时候更容易过拟合，因此一个简单的方法就是增大dropout，效果如下<br>
+<img src="/44e38c1b/switch_transformer_dropout.png" class title="dropout效果"><br>
+大dropout有效果，并且dense层保持0.1，只有expert层增大dropout效果更好</li>
+</ul>
+<ol start="2" type="1">
+<li>scaling实验</li>
+</ol>
+<p>（1）step basis</p>
+<img src="/44e38c1b/switch_transformer_scaling_step.png" class title="step scaling">
+<p>（2）time basis</p>
+<p>For a fixed training duration and computational budget, should one
+train a dense or a sparse model?</p>
+<img src="/44e38c1b/switch_transformer_scaling_time.png" class title="time scaling">
+<p>（3）和更多的dense模型对比</p>
+<img src="/44e38c1b/switch_transformer_scaling_dense.png" class title="dense对比">
+<ol start="3" type="1">
+<li>sft效果对比</li>
+</ol>
+<p>和dense模型对比，每两百步进行一次eval，选最好的效果，还是比较公平的</p>
+<img src="/44e38c1b/switch_transformer_sft_result.png" class title="sft对比">
+<p>把moe模型蒸馏到到dense模型（预训练）</p>
+<p>几个技巧：（1）初始化的时候，把moe模型中的非moe部分用于初始化dense模型。（2）label使用25%的teacher
+label和75%的ground truth</p>
+<img src="/44e38c1b/switch_transformer_distill.png" class title="蒸馏">
+<ol start="4" type="1">
+<li>不同模型下的蒸馏效果 压缩99%的参数，仍然有可观的提升
+<img src="/44e38c1b/switch_transformer_distill_diff_model.png" class title="蒸馏"></li>
+</ol>
+<p>微调也可以蒸馏</p>
+<img src="/44e38c1b/switch_transformer_distill_sft.png" class title="sft蒸馏">
+<p>数据并行与模型并行</p>
+<h1 id="glam">GLaM</h1>
+<p>GLaM (Generalist Language Model)，focus on pretrain，zero-shot ，like
+gpt3，without sft</p>
+<p>The largest version of GLaM has 1.2T parameters in total with 64
+experts per MoE layer，每个token只激活96.6B</p>
+<img src="/44e38c1b/glam_compare_gpt3.png" class title="glam和gpt3对比">
+<img src="/44e38c1b/glam_compare_gpt3_2.png" class title="glam和gpt3对比">
+<p>在related work的moe种提到了 《Beyond distillation: Task-level
+mixture-of-experts for efficient inference》《DEEP LEARNING SCALING IS
+PREDICTABLE, EMPIRICALLY》 《Scaling to trillion parameter models with
+simple and efficient sparsity》</p>
+<p>每两层使用一个moe层，每次激活两个expert，如果一共有E个专家，则每层有O（E^2）个组合</p>
+<img src="/44e38c1b/glam_model.png" class title="glam模型">
+<p>做了一些其他改动，模型使用了XLNET的相对位置编码</p>
+<p>使用了GLU In the non-MoE Transformer feed-forward sub-layers, we
+replace the first linear projection and the activation function with the
+Gated Linear Unit，which computes the component-wise product of two
+linear transformation of the input, followed by a Gaussian Error Linear
+Unit</p>
+<p>训了好几个模型来探索moe</p>
+<img src="/44e38c1b/glam_family.png" class title="glam模型系列">
+<p>一些训练的trick</p>
+<p>We skip weight updates for a batch if there are any NaNs or Inf s in
+the gradients，引用了文章《Lingvo: a modular and scalable framework for
+sequence-to-sequence modeling》</p>
+<p>以及如果在bp遇到nan了，就用重新加载更早的checkpoint并跳过nan的数据，利用随机来避免nan</p>
+<img src="/44e38c1b/glam_perf.png" class title="glam模型效果">
+<h1 id="st-moe">ST-MoE</h1>
+<h1 id="deepseekmoe">DeepseekMoE</h1>
+<p>2024年1月，幻方量化发布了DeepseekMoE，这也是国内首个开源的MoE大模型。同时也发布了论文《DeepSeekMoE:
+Towards Ultimate Expert Specialization in Mixture-of-Experts Language
+Models》，给出了一些DeepSeekMoE的细节内容，实属良心。</p>
+<p>DeepSeekMoE在其他MoE工作的基础上，新提出了几个做法：（1）对expert的粒度进行再细分，以此提供更多样的排列组合情况；（2）对expert的类型进行区分，从所有expert中划出一部分作为shared
+expert共享专家。</p>
+<p>这样的做法可以帮助expert达到更强的专门化(specialization)的水平，更好地学习不同的专业知识。</p>
+<p>DeepSeekMoE先在2B的较小MoE模型上进行了充分的实验，再把方案应用到16B参数的模型上，并获得了较好的效果。</p>
+<p>DeepSeekMoE-2B模型具有和稠密2B模型相当的性能，而DeepSeekMoE-16B则具有和7B稠密模型相当的性能，且计算量仅为40%。</p>
+<p>DeepSeekMoE-16B的参数效率相比dense模型有明显的优势，如下图</p>
+<img src="/44e38c1b/ds_moe_perf.png" class title="deepseek moe">
+<p>2B和16B模型都开源了。</p>
+<p>在前面实验的基础上，幻方量化内部还训出了DeepSeekMoE-145B的超大模型，具有和稠密的DeepSeek-67B相当的表现，这个后续也有机会放出来。</p>
+<h2 id="模型设计-2">模型设计</h2>
+<p>当前的moe架构会遇到knowledge hybridity and knowledge
+redundancy，阻碍了expert specialization，即每个专家学习non-overlap &amp;
+foucusd knowledge的能力。</p>
+<p>（switch 分给1个expert，gshard：分给两个）</p>
+<p>知识混合：现有的MoE实践通常使用数量有限的专家（例如，8个或16个），因此分配给特定专家的标记可能会涵盖多样化的知识。因为专家数量比较少，每个专家不能太专，而要多覆盖几个领域才够用
+因此，指定的专家将倾向于在其参数中组装截然不同的知识类型，这些知识很难同时利用。</p>
+<p>知识冗余：分配给不同专家的标记可能需要共同知识。结果，多个专家可能会在各自的参数中获取（本应）共享的知识，从而导致专家参数的冗余。</p>
+<p>这些问题共同阻碍了现有MoE实践中专家的专业化，阻止他们达到MoE模型的理论上限性能。</p>
+<p>deepseek moe架构有2各个主要策略：</p>
+<p>（1）Fine-Grained Expert
+Segmentation:参数不变的情况下，将专家分成更细的粒度，这样带来更灵活的激活组合，让专家有更高的专业化。</p>
+<p>（2）Shared Expert
+Isolation:把部分专家分离出来，保持永远被激活，这部分专家提供common
+knowledge，这同样使得其他专家能够更加专业化，并且减少冗余</p>
+<p>deepseekmoe 16b不用量化就是在40gb显存上跑</p>
+<img src="/44e38c1b/ds_moe_structure.png" class title="deepseek moe 结构">
+<p>expert isolation的idea可以追溯到《Deepspeed-moe: Advancing
+mixture-of-experts inference and training to power next-generation AI
+scale》</p>
+<p>负载均衡</p>
+<p>任由模型自主学习gating可能会遇到两个问题</p>
+<p>（1）routing
+collapse，也就是老选那么几个expert，并自我加强这种效应</p>
+<p>（2）多设备间，不平衡的负载可能会成为计算效率的瓶颈</p>
+<p>针对第一个问题，增加一个expert-level balance loss，</p>
+<p><span class="math display">\[\begin{aligned}
+\text{LExpBal}&amp; =\alpha_1\sum_{i=1}^{N&#39;}f_iP_i,  \\
+f_{i}&amp;
+=\frac{N^{\prime}}{K^{\prime}T}\sum_{t=1}^T\mathbb{1}(\text{Token
+}t\text{ selects Expert }i),  \\
+P_{i}&amp; =\frac1T\sum_{t=1}^Ts_{i,t},
+\end{aligned}\]</span></p>
+<p>针对第二个问题，引入devicelevel balance loss，</p>
+<p>当目标是缓解计算瓶颈时，在专家层面强制执行严格的平衡约束就变得不必要了，因为过度的负载平衡约束会损害模型性能。相反，我们的主要目标是确保设备之间的计算平衡。如果我们把所有路由的专家分成D组{E1,
+E2, ..., ED}，并且每个组在单个设备上部署，设备级的平衡损失计算如下：</p>
+<p><span class="math display">\[\begin{aligned}
+\mathcal{L}_{\mathrm{DevBal}}&amp;
+=\alpha_2\sum_{i=1}^Df_i&#39;P_i&#39;,  \\
+f_i^{\prime}&amp;
+=\frac1{|\mathcal{E}_i|}\sum_{j\in\mathcal{E}_i}f_j,  \\
+P_{i}^{\prime}&amp; =\sum_{j\in\mathcal{E}_i}P_j,
+\end{aligned}\]</span></p>
+<h2 id="实验-2">实验</h2>
+<p>只用了100B数据</p>
+<p>用HAI-LLM框架</p>
+<p>训了deepseek moe
+2b和13b模型，在benchmark上和5个模型做对比：dense，hash
+layer（也是一种moe，《Hash layers for large sparse models》），switch
+transformer，gshard</p>
+<img src="/44e38c1b/ds_moe_comparison.png" class title="deepseek moe 效果">
+<p>为了探索deepseek
+moe架构带来的收益，提升dense和gshard的激活参数，直到效果和deepseek
+moe差不多</p>
+<p>deepseek moe 2b, gshard 提升了 1.5倍激活参数</p>
+<img src="/44e38c1b/ds_moe_upper_bound_2b.png" class title="deepseek moe upper bound">
+<p>deepseek moe 13b, gshard 提升了 1.2倍激活参数</p>
+<img src="/44e38c1b/ds_moe_upper_bound_13b.png" class title="deepseek moe upper bound">
+<p>消融实验</p>
+<img src="/44e38c1b/ds_moe_ablation.png" class title="deepseek moe upper bound 消融实验">
+<p>（1）对比蓝色和橙色，可以看到增加共享专家带来了收益</p>
+<p>（2）绿色和红色在橙色的基础上进一步把专家颗粒分得更细，效果进一步提升</p>
+<p>（3）共享专家和路由专家的比例：在总共64个expert的情况下，对比了1/2/4个共享专家的情况，结果并没有显著差别，在pile上的loss分别是1.808,1.806,1.811。最终选择了共享专家和激活路由专家1:3（2+6）的比例。</p>
+<p>专家专门化</p>
+<img src="/44e38c1b/ds_moe_expert_specialization.png" class title="专家专门化">
+<p>对比deepseek moe2b和gshard2b*1.5，二者在正常情况下表现相同。</p>
+<p>通过禁用top专家，而只能从次优的专家中选择进行回答这个实验，发现deepseek
+moe损失更大，说明每个专家的专门化程度更好，必要性更高，这说明deepseek的专家专门化程度更高。</p>
+<p>通过禁用deepseek
+moe的共享专家，而额外激活一个专家，发现loss也大大提升。这个结果突出了共享专家的关键功能，并表明共享专家捕捉到了与路由专家不共享的基本且重要的知识，使得它无法被路由专家替代。</p>
+<p>只激活更少专家，也能和gshard达到相同水平，这一观察结果支持了DeepSeekMoE可以更准确和高效地获取所需知识的观点。</p>
+<img src="/44e38c1b/ds_moe_less_activated_expert.png" class title="激活更少专家">
+<p>还训了一个只用1个共享专家和3个激活专家的2b模型，也比gshard好，说明deepseek
+moe的有效参数效率更高</p>
+<p>16b moe模型用2T数据训练。</p>
+<p>除了第一层，其他都使用了moe，因为观察到第一层的负载均衡loss收敛得特别慢</p>
+<p>2 + 6/64 专家</p>
+<p>没有把专家的dimension再减小是因为会有计算效率的下降</p>
+<p>最总16.4b参数，激活2.8b</p>
+<p>batch size=4.5k，长度是4k，每个batch有18Mtoken</p>
+<p>2T数据差不多是10.6w步</p>
+<p>使用了pipeline parallelism</p>
+<p>expert level balance
+loss的系数设得比较下，0.001，因为再大爷不能优化负载平衡，反而会损害效果</p>
+<p>和dense模型比效果好很多就是了</p>
+<p>微调</p>
+<p>《Efficient large scale language modeling with mixtures of
+experts》、switch transformer没有探索太多关于sft在moe的收益</p>
+<p>《Flan-moe: Scaling instruction-finetuned language models with sparse
+mixture of experts.》suggesting that MoE models can indeed benefit from
+instruction tuning</p>
+<p>deepseek用了百万级的内部微调数据</p>
+<p>结果。评估结果呈现于表5中。我们的主要观察包括：（1）DeepSeekMoE Chat
+16B在消耗近40%的计算资源的情况下，与7B密集模型在语言理解和推理（PIQA、ARC、BBH）、机器阅读理解（RACE）、数学（GSM8K、MATH）以及知识密集型任务（TriviaQA、NaturalQuestions）方面实现了相当的表现。
+（2）在代码生成任务上，DeepSeekMoE Chat 16B显著优于LLaMA2 SFT
+7B，在HumanEval和MBPP上展现了显著的改进。此外，它还超越了DeepSeek Chat
+7B。
+（3）在多项选择题回答基准测试中，包括MMLU、CEval和CMMLU，DeepSeekMoE
+Chat 16B仍然落后于DeepSeek Chat
+7B，这与基础模型的观察结果一致（第5.2.1节）。然而，值得注意的是，在经过监督式微调之后，DeepSeekMoE
+16B与DeepSeek 7B之间的性能差距缩小了。
+（4）得益于在双语语料库上的预训练，DeepSeekMoE Chat
+16B在所有中文基准测试中显著优于LLaMA2 SFT 7B。这些结果证明了DeepSeekMoE
+16B在中文和英文方面的平衡能力，增强了其在多样化场景中的通用性和适用性。总之，对于聊天模型的评估突出了DeepSeekMoE
+16B从对齐中受益的潜力，并验证了其在使用大约40%的计算资源的同时实现与密集模型相当表现的一致优势。</p>
+<img src="/44e38c1b/ds_moe_sft.png" class title="sft结果">
+<p>deepseek moe 145b，用245btoken训的</p>
+<img src="/44e38c1b/ds_moe_145b.png" class title="145b">
+<p>related work 提到的工作</p>
+<p>《Stablemoe: Stable routing strategy for mixture of experts》</p>
+<p>每个token分配不同数量的moe《Mixture-of-experts with expert choice
+routing》</p>
+<p>关注在训练稳定性《Designing effective sparse expert models》</p>
+<h1 id="qwen1.5-moe">Qwen1.5-MoE</h1>
+<h1 id="dbrx">DBRX</h1>
+<h1 id="小结">小结</h1>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期文章</p>
+<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Adaptive Mixtures of Local Experts
+https://www.cs.toronto.edu/~hinton/absps/jjnh91.pdf<br>
+【2】Outrageously Large Neural Networks: The Sparsely-Gated
+Mixture-of-Experts Layer https://arxiv.org/abs/1701.06538<br>
+【3】GShard: Scaling Giant Models with Conditional Computation and
+Automatic Sharding https://arxiv.org/abs/2006.16668<br>
+【4】Switch Transformers: Scaling to Trillion Parameter Models with
+Simple and Efficient Sparsity https://arxiv.org/abs/2101.03961<br>
+【5】GLaM: Efficient Scaling of Language Models with Mixture-of-Experts
+https://arxiv.org/abs/2112.06905<br>
+【6】ST-MoE: Designing Stable and Transferable Sparse Expert Models
+https://arxiv.org/abs/2202.08906<br>
+【7】DeepSeekMoE: Towards Ultimate Expert Specialization in
+Mixture-of-Experts Language Models
+https://arxiv.org/abs/2401.06066<br>
+【8】Qwen1.5-MoE: Matching 7B Model Performance with 1/3 Activated
+Parameters https://qwenlm.github.io/zh/blog/qwen-moe/<br>
+【9】Introducing DBRX: A New State-of-the-Art Open LLM
+https://www.databricks.com/blog/introducing-dbrx-new-state-art-open-llm</p>
+<p>【7】A Review of Sparse Expert Models in Deep Learning
+https://arxiv.org/abs/2209.01667</p>
+<p>【8】LLaMA-MoE: Building Mixture-of-Experts from LLaMA with Continual
+Pre-training https://github.com/pjlab-sys4nlp/llama-moe<br>
+【9】MM1: Methods, Analysis &amp; Insights from Multimodal LLM
+Pre-training https://arxiv.org/abs/2403.09611<br>
+【12】Introducing Jamba https://www.ai21.com/jamba<br>
+【13】Go Wider Instead of Deeper https://arxiv.org/abs/2107.11817<br>
+【14】MoEBERT: from BERT to Mixture-of-Experts via Importance-Guided
+Adaptation https://arxiv.org/abs/2204.07675<br>
+【15】Learning Factored Representations in a Deep Mixture of Experts
+https://arxiv.org/abs/1312.4314<br>
+【17】MegaBlocks: Efficient Sparse Training with Mixture-of-Experts
+https://arxiv.org/abs/2211.15841<br>
+【18】Mixture-of-Experts Meets Instruction Tuning:A Winning Combination
+for Large Language Models https://arxiv.org/abs/2305.14705<br>
+【19】</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/44e38c1b.html" title="MoE模型的前世今生">https://saicat.github.io/44e38c1b.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/MoE/" rel="tag"><i class="fa fa-tag"></i> MoE</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/41b6a819.html" rel="prev" title="Yi技术报告-划重点看细节">
+                  <i class="fa fa-angle-left"></i> Yi技术报告-划重点看细节
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/1736008.html" rel="next" title="大模型算法题(3)">
+                  大模型算法题(3) <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">124k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">3:46</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

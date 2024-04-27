@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  之前在《transformer中normalization的二三事》从思路上梳理了关于常用的normalization的内容。发出之后收到了一些反馈，关于这些norm在实际使用中是怎么实现的，有一些疑问。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从代码实现看normalization-到底做了什么">
+<meta property="og:url" content="https://saicat.github.io/b70b4a2d.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  之前在《transformer中normalization的二三事》从思路上梳理了关于常用的normalization的内容。发出之后收到了一些反馈，关于这些norm在实际使用中是怎么实现的，有一些疑问。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/b70b4a2d/bn_and_ln.png">
+<meta property="og:image" content="https://saicat.github.io/b70b4a2d/cv_batchnorm.png">
+<meta property="og:image" content="https://saicat.github.io/b70b4a2d/cv_layernorm.jpeg">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-04-06T04:24:25.000Z">
+<meta property="article:modified_time" content="2024-04-08T11:32:01.659Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="layernorm">
+<meta property="article:tag" content="normalization">
+<meta property="article:tag" content="batchnorm">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/b70b4a2d/bn_and_ln.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/b70b4a2d.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/b70b4a2d.html","path":"b70b4a2d.html","title":"从代码实现看normalization-到底做了什么"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>从代码实现看normalization-到底做了什么 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8C%E7%BB%B4%E6%95%B0%E6%8D%AE"><span class="nav-number">1.</span> <span class="nav-text">二维数据</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#batchnorm"><span class="nav-number">1.1.</span> <span class="nav-text">batchnorm</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#layernorm"><span class="nav-number">1.2.</span> <span class="nav-text">layernorm</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94"><span class="nav-number">1.3.</span> <span class="nav-text">对比</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#cv%E6%95%B0%E6%8D%AE"><span class="nav-number">2.</span> <span class="nav-text">CV数据</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#batchnorm-1"><span class="nav-number">2.1.</span> <span class="nav-text">batchnorm</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#layernorm-1"><span class="nav-number">2.2.</span> <span class="nav-text">layernorm</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#nlp%E6%95%B0%E6%8D%AE"><span class="nav-number">3.</span> <span class="nav-text">NLP数据</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#batchnorm-2"><span class="nav-number">3.1.</span> <span class="nav-text">batchnorm</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#layernorm-2"><span class="nav-number">3.2.</span> <span class="nav-text">layernorm</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BD%92%E4%B8%80%E5%8C%96%E7%9A%84%E8%BE%93%E5%85%A5%E8%83%BD%E5%8F%98%E5%9B%9E%E5%8E%9F%E8%BE%93%E5%85%A5%E5%90%97"><span class="nav-number">4.</span> <span class="nav-text">归一化的输入能变回原输入吗</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">27</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/b70b4a2d.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="从代码实现看normalization-到底做了什么 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          从代码实现看normalization-到底做了什么
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-04-06 12:24:25" itemprop="dateCreated datePublished" datetime="2024-04-06T12:24:25+08:00">2024-04-06</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-04-08 19:32:01" itemprop="dateModified" datetime="2024-04-08T19:32:01+08:00">2024-04-08</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>19k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>34 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>之前在<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">《transformer中normalization的二三事》</a>从思路上梳理了关于常用的normalization的内容。发出之后收到了一些反馈，关于这些norm在实际使用中是怎么实现的，有一些疑问。</p>
+<p>因此本篇从实现的角度，来看下这些norm在不同的场景下，到底做了什么。</p>
+<p>代码已上传至<a target="_blank" rel="noopener" href="https://github.com/Saicat/normalization_exp">https://github.com/Saicat/normalization_exp</a></p>
+<h1 id="二维数据">二维数据</h1>
+<p>先看下二维数据的情况下normalization是怎么做的。二维数据一般可以对应到神经网络中的全连接层，比如CNN中分类网络最后几个特征层。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">from</span> torch <span class="keyword">import</span> nn</span><br><span class="line"></span><br><span class="line"><span class="comment"># epsilon</span></span><br><span class="line">eps = <span class="number">1e-8</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 定义一个随机二维输入</span></span><br><span class="line">batch_size = <span class="number">3</span></span><br><span class="line">feature_num = <span class="number">4</span></span><br><span class="line">torch.manual_seed(<span class="number">0</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">inputs = torch.randn(batch_size, feature_num)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;二维输入:\n&#x27;</span>, inputs)</span><br></pre></td></tr></table></figure>
+<p>这里定义了一个3×4的矩阵，相当于batch
+size=3，特征向量维度为4。得到的随机二维输入是</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">二维输入:</span><br><span class="line"> tensor([[ <span class="number">1.5410</span>, -<span class="number">0.2934</span>, -<span class="number">2.1788</span>,  <span class="number">0.5684</span>],</span><br><span class="line">        [-<span class="number">1.0845</span>, -<span class="number">1.3986</span>,  <span class="number">0.4033</span>,  <span class="number">0.8380</span>],</span><br><span class="line">        [-<span class="number">0.7193</span>, -<span class="number">0.4033</span>, -<span class="number">0.5966</span>,  <span class="number">0.1820</span>]])</span><br></pre></td></tr></table></figure>
+<h2 id="batchnorm">batchnorm</h2>
+<p>用pytorch自带的BatchNorm1d对二维输入进行操作</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># torch自带的batchnorm</span></span><br><span class="line">torch_bn = nn.BatchNorm1d(num_features=feature_num, affine=<span class="literal">True</span>)  <span class="comment"># 注意完整的batchnorm要包括仿射变换</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 仿射变化初始化的weigh=1，bias=0，相当于没有进行变换，看不出效果</span></span><br><span class="line"><span class="comment"># 手动改成别的值，用于对比包含仿射变换的效果</span></span><br><span class="line">torch.manual_seed(<span class="number">1</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">torch_bn.weight = nn.Parameter(torch_bn.weight * torch.randn(feature_num))</span><br><span class="line">torch_bn.bias = nn.Parameter(torch_bn.bias + torch.randn(feature_num))</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;weight:\n&#x27;</span>, torch_bn.weight)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;bias:\n&#x27;</span>, torch_bn.bias, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 结果</span></span><br><span class="line">torch_normed = torch_bn(inputs)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;torch bn结果:\n&#x27;</span>, torch_normed)</span><br></pre></td></tr></table></figure>
+<p>注意完整的batchnorm/layernorm等，是包括①归一化和②仿射变换（缩放+平移，也就是有可训练参数这部分）两步的。在BatchNorm接口中通过参数"affine"来决定是否进行放射变换。如果"affine"为False，相当于只是在某个维度上对数据进行了归一化处理。</p>
+<p>而且pytorch中各种norm的接口初始化都把缩放系数初始化为1.0，平移系数初始化为0，相当于没有进行变换。为了把仿射变换的影响也一起对比，这里手动给缩放和平移系数都添加了一个随机数，变成如下数值</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">weight:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([<span class="number">0.6614</span>, <span class="number">0.2669</span>, <span class="number">0.0617</span>, <span class="number">0.6213</span>], requires_grad=<span class="literal">True</span>)</span><br><span class="line">bias:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([-<span class="number">0.4519</span>, -<span class="number">0.1661</span>, -<span class="number">1.5228</span>,  <span class="number">0.3817</span>], requires_grad=<span class="literal">True</span>) </span><br></pre></td></tr></table></figure>
+<p>这里缩放系数weight和平移系数bias的维度都是4，对应特征向量的维度。</p>
+<p>输入矩阵用官方接口batchnorm之后得到的结果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">torch bn结果:</span><br><span class="line"> tensor([[ <span class="number">0.4756</span>,  <span class="number">0.0513</span>, -<span class="number">1.6033</span>,  <span class="number">0.4715</span>],</span><br><span class="line">        [-<span class="number">1.0197</span>, -<span class="number">0.5421</span>, -<span class="number">1.4535</span>,  <span class="number">1.0937</span>],</span><br><span class="line">        [-<span class="number">0.8117</span>, -<span class="number">0.0077</span>, -<span class="number">1.5115</span>, -<span class="number">0.4202</span>]],</span><br><span class="line">       grad_fn=&lt;NativeBatchNormBackward0&gt;)</span><br></pre></td></tr></table></figure>
+<p>接下来手动实现batchnorm</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 手动bn</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 计算均值和标准差</span></span><br><span class="line">mean = torch.mean(inputs, dim=<span class="number">0</span>, keepdim=<span class="literal">True</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;均值:\n&#x27;</span>, mean)</span><br><span class="line">std = torch.std(inputs, dim=<span class="number">0</span>, keepdim=<span class="literal">True</span>, unbiased=<span class="literal">False</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;标准差:\n&#x27;</span>, std, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line">manual_normed = (inputs - mean) / (std + eps) * torch_bn.weight + torch_bn.bias</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;手动bn结果:\n&#x27;</span>, manual_normed)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手动操作和torch自带操作有点误差，&lt;1e-4</span></span><br><span class="line">isclose = torch.isclose(torch_normed, manual_normed, rtol=<span class="number">1e-4</span>, atol=<span class="number">1e-4</span>)</span><br><span class="line"><span class="built_in">print</span>(isclose)</span><br></pre></td></tr></table></figure>
+<p>在dim=0这个维度上计算均值和标准差，即对整个batch内所有sample的同一个feature，进行操作，获得结果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">均值:</span><br><span class="line"> tensor([[-<span class="number">0.0876</span>, -<span class="number">0.6985</span>, -<span class="number">0.7907</span>,  <span class="number">0.5295</span>]])</span><br><span class="line">标准差:</span><br><span class="line"> tensor([[<span class="number">1.1612</span>, <span class="number">0.4971</span>, <span class="number">1.0630</span>, <span class="number">0.2692</span>]]) </span><br></pre></td></tr></table></figure>
+<p>均值和标准差的维度也是和特征向量的维度一致。这里计算mean和std的时候keepdim设置为True和False都可以，最后都会自动broadcast。</p>
+<p>一个要注意的点是，计算std的时候unbiased要设置为False，表明这里是对标准差的有偏估计，否则算出来的结果和torch的batchnorm接口不一致。</p>
+<p>用手动计算出来的均值和标准差对输入进行归一化，再进行放射变换，得到手动计算的batchnorm结果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">手动bn结果:</span><br><span class="line"> tensor([[ <span class="number">0.4756</span>,  <span class="number">0.0514</span>, -<span class="number">1.6033</span>,  <span class="number">0.4715</span>],</span><br><span class="line">        [-<span class="number">1.0197</span>, -<span class="number">0.5421</span>, -<span class="number">1.4535</span>,  <span class="number">1.0937</span>],</span><br><span class="line">        [-<span class="number">0.8117</span>, -<span class="number">0.0077</span>, -<span class="number">1.5115</span>, -<span class="number">0.4202</span>]], grad_fn=&lt;AddBackward0&gt;)</span><br></pre></td></tr></table></figure>
+<p>这里用torch.isclose接口验证官方batchnorm和手动计算的batchnorm是否相同</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">tensor([[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">        [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">        [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]])</span><br></pre></td></tr></table></figure>
+<p>为什么没有用equal，因为发现两个结果会有一点点误差，相对误差大概在1e-5~1e-4之间，应该是因为使用的eps不同导致。</p>
+<h2 id="layernorm">layernorm</h2>
+<p>看下layernorm对于二维数据的操作，还是用同样的3×4的输入</p>
+<p>使用torch官方接口</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># torch自带的layernorm</span></span><br><span class="line">torch_ln = nn.LayerNorm(normalized_shape=feature_num, elementwise_affine=<span class="literal">True</span>)  <span class="comment"># 注意完整的layernorm要包括仿射变换</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 仿射变化初始化的weigh=1，bias=0，相当于没有进行变换，看不出效果</span></span><br><span class="line"><span class="comment"># 手动改成别的值，用于对比包含仿射变换的效果</span></span><br><span class="line">torch.manual_seed(<span class="number">2</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">torch_ln.weight = nn.Parameter(torch_ln.weight * torch.randn(feature_num))</span><br><span class="line">torch_ln.bias = nn.Parameter(torch_ln.bias + torch.randn(feature_num))</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;weight:\n&#x27;</span>, torch_ln.weight)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;bias:\n&#x27;</span>, torch_ln.bias, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 结果</span></span><br><span class="line">torch_normed = torch_ln(inputs)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;torch ln结果:\n&#x27;</span>, torch_normed)</span><br></pre></td></tr></table></figure>
+<p>得到layernorm仿射变换的系数如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">weight:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([ <span class="number">0.3923</span>, -<span class="number">0.2236</span>, -<span class="number">0.3195</span>, -<span class="number">1.2050</span>], requires_grad=<span class="literal">True</span>)</span><br><span class="line">bias:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([ <span class="number">1.0445</span>, -<span class="number">0.6332</span>,  <span class="number">0.5731</span>,  <span class="number">0.5409</span>], requires_grad=<span class="literal">True</span>) </span><br></pre></td></tr></table></figure>
+<p>维度依然是和特征向量的维度一致。</p>
+<p>官方layernorm的结果是这样的</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">torch ln结果:</span><br><span class="line"> tensor([[ <span class="number">1.5120</span>, -<span class="number">0.6001</span>,  <span class="number">1.0604</span>, -<span class="number">0.0392</span>],</span><br><span class="line">        [ <span class="number">0.7249</span>, -<span class="number">0.3772</span>,  <span class="number">0.3331</span>, -<span class="number">0.9155</span>],</span><br><span class="line">        [ <span class="number">0.6645</span>, -<span class="number">0.6209</span>,  <span class="number">0.7693</span>, -<span class="number">1.4324</span>]],</span><br><span class="line">       grad_fn=&lt;NativeLayerNormBackward0&gt;)</span><br></pre></td></tr></table></figure>
+<p>接下来手动实现一下，和官方结果作对比。</p>
+<p>在dim=1计算均值和向量</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 手动ln</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 计算均值</span></span><br><span class="line">mean = torch.mean(inputs, dim=<span class="number">1</span>, keepdim=<span class="literal">True</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;均值:\n&#x27;</span>, mean)</span><br><span class="line">std = torch.std(inputs, dim=<span class="number">1</span>, keepdim=<span class="literal">True</span>, unbiased=<span class="literal">False</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;标准差:\n&#x27;</span>, std, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line">manual_normed = (inputs - mean) / (std + eps) * torch_ln.weight + torch_ln.bias</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;手动ln结果:\n&#x27;</span>, manual_normed)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手动操作和torch自带操作有点误差，&lt;1e-4</span></span><br><span class="line">isclose = torch.isclose(torch_normed, manual_normed, rtol=<span class="number">1e-4</span>, atol=<span class="number">1e-4</span>)</span><br><span class="line"><span class="built_in">print</span>(isclose)</span><br></pre></td></tr></table></figure>
+<p>得到的均值和标准差是这样的</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">均值:</span><br><span class="line"> tensor([[-<span class="number">0.0907</span>],</span><br><span class="line">        [-<span class="number">0.3104</span>],</span><br><span class="line">        [-<span class="number">0.3843</span>]])</span><br><span class="line">标准差:</span><br><span class="line"> tensor([[<span class="number">1.3691</span>],</span><br><span class="line">        [<span class="number">0.9502</span>],</span><br><span class="line">        [<span class="number">0.3458</span>]]) </span><br></pre></td></tr></table></figure>
+<p>对输入进行归一化和仿射变换，结果如下，和官方接口结果一致</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">手动ln结果:</span><br><span class="line"> tensor([[ <span class="number">1.5120</span>, -<span class="number">0.6001</span>,  <span class="number">1.0604</span>, -<span class="number">0.0392</span>],</span><br><span class="line">        [ <span class="number">0.7249</span>, -<span class="number">0.3772</span>,  <span class="number">0.3331</span>, -<span class="number">0.9155</span>],</span><br><span class="line">        [ <span class="number">0.6645</span>, -<span class="number">0.6209</span>,  <span class="number">0.7693</span>, -<span class="number">1.4325</span>]], grad_fn=&lt;AddBackward0&gt;)</span><br><span class="line">验证结果:</span><br><span class="line"> tensor([[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">        [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">        [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]])</span><br></pre></td></tr></table></figure>
+<h2 id="对比">对比</h2>
+<p>对于二维输入，batchnorm和layernorm在做第①步归一化的时候，方向如下图</p>
+<img src="/b70b4a2d/bn_and_ln.png" class title="bn和ln">
+<p>batchnorm在dim=0，即batch方向操作；而layernorm在dim=1，即特征向量内部进行操作。</p>
+<p>但是无论是batchnorm还是layernorm，在做仿射变换的时候，使用的系数形状都和输入的特征向量相同，可以认为在放射变化这一步上，二者的操作是一样。</p>
+<h1 id="cv数据">CV数据</h1>
+<p>再看下CV场景下的情况。</p>
+<p>CV数据形状一般为[N,C,H,W]，N为batch
+size，C为channel即特征数，H和W分别是feature
+map的高和宽。先定义一个CV输入数据</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定义一个随机四维输入，[N,C,H,W]</span></span><br><span class="line">batch_size = <span class="number">2</span></span><br><span class="line">channel = <span class="number">2</span></span><br><span class="line">height = <span class="number">2</span></span><br><span class="line">width = <span class="number">3</span></span><br><span class="line">torch.manual_seed(<span class="number">3</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">inputs = torch.randn(batch_size, channel, height, width)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;四维输入:\n&#x27;</span>, inputs)</span><br></pre></td></tr></table></figure>
+<p>输入如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">四维输入:</span><br><span class="line"> tensor([[[[-<span class="number">0.0766</span>,  <span class="number">0.3599</span>, -<span class="number">0.7820</span>],</span><br><span class="line">          [ <span class="number">0.0715</span>,  <span class="number">0.6648</span>, -<span class="number">0.2868</span>]],</span><br><span class="line"></span><br><span class="line">         [[ <span class="number">1.6206</span>, -<span class="number">1.5967</span>,  <span class="number">0.4046</span>],</span><br><span class="line">          [ <span class="number">0.6113</span>,  <span class="number">0.7604</span>, -<span class="number">0.0336</span>]]],</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        [[[-<span class="number">0.3448</span>,  <span class="number">0.4937</span>, -<span class="number">0.0776</span>],</span><br><span class="line">          [-<span class="number">1.8054</span>,  <span class="number">0.4851</span>,  <span class="number">0.2052</span>]],</span><br><span class="line"></span><br><span class="line">         [[ <span class="number">0.3384</span>,  <span class="number">1.3528</span>,  <span class="number">0.3736</span>],</span><br><span class="line">          [ <span class="number">0.0134</span>,  <span class="number">0.7737</span>, -<span class="number">0.1092</span>]]]])</span><br></pre></td></tr></table></figure>
+<h2 id="batchnorm-1">batchnorm</h2>
+<p>图像数据需要用BatchNorm2d，设置的特征数为channel</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># torch自带的batchnorm</span></span><br><span class="line">torch_bn = nn.BatchNorm2d(num_features=channel, affine=<span class="literal">True</span>)  <span class="comment"># 注意完整的batchnorm要包括仿射变换</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 仿射变化初始化的weigh=1，bias=0，相当于没有进行变换，看不出效果</span></span><br><span class="line"><span class="comment"># 手动改成别的值，用于对比包含仿射变换的效果</span></span><br><span class="line">torch.manual_seed(<span class="number">4</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">torch_bn.weight = nn.Parameter(torch_bn.weight * torch.randn(channel))</span><br><span class="line">torch_bn.bias = nn.Parameter(torch_bn.bias + torch.randn(channel))</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;weight:\n&#x27;</span>, torch_bn.weight)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;bias:\n&#x27;</span>, torch_bn.bias, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 结果</span></span><br><span class="line">torch_normed = torch_bn(inputs)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;torch bn结果:\n&#x27;</span>, torch_normed)</span><br></pre></td></tr></table></figure>
+<p>仿射变换的参数如下，形状和channel数是一致的，和二维数据的情况一样。这里同样手动给缩放和平移系数加了个随机数</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">weight:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([-<span class="number">1.6053</span>,  <span class="number">0.2325</span>], requires_grad=<span class="literal">True</span>)</span><br><span class="line">bias:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([<span class="number">2.2399</span>, <span class="number">0.8473</span>], requires_grad=<span class="literal">True</span>) </span><br></pre></td></tr></table></figure>
+<p>用torch官方batchnorm2d得到的结果是</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">torch bn结果:</span><br><span class="line"> tensor([[[[<span class="number">2.2043</span>, <span class="number">1.1275</span>, <span class="number">3.9442</span>],</span><br><span class="line">          [<span class="number">1.8388</span>, <span class="number">0.3753</span>, <span class="number">2.7226</span>]],</span><br><span class="line"></span><br><span class="line">         [[<span class="number">1.2185</span>, <span class="number">0.2591</span>, <span class="number">0.8559</span>],</span><br><span class="line">          [<span class="number">0.9175</span>, <span class="number">0.9620</span>, <span class="number">0.7252</span>]]],</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        [[[<span class="number">2.8658</span>, <span class="number">0.7975</span>, <span class="number">2.2066</span>],</span><br><span class="line">          [<span class="number">6.4684</span>, <span class="number">0.8186</span>, <span class="number">1.5090</span>]],</span><br><span class="line"></span><br><span class="line">         [[<span class="number">0.8362</span>, <span class="number">1.1387</span>, <span class="number">0.8467</span>],</span><br><span class="line">          [<span class="number">0.7392</span>, <span class="number">0.9660</span>, <span class="number">0.7027</span>]]]], grad_fn=&lt;NativeBatchNormBackward0&gt;)</span><br></pre></td></tr></table></figure>
+<p>再来手动实现一下batchnorm2d</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 手动bn</span></span><br><span class="line"></span><br><span class="line">manual_normed = []</span><br><span class="line"><span class="comment"># 每个channel分别处理</span></span><br><span class="line"><span class="keyword">for</span> c <span class="keyword">in</span> <span class="built_in">range</span>(channel):</span><br><span class="line">    <span class="comment"># 计算均值和标准差</span></span><br><span class="line">    mean = torch.mean(inputs[:, c, :, :])</span><br><span class="line">    std = torch.std(inputs[:, c, :, :], unbiased=<span class="literal">False</span>)</span><br><span class="line">    normed = (inputs[:, c, :, :] - mean) / (std + eps) * torch_bn.weight[c] + torch_bn.bias[c]</span><br><span class="line">    normed = normed.unsqueeze(<span class="number">1</span>)</span><br><span class="line">    manual_normed.append(normed)</span><br><span class="line">manual_normed = torch.cat(manual_normed, <span class="number">1</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;手动bn结果:\n&#x27;</span>, manual_normed)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手动操作和torch自带操作有点误差，&lt;1e-4</span></span><br><span class="line">isclose = torch.isclose(torch_normed, manual_normed, rtol=<span class="number">1e-4</span>, atol=<span class="number">1e-4</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;验证结果:\n&#x27;</span>, isclose)</span><br></pre></td></tr></table></figure>
+<p>如同之前文章所解释，由于CV的卷积计算是通过二维滑动窗口在同一个输入平面上遍历所有位置，因此同一个channel下的多个值对于这个卷积和也是一种"batch"。</p>
+<p>相当于对于每一个特征值，计算平均和标准差的范围是N×H×W。</p>
+<img src="/b70b4a2d/cv_batchnorm.png" class title="CV数据batchnorm">
+<p>手动计算得到的结果如下，和官方接口一致</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">手动bn结果:</span><br><span class="line"> tensor([[[[<span class="number">2.2043</span>, <span class="number">1.1275</span>, <span class="number">3.9442</span>],</span><br><span class="line">          [<span class="number">1.8388</span>, <span class="number">0.3752</span>, <span class="number">2.7226</span>]],</span><br><span class="line"></span><br><span class="line">         [[<span class="number">1.2185</span>, <span class="number">0.2591</span>, <span class="number">0.8559</span>],</span><br><span class="line">          [<span class="number">0.9175</span>, <span class="number">0.9620</span>, <span class="number">0.7252</span>]]],</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        [[[<span class="number">2.8658</span>, <span class="number">0.7975</span>, <span class="number">2.2066</span>],</span><br><span class="line">          [<span class="number">6.4685</span>, <span class="number">0.8186</span>, <span class="number">1.5089</span>]],</span><br><span class="line"></span><br><span class="line">         [[<span class="number">0.8362</span>, <span class="number">1.1387</span>, <span class="number">0.8467</span>],</span><br><span class="line">          [<span class="number">0.7392</span>, <span class="number">0.9660</span>, <span class="number">0.7027</span>]]]], grad_fn=&lt;CatBackward0&gt;)</span><br><span class="line">验证结果:</span><br><span class="line"> tensor([[[[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">          [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]],</span><br><span class="line"></span><br><span class="line">         [[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">          [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]]],</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        [[[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">          [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]],</span><br><span class="line"></span><br><span class="line">         [[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">          [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]]]])</span><br></pre></td></tr></table></figure>
+<h2 id="layernorm-1">layernorm</h2>
+<p>按照<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html">torch的layernorm官方接口文档</a>，对于图像数据，layernorm是这样做的</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># torch自带的layernorm</span></span><br><span class="line">torch_ln = nn.LayerNorm(</span><br><span class="line">    normalized_shape=[channel, height, width], </span><br><span class="line">    elementwise_affine=<span class="literal">True</span></span><br><span class="line">)  <span class="comment"># 注意完整的layernorm要包括仿射变换</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 仿射变化初始化的weigh=1，bias=0，相当于没有进行变换，看不出效果</span></span><br><span class="line"><span class="comment"># 手动改成别的值，用于对比包含仿射变换的效果</span></span><br><span class="line">torch.manual_seed(<span class="number">5</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">torch_ln.weight = nn.Parameter(torch_ln.weight * torch.randn(channel, height, width))</span><br><span class="line">torch_ln.bias = nn.Parameter(torch_ln.bias + torch.randn(channel, height, width))</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;weight:\n&#x27;</span>, torch_ln.weight)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;bias:\n&#x27;</span>, torch_ln.bias, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 结果</span></span><br><span class="line">torch_normed = torch_ln(inputs)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;torch ln结果:\n&#x27;</span>, torch_normed)</span><br></pre></td></tr></table></figure>
+<p>如同下面这个图所表示</p>
+<img src="/b70b4a2d/cv_layernorm.jpeg" class title="CV数据layernorm">
+<p>此时仿射变化系数的形状是这样的，为[channel, height, width]</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">weight:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([[[-<span class="number">0.4868</span>, -<span class="number">0.6038</span>, -<span class="number">0.5581</span>],</span><br><span class="line">         [ <span class="number">0.6675</span>, -<span class="number">0.1974</span>,  <span class="number">1.9428</span>]],</span><br><span class="line"></span><br><span class="line">        [[-<span class="number">1.4017</span>, -<span class="number">0.7626</span>,  <span class="number">0.6312</span>],</span><br><span class="line">         [-<span class="number">0.8991</span>, -<span class="number">0.5578</span>,  <span class="number">0.6907</span>]]], requires_grad=<span class="literal">True</span>)</span><br><span class="line">bias:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([[[ <span class="number">0.2225</span>, -<span class="number">0.6662</span>,  <span class="number">0.6846</span>],</span><br><span class="line">         [ <span class="number">0.5740</span>, -<span class="number">0.5829</span>,  <span class="number">0.7679</span>]],</span><br><span class="line"></span><br><span class="line">        [[ <span class="number">0.0571</span>, -<span class="number">1.1894</span>, -<span class="number">0.5659</span>],</span><br><span class="line">         [-<span class="number">0.8327</span>,  <span class="number">0.9014</span>,  <span class="number">0.2116</span>]]], requires_grad=<span class="literal">True</span>) </span><br></pre></td></tr></table></figure>
+<p>即每个channel内的每一个特征值，都有单独的可训练的仿射变换系数。</p>
+<p>layernorm的结果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">torch ln结果:</span><br><span class="line"> tensor([[[[ <span class="number">0.3594</span>, -<span class="number">0.8338</span>,  <span class="number">1.3456</span>],</span><br><span class="line">          [ <span class="number">0.5128</span>, -<span class="number">0.7147</span>, -<span class="number">0.3012</span>]],</span><br><span class="line"></span><br><span class="line">         [[-<span class="number">2.5939</span>,  <span class="number">0.5089</span>, -<span class="number">0.3546</span>],</span><br><span class="line">          [-<span class="number">1.3715</span>,  <span class="number">0.4607</span>,  <span class="number">0.0553</span>]]],</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        [[[ <span class="number">0.5477</span>, -<span class="number">0.9583</span>,  <span class="number">0.8526</span>],</span><br><span class="line">          [-<span class="number">1.2112</span>, -<span class="number">0.6760</span>,  <span class="number">0.9378</span>]],</span><br><span class="line"></span><br><span class="line">         [[-<span class="number">0.3219</span>, -<span class="number">2.4580</span>, -<span class="number">0.3647</span>],</span><br><span class="line">          [-<span class="number">0.6744</span>,  <span class="number">0.4171</span>, -<span class="number">0.0264</span>]]]], grad_fn=&lt;NativeLayerNormBackward0&gt;)</span><br></pre></td></tr></table></figure>
+<p>手动进行layernorm的归一化和仿射变换，和官方接口对比一下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 手动ln</span></span><br><span class="line"></span><br><span class="line">manual_normed = []</span><br><span class="line"><span class="comment"># 每个channel分别处理</span></span><br><span class="line"><span class="keyword">for</span> b <span class="keyword">in</span> <span class="built_in">range</span>(batch_size):</span><br><span class="line">    <span class="comment"># 计算均值和标准差</span></span><br><span class="line">    mean = torch.mean(inputs[b, :, :, :])</span><br><span class="line">    std = torch.std(inputs[b, :, :, :], unbiased=<span class="literal">False</span>)</span><br><span class="line">    normed = (inputs[b, :, :, :] - mean) / (std + eps) * torch_ln.weight + torch_ln.bias</span><br><span class="line">    normed = normed.unsqueeze(<span class="number">0</span>)</span><br><span class="line">    manual_normed.append(normed)</span><br><span class="line">manual_normed = torch.cat(manual_normed, <span class="number">0</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;手动ln结果:\n&#x27;</span>, manual_normed)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手动操作和torch自带操作有点误差，&lt;1e-4</span></span><br><span class="line">isclose = torch.isclose(torch_normed, manual_normed, rtol=<span class="number">1e-4</span>, atol=<span class="number">1e-4</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;验证结果:\n&#x27;</span>, isclose)</span><br></pre></td></tr></table></figure>
+<p>这里计算均值和标准差，是把所有channel内的所有特征值放在一起算的，即每个样本只有一个标量的均值和一个标量的标准差。但是仿射变换的时候就每个特征值都有自己的参数。</p>
+<p>手动计算的结果如下，和官方接口一致</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">手动ln结果:</span><br><span class="line"> tensor([[[[ <span class="number">0.3594</span>, -<span class="number">0.8338</span>,  <span class="number">1.3456</span>],</span><br><span class="line">          [ <span class="number">0.5128</span>, -<span class="number">0.7147</span>, -<span class="number">0.3012</span>]],</span><br><span class="line"></span><br><span class="line">         [[-<span class="number">2.5939</span>,  <span class="number">0.5090</span>, -<span class="number">0.3546</span>],</span><br><span class="line">          [-<span class="number">1.3715</span>,  <span class="number">0.4607</span>,  <span class="number">0.0553</span>]]],</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        [[[ <span class="number">0.5477</span>, -<span class="number">0.9583</span>,  <span class="number">0.8527</span>],</span><br><span class="line">          [-<span class="number">1.2112</span>, -<span class="number">0.6760</span>,  <span class="number">0.9378</span>]],</span><br><span class="line"></span><br><span class="line">         [[-<span class="number">0.3219</span>, -<span class="number">2.4581</span>, -<span class="number">0.3647</span>],</span><br><span class="line">          [-<span class="number">0.6744</span>,  <span class="number">0.4171</span>, -<span class="number">0.0264</span>]]]], grad_fn=&lt;CatBackward0&gt;)</span><br><span class="line">验证结果:</span><br><span class="line"> tensor([[[[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">          [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]],</span><br><span class="line"></span><br><span class="line">         [[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">          [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]]],</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        [[[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">          [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]],</span><br><span class="line"></span><br><span class="line">         [[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">          [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]]]])</span><br></pre></td></tr></table></figure>
+<h1 id="nlp数据">NLP数据</h1>
+<p>再看下在NLP场景下的情况。</p>
+<p>先定义输入，N是batch size，S是sequence length，H是hidden size。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定义一个随机三维输入，[N,S,H]</span></span><br><span class="line">batch_size = <span class="number">2</span></span><br><span class="line">seq_len = <span class="number">3</span></span><br><span class="line">hidden_size = <span class="number">4</span></span><br><span class="line">torch.manual_seed(<span class="number">6</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">inputs = torch.randn(batch_size, seq_len, hidden_size)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;三维输入:\n&#x27;</span>, inputs)</span><br></pre></td></tr></table></figure>
+<h2 id="batchnorm-2">batchnorm</h2>
+<p>用官方接口计算</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># torch自带的batchnorm</span></span><br><span class="line">torch_bn = nn.BatchNorm1d(num_features=hidden_size, affine=<span class="literal">True</span>)  <span class="comment"># 注意完整的batchnorm要包括仿射变换</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 仿射变化初始化的weigh=1，bias=0，相当于没有进行变换，看不出效果</span></span><br><span class="line"><span class="comment"># 手动改成别的值，用于对比包含仿射变换的效果</span></span><br><span class="line">torch.manual_seed(<span class="number">7</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">torch_bn.weight = nn.Parameter(torch_bn.weight * torch.randn(hidden_size))</span><br><span class="line">torch_bn.bias = nn.Parameter(torch_bn.bias + torch.randn(hidden_size))</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;weight:\n&#x27;</span>, torch_bn.weight)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;bias:\n&#x27;</span>, torch_bn.bias, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># # 结果</span></span><br><span class="line">torch_normed = torch_bn(inputs.transpose(<span class="number">1</span>, <span class="number">2</span>)).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;torch bn结果:\n&#x27;</span>, torch_normed)</span><br></pre></td></tr></table></figure>
+<p>根据官方接口的描述，输入的第二维应该为特征数，第三维为序列长度，因此这里对输入做了transpose，再把结果transpose回来。</p>
+<p>结果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">weight:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([-<span class="number">0.1468</span>,  <span class="number">0.7861</span>,  <span class="number">0.9468</span>, -<span class="number">1.1143</span>], requires_grad=<span class="literal">True</span>)</span><br><span class="line">bias:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([ <span class="number">1.6908</span>, -<span class="number">0.8948</span>, -<span class="number">0.3556</span>,  <span class="number">1.2324</span>], requires_grad=<span class="literal">True</span>) </span><br><span class="line"></span><br><span class="line">torch bn结果:</span><br><span class="line"> tensor([[[ <span class="number">1.8740</span>, -<span class="number">0.7037</span>, -<span class="number">1.8222</span>,  <span class="number">2.3385</span>],</span><br><span class="line">         [ <span class="number">1.7413</span>, -<span class="number">1.8119</span>,  <span class="number">0.3641</span>,  <span class="number">0.0200</span>],</span><br><span class="line">         [ <span class="number">1.4615</span>, -<span class="number">0.2676</span>,  <span class="number">0.1081</span>,  <span class="number">1.3450</span>]],</span><br><span class="line"></span><br><span class="line">        [[ <span class="number">1.7084</span>, -<span class="number">1.9653</span>,  <span class="number">1.0169</span>,  <span class="number">0.5785</span>],</span><br><span class="line">         [ <span class="number">1.8213</span>, -<span class="number">0.8614</span>, -<span class="number">0.8056</span>,  <span class="number">2.9892</span>],</span><br><span class="line">         [ <span class="number">1.5383</span>,  <span class="number">0.2409</span>, -<span class="number">0.9949</span>,  <span class="number">0.1231</span>]]], grad_fn=&lt;TransposeBackward0&gt;)</span><br></pre></td></tr></table></figure>
+<p>可以看到batchnorm的仿射变化系数形状在各种情况下都保持和特征向量维度相同。</p>
+<p>再来手动计算验证一下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 手动bn</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 计算均值</span></span><br><span class="line">mean = torch.mean(inputs, dim=(<span class="number">0</span>, <span class="number">1</span>) , keepdim=<span class="literal">True</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;均值:\n&#x27;</span>, mean)</span><br><span class="line">std = torch.std(inputs, dim=(<span class="number">0</span>, <span class="number">1</span>), keepdim=<span class="literal">True</span>, unbiased=<span class="literal">False</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;标准差:\n&#x27;</span>, std, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line">manual_normed = (inputs - mean) / (std + eps) * torch_bn.weight + torch_bn.bias</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;手动bn结果:\n&#x27;</span>, manual_normed)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手动操作和torch自带操作有点误差，&lt;1e-4</span></span><br><span class="line">isclose = torch.isclose(torch_normed, manual_normed, rtol=<span class="number">1e-4</span>, atol=<span class="number">1e-4</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;验证结果:\n&#x27;</span>, isclose)</span><br></pre></td></tr></table></figure>
+<p>这里计算用于归一化均值和方差，是在dim=(0,1)范围内计算的，相当于把[N,
+S, H]的输入拉平为[N×S,
+H]的二维输入，再按二维输入的方式进行batchnorm。</p>
+<p>结果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">均值:</span><br><span class="line"> tensor([[[-<span class="number">0.2151</span>,  <span class="number">0.5444</span>, -<span class="number">0.2633</span>, -<span class="number">0.5424</span>]]])</span><br><span class="line">标准差:</span><br><span class="line"> tensor([[[<span class="number">0.7984</span>, <span class="number">0.3537</span>, <span class="number">0.7799</span>, <span class="number">0.7986</span>]]]) </span><br><span class="line"></span><br><span class="line">手动bn结果:</span><br><span class="line"> tensor([[[ <span class="number">1.8740</span>, -<span class="number">0.7037</span>, -<span class="number">1.8222</span>,  <span class="number">2.3385</span>],</span><br><span class="line">         [ <span class="number">1.7413</span>, -<span class="number">1.8119</span>,  <span class="number">0.3641</span>,  <span class="number">0.0200</span>],</span><br><span class="line">         [ <span class="number">1.4615</span>, -<span class="number">0.2676</span>,  <span class="number">0.1081</span>,  <span class="number">1.3450</span>]],</span><br><span class="line"></span><br><span class="line">        [[ <span class="number">1.7084</span>, -<span class="number">1.9653</span>,  <span class="number">1.0169</span>,  <span class="number">0.5785</span>],</span><br><span class="line">         [ <span class="number">1.8213</span>, -<span class="number">0.8614</span>, -<span class="number">0.8056</span>,  <span class="number">2.9892</span>],</span><br><span class="line">         [ <span class="number">1.5383</span>,  <span class="number">0.2409</span>, -<span class="number">0.9950</span>,  <span class="number">0.1231</span>]]], grad_fn=&lt;AddBackward0&gt;)</span><br><span class="line">验证结果:</span><br><span class="line"> tensor([[[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">         [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">         [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]],</span><br><span class="line"></span><br><span class="line">        [[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">         [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">         [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]]])</span><br></pre></td></tr></table></figure>
+<h2 id="layernorm-2">layernorm</h2>
+<p>终于来到NLP数据的layernorm，先确认一下，huggingface中bert是这么使用layernorm的</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">BertSelfOutput</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, config</span>):</span><br><span class="line">        <span class="built_in">super</span>().__init__()</span><br><span class="line">        self.dense = nn.Linear(config.hidden_size, config.hidden_size)</span><br><span class="line">        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)</span><br><span class="line">        self.dropout = nn.Dropout(config.hidden_dropout_prob)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, hidden_states: torch.normTensor, input_tensor: torch.Tensor</span>) -&gt; torch.Tensor:</span><br><span class="line">        hidden_states = self.dense(hidden_states)</span><br><span class="line">        hidden_states = self.dropout(hidden_states)</span><br><span class="line">        hidden_states = self.LayerNorm(hidden_states + input_tensor)</span><br><span class="line">        <span class="keyword">return</span> hidden_states</span><br></pre></td></tr></table></figure>
+<p>用我们的数据跑一下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># torch自带的layernorm</span></span><br><span class="line">torch_ln = nn.LayerNorm(normalized_shape=hidden_size, elementwise_affine=<span class="literal">True</span>)  <span class="comment"># 注意完整的layernorm要包括仿射变换</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 仿射变化初始化的weigh=1，bias=0，相当于没有进行变换，看不出效果</span></span><br><span class="line"><span class="comment"># 手动改成别的值，用于对比包含仿射变换的效果</span></span><br><span class="line">torch.manual_seed(<span class="number">8</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">torch_ln.weight = nn.Parameter(torch_ln.weight * torch.randn(hidden_size))</span><br><span class="line">torch_ln.bias = nn.Parameter(torch_ln.bias + torch.randn(hidden_size))</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;weight:\n&#x27;</span>, torch_ln.weight)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;bias:\n&#x27;</span>, torch_ln.bias, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 结果</span></span><br><span class="line">torch_normed = torch_ln(inputs)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;torch ln结果:\n&#x27;</span>, torch_normed)</span><br></pre></td></tr></table></figure>
+<p>仿射变化参数的形状和hidden size一致</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">weight:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([ <span class="number">0.2713</span>, -<span class="number">1.2729</span>,  <span class="number">0.5027</span>,  <span class="number">0.4181</span>], requires_grad=<span class="literal">True</span>)</span><br><span class="line">bias:</span><br><span class="line"> Parameter containing:</span><br><span class="line">tensor([-<span class="number">0.6394</span>, -<span class="number">0.6608</span>, -<span class="number">0.1433</span>, -<span class="number">0.1043</span>], requires_grad=<span class="literal">True</span>) </span><br><span class="line"></span><br><span class="line">torch ln结果:</span><br><span class="line"> tensor([[[-<span class="number">0.7547</span>, -<span class="number">2.8528</span>, -<span class="number">0.5092</span>, -<span class="number">0.3423</span>],</span><br><span class="line">         [-<span class="number">1.0957</span>, -<span class="number">0.8780</span>,  <span class="number">0.2388</span>,  <span class="number">0.2097</span>],</span><br><span class="line">         [-<span class="number">0.3502</span>, -<span class="number">1.6158</span>, -<span class="number">0.3133</span>, -<span class="number">0.7224</span>]],</span><br><span class="line"></span><br><span class="line">        [[-<span class="number">0.9134</span>, -<span class="number">0.4490</span>,  <span class="number">0.6868</span>, -<span class="number">0.3029</span>],</span><br><span class="line">         [-<span class="number">0.7116</span>, -<span class="number">2.5589</span>, -<span class="number">0.1039</span>, -<span class="number">0.6493</span>],</span><br><span class="line">         [-<span class="number">0.5076</span>, -<span class="number">2.1031</span>, -<span class="number">0.9346</span>, -<span class="number">0.1230</span>]]],</span><br><span class="line">       grad_fn=&lt;NativeLayerNormBackward0&gt;)</span><br></pre></td></tr></table></figure>
+<p>再来手动验证一下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 手动ln</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 计算均值</span></span><br><span class="line">mean = torch.mean(inputs, dim=<span class="number">2</span>, keepdim=<span class="literal">True</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;均值:\n&#x27;</span>, mean)</span><br><span class="line">std = torch.std(inputs, dim=<span class="number">2</span>, keepdim=<span class="literal">True</span>, unbiased=<span class="literal">False</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;标准差:\n&#x27;</span>, std, <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line"></span><br><span class="line">manual_normed = (inputs - mean) / (std + eps) * torch_ln.weight + torch_ln.bias</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;手动ln结果:\n&#x27;</span>, manual_normed)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手动操作和torch自带操作有点误差，&lt;1e-4</span></span><br><span class="line">isclose = torch.isclose(torch_normed, manual_normed, rtol=<span class="number">1e-4</span>, atol=<span class="number">1e-4</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;验证结果:\n&#x27;</span>, isclose)</span><br></pre></td></tr></table></figure>
+<p>得到的均值和标准差如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">均值:</span><br><span class="line"> tensor([[[-<span class="number">0.8469</span>],</span><br><span class="line">         [ <span class="number">0.0745</span>],</span><br><span class="line">         [ <span class="number">0.3386</span>]],</span><br><span class="line"></span><br><span class="line">        [[ <span class="number">0.1364</span>],</span><br><span class="line">         [-<span class="number">0.7003</span>],</span><br><span class="line">         [ <span class="number">0.2831</span>]]])</span><br><span class="line">标准差:</span><br><span class="line"> tensor([[[<span class="number">0.8578</span>],</span><br><span class="line">         [<span class="number">0.3354</span>],</span><br><span class="line">         [<span class="number">0.6505</span>]],</span><br><span class="line"></span><br><span class="line">        [[<span class="number">0.4426</span>],</span><br><span class="line">         [<span class="number">0.8448</span>],</span><br><span class="line">         [<span class="number">0.6816</span>]]]) </span><br></pre></td></tr></table></figure>
+<p>每个sample中的每个token，都有各自的均值和标准差，用于归一化。</p>
+<p>最终结果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">手动ln结果:</span><br><span class="line"> tensor([[[-<span class="number">0.7547</span>, -<span class="number">2.8528</span>, -<span class="number">0.5092</span>, -<span class="number">0.3423</span>],</span><br><span class="line">         [-<span class="number">1.0957</span>, -<span class="number">0.8780</span>,  <span class="number">0.2388</span>,  <span class="number">0.2097</span>],</span><br><span class="line">         [-<span class="number">0.3502</span>, -<span class="number">1.6158</span>, -<span class="number">0.3133</span>, -<span class="number">0.7224</span>]],</span><br><span class="line"></span><br><span class="line">        [[-<span class="number">0.9134</span>, -<span class="number">0.4490</span>,  <span class="number">0.6868</span>, -<span class="number">0.3029</span>],</span><br><span class="line">         [-<span class="number">0.7116</span>, -<span class="number">2.5590</span>, -<span class="number">0.1039</span>, -<span class="number">0.6493</span>],</span><br><span class="line">         [-<span class="number">0.5076</span>, -<span class="number">2.1031</span>, -<span class="number">0.9347</span>, -<span class="number">0.1230</span>]]], grad_fn=&lt;AddBackward0&gt;)</span><br><span class="line">验证结果:</span><br><span class="line"> tensor([[[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">         [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">         [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]],</span><br><span class="line"></span><br><span class="line">        [[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">         [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">         [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]]])</span><br></pre></td></tr></table></figure>
+<h1 id="归一化的输入能变回原输入吗">归一化的输入能变回原输入吗</h1>
+<p>既然这些操作是先计算均值和标准差进行归一化，再进行仿射变换，那把仿射变换的参数设置为输入的均值和标准差，是不是就可以把归一化过的数据变回跟原数据一模一样了呢？</p>
+<p>以二维情况为例，看下batchnorm是否能变回去。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定义一个随机二维输入</span></span><br><span class="line">batch_size = <span class="number">3</span></span><br><span class="line">feature_num = <span class="number">4</span></span><br><span class="line">torch.manual_seed(<span class="number">0</span>)  <span class="comment"># 设置随机种子，方便复现</span></span><br><span class="line">inputs = torch.randn(batch_size, feature_num)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;二维输入:\n&#x27;</span>, inputs)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 计算均值和标准差</span></span><br><span class="line">mean = torch.mean(inputs, dim=<span class="number">0</span>, keepdim=<span class="literal">True</span>)</span><br><span class="line"><span class="comment"># print(&#x27;均值:\n&#x27;, mean)</span></span><br><span class="line">std = torch.std(inputs, dim=<span class="number">0</span>, keepdim=<span class="literal">True</span>, unbiased=<span class="literal">False</span>)</span><br><span class="line"><span class="comment"># print(&#x27;标准差:\n&#x27;, std, &#x27;\n&#x27;)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># torch自带的batchnorm</span></span><br><span class="line">torch_bn = nn.BatchNorm1d(num_features=feature_num, affine=<span class="literal">True</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 把仿射变换的缩放和平移替换为标准差和均值</span></span><br><span class="line">torch_bn.weight = nn.Parameter(std)</span><br><span class="line">torch_bn.bias =  nn.Parameter(mean)</span><br><span class="line"><span class="comment"># print(&#x27;weight:\n&#x27;, torch_bn.weight)</span></span><br><span class="line"><span class="comment"># print(&#x27;bias:\n&#x27;, torch_bn.bias, &#x27;\n&#x27;)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 结果</span></span><br><span class="line">torch_normed = torch_bn(inputs)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;torch bn结果:\n&#x27;</span>, torch_normed)</span><br><span class="line"></span><br><span class="line">isclose = torch.isclose(torch_normed, inputs, rtol=<span class="number">1e-4</span>, atol=<span class="number">1e-4</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;验证结果:\n&#x27;</span>, isclose)</span><br></pre></td></tr></table></figure>
+<p>结果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">二维输入:</span><br><span class="line"> tensor([[ <span class="number">1.5410</span>, -<span class="number">0.2934</span>, -<span class="number">2.1788</span>,  <span class="number">0.5684</span>],</span><br><span class="line">        [-<span class="number">1.0845</span>, -<span class="number">1.3986</span>,  <span class="number">0.4033</span>,  <span class="number">0.8380</span>],</span><br><span class="line">        [-<span class="number">0.7193</span>, -<span class="number">0.4033</span>, -<span class="number">0.5966</span>,  <span class="number">0.1820</span>]])</span><br><span class="line">torch bn结果:</span><br><span class="line"> tensor([[ <span class="number">1.5410</span>, -<span class="number">0.2934</span>, -<span class="number">2.1788</span>,  <span class="number">0.5684</span>],</span><br><span class="line">        [-<span class="number">1.0845</span>, -<span class="number">1.3986</span>,  <span class="number">0.4033</span>,  <span class="number">0.8380</span>],</span><br><span class="line">        [-<span class="number">0.7193</span>, -<span class="number">0.4033</span>, -<span class="number">0.5966</span>,  <span class="number">0.1821</span>]],</span><br><span class="line">       grad_fn=&lt;NativeBatchNormBackward0&gt;)</span><br><span class="line">验证结果:</span><br><span class="line"> tensor([[<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">        [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>],</span><br><span class="line">        [<span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>, <span class="literal">True</span>]])</span><br></pre></td></tr></table></figure>
+<p>确认了batchnorm是可以变回去的。</p>
+<p>再来看下layernorm</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;二维输入:\n&#x27;</span>, inputs)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 计算均值和标准差</span></span><br><span class="line">mean = torch.mean(inputs, dim=<span class="number">1</span>, keepdim=<span class="literal">True</span>)</span><br><span class="line"><span class="comment"># print(&#x27;均值:\n&#x27;, mean)</span></span><br><span class="line">std = torch.std(inputs, dim=<span class="number">1</span>, keepdim=<span class="literal">True</span>, unbiased=<span class="literal">False</span>)</span><br><span class="line"><span class="comment"># print(&#x27;标准差:\n&#x27;, std, &#x27;\n&#x27;)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># torch自带的layernorm</span></span><br><span class="line">torch_ln = nn.LayerNorm(normalized_shape=feature_num, elementwise_affine=<span class="literal">True</span>)  <span class="comment"># 注意完整的layernorm要包括仿射变换</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 把仿射变换的缩放和平移替换为标准差和均值</span></span><br><span class="line">torch_bn.weight = nn.Parameter(std)</span><br><span class="line">torch_bn.bias =  nn.Parameter(mean)</span><br><span class="line"><span class="comment"># print(&#x27;weight:\n&#x27;, torch_bn.weight)</span></span><br><span class="line"><span class="comment"># print(&#x27;bias:\n&#x27;, torch_bn.bias, &#x27;\n&#x27;)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 结果</span></span><br><span class="line">torch_normed = torch_ln(inputs)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;torch ln结果:\n&#x27;</span>, torch_normed)</span><br><span class="line"></span><br><span class="line">isclose = torch.isclose(torch_normed, inputs, rtol=<span class="number">1e-4</span>, atol=<span class="number">1e-4</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;验证结果:\n&#x27;</span>, isclose)</span><br></pre></td></tr></table></figure>
+<p>结果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">二维输入:</span><br><span class="line"> tensor([[ <span class="number">1.5410</span>, -<span class="number">0.2934</span>, -<span class="number">2.1788</span>,  <span class="number">0.5684</span>],</span><br><span class="line">        [-<span class="number">1.0845</span>, -<span class="number">1.3986</span>,  <span class="number">0.4033</span>,  <span class="number">0.8380</span>],</span><br><span class="line">        [-<span class="number">0.7193</span>, -<span class="number">0.4033</span>, -<span class="number">0.5966</span>,  <span class="number">0.1820</span>]])</span><br><span class="line">torch ln结果:</span><br><span class="line"> tensor([[ <span class="number">1.1918</span>, -<span class="number">0.1481</span>, -<span class="number">1.5251</span>,  <span class="number">0.4814</span>],</span><br><span class="line">        [-<span class="number">0.8146</span>, -<span class="number">1.1451</span>,  <span class="number">0.7512</span>,  <span class="number">1.2086</span>],</span><br><span class="line">        [-<span class="number">0.9685</span>, -<span class="number">0.0551</span>, -<span class="number">0.6140</span>,  <span class="number">1.6376</span>]],</span><br><span class="line">       grad_fn=&lt;NativeLayerNormBackward0&gt;)</span><br><span class="line">验证结果:</span><br><span class="line"> tensor([[<span class="literal">False</span>, <span class="literal">False</span>, <span class="literal">False</span>, <span class="literal">False</span>],</span><br><span class="line">        [<span class="literal">False</span>, <span class="literal">False</span>, <span class="literal">False</span>, <span class="literal">False</span>],</span><br><span class="line">        [<span class="literal">False</span>, <span class="literal">False</span>, <span class="literal">False</span>, <span class="literal">False</span>]])</span><br></pre></td></tr></table></figure>
+<p>发现layernorm并不能通过这种方式把归一化的输入变回原始值，因为layernorm归一化是在特征向量内进行的，所有特征值共享一个均值和方差，但是仿射变换的时候每个特征却有单独的系数。</p>
+<p>对于CV数据和NLP数据也有一样的结论。</p>
+<p>可以认为batchnorm的归一化和仿射变换是互为可逆的一对操作，而layernorm的归一化和仿射变换是在不同范围内的操作，是不可逆的。</p>
+<h1 id="小结">小结</h1>
+<p>本篇从各种输入数据对batchnorm和layernorm做了手动复现。</p>
+<p>需要注意到，batchnorm、layernorm等实际都包含两步操作：①归一化②仿射变换。</p>
+<p>基本上，batchnorm可以总结为，对于特征向量中的每一个特征值，在一个"大范围"内进行归一化，这个"大范围"根据输入数据形状，可能是batch，可能是batch×序列长度，或者batch×feature
+map大小。并且归一化和仿射变换在同一个方向上进行，因此这两个操作是互为可逆的。</p>
+<p>而layernorm是在每个特征向量内部进行归一化处理，然后在另一个方向上使用仿射变换。由于归一化和仿射变换的方向不同，因此无法通过把仿射变换，把已经归一化的数据变换为原输入数据。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期文章</p>
+<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】LAYERNORM
+https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html<br>
+【2】BATCHNORM1D
+https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm1d.html<br>
+【3】BATCHNORM2D
+https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/b70b4a2d.html" title="从代码实现看normalization-到底做了什么">https://saicat.github.io/b70b4a2d.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/layernorm/" rel="tag"><i class="fa fa-tag"></i> layernorm</a>
+              <a href="/tags/normalization/" rel="tag"><i class="fa fa-tag"></i> normalization</a>
+              <a href="/tags/batchnorm/" rel="tag"><i class="fa fa-tag"></i> batchnorm</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/1736008.html" rel="prev" title="大模型算法题(3)">
+                  <i class="fa fa-angle-left"></i> 大模型算法题(3)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/812c93f3.html" rel="next" title="实现大模型长上下文能力之路">
+                  实现大模型长上下文能力之路 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">124k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">3:46</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

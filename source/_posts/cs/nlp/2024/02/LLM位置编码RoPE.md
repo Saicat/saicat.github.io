@@ -64,7 +64,7 @@ $x_i$ 和 $x_j$ 分别是位置 $i$ 和 $j$ 的输入，$p$ 是对应位置的�
 
 扯远了，现在回来看一下相对位置编码。把公式（1）中的 $q_{i}k_{j}^{T}$展开来  
 
-$$\begin{align*}q_1k_j^\top&=\left(x_i+p_j\right)W_\mathbb{Q}W_K^\top\left(x_j+p_j\right)^\top\\&=\left(x_iW_\mathbb{Q}+{\color{red}p_iW_\mathbb{Q}}\right)\left(W_K^\top x_j^\top+{\color{red}W_K^\top p_j^\top}\right)\end{align*}\tag{2}$$  
+$$\begin{align*}q_ik_j^\top&=\left(x_i+p_i\right)W_\mathbb{Q}W_K^\top\left(x_j+p_j\right)^\top\\&=\left(x_iW_\mathbb{Q}+{\color{red}p_iW_\mathbb{Q}}\right)\left(W_K^\top x_j^\top+{\color{red}W_K^\top p_j^\top}\right)\end{align*}\tag{2}$$  
 
 和位置相关的有 $p_iW_\mathbb{Q}$ 和 $W_K^\top p_j^\top$ 两项。  
 
