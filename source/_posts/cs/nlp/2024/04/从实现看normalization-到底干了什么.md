@@ -879,16 +879,22 @@ torch ln结果:
 
 ***  
 
-往期文章
+【往期文章】
 
+[MoE模型的前世今生](http://www.linsight.cn/44e38c1b.html)  
+[LLM长上下文的问题](http://www.linsight.cn/c4da56c0.html)  
+[解锁大模型长上下文能力](http://www.linsight.cn/cc852861.html)  
+[理解Attention:从起源到MHA,MQA和GQA](http://www.linsight.cn/3dc22f96.html)  
 [Yi技术报告-划重点看细节](http://www.linsight.cn/41b6a819.html)  
 [transformer中normalization的二三事](http://www.linsight.cn/6a40bfa5.html)  
+[从代码实现看normalization-到底做了什么](http://www.linsight.cn/b70b4a2d.html)  
 [稀疏注意力计算:sliding window attention](http://www.linsight.cn/c61d17e3.html)  
-[理解Attention:从起源到MHA,MQA和GQA](http://www.linsight.cn/3dc22f96.html)  
-[LLM长上下文的问题](http://www.linsight.cn/c4da56c0.html)  
 [理解LLM位置编码:RoPE](http://www.linsight.cn/a051710f.html)  
 [大模型算法题(1)](http://www.linsight.cn/3345028a.html)  
 [大模型算法题(2)](http://www.linsight.cn/ad0bba9d.html)  
+[大模型算法题(3)](http://www.linsight.cn/1736008.html)  
+[大模型算法题(4)](http://www.linsight.cn/1736008.html)  
+[大模型算法题(5)](http://www.linsight.cn/336f2f3e.html)  
 
 ***
 

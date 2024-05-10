@@ -20,19 +20,22 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="往期文章 transformer中normalization的二三事">
+    <meta name="description" content="【往期文章】 Yi技术报告-划重点看细节 transformer中normalization的二三事 稀疏注意力计算:sliding window attention 理解Attention:从起源到MHA,MQA和GQA LLM长上下文的问题 理解LLM位置编码:RoPE 大模型算法题(1) 大模型算法题(2)">
 <meta property="og:type" content="article">
-<meta property="og:title" content="大模型算法题(3)">
+<meta property="og:title" content="大模型算法题(4)">
 <meta property="og:url" content="https://saicat.github.io/1736008.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="往期文章 transformer中normalization的二三事">
+<meta property="og:description" content="【往期文章】 Yi技术报告-划重点看细节 transformer中normalization的二三事 稀疏注意力计算:sliding window attention 理解Attention:从起源到MHA,MQA和GQA LLM长上下文的问题 理解LLM位置编码:RoPE 大模型算法题(1) 大模型算法题(2)">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://saicat.github.io/images/cover.png">
 <meta property="og:image" content="https://saicat.github.io/1736008/transformer.png">
 <meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
 <meta property="article:published_time" content="2024-04-20T08:56:45.000Z">
-<meta property="article:modified_time" content="2024-04-20T09:28:48.781Z">
+<meta property="article:modified_time" content="2024-05-10T06:50:46.826Z">
 <meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="算法题">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://saicat.github.io/images/cover.png">
 
@@ -41,10 +44,10 @@
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/1736008.html","path":"1736008.html","title":"大模型算法题(3)"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/1736008.html","path":"1736008.html","title":"大模型算法题(4)"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>大模型算法题(3) | Linsight</title>
+<title>大模型算法题(4) | Linsight</title>
   
 
 
@@ -161,7 +164,7 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-count">16</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -172,7 +175,7 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">27</span>
+        <span class="site-state-item-count">29</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -224,12 +227,12 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="大模型算法题(3) | Linsight">
+      <meta itemprop="name" content="大模型算法题(4) | Linsight">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          大模型算法题(3)
+          大模型算法题(4)
         </h1>
 
         <div class="post-meta-container">
@@ -239,9 +242,32 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
         <i class="far fa-calendar"></i>
       </span>
       <span class="post-meta-item-text">发表于</span>
-      
 
-      <time title="创建时间：2024-04-20 16:56:45 / 修改时间：17:28:48" itemprop="dateCreated datePublished" datetime="2024-04-20T16:56:45+08:00">2024-04-20</time>
+      <time title="创建时间：2024-04-20 16:56:45" itemprop="dateCreated datePublished" datetime="2024-04-20T16:56:45+08:00">2024-04-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-05-10 14:50:46" itemprop="dateModified" datetime="2024-05-10T14:50:46+08:00">2024-05-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
     </span>
 
   
@@ -251,7 +277,7 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>2.2k</span>
+      <span>2.3k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -269,14 +295,16 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
     
     
     <div class="post-body" itemprop="articleBody"><p><img src="/images/cover.png"></p>
-<p>往期文章</p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+<p>【往期文章】</p>
+<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
 <hr>
 <p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
 <p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错漏，欢迎指正</sub></p>
@@ -317,14 +345,20 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
 微信公众号：Linsight<br>
 <img src="/images/qrcode.jpg"></p>
 <hr>
-<p>往期文章</p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+<p>【往期文章】</p>
+<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a></p>
 
     </div>
 
@@ -342,7 +376,7 @@ window attention</a></p>
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://saicat.github.io/1736008.html" title="大模型算法题(3)">https://saicat.github.io/1736008.html</a>
+      <a href="https://saicat.github.io/1736008.html" title="大模型算法题(4)">https://saicat.github.io/1736008.html</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -350,16 +384,24 @@ window attention</a></p>
 </ul>
 </div>
 
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/%E7%AE%97%E6%B3%95%E9%A2%98/" rel="tag"><i class="fa fa-tag"></i> 算法题</a>
+          </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/812c93f3.html" rel="prev" title="实现大模型长上下文能力之路">
-                  <i class="fa fa-angle-left"></i> 实现大模型长上下文能力之路
+                <a href="/b70b4a2d.html" rel="prev" title="从代码实现看normalization-到底做了什么">
+                  <i class="fa fa-angle-left"></i> 从代码实现看normalization-到底做了什么
                 </a>
             </div>
             <div class="post-nav-item">
+                <a href="/336f2f3e.html" rel="next" title="大模型算法题(5)">
+                  大模型算法题(5) <i class="fa fa-angle-right"></i>
+                </a>
             </div>
           </div>
     </footer>
@@ -391,13 +433,13 @@ window attention</a></p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">124k</span>
+    <span title="站点总字数">159k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">3:46</span>
+    <span title="站点阅读时长">4:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

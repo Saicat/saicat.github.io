@@ -1048,7 +1048,7 @@ DeepSeekMoE的优势在更大规模的情况下，依然成立。训了DeepSeekM
 
 {% asset_img ds_moe_expert_specialization.png 专家专门化 %}  
 
-发现DeepSeekMoE损失更大，说明每个专家的专家化程度更好，必要性更高。这说明DeepSeekMoE的专家专门化程度更高。  
+发现DeepSeekMoE损失更大，说明DeepSeekMoE每个专家的专业化程度更好，必要性更高。  
 
 （2）另外，通过禁用DeepSeekMoE的共享专家，而额外激活一个专家，发现loss也大大提升。这个结果突出了共享专家的关键功能，并表明共享专家捕捉到了与路由专家不共享的基本且重要的知识，使得它无法被路由专家替代。
 
@@ -1060,7 +1060,7 @@ DeepSeekMoE的优势在更大规模的情况下，依然成立。训了DeepSeekM
 
 {% asset_img ds_2b_less_expert.png 2B激活更少专家 %}  
 
-4. DeepSeekMoE-16B  
+1. DeepSeekMoE-16B  
 
 DeepSeekMoE-16B模型使用了2T数据训练（和LLAMA2-7B对齐）训练，并使用了100k的词表。其他参数如下表所示  
 
@@ -1188,13 +1188,16 @@ Mistral-8x22B支持多语言，并且具有较强的数学和代码能力。此�
 
 ***  
 
-往期文章  
+【往期文章】
 
+[MoE模型的前世今生](http://www.linsight.cn/44e38c1b.html)  
+[LLM长上下文的问题](http://www.linsight.cn/c4da56c0.html)  
+[解锁大模型长上下文能力](http://www.linsight.cn/cc852861.html)  
+[理解Attention:从起源到MHA,MQA和GQA](http://www.linsight.cn/3dc22f96.html)  
 [Yi技术报告-划重点看细节](http://www.linsight.cn/41b6a819.html)  
 [transformer中normalization的二三事](http://www.linsight.cn/6a40bfa5.html)  
+[从代码实现看normalization-到底做了什么](http://www.linsight.cn/b70b4a2d.html)  
 [稀疏注意力计算:sliding window attention](http://www.linsight.cn/c61d17e3.html)  
-[理解Attention:从起源到MHA,MQA和GQA](http://www.linsight.cn/3dc22f96.html)  
-[LLM长上下文的问题](http://www.linsight.cn/c4da56c0.html)  
 [理解LLM位置编码:RoPE](http://www.linsight.cn/a051710f.html)  
 [大模型算法题(1)](http://www.linsight.cn/3345028a.html)  
 [大模型算法题(2)](http://www.linsight.cn/ad0bba9d.html)  

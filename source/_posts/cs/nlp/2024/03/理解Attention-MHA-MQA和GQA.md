@@ -30,7 +30,7 @@ Attention模块是现在几乎所有大模型的核心模块，因此也有很�
 
 ## 从RNN说起
 
->Memory is attention through time. ~ Alex Graves 2020
+> Memory is attention through time. ~ Alex Graves 2020
 
 注意力机制最初起源是为了解决序列问题。回想在还没有Transformer的上一世代，使用RNN的Seq2Seq是这样的
 

@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  步入2024年Q2，大模型在RAG、文档对话、大模型Agent能力等方向的发展持续升温。在平时的日常生活和工作中，大模型工具提供的文档总结、文本润色、代码生成等能力已经是提高效率的必备帮手，甚至在一些复杂或者不熟悉的场景上，大模型也已经能提供一些比较专业的帮助。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="解锁大模型长上下文能力">
+<meta property="og:url" content="https://saicat.github.io/cc852861.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  步入2024年Q2，大模型在RAG、文档对话、大模型Agent能力等方向的发展持续升温。在平时的日常生活和工作中，大模型工具提供的文档总结、文本润色、代码生成等能力已经是提高效率的必备帮手，甚至在一些复杂或者不熟悉的场景上，大模型也已经能提供一些比较专业的帮助。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/cc852861/eng_ppl.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/eng_needle_comp.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/eng_data_dist.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/add_money.jpg">
+<meta property="og:image" content="https://saicat.github.io/cc852861/eng_data.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/eng_config.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/eng_tokens.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/eng_sample.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/eng_ppl.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/paraphrasing_intro.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/paraphrasing_example.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/paraphrasing_dataset.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/paraphrasing_dataset_dist.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/paraphrasing_quality.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/paraphrasing_perf.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/paraphrasing_lost.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/pose_method.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/pose_ppl.png">
+<meta property="og:image" content="https://saicat.github.io/cc852861/pose_passkey.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-05-04T11:05:48.000Z">
+<meta property="article:modified_time" content="2024-05-10T06:50:20.731Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="长上下文">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="微调">
+<meta property="article:tag" content="attention">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/cc852861/eng_ppl.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/cc852861.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/cc852861.html","path":"cc852861.html","title":"解锁大模型长上下文能力"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>解锁大模型长上下文能力 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%94%AF%E6%8C%81128k%E4%B8%8A%E4%B8%8B%E6%96%87%E7%9A%84%E6%95%B0%E6%8D%AE%E5%B7%A5%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">支持128k上下文的数据工程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B%E6%8C%87%E6%A0%87"><span class="nav-number">1.1.</span> <span class="nav-text">评测指标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%88%86%E5%B8%83"><span class="nav-number">1.2.</span> <span class="nav-text">数据分布</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C%E9%85%8D%E7%BD%AE"><span class="nav-number">1.3.</span> <span class="nav-text">实验配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E9%87%8F"><span class="nav-number">1.4.</span> <span class="nav-text">训练量</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%AD%96%E7%95%A5%E5%AF%B9%E6%AF%94"><span class="nav-number">1.5.</span> <span class="nav-text">数据策略对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AE%BA"><span class="nav-number">1.6.</span> <span class="nav-text">结论</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#paraphrasing"><span class="nav-number">2.</span> <span class="nav-text">Paraphrasing</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E7%B4%A2%E8%83%BD%E5%8A%9B"><span class="nav-number">2.1.</span> <span class="nav-text">检索能力</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E5%B7%A5%E4%BD%9C"><span class="nav-number">2.2.</span> <span class="nav-text">相关工作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8F%90%E9%AB%98%E6%A3%80%E7%B4%A2%E8%83%BD%E5%8A%9B"><span class="nav-number">2.3.</span> <span class="nav-text">提高检索能力</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#pose"><span class="nav-number">3.</span> <span class="nav-text">PoSE</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">3.1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%8D%E7%BD%AE%E6%A8%A1%E6%8B%9F"><span class="nav-number">3.2.</span> <span class="nav-text">位置模拟</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">29</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/cc852861.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="解锁大模型长上下文能力 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          解锁大模型长上下文能力
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-05-04 19:05:48" itemprop="dateCreated datePublished" datetime="2024-05-04T19:05:48+08:00">2024-05-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-05-10 14:50:20" itemprop="dateModified" datetime="2024-05-10T14:50:20+08:00">2024-05-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.1k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>15 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>步入2024年Q2，大模型在RAG、文档对话、大模型Agent能力等方向的发展持续升温。在平时的日常生活和工作中，大模型工具提供的文档总结、文本润色、代码生成等能力已经是提高效率的必备帮手，甚至在一些复杂或者不熟悉的场景上，大模型也已经能提供一些比较专业的帮助。</p>
+<p>在这些方向上，大模型(超)长上下文的能力都是基础。无论是使用详细的CoT/ToT，还是通过多篇检索文档提供专业知识，抑或是使用相关样例提升回复质量，都需要模型具备处理很长的输入输出信息的能力。这不仅要求模型在较长的位置编码下依然具有良好的语言建模能力，而且还需要模型能够进行长距离的、细致的阅、准确的阅读和理解。</p>
+<p>本篇将梳理几个通过轻量级训练解锁大模型长上下文能力的工作。</p>
+<h1 id="支持128k上下文的数据工程">支持128k上下文的数据工程</h1>
+<p>论文：Data Engineering for Scaling Language Models to 128K
+Context</p>
+<p>时间：2024年2月</p>
+<p>阶段：预训练</p>
+<p>长度：128k</p>
+<h2 id="评测指标">评测指标</h2>
+<p>模型的长上下文能力不仅体现在文本较长的时候，模型的PPL依然能保持在较低的水平，还体现在对于长上下文输入，模型依然能够进行准确的阅读理解和推理。</p>
+<p>以往一些工作仅使用validation
+dataset上的PPL作为评测指标，并不能很好地表征模型的真实长上下文能力。而目前被广泛使用的
+Needle in a
+Haystack，或者叫大海捞针任务，是对长上下文能力的一个比较好的评测。这篇论文主要就以大海捞针任务为标准，对不同的模型和方案进行对比。</p>
+<p>两个PPL几乎相同的模型，在大海捞针任务上的差距可以很大，如下图所示，颜色越绿代表正确率越高</p>
+<img src="/cc852861/eng_ppl.png" class title="PPL和大海捞针">
+<p>目前已有的一些扩展大模型上下文窗口的方法，比如LongLoRA和Mistral所采用的YaRN，虽然理论上来说，能够支持&gt;100k的上下文长度，但是实际上在大海捞针任务的表现却不太好。相关模型在大海捞针任务上的效果对比如下所示，只有GPT-4的效果比较好。</p>
+<img src="/cc852861/eng_needle_comp.png" class title="大海捞针任务对比">
+<h2 id="数据分布">数据分布</h2>
+<p>这篇论文认为，在&lt;=4k窗口长度完成预训练的模型，其实就已经基本具备在128k或者更大的上下文窗口进行推理的能力，只需要进行轻量级的继续预训练（e.g.
+&lt;5B token），就能够解锁这种能力。</p>
+<p>（而一些其他的工作在这方面则有着相反的观点，比如在32k窗口训练了400B
+token的《Effective long-context scaling of foundation
+models》，以及Xverse）</p>
+<p>要做继续预训练，最重要的一点就是要决定使用什么样的数据。</p>
+<p>这篇论文里的实验是基于LLAMA的，因此使用了和LLAMA预训练数据具有相近领域分布的SlimPajama数据集作为基础。</p>
+<p>对于长上下文的继续预训练数据，需要仔细考虑数据长度和领域分布的影响。通常来说，某些领域天然会有更高比例的长文本数据，比如书籍、论文和github，而一些其他领域的长数据就较少，比如新闻。如果直接从整体数据中挑选长数据而忽略领域分布，就可能造成训练数据在领域分布上的偏移。</p>
+<p>论文使用了几种不同的数据处理策略，用于后面的实验对比：<br>
+- Cut at
+4K：把所有的数据按4k长度进行分块，这样不会影响领域分布。这也是很多4k预训练模型所采样的方案，比如LLAMA。<br>
+- Cut at
+128K：截断长度提升到128k，可以保留长文本内部信息的依赖关系。LongLoRA就是这么做的。<br>
+- Per-source
+Upsampling：在保持各个领域的比例不变的前提下，对长文本进行上采样，提高长文本的比例。这是这篇论文所推荐的方法，实验效果最好。<br>
+- Global Upsampling：不管领域，直接对长文本进行上采样。<br>
+- Upsample Arxiv/ Book/
+Github：提高特定领域的数据比例，对长文本进行上采样。</p>
+<p>这些策略基本涵盖了大部分长文本相关工作在数据上的处理策略。</p>
+<p>不同数据处理策略下，SlimPajama数据内各领域的分布如下图所示</p>
+<img src="/cc852861/eng_data_dist.png" class title="数据分布">
+<p>Per-source
+Upsampling是效果最好的，也是这篇论文所推荐的数据工程策略。</p>
+<h2 id="实验配置">实验配置</h2>
+<p>实验上，用80k的窗口长度训练LLAMA2-7B模型，用64k的窗口训练LLAMA2-13B模型。</p>
+<p>虽然理论上，计算复杂度度和模型训练窗口长度是平方关系，但是实际实现上，由于有FlashAttention等方案，可以把Attention的计算通过设备间通讯，在多个设备间并行起来。而设备间的通讯（包括GPU和CPU，GPU和GPU之间）成本都是constant或者linear，因此实际上80k窗口的的训练耗时只是4k长度的训练的3倍，而不是理论上的400倍。</p>
+<p>当然，实际所需的计算量并没有减少，但是至少时间成本从平方变成了线性。剩下的，只要堆jia卡qian就可以提速。</p>
+<img src="/cc852861/add_money.jpg" class title="加钱就行">
+<p>Per-source Upsampling和其他工作的数据处理策略的对比如下</p>
+<img src="/cc852861/eng_data.png" class title="模型策略">
+<p>训练的配置和耗时如下所示</p>
+<img src="/cc852861/eng_config.png" class title="训练配置">
+<p>实验的其他配置：<br>
+- lr = 2e-5<br>
+- RoPE base从1,0000改为500,000<br>
+- batch size = 4M token</p>
+<h2 id="训练量">训练量</h2>
+<p>前面提到，论文认为只需要轻量级的继续预训练就可以解锁长上下文能力，那么到底需要训练多少token呢？</p>
+<p>论文分别取了训练了100M、300M、500M、1B、5B、10B
+token的中间checkpoint进行PPL和海底捞针任务评测，结果如下</p>
+<img src="/cc852861/eng_tokens.png" class title="训练量">
+<p>结论是，在训练了500M
+token的时候，模型基本解锁了长上下文的能力；在训练了5B
+token的时候，模型已经收敛，而且继续训练到10B
+token也没有进一步收益了。</p>
+<h2 id="数据策略对比">数据策略对比</h2>
+<p>使用前面提到的不同数据策略在LLAMA2-7B模型用5B
+token进行训练，并对比效果。</p>
+<p>LLAMA2的预训练长度为4k，因此对比的时候分成了0-4k和4k-128k两段，分别评测模型经过长文本训练后，在短文本上的效果是否有变差，以及在长文本上是否有提升。</p>
+<p>各个数据策略在不同领域的效果变化如下</p>
+<img src="/cc852861/eng_sample.png" class title="采样的影响">
+<p>可以得到几个结论：<br>
+- 在0-4k长度上，除了Per-source
+Upsampling以外，各种数据策略都会对模型效果有损害<br>
+-
+在一些领域上的提升，并不能很好地迁移到其他领域，比如Book和Github之间就有点跷跷板效应，其中一个效果好了，另一个可能就有损失<br>
+- 在4k-128k，Per-source
+Upsampling在各个领域的效果相对较为平衡（绿色的数量最多）</p>
+<p>此外，length upsampling很重要。Per-source
+Upsampling的策略在领域上可以和源数据保持一致，而提升长文本的比例。</p>
+<p>用同样80k的训练窗口在LLAMA2-7B进行实验，一个使用原数据进行拼接，另一个使用Per-source
+Upsampling，结果如下。在PPL基本相同的情况下，Per-source
+Upsampling在大海捞针的效果远超原数据。这说明提高长文本的比例，能极大优化模型远距离建模的能力。</p>
+<img src="/cc852861/eng_ppl.png" class title="PPL和大海捞针">
+<h2 id="结论">结论</h2>
+<p>通过实验，论文提出提升模型长上下文能力的数据工程实践的几个关键点：<br>
+-
+在长窗口上进行轻量级训练，可以提升模型实际的远距离建模能力，而不仅仅是保持PPL较低<br>
+- 领域之间有竞争关系，最好和原预训练模型所用的分布保持一致<br>
+- 长度上采样对最终效果有很大影响，要提高各领域内长文本的比例</p>
+<h1 id="paraphrasing">Paraphrasing</h1>
+<p>论文：Training With "Paraphrasing the Original Text" Improves
+Long-Context Performance</p>
+<p>时间：2023年12月</p>
+<p>阶段：微调</p>
+<p>长度：在50k长度依然能有较好的效果，如下所示。</p>
+<img src="/cc852861/paraphrasing_intro.png" class title="paraphrasing">
+<h2 id="检索能力">检索能力</h2>
+<p>对于长上下文的任务，有用的信息通常是稀疏的，一般只有少量的句子或者段落包含了可以用于回答问题的有用信息。可以隐式地将这样长上下文的任务拆分成两个子任务，即相关信息的检索，和根据相关信息回答问题两个任务。</p>
+<p>目前一些支持长上下文的方法，比如位置编码相关的线性插值、NTK插值、YaRN等，虽然使得模型在形式上支持了长上下文的任务，但是在任务的准确性上效果却不佳。</p>
+<p>使用这些优化方案的模型依然会遇到lost in the
+middle的问题，即模型天然更容易关注到输入文本的开头和结尾部分的信息，而更容易忽略中间部分的信息，注意力迷失在大量无关内容上，而无法集中到少数相关的位置上。而对于长上下文的任务，大量的信息是处于middle的位置的，如果忽略这些信息自然会使得任务效果不好。而效果不好的原因就是模型在长上下文的情况下，retrieval能力偏弱，不能找到有用的信息。</p>
+<h2 id="相关工作">相关工作</h2>
+<p>一些工作直接把模型在长窗口下进行训练，比如：<br>
+-
+Together的LLaMA-2-7B-32K（https://huggingface.co/datasets/togethercomputer/Long-Data-Collections）；Together开源了Multipassage-QA-from-Natural-Questions和BookSum微调数据集。<br>
+- LongAlpaca（《LongLoRA: Efficient Fine-tuning of Long-Context Large
+Language Models》）<br>
+- Ziya-Reader（《Never Lost in the Middle:Improving Large Language
+Models via Attention Strengthening Question Answering》）</p>
+<p>直接在长窗口训练有一定的效果，但是依然有几个问题：<br>
+- 模型推理窗口越来越大，所需的训练数据集长度也要不断更新。<br>
+- 随着长度增大，训练成本变高。<br>
+-
+构建长上下文数据集的成本比价高，高质量的数据并不容易获得。虽然有一些开源的数据集，但是在实际场景上可能还需要做领域适配，分布调整等工作。</p>
+<p>一个更简单一点的方法是优化prompt的设计，比如CoT。</p>
+<p>在长上下文的场景下，可以通过prompt让模型显式地先找到原文的相关信息再进行回答。比如Claude-2.1就通过在prompt增加“Here
+is the most relevant sentence in the
+context”让长文本问答的准确率从27%提升到98%（https://www.anthropic.com/news/claude-2-1-prompting）。</p>
+<p>也可以对输入内容进行重新的编排：<br>
+- LongLLMLingua（《LongLLMLingua: Accelerating and Enhancing LLMs in
+Long Context Scenarios via Prompt
+Compression》）对输入文本进行了压缩。<br>
+- Attention Sorting（《Attention Sorting Combats Recency Bias In Long
+Context Language
+Models》）在decode过程中根据各个文档被分配到的注意力值，对文档进行重新排序。</p>
+<h2 id="提高检索能力">提高检索能力</h2>
+<p>这篇论文提出了一个叫检索相关度（retrieval
+relevance）的指标，一个token（或者n-gram） <span class="math inline">\(x\)</span> 的检索相关度 <span class="math inline">\(R(x)\)</span> 定义如下。</p>
+<p><span class="math display">\[R(x)=\frac{n^\prime}n\log\frac
+N{N^\prime+1}\]</span></p>
+<p>这个指标和TF-IDF很像。其中，<span class="math inline">\(n^\prime\)</span> 表示 <span class="math inline">\(x\)</span> 在gold-chunk中的频率，而 <span class="math inline">\(n\)</span> 是gold-chunk中的总token数；<span class="math inline">\(N\)</span> 表示整个上下文中总chunk数，<span class="math inline">\(N^\prime\)</span> 是包含x的chunk的数量。</p>
+<p>基于token <span class="math inline">\(x\)</span> 的检索相关度 <span class="math inline">\(R(x)\)</span> ，定义训练样本 <span class="math inline">\(S\)</span> 的检索相关度如下</p>
+<p><span class="math display">\[\mathcal{R}(S)=\frac{1}{|S_a|}\sum_{x\in\mathcal{S}_a}R(x)\]</span></p>
+<p>其中 <span class="math inline">\(S_a\)</span> 表示 <span class="math inline">\(S\)</span> 的答案部分。</p>
+<p>通过 <span class="math inline">\(\mathcal{R}(S)\)</span>
+这个指标可以反映出一个训练样本对模型提高检索能力的贡献。<span class="math inline">\(\mathcal{R}(S)\)</span>
+越高，这个样本对提高模型检索能力的贡献越大。</p>
+<p>那么一个简单有效提升训练样本检索相关度的做法，就是把gold-chunk放到答案中，即paraphrasing
+the original text。</p>
+<p>一个paraphrasing和其他答案设计方案对比的例子如下</p>
+<img src="/cc852861/paraphrasing_example.png" class title="paraphrasing例子">
+<p>其中高亮部分的token是高检索相关度的token，明显paraphrasing拥有更高的比例。</p>
+<p>论文使用GPT-4来构建包含paraphrasing的问答对，流程实际如下</p>
+<img src="/cc852861/paraphrasing_dataset.png" class title="构建数据集">
+<p>这种方式收集了一批单文档问答和多文档问答的数据，再加上一些传统文本摘要数据（摘要不好用这种方式构建，因此直接使用）等，构成一个包含10,825条英文数据，8,454条中文数据，长度在8k和32k之间的数据集。数据集详细的领域分布如下所示</p>
+<img src="/cc852861/paraphrasing_dataset_dist.png" class title="数据集分布">
+<p>论文构建的数据集和Multi-passage-QA-from-NQ的检索相关性指标对比如下</p>
+<img src="/cc852861/paraphrasing_quality.png" class title="数据集检索相关性对比">
+<p>使用这个数据集微调的模型，和其他模型在LongBench上的效果对比如下</p>
+<img src="/cc852861/paraphrasing_perf.png" class title="效果对比">
+<p>另外，在这个数据集上微调之后，模型对于lost in the
+middle的问题也有一定的缓解，如下所示</p>
+<img src="/cc852861/paraphrasing_lost.png" class title="缓解lost in the middle">
+<h1 id="pose">PoSE</h1>
+<p>论文：PoSE: Efficient Context Window Extension of LLMs via Positional
+Skip-wise Training</p>
+<p>时间：2023年9月</p>
+<p>阶段：微调</p>
+<p>长度：128k</p>
+<h2 id="背景">背景</h2>
+<p>目前大部分流行的大模型使用旋转位置编码RoPE。在短文本上训练的模型，在长输入上效果不好的原因之一，就是长文本有很多模型没有见过没有训练过的位置编码。</p>
+<p>基于位置编码的长上下文优化，比如线性插值、NTK插值和YaRN等，依然需要进行目标长度的训练才能有比价好的效果。而随着目标长度越来越长（8k，32k，128k...），这样的训练成本也越来越高，逐渐变得不容易进行。</p>
+<p>这篇论文提出<strong>Po</strong>sitional
+<strong>S</strong>kip-wis<strong>E</strong>，PoSE，通过在短的训练窗口模拟长距离的位置编码，提升模型处理长上下文的能力。模型可以在2k的训练窗口进行训练，而在128k的长度进行推理。相比直接训练128k模型效率更高。</p>
+<p>也有一些工作的思路和这篇文章有相近之处，比如RandPos（《Randomized
+positional encodings boost length generalization of
+transformers》），但是RandPos主要用于预训练阶段，并且相邻token之间的位置是不连续的，而PoSE主要用于微调阶段，相邻token之间的位置是连续的。</p>
+<h2 id="位置模拟">位置模拟</h2>
+<p>PoSE提出两个设计原则：<br>
+-
+模拟所用的位置编码index要覆盖目标长度的范围。如果我们想在128k的窗口进行推理，那就要保证训练的时候，模型从1-128k的位置编码都见过。<br>
+-
+为了不损害原模型的能力，位置编码应该尽量保持原来预训练的结构，即尽量连续，和保持顺序关系。</p>
+<p>假设我们的训练窗口长度为 <span class="math inline">\(L_c\)</span>，首先我们随机把它切成 <span class="math inline">\(N\)</span> 个chunk， <span class="math inline">\(c_0,c_1,\ldots,c_{N-1}\)</span>，长度分别为 <span class="math inline">\(l_0,l_1,\ldots,l_{N-1}\)</span>。对于chunk <span class="math inline">\(i\)</span>，其中token的位置编码下标如下</p>
+<p><span class="math display">\[\mathrm{Pos}(c_i)=\{st_i,st_i+1,\ldots,st_i+l_i-1\},\quad
+st_i=\sum_{j=0}^{i-1}l_j\]</span></p>
+<p>然后我们给每个chunk，从uniform distribution <span class="math inline">\(\mathcal{U}(S)\)</span> 中随机采样一个skipping
+bias <span class="math inline">\(u_i\)</span>，把这个bias加到这个对应chunk的token的位置编码下标中，就有</p>
+<p><span class="math display">\[\mathrm{PoSE}(c_i)=\{u_i+st_i,u_i+st_i+1,\ldots,u_i+st_i+l_i-1\}\]</span></p>
+<p>这里要注意，处理后各个chunk的位置编码下标不能有overlap，所以要求
+<span class="math inline">\(u_i\geq u_{i-1}\)</span>。</p>
+<p>直观地说，引入skipping
+bias使模型能接触到更大范围的位置编码。为了全面覆盖目标上下文窗口，我们为每个训练sample单独采样每个chunk的长度和skipping
+bias。</p>
+<p>此外，位置编码index在每个chunk内的连续性，与原模型预训练期间所采用的结构非常相似。因此，在这些新的index上进行微调，不会损害模型原有的能力。</p>
+<p>现在，位置编码的下标决定好了，我们还需要决定每个chunk的token使用哪些。</p>
+<p>token的采样和位置编码下标的采样类似，具体来说，我们采样<span class="math inline">\(v_i\sim\mathcal{U}(\{v_{i-1},\ldots,L_x-L_c\})\)</span>，那么
+<span class="math inline">\(c_i\)</span> 的token如下</p>
+<p><span class="math display">\[c_i=\boldsymbol{x}[v_i+st_i:v_i+st_i+l_i]\]</span></p>
+<p>论文对一些采样变体，比如 <span class="math inline">\(v_i=u_i\)</span>，<span class="math inline">\(v_i=0\)</span>
+等进行了探索，发现基本没有什么影响，因此 <span class="math inline">\(v_i\)</span> 保持原来的采样方案即可。</p>
+<p>在实际训练中，<span class="math inline">\(N\)</span>
+设置为2，因为如果太大可能对原模型的能力造成损害。而 <span class="math inline">\(u_0\)</span> 和 <span class="math inline">\(v_0\)</span> 设为了0。</p>
+<p>PoSE方案如下图所示</p>
+<img src="/cc852861/pose_method.png" class title="PoSE">
+<p>实验上，使用了LLAMA-7B模型，在2k的窗口上进行了1,000步的训练，batch
+size为64。使用lr=2e-5，warmup step=10。</p>
+<p>PoSE和其他模型在PPL上的对比如下，基本能达到和Full-length训练相近的水平。</p>
+<img src="/cc852861/pose_ppl.png" class title="PPL">
+<p>而在passkey retrieval任务上，也有不错的效果，如下图所示</p>
+<img src="/cc852861/pose_passkey.png" class title="passkey">
+<p>相比其他方案，PoSE的一个优势是可以在没有任何成本增加的情况下，支持更长的推理长度。比如可以通过简单修改采样策略的参数，PoSE就可以支持到1M，甚至更大的窗口长度，这是其他方法难以做到的。</p>
+<h1 id="小结">小结</h1>
+<ol type="1">
+<li>有了FlashAttention等方案之后，在128k这个长度，我们也有能力在合理的成本下，进行继续预训练，使用5B左右的token解锁模型的长上下文能力。<br>
+</li>
+<li>预训练中，长文本对模型的远距离建模能力很重要，要提高长文本的比例才有更好的效果。此外，领域的分布也是一个需要关注的点。<br>
+</li>
+<li>在长窗口的微调上，精心设计输入输出形式能带来一些收益。</li>
+<li>对于更长的窗口，比如M级别这种几乎无法直接训练/微调的长度，PoSE这种模拟的方案能够在不增加成本的情况下，在效果上达到接近直接训练/微调的表现。</li>
+</ol>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Data Engineering for Scaling Language Models to 128K Context
+https://arxiv.org/abs/2402.10171<br>
+【2】Training With "Paraphrasing the Original Text" Improves
+Long-Context Performance https://arxiv.org/abs/2312.11193<br>
+【3】PoSE: Efficient Context Window Extension of LLMs via Positional
+Skip-wise Training https://arxiv.org/abs/2309.10400</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/cc852861.html" title="解锁大模型长上下文能力">https://saicat.github.io/cc852861.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E9%95%BF%E4%B8%8A%E4%B8%8B%E6%96%87/" rel="tag"><i class="fa fa-tag"></i> 长上下文</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/%E5%BE%AE%E8%B0%83/" rel="tag"><i class="fa fa-tag"></i> 微调</a>
+              <a href="/tags/attention/" rel="tag"><i class="fa fa-tag"></i> attention</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/336f2f3e.html" rel="prev" title="大模型算法题(5)">
+                  <i class="fa fa-angle-left"></i> 大模型算法题(5)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/45ee1a6d.html" rel="next" title="大模型推理窗口-从有限到无限大">
+                  大模型推理窗口-从有限到无限大 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">159k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:49</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
