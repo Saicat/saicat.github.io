@@ -1,415 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>理解LLM位置编码:RoPE</title>
-    <url>/a051710f.html</url>
-    <content><![CDATA[<p>最近在做LLM窗口外推的相关工作，因此刚好也回顾一下目前最流行的位置编码RoPE。</p>
-<h1 id="关于rope">关于RoPE</h1>
-<p>RoPE（Rotary Position
-Embedding），是苏剑林大神在2021年就提出的一种Transformer模型的位置编码。RoPE是一种可以<big><u><strong>以绝对位置编码形式实现的相对位置编码</strong></u></big>，兼顾了模型性能和效率。</p>
-<p>2023年上半年的时候，大模型位置编码尚有Alibi和RoPE在相互比拼，而到了2023年下半年，及今2024年，新开源出来的模型，大部分都是使用RoPE了。当然Alibi也有其优势，这个在讲Alibi的时候来说。</p>
-<p>苏神在他的个人网站科学空间中对RoPE有相关文章进行了介绍，本篇是在这个基础上，对RoPE进行理解（公式和符号上也会沿用苏神的写法）。</p>
-<h1 id="以绝对位置编码的方式实现相对位置编码">以绝对位置编码的方式实现相对位置编码</h1>
-<p>前面提到，RoPE是一种一绝对位置编码的方式实现的相对位置编码，那么这么做能带来什么收益？</p>
-<p>先说原因：</p>
-<p>在文本长度不长的情况下（比如Bert时代基本都是256/512token的长度），相对位置编码和绝对位置编码在使用效果上可以说没有显著差别。<br>
-如果要处理更大长度的输入输出，使用绝对位置编码就需要把训练数据也加长到推理所需长度，否则对于没训练过的长度（训练时没见过的位置编码），效果多少会打些折扣。<br>
-而使用相对位置编码则<u><strong>更容易外推</strong></u>，毕竟token-2和token-1的距离，与token-10002和token-10001的距离是一样的，也因此可以缓解对巨量长文本数据的需求。<br>
-但是传统相对位置编码的实现相对<u><strong>复杂</strong></u>，有些也会有<u><strong>计算效率低</strong></u>的问题。由于修改了self-attention的计算方式，也比较难推广到<u><strong>线性注意力</strong></u>计算法模型中。<br>
-总结来说，就是绝对位置编码<u><strong>好实现</strong></u>，<u><strong>效率高</strong></u>，<u><strong>适用线性注意力</strong></u>，而相对位置编码<u><strong>易外推</strong></u>，因此就有了对“绝对位置编码的方式实现相对位置编码”的追求，去把二者的优点结合起来。</p>
-<p>下面简单回顾一下绝对位置编码和相对位置编码。</p>
-<p>（对位置编码比较熟悉的朋友可以直接跳到第3节。）</p>
-<h2 id="绝对位置编码">绝对位置编码</h2>
-<p>先回顾一下带绝对位置编码的self-attention。</p>
-<p><span class="math display">\[\left.\left\{\begin{array}{l}q_\mathrm{i}=(x_\mathrm{i}+p_\mathrm{i})W_\mathrm{Q}\\k_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{K}\\\nu_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{V}\\\mathrm{a_\mathrm{i,j}}=\mathrm{softmax}\left(q_\mathrm{i}k_\mathrm{j}^\top\right)\\o_\mathrm{i}=\sum_\mathrm{j}a_\mathrm{i,j}\nu_\mathrm{j}\end{array}\right.\right.\tag{1}\]</span></p>
-<p><span class="math inline">\(x_i\)</span> 和 <span class="math inline">\(x_j\)</span> 分别是位置 <span class="math inline">\(i\)</span> 和 <span class="math inline">\(j\)</span> 的输入，<span class="math inline">\(p\)</span> 是对应位置的位置编码向量。</p>
-<p>这里的位置编码<span class="math inline">\(p\)</span>可以是三角函数式，或者直接训练式。但是无论是哪种，其实现方式都很简单，就是在输入端把词向量
-<span class="math inline">\(x\)</span> 和位置向量 <span class="math inline">\(p\)</span>
-相加即可，相比attention中的softmax计算，element-wise
-addition操作的计算量非常小，是可以忽略不计的。</p>
-<p>大部分绝对位置编码使用的是这样向量相加的形式，即加性编码，也有一些用乘性编码的工作，把
-<span class="math inline">\(x + p\)</span> 变成 <span class="math inline">\(x * p\)</span> 这样，效果上也是大差不差。</p>
-<h2 id="相对位置编码">相对位置编码</h2>
-<p>在绝对位置编码中，可以在输入阶段就把 <span class="math inline">\(x\)</span> 和 <span class="math inline">\(p\)</span>
-直接相加，是因为这里把位置信息当做是这个位置的词的固有特征。</p>
-<p>比如“我”这个词放在位置1时，形成一个 <span class="math inline">\(e_1 =
-x_我 + p_1\)</span>
-这么一个向量来代表【“我”在位置1】这一个情况；而当同样的词“我”放在位置8时，形成了另一个向量
-<span class="math inline">\(e_8 = x_我 + p_8\)</span> 。两个向量 <span class="math inline">\(e_1\)</span> 和 <span class="math inline">\(e_8\)</span>
-虽然包含同一个词，但是对于模型来说，这两个输入是不同的（因为每个数值都包含了位置向量），词向量和位置向量<u><strong>耦合</strong></u>在一起共同构成了一个完整的输入。</p>
-<p>直观来说，比如词表大小是1万，模型训练窗口最大长度是512，那么对于模型来说，实际上要区分的输入是1万×512=512万个。看起来虽然不少，但是在海量的数据和训练量下，这也不算什么事儿，模型确实能handle。</p>
-<p>扯远了，现在回来看一下相对位置编码。把公式（1）中的 <span class="math inline">\(q_{i}k_{j}^{T}\)</span>展开来</p>
-<p><span class="math display">\[\begin{align*}q_ik_j^\top&amp;=\left(x_i+p_i\right)W_\mathbb{Q}W_K^\top\left(x_j+p_j\right)^\top\\&amp;=\left(x_iW_\mathbb{Q}+{\color{red}p_iW_\mathbb{Q}}\right)\left(W_K^\top
-x_j^\top+{\color{red}W_K^\top
-p_j^\top}\right)\end{align*}\tag{2}\]</span></p>
-<p>和位置相关的有 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
-和 <span class="math inline">\(W_K^\top p_j^\top\)</span> 两项。</p>
-<h3 id="google式">Google式</h3>
-<p>在最早引入相对位置编码的Google的论文《Self-Attention with Relative
-Position Representations》中，把第一项 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
-去掉了（因为要搞相对位置编码，只要能把相对位置信息加到其中一项输入就可以了，这里加在了位置
-<span class="math inline">\(j\)</span>），把第二项 <span class="math inline">\(W_K^\top p_j^\top\)</span> 改成和位置 <span class="math inline">\(i\)</span>、<span class="math inline">\(j\)</span>
-都相关的位置向量 <span class="math inline">\(R_{ij}^K\)</span>，于是在这个使用相对位置编码的attention计算中，<u><strong>不再是直接计算input
-projection的内积来获取权重</strong></u>，而变成</p>
-<p><span class="math display">\[
-\mathrm{a_{ij}=softmax}\left(x_{i}W_{\mathbb{Q}}\left(x_{j}W_{\mathbb{K}}+R_{\mathbf{i,j}}^{\mathbf{K}}\right)^{\top}\right)\tag{3}
-\]</span></p>
-<p><span class="math inline">\(R_{ij}^K\)</span>
-是什么呢？可以是可训练式的向量，也可以是类似三角函数式的，在这个基础上增加了一个clip操作。</p>
-<p><span class="math display">\[
-R_{\mathrm{i,j}}^\mathrm{K}=p_\mathrm{K}\left[\mathrm{clip(i-j,p_{min},p_{max})}\right]
-\]</span></p>
-<p>其中 <span class="math inline">\(p_\mathrm{K}\)</span>
-就是可训练的向量或者三角函数向量。</p>
-<p>为什么要增加一个clip操作？因为直观上，一个词对其左右附近的其他词的位置关系<strong>理应</strong>更加敏感，比如“我请你吃饭”中，“吃饭”这个词需要以高分辨率明确区分出前面三个词“我”、“请”、“你”的位置，以免理解成了“你请我吃饭”；而随着距离越来越远，这种高分辨率的需求也就越来越低，十万个token之前的内容顺序对于当前token来说，影响比较小了，在位置向量上可以一视同仁。另外这也是方便了位置信息的外推，比如我们可以只训练256个相对位置编码信息，而在应用是可以外推到&gt;256的长度。</p>
-<p>本来到这里就可以了，相对位置信息已经加入了，但是Google除了在input端增加了相对位置信息，在输出端也增加了相对位置信息。本来输出端的计算是</p>
-<p><span class="math display">\[\begin{align*}
-o_\mathrm{i}&amp;=\sum_\mathrm{j}a_\mathrm{i,j}\nu_\mathrm{j}\\
-&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}(x_{j} + p_{j})W_{\mathrm{V}}\\
-&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}(x_{j}W_{\mathrm{V}} +
-{\color{red}p_{j}W_{\mathrm{V}}})\\
-\end{align*}\tag{4}\]</span></p>
-<p>Google的方法把 <span class="math inline">\(p_{j}W_{\mathrm{V}}\)</span>
-也改成了包含相对位置信息的向量</p>
-<p><span class="math display">\[\begin{align*}
-o_{\mathrm{i}}=\sum_{\mathrm{j}}\mathrm{a_{i,j}}\left(x_{j}W_{\mathrm{V}}+R_{\mathrm{i,j}}^{\mathrm{V}}\right)\tag{5}
-\end{align*}\]</span></p>
-<p><span class="math inline">\(R_{\mathrm{i,j}}^{\mathrm{V}}\)</span> 和
-<span class="math inline">\(R_{ij}^K\)</span> 相似，都是一个相对位置向量
-+ clip操作。</p>
-<h3 id="xlnet式">XLNET式</h3>
-<p>XLNET也使用了相对位置编码，思路类似Google，只是具体的操作不同。</p>
-<p>在公式（2）的基础上继续展开</p>
-<p><span class="math display">\[\begin{align*}
-q_ik_j^T
-&amp;= \left(x_iW_\mathbb{Q}+{p_iW_\mathbb{Q}}\right)\left(W_K^\top
-x_j^\top+{W_K^\top p_j^\top}\right)\\
-&amp;=
-x_iW_\mathbb{Q}W_\mathbb{K}^Tx_j^T
-+x_iW_\mathbb{Q}W_\mathbb{K}^T{\color{red}p_j^T}
-+{\color{red}p_i}W_\mathbb{Q}W_\mathbb{K}^T{x_j^T}
-+{\color{red}p_i}W_\mathbb{Q}W_\mathbb{K}^T{\color{red}p_j^T}\\
-\end{align*}\tag{6}
-\]</span></p>
-<p>把绝对位置相关的几个参数改成相对位置相关的参数，变成：</p>
-<p><span class="math display">\[
-\mathrm{a_{ij}=softmax}\left
-(x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+x_iW_\mathrm{Q}W_\mathrm{K}^\top {\color{red}R_\mathrm{i-j}^\top}
-+{\color{red}u}W_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+{\color{red}\nu}
-W_\mathrm{Q}W_\mathrm{K}^\top{\color{red}R_\mathrm{i-j}^\top}\right)
-\tag{7}
-\]</span></p>
-<p>把 <span class="math inline">\(p_i\)</span> 变成了两个可训练的向量
-<span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span> ，把 <span class="math inline">\(p_j\)</span> 变成相对位置向量 <span class="math inline">\(R_{i-j}^\top\)</span> 。</p>
-<p>实际实现上可以把 <span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span>
-后面跟着的矩阵省掉了，去掉这个线性变化不影响 <span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span> 的训练，变成</p>
-<p><span class="math display">\[
-x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+x_iW_\mathrm{Q}W_\mathrm{K}^\top {\color{red}R_\mathrm{i-j}^\top}
-+{\color{red}u}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+{\color{red}\nu} W_\mathrm{K}^\top{\color{red}R_\mathrm{i-j}^\top}
-\tag{8}
-\]</span></p>
-<p>此外，XLNET只对输入端做了处理，输出端则直接把位置相关的计算去掉了，即</p>
-<p><span class="math display">\[\begin{align*}
-o_\mathrm{i}
-&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}x_{j}W_{\mathrm{V}}\\
-\end{align*}\tag{9}\]</span></p>
-<p>可以看到，Google式和XLNET式的相对位置编码在权重 <span class="math inline">\(\mathrm{a_{i,j}}\)</span>
-的计算上都变得比较复杂了（相对绝对位置编码而言），并且到这里可以看到，获取相对位置信息的思路其实就是想办法把原来公式（2）中的绝对位置向量替换成和位置
-<span class="math inline">\(i\)</span> 、 <span class="math inline">\(j\)</span>
-都相关的向量。很多其他变体其实都大差不差，基本就是在怎么加入相对位置向量、怎么clip上下功夫。</p>
-<p>当然，也有简单一点的实现，比如T5的方法。</p>
-<h3 id="t5式">T5式</h3>
-<p>公式（6）中展开了内积计算，一共有四项，第一项完全没有位置信息，只和词向量本身有关，第二三项分别包含了位置
-<span class="math inline">\(i\)</span> 和位置 <span class="math inline">\(j\)</span>
-的信息，而第四项只和位置相关，和词向量本身是什么内容无关。也就是说，位置相关的信息都是在后面三项引入的，那简单点，直接把后面三项替换成一个位置向量：</p>
-<p><span class="math display">\[
-\mathrm{a_{ij}=softmax}\left
-(x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
-+ \beta_{i,j}\right)
-\tag{10}
-\]</span></p>
-<p>（从最早提出，到XLNET，以及DeBerta，T5等，可以看到相对位置编码的实现有一个简化的趋势，而效果也越来越好，正所谓大道至简，有时候有用的东西未必需要很复杂）</p>
-<h2 id="对比">对比</h2>
-<p>看来相对位置编码确实比较复杂，说个大概需要这么多篇幅；并且相对绝对位置编码，也没有那么直接明了，需要对attention计算做一些改造。</p>
-<p>公式（1）的绝对位置编码中，可以看到在进softmax操作前需要做3次矩阵加法，3次矩阵乘法</p>
-<p>从公式（8）可以看到，共有4组矩阵计算要做，每组要做3次矩阵乘法，相对会比较复杂。公式（3）也有类似的情况。当然同时也有一些针对相对位置编码的高效计算被提出，这些就需要针对不同的计算方案来优化了。</p>
-<p>总之在实现方式上和计算效率上，绝对位置编码具有一些优势。</p>
-<p>而在输入输出窗口外推方面，相对位置编码有着天然的优势。</p>
-<p>另外，绝对位置编码保持self-attention的经典形式，使得应用面更广，如可以使用到linear
-attention方案中去，这个以后再展开讲（又挖了个坑）。</p>
-<h1 id="rope的设计思路">RoPE的设计思路</h1>
-<h2 id="保持attention计算形式">保持attention计算形式</h2>
-<p>回顾完经典的绝对位置编码和相对位置编码，回到RoPE上来。</p>
-<p>先说设计思路：</p>
-<p>首先我们想要保持经典self-attention的计算方式，即公式（1）中的形式，输入端
-= 内积 +
-softmax，至于输出端则保持完全不变。softmax我们不去动，那这里留给我们操作的就是内积。</p>
-<p>也就说，现在问题是，我们怎么在只做内积的情况下，把内积结果变成只和相对位置有关，而和绝对位置无关的结果。写成公式就是</p>
-<p><span class="math display">\[
-\langle
-f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle=g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)
-\tag{11}
-\]</span></p>
-<p>其中 <span class="math inline">\(q_m\)</span> 是在位置 <span class="math inline">\(m\)</span> 的query向量，<span class="math inline">\(k_n\)</span> 是在位置 <span class="math inline">\(n\)</span> 的key向量，<span class="math inline">\(f_q\)</span> 和 <span class="math inline">\(f_k\)</span>
-是分别针对这query和key向量的操作函数。</p>
-<p>我们的任务就是要找到一组 <span class="math inline">\(f_q\)</span> 、
-<span class="math inline">\(f_k\)</span> 和 <span class="math inline">\(g\)</span> ，使得公式（11）恒成立。</p>
-<p>当然理论上这里是存在无数多组答案的，那么RoPE怎么找到一组好实现的组合呢？</p>
-<h2 id="借用复数寻找组合">借用复数寻找组合</h2>
-<p>式（11）中， <span class="math inline">\(g\)</span>
-的结果是一个标量，我们需要一个能连接向量内积和标量的桥梁，这个桥梁就是复数。</p>
-<p>这里先回顾一下复数的知识。任意复数都可以表示成复平面的一个2维向量</p>
-<img src="/a051710f/complex_number.png" class width="282" height="401" title="复数平面">
-<p>现在考虑query和key向量都是2维的情况，那么可以代入复数的操作<br>
-（先把 hidden size = 2 的情况推理清楚，后续再推广到更高维的情况）</p>
-<p>那么在2维复数平面上有什么操作可以满足公式（11）的要求呢？Roformer论文中提出的是这组：</p>
-<p><span class="math display">\[
-\begin{aligned}
-f_q(\boldsymbol{q}_m,m)&amp;=\boldsymbol{q}_me^{im\theta}=\left(\boldsymbol{W}_q\boldsymbol{x}_m\right)e^{im\theta}
-\\
-f_k(\boldsymbol{k}_n,n)&amp;=\boldsymbol{k}_ne^{in\theta}=(\boldsymbol{W}_k\boldsymbol{x}_n)e^{in\theta}
-\\
-g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)&amp;=\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
-=\mathrm{Re}\left[(\boldsymbol{W}_q\boldsymbol{x}_m)(\boldsymbol{W}_k\boldsymbol{x}_n)^*e^{i(m-n)\theta}\right]\\
-\end{aligned} \\
-\tag{12}
-\]</span></p>
-<p>其中 <span class="math inline">\(\boldsymbol{k}_n^*\)</span> 是 <span class="math inline">\(\boldsymbol{k}_n\)</span> 的共轭复数。</p>
-<p>（如果暂时理解不了是怎么想出这个组合来满足要求的的，先把它放一边，毕竟数学就是这么神奇）</p>
-<p>共轭复数是这样的关系</p>
-<p><span class="math display">\[
-\begin{gathered}
-z=a+ib \\
-z^*=a-ib
-\end{gathered}
-\tag{13}
-\]</span></p>
-<p>先证明一下这个组合的正确性，是不是真的满足公式（11）。</p>
-<p>（也可以先跳过证明，选择先相信这个组合）</p>
-<p>回顾一下欧拉公式</p>
-<p><span class="math display">\[
-e^{ix}=\cos x+i\sin x
-\tag{14}
-\]</span></p>
-<p>因为现在我们讨论的是2维的情况，那2维向量 <span class="math inline">\(q_m\)</span> 可以用一个复数来表示</p>
-<p><span class="math display">\[
-q_m = q_m^{(1)} + iq_m^{(2)}
-\tag{15}
-\]</span></p>
-<p>那从复数角度来看，就有</p>
-<p><span class="math display">\[
-\begin{aligned}
-f_q(\boldsymbol{q}_m,m)
-&amp;= \boldsymbol{q}_me^{im\theta} \\
-&amp;= (q_m^{(1)} + iq_m^{(2)})(\cos (m\theta)+i\sin (m\theta)) \\
-&amp;=
-(q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta))+i(q_m^{(1)}\sin(m\theta)
-+ q_m^{(2)}\cos(m\theta))
-\end{aligned}
-\tag{16}
-\]</span></p>
-<p>式（16）的结果也是一个复数，那也可以用复平面上的一个向量来表示：</p>
-<p><span class="math display">\[
-f_q(\boldsymbol{q}_m,m) =
-\left.\left[\begin{matrix}{q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta)}\\{q_m^{(1)}\sin(m\theta)
-+ q_m^{(2)}\cos(m\theta)}\end{matrix}\right.\right]^\top
-\tag{17}
-\]</span></p>
-<p>（这里沿用式（1）中，默认向量为行向量的设定，所有有个transpose，实际上是行向量还是列向量都没关系，只是推算的时候写法问题）</p>
-<p>类似地，有</p>
-<p><span class="math display">\[
-\begin{aligned}
-f_k(\boldsymbol{k}_n,n)
-&amp;=
-(k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta))+i(k_n^{(1)}\sin(n\theta)
-+ k_n^{(2)}\cos(n\theta))
-\end{aligned}
-\tag{18}
-\]</span></p>
-<p>和</p>
-<p><span class="math display">\[
-f_k(\boldsymbol{k}_n,n) =
-\left.\left[\begin{matrix}{k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta)}\\{k_n^{(1)}\sin(n\theta)
-+ k_n^{(2)}\cos(n\theta)}\end{matrix}\right.\right]^\top
-\tag{19}
-\]</span></p>
-<p>则有<br>
-<span class="math display">\[
-\begin{aligned}
-&amp;\langle
-f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle\\=&amp;(q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta))(k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta))
-\\&amp;+ (q_m^{(1)}\sin(m\theta) +
-q_m^{(2)}\cos(m\theta))(k_n^{(1)}\sin(n\theta) +
-k_n^{(2)}\cos(n\theta))\\
-=&amp;q_m^{(1)}k_n^{(1)}\left(\cos(m\theta)\cos(n\theta)+\sin(m\theta)\sin(n\theta)\right)
-\\
-&amp;+q_m^{(1)}k_n^{(2)}\left(-\cos(m\theta)\sin(n\theta)+\sin(m\theta)\cos(n\theta)\right)
-\\
-&amp;+q_m^{(2)}k_n^{(1)}(-\sin(m\theta)\cos(n\theta)+\cos(m\theta)\sin(n\theta))
-\\
-&amp;+q_m^{(2)}k_n^{(2)}(\sin(m\theta)\sin(n\theta)+\cos(m\theta)\cos(n\theta))
-\\
-=&amp;q_m^{(1)}k_n^{(1)}\cos((m-n)\theta)+q_m^{(1)}k_n^{(2)}\sin((m-n)\theta)
-\\
-&amp;-\left.q_m^{(2)}k_n^{(1)}\right.\sin((m-n)\theta)
-+q_m^{(2)}k_n^{(2)}\cos((m-n)\theta)\\
-= &amp;(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)})\cos((m - n)\theta) +
-(q_m^{(1)}k_n^2 - q_m^{(2)}k_n^{(1)})\sin((m-n)\theta)
-\end{aligned}
-\tag{20}
-\]</span></p>
-<p>用了三角函数和差公式 <span class="math display">\[
-\sin(\alpha\pm\beta)=\sin\alpha\cos\beta\pm\cos\alpha\sin\beta\\
-{\cos(\alpha\pm\beta)=\cos\alpha\cos\beta\mp\sin\alpha\sin\beta}
-\]</span></p>
-<p>再看 <span class="math inline">\(g\)</span></p>
-<p><span class="math display">\[
-\begin{aligned}
-&amp;g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)\\
-=
-&amp;\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
-\\
-= &amp;\mathrm{Re}\left[[(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)}) -
-i(q_m^{(1)}k_n^2 - q_m^{(2)}k_n^{(1)})](\cos((m -
-n)\theta) + i\sin((m-n)\theta))\right] \\
-= &amp;(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)})\cos((m - n)\theta) +
-(q_m^{(1)}k_n^2 -
-q_m^{(2)}k_n^{(1)})\sin((m-n)\theta)\\
-= &amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle
-\end{aligned}
-\tag{21}
-\]</span></p>
-<p>证毕。</p>
-<h2 id="旋转位置编码">“旋转”位置编码</h2>
-<p>发现式（17）可以写成这样</p>
-<p><span class="math display">\[
-f_q(\boldsymbol{q}_m,m)^\top =
-\left.\left[\begin{matrix}{\cos(m\theta)}&amp;{-\sin(m\theta)}\\{\sin(m\theta)}&amp;{\cos(m\theta)}\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{q_m^{(1)}}\\{q_m^{(2)}}\end{matrix}\right.\right]}
-\tag{22}
-\]</span></p>
-<p>同样地</p>
-<p><span class="math display">\[
-f_k(\boldsymbol{k}_n,n)^\top =
-\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}
-\tag{23}
-\]</span></p>
-<p>如果从向量视角来看，则有</p>
-<p><span class="math display">\[
-\begin{aligned}
-&amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle\\
-=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}
-\left.\left[\begin{matrix}{\cos(m\theta)}&amp;{\sin(m\theta)}\\{-\sin(m\theta)}&amp;{\cos(m\theta)}\end{matrix}\right.\right]
-\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}\\
-=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}\left.\left[\begin{matrix}{\cos(m\theta)\cos(n\theta)
-+ \sin(m\theta)\sin(n\theta)}&amp;
-{-\cos(m\theta)\sin(n\theta) + \sin(m\theta)\cos(n\theta)}\\
-{-\cos(n\theta)\sin(m\theta) + \cos(m\theta)\sin(n\theta)}&amp;
-{\sin(m\theta)\sin(n\theta) + \cos(m\theta)\cos(n\theta)}
-\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}\\
-=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}
-\left.\left[\begin{matrix}{\cos((m-n)\theta)}&amp;{\sin((m-n)\theta)}\\{-\sin((m-n)\theta)}&amp;{\cos((m-n)\theta)}\end{matrix}\right.\right]
-{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}
-\end{aligned}
-\tag{24}
-\]</span></p>
-<p>看式（22）和（23），可以看到等号右边都有</p>
-<p><span class="math display">\[
-\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
-\]</span></p>
-<p>这正是一个二维平面的旋转矩阵。 <span class="math inline">\(f_q\)</span> 、 <span class="math inline">\(f_k\)</span>
-的操作相当于对输入向量进行了一次不改变大小，只改变方向的旋转。</p>
-<p>这也是为什么叫做“旋转”位置编码。</p>
-<h2 id="从2维推广到高维">从2维推广到高维</h2>
-<p>我们现在已经确认，对于2维的情况，经过 <span class="math inline">\(f_q\)</span> 、 <span class="math inline">\(f_k\)</span> 和 <span class="math inline">\(g\)</span>
-这么一波操作，能够满足式（11）的要求，但是实际上怎么在高维模型里实现呢？</p>
-<p>答案是把高维输入拆分成两个两个一组（这要求输入是偶数维，目前的模型也都是偶数维，所以没问题），则高维的“旋转”矩阵有多个小旋转矩阵组成</p>
-<p><span class="math display">\[
-\boldsymbol{R}_{\Theta,m}^d=\begin{pmatrix}\cos m\theta_0&amp;-\sin
-m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\\sin m\theta_0&amp;\cos
-m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\cos
-m\theta_1&amp;-\sin m\theta_1&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\sin
-m\theta_1&amp;\cos
-m\theta_1&amp;\cdots&amp;0&amp;0\\\vdots&amp;\vdots&amp;\vdots&amp;\vdots&amp;\ddots&amp;\vdots&amp;\vdots\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\cos
-m\theta_{d/2-1}&amp;-\sin
-m\theta_{d/2-1}\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\sin
-m\theta_{d/2-1}&amp;\cos n\theta_{d/2-1}\end{pmatrix}
-\tag{25}
-\]</span></p>
-<p><span class="math inline">\(d\)</span>
-是的输入向量的维度，由于是两个两个一组，所以一共有 <span class="math inline">\(d/2\)</span> 组小旋转矩阵，这 <span class="math inline">\(d/2\)</span> 组矩阵为了区分，设计使用了不同的
-<span class="math inline">\(\theta\)</span></p>
-<p><span class="math display">\[
-\Theta=\left\{\theta_i=10000^{-2(i-1)/d},i\in[1,2,\ldots,d/2]\right\}
-\tag{26}
-\]</span></p>
-<p>那么在实际操作的时候，给位置 <span class="math inline">\(m\)</span>
-和位置 <span class="math inline">\(n\)</span> 的输入向量分别乘以 <span class="math inline">\(R_m\)</span> 和 <span class="math inline">\(R_n\)</span>，再进行self-attention，就能获得仅使用相对位置信息编码的效果。</p>
-<p>另外 <span class="math inline">\(\theta\)</span>
-是怎么来的呢？这里是参考了Google最初在《Attention is All You
-Need》中提出的，这里就先不展开了，可以看看论文原文。</p>
-<h2 id="高效率实现">高效率实现</h2>
-<p>式（25）中的矩阵在高维的情况下很稀疏，直接使用这么个矩阵来计算效率并不高，可以使用一个这样的高效率实现方式</p>
-<p><span class="math display">\[
-\boldsymbol{R}_{
-m}\boldsymbol{q}=\begin{pmatrix}q_0\\q_1\\q_2\\q_3\\q_4\\\vdots\\q_{d-2}\\q_{d-1}\end{pmatrix}\otimes\begin{pmatrix}\cos
-m\theta_0\\\cos m\theta_0\\\cos m\theta_1\\\cos m\theta_1\\\cos
-m\theta_1\\\vdots\\\cos m\theta_{d/2-1}\\\cos
-m\theta_{d/2-1}\end{pmatrix}
-+\begin{pmatrix}-q_1\\q_0\\-q_3\\\vdots\\-q_{d-1}\\q_{d-2}\end{pmatrix}\otimes\begin{pmatrix}\sin
-m\theta_0\\\sin m\theta_0\\\sin m\theta_1\\\sin m\theta_1\\\sin
-m\theta_1\\\vdots\\\sin m\theta_{d/2-1}\\\sin
-m\theta_{d/2-1}\end{pmatrix}
-\tag{27}
-\]</span></p>
-<p>只需进行两组element-wise乘法即可。形式上看起来是类似乘性绝对位置编码的做法。</p>
-<p>另外，看LLAMA中的实现，可以看到旋转位置编码是在每一个decoder层的输入都加了的。每次都强化一次位置信息，也有助于模型更好识别不同距离的内容。</p>
-<h2 id="远程衰减的特性">远程衰减的特性</h2>
-<p>至此，旋转位置编码已经完备，具备了计算高效，实现容易，便于外推，适用于线性注意力的特性。实际上它还具备另一项优点：有远程衰减的特性。</p>
-<p>直观看起来远程衰减很符合直觉，毕竟注意力机制随着距离的衰减而降低，这个机制和人类也很像。</p>
-<p>回顾训练式的绝对位置编码，由于每个位置的位置向量是模型在训练中自我学习的，所以并不保证能具备这样的特性。而这个
-<span class="math inline">\(\theta\)</span>
-的选择沿用了三角函数式编码的做法，就使得整体具有远程衰减的特性。</p>
-<p>证明过程这里就偷偷懒略过了，具体可以看<a href="https://arxiv.org/abs/2104.09864">Roformer的论文</a>或者<a href="https://spaces.ac.cn/archives/8265">苏神的博客</a>。</p>
-<p>当 <span class="math inline">\(d = 128\)</span>
-时，画出来的图像如下</p>
-<img src="/a051710f/remote_attenuation.png" class width="775" height="457" title="远程衰减">
-<h1 id="小结">小结</h1>
-<p>总之，RoPE在设计和实现上还是挺巧妙的，性质上也很有很多优势，所以被广泛应用到transformer模型中去了。</p>
-<h1 id="reference">Reference</h1>
-<p>【1】让研究人员绞尽脑汁的Transformer位置编码，https://spaces.ac.cn/archives/8130<br>
-【2】Transformer升级之路：2、博采众长的旋转式位置编码，https://spaces.ac.cn/archives/8265<br>
-【3】RoFormer: Enhanced Transformer with Rotary Position Embedding
-https://arxiv.org/abs/2104.09864<br>
-【4】十分钟读懂旋转编码（RoPE）
-https://zhuanlan.zhihu.com/p/647109286</p>
-<hr>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>positional encoding</tag>
-        <tag>RoPE</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>LLM长上下文的问题</title>
     <url>/c4da56c0.html</url>
     <content><![CDATA[<p>最近长上下文的业务需求越来越多，刚好把这个能力现状和主流方案的基础内容简单梳理一下。</p>
@@ -847,6 +438,488 @@ https://zhuanlan.zhihu.com/p/678755776 ***</p>
       </tags>
   </entry>
   <entry>
+    <title>理解LLM位置编码:RoPE</title>
+    <url>/a051710f.html</url>
+    <content><![CDATA[<p>最近在做LLM窗口外推的相关工作，因此刚好也回顾一下目前最流行的位置编码RoPE。</p>
+<h1 id="关于rope">关于RoPE</h1>
+<p>RoPE（Rotary Position
+Embedding），是苏剑林大神在2021年就提出的一种Transformer模型的位置编码。RoPE是一种可以<big><u><strong>以绝对位置编码形式实现的相对位置编码</strong></u></big>，兼顾了模型性能和效率。</p>
+<p>2023年上半年的时候，大模型位置编码尚有Alibi和RoPE在相互比拼，而到了2023年下半年，及今2024年，新开源出来的模型，大部分都是使用RoPE了。当然Alibi也有其优势，这个在讲Alibi的时候来说。</p>
+<p>苏神在他的个人网站科学空间中对RoPE有相关文章进行了介绍，本篇是在这个基础上，对RoPE进行理解（公式和符号上也会沿用苏神的写法）。</p>
+<h1 id="以绝对位置编码的方式实现相对位置编码">以绝对位置编码的方式实现相对位置编码</h1>
+<p>前面提到，RoPE是一种一绝对位置编码的方式实现的相对位置编码，那么这么做能带来什么收益？</p>
+<p>先说原因：</p>
+<p>在文本长度不长的情况下（比如Bert时代基本都是256/512token的长度），相对位置编码和绝对位置编码在使用效果上可以说没有显著差别。<br>
+如果要处理更大长度的输入输出，使用绝对位置编码就需要把训练数据也加长到推理所需长度，否则对于没训练过的长度（训练时没见过的位置编码），效果多少会打些折扣。<br>
+而使用相对位置编码则<u><strong>更容易外推</strong></u>，毕竟token-2和token-1的距离，与token-10002和token-10001的距离是一样的，也因此可以缓解对巨量长文本数据的需求。<br>
+但是传统相对位置编码的实现相对<u><strong>复杂</strong></u>，有些也会有<u><strong>计算效率低</strong></u>的问题。由于修改了self-attention的计算方式，也比较难推广到<u><strong>线性注意力</strong></u>计算法模型中。<br>
+总结来说，就是绝对位置编码<u><strong>好实现</strong></u>，<u><strong>效率高</strong></u>，<u><strong>适用线性注意力</strong></u>，而相对位置编码<u><strong>易外推</strong></u>，因此就有了对“绝对位置编码的方式实现相对位置编码”的追求，去把二者的优点结合起来。</p>
+<p>下面简单回顾一下绝对位置编码和相对位置编码。</p>
+<p>（对位置编码比较熟悉的朋友可以直接跳到第3节。）</p>
+<h2 id="绝对位置编码">绝对位置编码</h2>
+<p>先回顾一下带绝对位置编码的self-attention。</p>
+<p><span class="math display">\[\left.\left\{\begin{array}{l}q_\mathrm{i}=(x_\mathrm{i}+p_\mathrm{i})W_\mathrm{Q}\\k_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{K}\\\nu_\mathrm{j}=(x_\mathrm{j}+p_\mathrm{j})W_\mathrm{V}\\\mathrm{a_\mathrm{i,j}}=\mathrm{softmax}\left(q_\mathrm{i}k_\mathrm{j}^\top\right)\\o_\mathrm{i}=\sum_\mathrm{j}a_\mathrm{i,j}\nu_\mathrm{j}\end{array}\right.\right.\tag{1}\]</span></p>
+<p><span class="math inline">\(x_i\)</span> 和 <span class="math inline">\(x_j\)</span> 分别是位置 <span class="math inline">\(i\)</span> 和 <span class="math inline">\(j\)</span> 的输入，<span class="math inline">\(p\)</span> 是对应位置的位置编码向量。</p>
+<p>这里的位置编码<span class="math inline">\(p\)</span>可以是三角函数式，或者直接训练式。但是无论是哪种，其实现方式都很简单，就是在输入端把词向量
+<span class="math inline">\(x\)</span> 和位置向量 <span class="math inline">\(p\)</span>
+相加即可，相比attention中的softmax计算，element-wise
+addition操作的计算量非常小，是可以忽略不计的。</p>
+<p>大部分绝对位置编码使用的是这样向量相加的形式，即加性编码，也有一些用乘性编码的工作，把
+<span class="math inline">\(x + p\)</span> 变成 <span class="math inline">\(x * p\)</span> 这样，效果上也是大差不差。</p>
+<h2 id="相对位置编码">相对位置编码</h2>
+<p>在绝对位置编码中，可以在输入阶段就把 <span class="math inline">\(x\)</span> 和 <span class="math inline">\(p\)</span>
+直接相加，是因为这里把位置信息当做是这个位置的词的固有特征。</p>
+<p>比如“我”这个词放在位置1时，形成一个 <span class="math inline">\(e_1 =
+x_我 + p_1\)</span>
+这么一个向量来代表【“我”在位置1】这一个情况；而当同样的词“我”放在位置8时，形成了另一个向量
+<span class="math inline">\(e_8 = x_我 + p_8\)</span> 。两个向量 <span class="math inline">\(e_1\)</span> 和 <span class="math inline">\(e_8\)</span>
+虽然包含同一个词，但是对于模型来说，这两个输入是不同的（因为每个数值都包含了位置向量），词向量和位置向量<u><strong>耦合</strong></u>在一起共同构成了一个完整的输入。</p>
+<p>直观来说，比如词表大小是1万，模型训练窗口最大长度是512，那么对于模型来说，实际上要区分的输入是1万×512=512万个。看起来虽然不少，但是在海量的数据和训练量下，这也不算什么事儿，模型确实能handle。</p>
+<p>扯远了，现在回来看一下相对位置编码。把公式（1）中的 <span class="math inline">\(q_{i}k_{j}^{T}\)</span>展开来</p>
+<p><span class="math display">\[\begin{align*}q_ik_j^\top&amp;=\left(x_i+p_i\right)W_\mathbb{Q}W_K^\top\left(x_j+p_j\right)^\top\\&amp;=\left(x_iW_\mathbb{Q}+{\color{red}p_iW_\mathbb{Q}}\right)\left(W_K^\top
+x_j^\top+{\color{red}W_K^\top
+p_j^\top}\right)\end{align*}\tag{2}\]</span></p>
+<p>和位置相关的有 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
+和 <span class="math inline">\(W_K^\top p_j^\top\)</span> 两项。</p>
+<h3 id="google式">Google式</h3>
+<p>在最早引入相对位置编码的Google的论文《Self-Attention with Relative
+Position Representations》中，把第一项 <span class="math inline">\(p_iW_\mathbb{Q}\)</span>
+去掉了（因为要搞相对位置编码，只要能把相对位置信息加到其中一项输入就可以了，这里加在了位置
+<span class="math inline">\(j\)</span>），把第二项 <span class="math inline">\(W_K^\top p_j^\top\)</span> 改成和位置 <span class="math inline">\(i\)</span>、<span class="math inline">\(j\)</span>
+都相关的位置向量 <span class="math inline">\(R_{ij}^K\)</span>，于是在这个使用相对位置编码的attention计算中，<u><strong>不再是直接计算input
+projection的内积来获取权重</strong></u>，而变成</p>
+<p><span class="math display">\[
+\mathrm{a_{ij}=softmax}\left(x_{i}W_{\mathbb{Q}}\left(x_{j}W_{\mathbb{K}}+R_{\mathbf{i,j}}^{\mathbf{K}}\right)^{\top}\right)\tag{3}
+\]</span></p>
+<p><span class="math inline">\(R_{ij}^K\)</span>
+是什么呢？可以是可训练式的向量，也可以是类似三角函数式的，在这个基础上增加了一个clip操作。</p>
+<p><span class="math display">\[
+R_{\mathrm{i,j}}^\mathrm{K}=p_\mathrm{K}\left[\mathrm{clip(i-j,p_{min},p_{max})}\right]
+\]</span></p>
+<p>其中 <span class="math inline">\(p_\mathrm{K}\)</span>
+就是可训练的向量或者三角函数向量。</p>
+<p>为什么要增加一个clip操作？因为直观上，一个词对其左右附近的其他词的位置关系<strong>理应</strong>更加敏感，比如“我请你吃饭”中，“吃饭”这个词需要以高分辨率明确区分出前面三个词“我”、“请”、“你”的位置，以免理解成了“你请我吃饭”；而随着距离越来越远，这种高分辨率的需求也就越来越低，十万个token之前的内容顺序对于当前token来说，影响比较小了，在位置向量上可以一视同仁。另外这也是方便了位置信息的外推，比如我们可以只训练256个相对位置编码信息，而在应用是可以外推到&gt;256的长度。</p>
+<p>本来到这里就可以了，相对位置信息已经加入了，但是Google除了在input端增加了相对位置信息，在输出端也增加了相对位置信息。本来输出端的计算是</p>
+<p><span class="math display">\[\begin{align*}
+o_\mathrm{i}&amp;=\sum_\mathrm{j}a_\mathrm{i,j}\nu_\mathrm{j}\\
+&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}(x_{j} + p_{j})W_{\mathrm{V}}\\
+&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}(x_{j}W_{\mathrm{V}} +
+{\color{red}p_{j}W_{\mathrm{V}}})\\
+\end{align*}\tag{4}\]</span></p>
+<p>Google的方法把 <span class="math inline">\(p_{j}W_{\mathrm{V}}\)</span>
+也改成了包含相对位置信息的向量</p>
+<p><span class="math display">\[\begin{align*}
+o_{\mathrm{i}}=\sum_{\mathrm{j}}\mathrm{a_{i,j}}\left(x_{j}W_{\mathrm{V}}+R_{\mathrm{i,j}}^{\mathrm{V}}\right)\tag{5}
+\end{align*}\]</span></p>
+<p><span class="math inline">\(R_{\mathrm{i,j}}^{\mathrm{V}}\)</span> 和
+<span class="math inline">\(R_{ij}^K\)</span> 相似，都是一个相对位置向量
++ clip操作。</p>
+<h3 id="xlnet式">XLNET式</h3>
+<p>XLNET也使用了相对位置编码，思路类似Google，只是具体的操作不同。</p>
+<p>在公式（2）的基础上继续展开</p>
+<p><span class="math display">\[\begin{align*}
+q_ik_j^T
+&amp;= \left(x_iW_\mathbb{Q}+{p_iW_\mathbb{Q}}\right)\left(W_K^\top
+x_j^\top+{W_K^\top p_j^\top}\right)\\
+&amp;=
+x_iW_\mathbb{Q}W_\mathbb{K}^Tx_j^T
++x_iW_\mathbb{Q}W_\mathbb{K}^T{\color{red}p_j^T}
++{\color{red}p_i}W_\mathbb{Q}W_\mathbb{K}^T{x_j^T}
++{\color{red}p_i}W_\mathbb{Q}W_\mathbb{K}^T{\color{red}p_j^T}\\
+\end{align*}\tag{6}
+\]</span></p>
+<p>把绝对位置相关的几个参数改成相对位置相关的参数，变成：</p>
+<p><span class="math display">\[
+\mathrm{a_{ij}=softmax}\left
+(x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
++x_iW_\mathrm{Q}W_\mathrm{K}^\top {\color{red}R_\mathrm{i-j}^\top}
++{\color{red}u}W_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
++{\color{red}\nu}
+W_\mathrm{Q}W_\mathrm{K}^\top{\color{red}R_\mathrm{i-j}^\top}\right)
+\tag{7}
+\]</span></p>
+<p>把 <span class="math inline">\(p_i\)</span> 变成了两个可训练的向量
+<span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span> ，把 <span class="math inline">\(p_j\)</span> 变成相对位置向量 <span class="math inline">\(R_{i-j}^\top\)</span> 。</p>
+<p>实际实现上可以把 <span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span>
+后面跟着的矩阵省掉了，去掉这个线性变化不影响 <span class="math inline">\(u\)</span> 和 <span class="math inline">\(\nu\)</span> 的训练，变成</p>
+<p><span class="math display">\[
+x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
++x_iW_\mathrm{Q}W_\mathrm{K}^\top {\color{red}R_\mathrm{i-j}^\top}
++{\color{red}u}W_\mathrm{K}^\top x_\mathrm{j}^\top
++{\color{red}\nu} W_\mathrm{K}^\top{\color{red}R_\mathrm{i-j}^\top}
+\tag{8}
+\]</span></p>
+<p>此外，XLNET只对输入端做了处理，输出端则直接把位置相关的计算去掉了，即</p>
+<p><span class="math display">\[\begin{align*}
+o_\mathrm{i}
+&amp;=\sum_{\mathrm{j}}\mathrm{a_{i,j}}x_{j}W_{\mathrm{V}}\\
+\end{align*}\tag{9}\]</span></p>
+<p>可以看到，Google式和XLNET式的相对位置编码在权重 <span class="math inline">\(\mathrm{a_{i,j}}\)</span>
+的计算上都变得比较复杂了（相对绝对位置编码而言），并且到这里可以看到，获取相对位置信息的思路其实就是想办法把原来公式（2）中的绝对位置向量替换成和位置
+<span class="math inline">\(i\)</span> 、 <span class="math inline">\(j\)</span>
+都相关的向量。很多其他变体其实都大差不差，基本就是在怎么加入相对位置向量、怎么clip上下功夫。</p>
+<p>当然，也有简单一点的实现，比如T5的方法。</p>
+<h3 id="t5式">T5式</h3>
+<p>公式（6）中展开了内积计算，一共有四项，第一项完全没有位置信息，只和词向量本身有关，第二三项分别包含了位置
+<span class="math inline">\(i\)</span> 和位置 <span class="math inline">\(j\)</span>
+的信息，而第四项只和位置相关，和词向量本身是什么内容无关。也就是说，位置相关的信息都是在后面三项引入的，那简单点，直接把后面三项替换成一个位置向量：</p>
+<p><span class="math display">\[
+\mathrm{a_{ij}=softmax}\left
+(x_iW_\mathrm{Q}W_\mathrm{K}^\top x_\mathrm{j}^\top
++ \beta_{i,j}\right)
+\tag{10}
+\]</span></p>
+<p>（从最早提出，到XLNET，以及DeBerta，T5等，可以看到相对位置编码的实现有一个简化的趋势，而效果也越来越好，正所谓大道至简，有时候有用的东西未必需要很复杂）</p>
+<h2 id="对比">对比</h2>
+<p>看来相对位置编码确实比较复杂，说个大概需要这么多篇幅；并且相对绝对位置编码，也没有那么直接明了，需要对attention计算做一些改造。</p>
+<p>公式（1）的绝对位置编码中，可以看到在进softmax操作前需要做3次矩阵加法，3次矩阵乘法</p>
+<p>从公式（8）可以看到，共有4组矩阵计算要做，每组要做3次矩阵乘法，相对会比较复杂。公式（3）也有类似的情况。当然同时也有一些针对相对位置编码的高效计算被提出，这些就需要针对不同的计算方案来优化了。</p>
+<p>总之在实现方式上和计算效率上，绝对位置编码具有一些优势。</p>
+<p>而在输入输出窗口外推方面，相对位置编码有着天然的优势。</p>
+<p>另外，绝对位置编码保持self-attention的经典形式，使得应用面更广，如可以使用到linear
+attention方案中去，这个以后再展开讲（又挖了个坑）。</p>
+<h1 id="rope的设计思路">RoPE的设计思路</h1>
+<h2 id="保持attention计算形式">保持attention计算形式</h2>
+<p>回顾完经典的绝对位置编码和相对位置编码，回到RoPE上来。</p>
+<p>先说设计思路：</p>
+<p>首先我们想要保持经典self-attention的计算方式，即公式（1）中的形式，输入端
+= 内积 +
+softmax，至于输出端则保持完全不变。softmax我们不去动，那这里留给我们操作的就是内积。</p>
+<p>也就说，现在问题是，我们怎么在只做内积的情况下，把内积结果变成只和相对位置有关，而和绝对位置无关的结果。写成公式就是</p>
+<p><span class="math display">\[
+\langle
+f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle=g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)
+\tag{11}
+\]</span></p>
+<p>其中 <span class="math inline">\(q_m\)</span> 是在位置 <span class="math inline">\(m\)</span> 的query向量，<span class="math inline">\(k_n\)</span> 是在位置 <span class="math inline">\(n\)</span> 的key向量，<span class="math inline">\(f_q\)</span> 和 <span class="math inline">\(f_k\)</span>
+是分别针对这query和key向量的操作函数。</p>
+<p>我们的任务就是要找到一组 <span class="math inline">\(f_q\)</span> 、
+<span class="math inline">\(f_k\)</span> 和 <span class="math inline">\(g\)</span> ，使得公式（11）恒成立。</p>
+<p>当然理论上这里是存在无数多组答案的，那么RoPE怎么找到一组好实现的组合呢？</p>
+<h2 id="借用复数寻找组合">借用复数寻找组合</h2>
+<p>式（11）中， <span class="math inline">\(g\)</span>
+的结果是一个标量，我们需要一个能连接向量内积和标量的桥梁，这个桥梁就是复数。</p>
+<p>这里先回顾一下复数的知识。任意复数都可以表示成复平面的一个2维向量</p>
+<img src="/a051710f/complex_number.png" class width="282" height="401" title="复数平面">
+<p>现在考虑query和key向量都是2维的情况，那么可以代入复数的操作<br>
+（先把 hidden size = 2 的情况推理清楚，后续再推广到更高维的情况）</p>
+<p>那么在2维复数平面上有什么操作可以满足公式（11）的要求呢？Roformer论文中提出的是这组：</p>
+<p><span class="math display">\[
+\begin{aligned}
+f_q(\boldsymbol{q}_m,m)&amp;=\boldsymbol{q}_me^{im\theta}=\left(\boldsymbol{W}_q\boldsymbol{x}_m\right)e^{im\theta}
+\\
+f_k(\boldsymbol{k}_n,n)&amp;=\boldsymbol{k}_ne^{in\theta}=(\boldsymbol{W}_k\boldsymbol{x}_n)e^{in\theta}
+\\
+g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)&amp;=\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
+=\mathrm{Re}\left[(\boldsymbol{W}_q\boldsymbol{x}_m)(\boldsymbol{W}_k\boldsymbol{x}_n)^*e^{i(m-n)\theta}\right]\\
+\end{aligned} \\
+\tag{12}
+\]</span></p>
+<p>其中 <span class="math inline">\(\boldsymbol{k}_n^*\)</span> 是 <span class="math inline">\(\boldsymbol{k}_n\)</span> 的共轭复数。</p>
+<p>（如果暂时理解不了是怎么想出这个组合来满足要求的的，先把它放一边，毕竟数学就是这么神奇）</p>
+<p>共轭复数是这样的关系</p>
+<p><span class="math display">\[
+\begin{gathered}
+z=a+ib \\
+z^*=a-ib
+\end{gathered}
+\tag{13}
+\]</span></p>
+<p>先证明一下这个组合的正确性，是不是真的满足公式（11）。</p>
+<p>（也可以先跳过证明，选择先相信这个组合）</p>
+<p>回顾一下欧拉公式</p>
+<p><span class="math display">\[
+e^{ix}=\cos x+i\sin x
+\tag{14}
+\]</span></p>
+<p>因为现在我们讨论的是2维的情况，那2维向量 <span class="math inline">\(q_m\)</span> 可以用一个复数来表示</p>
+<p><span class="math display">\[
+q_m = q_m^{(1)} + iq_m^{(2)}
+\tag{15}
+\]</span></p>
+<p>那从复数角度来看，就有</p>
+<p><span class="math display">\[
+\begin{aligned}
+f_q(\boldsymbol{q}_m,m)
+&amp;= \boldsymbol{q}_me^{im\theta} \\
+&amp;= (q_m^{(1)} + iq_m^{(2)})(\cos (m\theta)+i\sin (m\theta)) \\
+&amp;=
+(q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta))+i(q_m^{(1)}\sin(m\theta)
++ q_m^{(2)}\cos(m\theta))
+\end{aligned}
+\tag{16}
+\]</span></p>
+<p>式（16）的结果也是一个复数，那也可以用复平面上的一个向量来表示：</p>
+<p><span class="math display">\[
+f_q(\boldsymbol{q}_m,m) =
+\left.\left[\begin{matrix}{q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta)}\\{q_m^{(1)}\sin(m\theta)
++ q_m^{(2)}\cos(m\theta)}\end{matrix}\right.\right]^\top
+\tag{17}
+\]</span></p>
+<p>（这里沿用式（1）中，默认向量为行向量的设定，所有有个transpose，实际上是行向量还是列向量都没关系，只是推算的时候写法问题）</p>
+<p>类似地，有</p>
+<p><span class="math display">\[
+\begin{aligned}
+f_k(\boldsymbol{k}_n,n)
+&amp;=
+(k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta))+i(k_n^{(1)}\sin(n\theta)
++ k_n^{(2)}\cos(n\theta))
+\end{aligned}
+\tag{18}
+\]</span></p>
+<p>和</p>
+<p><span class="math display">\[
+f_k(\boldsymbol{k}_n,n) =
+\left.\left[\begin{matrix}{k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta)}\\{k_n^{(1)}\sin(n\theta)
++ k_n^{(2)}\cos(n\theta)}\end{matrix}\right.\right]^\top
+\tag{19}
+\]</span></p>
+<p>则有<br>
+<span class="math display">\[
+\begin{aligned}
+&amp;\langle
+f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle\\=&amp;(q_m^{(1)}cos(m\theta)-q_m^{(2)}\sin(m\theta))(k_n^{(1)}cos(n\theta)-k_n^{(2)}\sin(n\theta))
+\\&amp;+ (q_m^{(1)}\sin(m\theta) +
+q_m^{(2)}\cos(m\theta))(k_n^{(1)}\sin(n\theta) +
+k_n^{(2)}\cos(n\theta))\\
+=&amp;q_m^{(1)}k_n^{(1)}\left(\cos(m\theta)\cos(n\theta)+\sin(m\theta)\sin(n\theta)\right)
+\\
+&amp;+q_m^{(1)}k_n^{(2)}\left(-\cos(m\theta)\sin(n\theta)+\sin(m\theta)\cos(n\theta)\right)
+\\
+&amp;+q_m^{(2)}k_n^{(1)}(-\sin(m\theta)\cos(n\theta)+\cos(m\theta)\sin(n\theta))
+\\
+&amp;+q_m^{(2)}k_n^{(2)}(\sin(m\theta)\sin(n\theta)+\cos(m\theta)\cos(n\theta))
+\\
+=&amp;q_m^{(1)}k_n^{(1)}\cos((m-n)\theta)+q_m^{(1)}k_n^{(2)}\sin((m-n)\theta)
+\\
+&amp;-\left.q_m^{(2)}k_n^{(1)}\right.\sin((m-n)\theta)
++q_m^{(2)}k_n^{(2)}\cos((m-n)\theta)\\
+= &amp;(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)})\cos((m - n)\theta) +
+(q_m^{(1)}k_n^2 - q_m^{(2)}k_n^{(1)})\sin((m-n)\theta)
+\end{aligned}
+\tag{20}
+\]</span></p>
+<p>用了三角函数和差公式 <span class="math display">\[
+\sin(\alpha\pm\beta)=\sin\alpha\cos\beta\pm\cos\alpha\sin\beta\\
+{\cos(\alpha\pm\beta)=\cos\alpha\cos\beta\mp\sin\alpha\sin\beta}
+\]</span></p>
+<p>再看 <span class="math inline">\(g\)</span></p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;g(\boldsymbol{q}_m,\boldsymbol{k}_n,m-n)\\
+=
+&amp;\mathrm{Re}\left[\boldsymbol{q}_m\boldsymbol{k}_n^*e^{i(m-n)\theta}\right]
+\\
+= &amp;\mathrm{Re}\left[[(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)}) -
+i(q_m^{(1)}k_n^2 - q_m^{(2)}k_n^{(1)})](\cos((m -
+n)\theta) + i\sin((m-n)\theta))\right] \\
+= &amp;(q_m^{(1)}k_n^{(1)} + q_m^{(2)}k_n^{(2)})\cos((m - n)\theta) +
+(q_m^{(1)}k_n^2 -
+q_m^{(2)}k_n^{(1)})\sin((m-n)\theta)\\
+= &amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle
+\end{aligned}
+\tag{21}
+\]</span></p>
+<p>证毕。</p>
+<h2 id="旋转位置编码">“旋转”位置编码</h2>
+<p>发现式（17）可以写成这样</p>
+<p><span class="math display">\[
+f_q(\boldsymbol{q}_m,m)^\top =
+\left.\left[\begin{matrix}{\cos(m\theta)}&amp;{-\sin(m\theta)}\\{\sin(m\theta)}&amp;{\cos(m\theta)}\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{q_m^{(1)}}\\{q_m^{(2)}}\end{matrix}\right.\right]}
+\tag{22}
+\]</span></p>
+<p>同样地</p>
+<p><span class="math display">\[
+f_k(\boldsymbol{k}_n,n)^\top =
+\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}
+\tag{23}
+\]</span></p>
+<p>如果从向量视角来看，则有</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\langle f_q(\boldsymbol{q}_m,m),f_k(\boldsymbol{k}_n,n)\rangle\\
+=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}
+\left.\left[\begin{matrix}{\cos(m\theta)}&amp;{\sin(m\theta)}\\{-\sin(m\theta)}&amp;{\cos(m\theta)}\end{matrix}\right.\right]
+\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}\\
+=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}\left.\left[\begin{matrix}{\cos(m\theta)\cos(n\theta)
++ \sin(m\theta)\sin(n\theta)}&amp;
+{-\cos(m\theta)\sin(n\theta) + \sin(m\theta)\cos(n\theta)}\\
+{-\cos(n\theta)\sin(m\theta) + \cos(m\theta)\sin(n\theta)}&amp;
+{\sin(m\theta)\sin(n\theta) + \cos(m\theta)\cos(n\theta)}
+\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}\\
+=&amp;{\left.\left[\begin{matrix}{q_m^{(1)}}&amp;{q_m^{(2)}}\end{matrix}\right.\right]}
+\left.\left[\begin{matrix}{\cos((m-n)\theta)}&amp;{\sin((m-n)\theta)}\\{-\sin((m-n)\theta)}&amp;{\cos((m-n)\theta)}\end{matrix}\right.\right]
+{\left.\left[\begin{matrix}{k_n^{(1)}}\\{k_n^{(2)}}\end{matrix}\right.\right]}
+\end{aligned}
+\tag{24}
+\]</span></p>
+<p>看式（22）和（23），可以看到等号右边都有</p>
+<p><span class="math display">\[
+\left.\left[\begin{matrix}{\cos(n\theta)}&amp;{-\sin(n\theta)}\\{\sin(n\theta)}&amp;{\cos(n\theta)}\end{matrix}\right.\right]
+\]</span></p>
+<p>这正是一个二维平面的旋转矩阵。 <span class="math inline">\(f_q\)</span> 、 <span class="math inline">\(f_k\)</span>
+的操作相当于对输入向量进行了一次不改变大小，只改变方向的旋转。</p>
+<p>这也是为什么叫做“旋转”位置编码。</p>
+<h2 id="从2维推广到高维">从2维推广到高维</h2>
+<p>我们现在已经确认，对于2维的情况，经过 <span class="math inline">\(f_q\)</span> 、 <span class="math inline">\(f_k\)</span> 和 <span class="math inline">\(g\)</span>
+这么一波操作，能够满足式（11）的要求，但是实际上怎么在高维模型里实现呢？</p>
+<p>答案是把高维输入拆分成两个两个一组（这要求输入是偶数维，目前的模型也都是偶数维，所以没问题），则高维的“旋转”矩阵有多个小旋转矩阵组成</p>
+<p><span class="math display">\[
+\boldsymbol{R}_{\Theta,m}^d=\begin{pmatrix}\cos m\theta_0&amp;-\sin
+m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\\sin m\theta_0&amp;\cos
+m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\cos
+m\theta_1&amp;-\sin m\theta_1&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\sin
+m\theta_1&amp;\cos
+m\theta_1&amp;\cdots&amp;0&amp;0\\\vdots&amp;\vdots&amp;\vdots&amp;\vdots&amp;\ddots&amp;\vdots&amp;\vdots\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\cos
+m\theta_{d/2-1}&amp;-\sin
+m\theta_{d/2-1}\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\sin
+m\theta_{d/2-1}&amp;\cos n\theta_{d/2-1}\end{pmatrix}
+\tag{25}
+\]</span></p>
+<p><span class="math inline">\(d\)</span>
+是的输入向量的维度，由于是两个两个一组，所以一共有 <span class="math inline">\(d/2\)</span> 组小旋转矩阵，这 <span class="math inline">\(d/2\)</span> 组矩阵为了区分，设计使用了不同的
+<span class="math inline">\(\theta\)</span></p>
+<p><span class="math display">\[
+\Theta=\left\{\theta_i=10000^{-2(i-1)/d},i\in[1,2,\ldots,d/2]\right\}
+\tag{26}
+\]</span></p>
+<p>那么在实际操作的时候，给位置 <span class="math inline">\(m\)</span>
+和位置 <span class="math inline">\(n\)</span> 的输入向量分别乘以 <span class="math inline">\(R_m\)</span> 和 <span class="math inline">\(R_n\)</span>，再进行self-attention，就能获得仅使用相对位置信息编码的效果。</p>
+<p>另外 <span class="math inline">\(\theta\)</span>
+是怎么来的呢？这里是参考了Google最初在《Attention is All You
+Need》中提出的，这里就先不展开了，可以看看论文原文。</p>
+<h2 id="高效率实现">高效率实现</h2>
+<p>式（25）中的矩阵在高维的情况下很稀疏，直接使用这么个矩阵来计算效率并不高，可以使用一个这样的高效率实现方式</p>
+<p><span class="math display">\[
+\boldsymbol{R}_{
+m}\boldsymbol{q}=\begin{pmatrix}q_0\\q_1\\q_2\\q_3\\q_4\\\vdots\\q_{d-2}\\q_{d-1}\end{pmatrix}\otimes\begin{pmatrix}\cos
+m\theta_0\\\cos m\theta_0\\\cos m\theta_1\\\cos m\theta_1\\\cos
+m\theta_1\\\vdots\\\cos m\theta_{d/2-1}\\\cos
+m\theta_{d/2-1}\end{pmatrix}
++\begin{pmatrix}-q_1\\q_0\\-q_3\\\vdots\\-q_{d-1}\\q_{d-2}\end{pmatrix}\otimes\begin{pmatrix}\sin
+m\theta_0\\\sin m\theta_0\\\sin m\theta_1\\\sin m\theta_1\\\sin
+m\theta_1\\\vdots\\\sin m\theta_{d/2-1}\\\sin
+m\theta_{d/2-1}\end{pmatrix}
+\tag{27}
+\]</span></p>
+<p>只需进行两组element-wise乘法即可。形式上看起来是类似乘性绝对位置编码的做法。</p>
+<p>另外，看LLAMA中的实现，可以看到旋转位置编码是在每一个decoder层的输入都加了的。每次都强化一次位置信息，也有助于模型更好识别不同距离的内容。</p>
+<h2 id="远程衰减的特性">远程衰减的特性</h2>
+<p>至此，旋转位置编码已经完备，具备了计算高效，实现容易，便于外推，适用于线性注意力的特性。实际上它还具备另一项优点：有远程衰减的特性。</p>
+<p>直观看起来远程衰减很符合直觉，毕竟注意力机制随着距离的衰减而降低，这个机制和人类也很像。</p>
+<p>回顾训练式的绝对位置编码，由于每个位置的位置向量是模型在训练中自我学习的，所以并不保证能具备这样的特性。而这个
+<span class="math inline">\(\theta\)</span>
+的选择沿用了三角函数式编码的做法，就使得整体具有远程衰减的特性。</p>
+<p>证明过程这里就偷偷懒略过了，具体可以看<a href="https://arxiv.org/abs/2104.09864">Roformer的论文</a>或者<a href="https://spaces.ac.cn/archives/8265">苏神的博客</a>。</p>
+<p>当 <span class="math inline">\(d = 128\)</span>
+时，画出来的图像如下</p>
+<img src="/a051710f/remote_attenuation.png" class width="775" height="457" title="远程衰减">
+<h1 id="小结">小结</h1>
+<p>总之，RoPE在设计和实现上还是挺巧妙的，性质上也很有很多优势，所以被广泛应用到transformer模型中去了。</p>
+<h1 id="reference">Reference</h1>
+<p>【1】让研究人员绞尽脑汁的Transformer位置编码，https://spaces.ac.cn/archives/8130<br>
+【2】Transformer升级之路：2、博采众长的旋转式位置编码，https://spaces.ac.cn/archives/8265<br>
+【3】RoFormer: Enhanced Transformer with Rotary Position Embedding
+https://arxiv.org/abs/2104.09864<br>
+【4】十分钟读懂旋转编码（RoPE）
+https://zhuanlan.zhihu.com/p/647109286</p>
+<hr>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>positional encoding</tag>
+        <tag>RoPE</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(3)</title>
+    <url>/1736008.html</url>
+    <content><![CDATA[<p><img src="/images/cover.png"></p>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+<hr>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错漏，欢迎指正</sub></p>
+<hr>
+<h1 id="旋转位置编码rope有什么优缺点">1.旋转位置编码RoPE有什么优缺点？</h1>
+<p>优点：RoPE以绝对位置编码的方式实现了相对位置编码，使得能够在不破坏注意力形式的情况下，以“加性编码”的方式让模型学习相对位置。①相比其他相对位置编码来说，实现简单，计算量少。②可以应用于线性注意力。③RoPE具有远程衰减的特性，使得每个位置天然能够更关注到附近的信息。</p>
+<p>缺点：RoPE相比训练式的绝对位置编码具有一定的外推能力，如可以在2k数据长度训练的模型进行略长于2k的推理。但是相比于Alibi等位置编码，其直接外推能力并不算特别好，需要通过线性插值、NTK插值、YaRN等方式来优化外推能力。</p>
+<h1 id="batchnorm中的momentum怎么影响训练效果">2.batchnorm中的momentum怎么影响训练效果</h1>
+<p>batchnorm在训练时计算每个batch内的均值和方差用于normalization，同时统计一个全局均值和方差用于推理。全局均值和方差计算公式为：</p>
+<p>moving_mean = momentum × moving_mean + (1.0 − momentum) × mean</p>
+<p>moving_var = momentum × moving_var + (1.0 − momentum) × var</p>
+<p>小的momentum值对应快的更新速度，能够更快地向真实分布靠近，但是同时也会导致更大的波动；如果更新过慢，则可能导致训练结束时还没有统计到真实的分布，是欠拟合的状态。如果batch
+size比较小，每个mini batch和全局差异较大，就不应该用太大的momentum。</p>
+<h1 id="多头注意力相比单头有什么好处">3.多头注意力相比单头有什么好处？</h1>
+<p>多头注意力使用多个维度较低的子空间分别进行学习。</p>
+<p>一般来说，相比单头的情况，多个头能够分别关注到不同的特征，增强了表达能力。多个头中，会有部分头能够学习到更高级的特征，并减少注意力权重对角线值过大的情况。</p>
+<p>比如部分头关注语法信息，部分头关注知识内容，部分头关注近距离文本，部分头关注远距离文本，这样减少信息缺失，提升模型容量。</p>
+<p>另外虽然多头注意力的整体计算量比单头要大一点，但是并行度也高一些。</p>
+<h1 id="kv-cache为什么能加速推理">4.kv cache为什么能加速推理？</h1>
+<p>对于GPT类模型，使用的是单向注意力，每个位置只能看到自己和前面的内容。</p>
+<p>在进行自回归解码的时候，新生成的token会加入序列，一起作为下一次解码的输入。</p>
+<p>由于单向注意力的存在，新加入的token并不会影响前面序列的计算，因此可以把已经计算过的每层的kv值保存起来，这样就节省了和本次生成无关的计算量。</p>
+<p>通过把kv值存储在速度远快于显存的L2缓存中，可以大大减少kv值的保存和读取，这样就极大加快了模型推理的速度。</p>
+<h1 id="relu有什么优缺点">5.ReLU有什么优缺点？</h1>
+<p>优点：（1）计算快，前向只需要进行max(0,
+x)计算，后向则是直接透传；（2）有激活值的时候，梯度恒定为1，不会爆炸/消失；</p>
+<p>缺点：（1）均值不为0，分布产生偏移（2）输入值小于0时，梯度再也无法回传过来，导致神经元坏死。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>从代码实现看normalization-到底做了什么</title>
     <url>/b70b4a2d.html</url>
     <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
@@ -1037,79 +1110,6 @@ https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html</p>
       </tags>
   </entry>
   <entry>
-    <title>大模型算法题(3)</title>
-    <url>/1736008.html</url>
-    <content><![CDATA[<p><img src="/images/cover.png"></p>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
-<hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错漏，欢迎指正</sub></p>
-<hr>
-<h1 id="旋转位置编码rope有什么优缺点">1.旋转位置编码RoPE有什么优缺点？</h1>
-<p>优点：RoPE以绝对位置编码的方式实现了相对位置编码，使得能够在不破坏注意力形式的情况下，以“加性编码”的方式让模型学习相对位置。①相比其他相对位置编码来说，实现简单，计算量少。②可以应用于线性注意力。③RoPE具有远程衰减的特性，使得每个位置天然能够更关注到附近的信息。</p>
-<p>缺点：RoPE相比训练式的绝对位置编码具有一定的外推能力，如可以在2k数据长度训练的模型进行略长于2k的推理。但是相比于Alibi等位置编码，其直接外推能力并不算特别好，需要通过线性插值、NTK插值、YaRN等方式来优化外推能力。</p>
-<h1 id="batchnorm中的momentum怎么影响训练效果">2.batchnorm中的momentum怎么影响训练效果</h1>
-<p>batchnorm在训练时计算每个batch内的均值和方差用于normalization，同时统计一个全局均值和方差用于推理。全局均值和方差计算公式为：</p>
-<p>moving_mean = momentum × moving_mean + (1.0 − momentum) × mean</p>
-<p>moving_var = momentum × moving_var + (1.0 − momentum) × var</p>
-<p>小的momentum值对应快的更新速度，能够更快地向真实分布靠近，但是同时也会导致更大的波动；如果更新过慢，则可能导致训练结束时还没有统计到真实的分布，是欠拟合的状态。如果batch
-size比较小，每个mini batch和全局差异较大，就不应该用太大的momentum。</p>
-<h1 id="多头注意力相比单头有什么好处">3.多头注意力相比单头有什么好处？</h1>
-<p>多头注意力使用多个维度较低的子空间分别进行学习。</p>
-<p>一般来说，相比单头的情况，多个头能够分别关注到不同的特征，增强了表达能力。多个头中，会有部分头能够学习到更高级的特征，并减少注意力权重对角线值过大的情况。</p>
-<p>比如部分头关注语法信息，部分头关注知识内容，部分头关注近距离文本，部分头关注远距离文本，这样减少信息缺失，提升模型容量。</p>
-<p>另外虽然多头注意力的整体计算量比单头要大一点，但是并行度也高一些。</p>
-<h1 id="kv-cache为什么能加速推理">4.kv cache为什么能加速推理？</h1>
-<p>对于GPT类模型，使用的是单向注意力，每个位置只能看到自己和前面的内容。</p>
-<p>在进行自回归解码的时候，新生成的token会加入序列，一起作为下一次解码的输入。</p>
-<p>由于单向注意力的存在，新加入的token并不会影响前面序列的计算，因此可以把已经计算过的每层的kv值保存起来，这样就节省了和本次生成无关的计算量。</p>
-<p>通过把kv值存储在速度远快于显存的L2缓存中，可以大大减少kv值的保存和读取，这样就极大加快了模型推理的速度。</p>
-<h1 id="relu有什么优缺点">5.ReLU有什么优缺点？</h1>
-<p>优点：（1）计算快，前向只需要进行max(0,
-x)计算，后向则是直接透传；（2）有激活值的时候，梯度恒定为1，不会爆炸/消失；</p>
-<p>缺点：（1）均值不为0，分布产生偏移（2）输入值小于0时，梯度再也无法回传过来，导致神经元坏死。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>大模型算法题(4)</title>
     <url>/1736008.html</url>
     <content><![CDATA[<p><img src="/images/cover.png"></p>
@@ -1190,6 +1190,326 @@ window attention</a><br>
       </tags>
   </entry>
   <entry>
+    <title>大模型推理加速-投机解码基础</title>
+    <url>/f5c015c.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>大语言模型虽然效果很好，但是推理时，朴素的自回归解码策略需要逐个串行解码，耗时较长，这给用户的耐心带来了很大挑战。如今各家大模型提供商基本都有对外提供大模型的体验平台，而模型的推理效率自然也成了一个重要的竞争点。</p>
+<p>speculative
+decoding，译作投机解码，就是推理加速的一个比较巧妙的方案。本篇将介绍投机解码的基础思路。</p>
+<h1 id="背景">背景</h1>
+<p>2022年11月，Google在《Fast Inference from Transformers via
+Speculative
+Decoding》里提出投机解码的策略；DeepMind稍晚一点，在2023年初的《Accelerating
+Large Language Model Decoding with Speculative
+Sampling》也提出了一样的解码策略。（以这两家的关系，很可能私底下就沟通过这个idea了）Google的论文相比DeepMind的，做了更多的实验和分析，更为详尽一些。</p>
+<p>在speculative
+decoding之前，研究人员已经在模型推理加速这个方向做了不少工作：<br>
+- 模型蒸馏：以Hinton的《Distilling the Knowledge in a Neural
+Network》为代表，以及后面衍生出的各种蒸馏方法（参考《Knowledge
+Distillation: A
+Survey》），可以把规模更大的、性能更强的模型的能力，部分迁移到规模较小的模型上，在效果上相比直接训练小模型有一定的提升。transformer上蒸馏相关的经典工作有《TinyBERT:
+Distilling BERT for Natural Language Understanding》和《DistilBERT, a
+distilled version of BERT: smaller, faster, cheaper and
+lighter》等。<br>
+- 模型量化：如《Quantized Neural Networks: Training Neural Networks with
+Low Precision Weights and Activations》、《LLM.int8(): 8-bit Matrix
+Multiplication for Transformers at Scale》、《Zeroquant: Efficient and
+affordable post-training quantization for large-scale
+transformers》等，把模型参数量化到int8、int4以及更低的精度，在减少空间需求的同时，最大化地保持模型的推理效果。<br>
+- 高效模型结构设计：如使用稀疏层的《Sparse is Enough in Scaling
+Transformers》，减少KV缓存需求的MQA《Fast Transformer Decoding: One
+Write-Head is All You Need》、GQA《《GQA: Training Generalized
+Multi-Query Transformer Models from Multi-Head
+Checkpoints》》以及最近DeepSeek-V2中的MLA等，还有通过进化算法进行高效架构搜索的工作《Primer:
+Searching for Efficient Transformers for Language Modeling》。</p>
+<p>以上这些做法对不同的输入一视同仁，采用一个全局来看有收益的方案来统一处理，达到推理加速的目的。</p>
+<p>相对地，也有一些其他的方案，认为不是每一步推理都适合一样处理：某些推理step需要大模型，而另一些step只需要高效的小模型，从而根据输入，动态地决定模型参与计算的参数，相关工作有：<br>
+- 《Dynamic Neural Networks: A Survey》<br>
+- 《Adaptive Attention Span in Transformers》<br>
+- 《Consistent Accelerated Inference via Confident Adaptive
+Transformers》<br>
+- 《Why should we add early exits to neural networks?》<br>
+- 《Controlling Computation versus Quality for Neural Sequence
+Models》<br>
+- 《The Right Tool for the Job: Matching Model and Instance
+Complexities》<br>
+- 《Depth-Adaptive Transformer》<br>
+- 等</p>
+<p>MoE也属于动态激活的方案之一。</p>
+<p>而《Training compute-optimal large language models》的scaling
+law则指出模型规模没有原先预想的影响那么大，可以通过增加训练数据等方法让小模型逼近大模型的效果。</p>
+<p>以上这些方案虽然可以在一定程度上提升推理效率，但是要么需要重新训练模型，要么对模型的效果有损害。</p>
+<p>也有一些方案在解码的方法上进行优化，比如《Blockwise Parallel Decoding
+for Deep Autoregressive Models》和《Lossless Acceleration for Seq2seq
+Generation with Aggressive Decoding》。</p>
+<p>speculative
+decoding也是一个在解码策略上进行优化的方法。投机解码可以在不用训练原模型的基础上，提升2x-3x的推理速度，并且保证结果和原模型完全一致，没有任何效果损失。</p>
+<h1 id="speculative-decoding算法">speculative decoding算法</h1>
+<p>回想一下，自回归语言模型在训练的时候，在每一个位置，会根据当前及前面所有的token，预测下一个token。由于强制学习的特性，所有token可以一起训练。在某种特别的情况下，模型对当前的输入拟合得特别好，就有可能出现每个token的预测，都完美命中下一个输入token的情况。举个例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">位置：一  二  三  四</span><br><span class="line">输入：我  爱  中  国</span><br><span class="line">输出：爱  中  国  EOS</span><br></pre></td></tr></table></figure>
+<p>而在推理的时候，这种依赖前面所有token的特性，使得自回归模型只能一个一个串行地解码：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">step1：输入“我”，输出“爱”；</span><br><span class="line">step2：输入“我爱”，输出“中”；</span><br><span class="line">step3：输入“我爱中”，输出“国”；</span><br><span class="line">step4：输入“我爱中国”，输出“EOS”；</span><br></pre></td></tr></table></figure>
+<p>现在，假设我们有一个神奇海螺，你只要输入“我”，就会输出“爱 中 国
+EOS”四个token作为草稿，我们就可以拿着这四个draft
+token一起放到原来的模型，跑一下各个位置的输出，进行验证，跟训练时的前向推理一样：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">位置：一  二  三  四</span><br><span class="line">输入：我  爱  中  国</span><br><span class="line">输出：爱  中  国  EOS</span><br></pre></td></tr></table></figure>
+<p>然后就会发现模型的输出和神奇海螺给出的草稿完全一致，那就相当于我们只进行了一次模型推理，就解码了四个token，并且和原模型的效果完全一致。并且一般情况下，模型对一个位置进行预测和对四个位置进行预测的耗时基本没有太大的差异，也就是说在这个例子下，模型解码速度提升到了将近4倍。</p>
+<p>当然，神奇海螺不会总是能够给出和模型一模一样的结果，除非它就是模型本身。因此，在上面这个例子中，输入“我”之后，神奇海螺有可能给出的是“爱
+中 华 EOS”这四个draft
+token。这种情况下，我们把这些token一起输入到模型进行验证</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">位置：一  二  三  四</span><br><span class="line">输入：我  爱  中  华</span><br><span class="line">输出：爱  中  国  EOS</span><br></pre></td></tr></table></figure>
+<p>会发现神奇海螺给出的“爱”和“中”命中了模型的结果，但是“华”没对上。不过这种情况下，跑一次模型推理也能解码出两个token，推理效率依然有提升。</p>
+<p>部分情况下，神奇海螺给出的结果也可能完全跑偏，比如给它输入“我”，它有可能输出“叫
+小
+明”，这就和原模型一个都没对上。但是只要统计上，神奇海螺给出的草稿平均命中token数
+&gt; 0，我们就有机会获得推理加速。</p>
+<p>使用神奇海螺的这个思路其实就是speculative
+decoding的主要思路，而你肯定也已经猜到了，神奇海螺其实就是一个规模比较小的模型，论文中把它称为approximation
+model或者draft model，而我们想要加速的原模型则叫target model。</p>
+<p>论文给出的一个例子如下</p>
+<img src="/f5c015c/fi_example.png" class title="例子">
+<p>绿色的就是approximation model给出并命中target
+model验证结果的token，红色的是错误的token，蓝色则是修正后的token。</p>
+<p>在这个例子中，target模型只推理了9次，就解码出了38个token，推理速度获得了较大提升。</p>
+<p>看完了例子，现在对投机解码算法给出正式的描述。</p>
+<p><span class="math inline">\(M_p\)</span> 是target model， <span class="math inline">\(M_q\)</span> 是approximation
+model，prefix是当前的输入。</p>
+<p>首先 <span class="math inline">\(M_q\)</span> 给出 <span class="math inline">\(\gamma\)</span> 个draft token，然后 <span class="math inline">\(M_p\)</span> 并行地对这 <span class="math inline">\(\gamma\)</span> 个draft
+token进行验证，根据验证结果，按顺序把通过验证的token加入到当前序列中；如果出现被
+<span class="math inline">\(M_p\)</span>
+拒绝的token，这些token则按规则重新抽样。</p>
+<p>Google论文给出的投机解码算法描述如下图。</p>
+<img src="/f5c015c/fi_sd_algo.png" class title="投机解码算法">
+<p>（DeepMind版本的算法描述在下面）</p>
+<p>这里注意，投机解码单次运行能解码的token数量，除了这 <span class="math inline">\(n\)</span> 个被接受的draft token，还有 <span class="math inline">\(M_p\)</span>
+对这些草稿进行验证时顺便推理出来的一个额外token，因此最终可以得到 <span class="math inline">\(n+1\)</span> 个token。因此如果approximation
+model每次给出 <span class="math inline">\(\gamma\)</span> 个draft
+token，理论上最多可以获得 <span class="math inline">\(\gamma+1\)</span>
+新解码token，而最少也能有1个（来自target模型）。</p>
+<p>投机解码的原理大致就是这样，思路还是很巧妙的，但是要实际应用还有几个问题需要解决，比如：<br>
+- 关于投机采样speculative sampling：target model怎么对approximation
+model给出的token进行验证？在一个draft
+token被拒绝之后，怎么重新采样？<br>
+- 怎么选择 <span class="math inline">\(\gamma\)</span> 才合理？<br>
+- 怎么选择approximation model，用什么指标表征approximation
+model的质量？</p>
+<p>另外，DeepMind论文的给出投机解码算法如下，可以对照Google的算法，方便理解。（DeepMind所用的符号有所不同，本篇采用Google论文的符号描述。）</p>
+<img src="/f5c015c/acce_alog.png" class title="DeepMind投机解码算法">
+<p>里面的 <span class="math inline">\((.)_+\)</span> 操作表示 <span class="math inline">\((f(x))_+=\frac{\max(0,f(x))}{\sum_x\max(0,f(x))}\)</span>
+。</p>
+<h1 id="speculative-sampling的正确性">speculative sampling的正确性</h1>
+<p>我们希望投机解码的最终结果，和target
+model自回归解码的结果一致，即完全无损，因此需要对投机采样做一些设计和分析。</p>
+<p>首先，当前在transformer的解码上已经有很多策略，包括但不限于argmax、top-k采样、使用温度等。而大部分操作都是在logits上进行操作，这相当于改变了模型的输出分布。而在最终分布上的采样操作，都是相同的。因此我们可以只在朴素的标准采样上进行分析，而结果可以推广到其他的解码策略上。</p>
+<p>假设 <span class="math inline">\(p(x)\)</span> 是target model <span class="math inline">\(M_p\)</span> 在当前输入下的分布， <span class="math inline">\(q(x)\)</span> 是approximation model <span class="math inline">\(M_q\)</span> 在当前输入下的分布。</p>
+<p>投机解码的做法是，先采样 <span class="math inline">\(x\sim
+q(x)\)</span>，如果 <span class="math inline">\(q(x)\leq
+p(x)\)</span>，就保留 <span class="math inline">\(x\)</span>，否则就以
+<span class="math inline">\(1-\frac{p(x)}{q(x)}\)</span> 的概率拒绝
+<span class="math inline">\(x\)</span>，并在分布 <span class="math inline">\(p&#39;(x)=norm(max(0,p(x)-q(x)))\)</span>
+对被拒绝的 <span class="math inline">\(x\)</span>
+重新采样，并结束当前的投机解码。</p>
+<p>其中 <span class="math inline">\(norm(max(0,p(x)-q(x)))=\frac{\max(0,p(x)-q(x))}{\sum_x\max(0,p(x)-q(x))}\)</span>
+。</p>
+<p>看起来并不复杂。一个问题是，为什么这样从 <span class="math inline">\(q(x)\)</span> 采样之后，我们得到的结果符合分布
+<span class="math inline">\(p(x)\)</span>？即按这样的概率进行拒绝之后，结果和target
+model自己解码一样？</p>
+<p>从公式上来说，approximation model的抽样有 <span class="math inline">\(\tilde{x}\sim q\)</span>。假设 <span class="math inline">\(X\)</span> 是最终结果，我们的目标就是证明 <span class="math inline">\(\mathbb{P}(X=x)=p(x)\)</span>。</p>
+<p>而要使得 <span class="math inline">\(X=x\)</span>，只有 <span class="math inline">\(\tilde{x}=x\)</span> 且 <span class="math inline">\(\tilde{x}\)</span> 被接受，或者在 <span class="math inline">\(\tilde{x}\)</span> 被拒绝之后重新采样到 <span class="math inline">\(\tilde{x}=x\)</span> 两种情况，即有</p>
+<p><span class="math display">\[\mathbb{P}(X=x)\\=\mathbb{P}(\tilde{x}=x)\mathbb{P}(\tilde{x}\textit{
+accepted}|\tilde{x}=x)\\+\mathbb{P}(\tilde{x}\textit{
+rejected})\mathbb{P}(X=x|\tilde{x}\textit{ rejected})\]</span></p>
+<p>对于第一项，有</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\mathbb{P}(\tilde{x}=x)\mathbb{P}(\tilde{x}\text{
+ассерґе}d|\tilde{x}=x)\\=&amp;q(x)\min\left(1,\frac{p(x)}{q(x)}\right)\\=&amp;\min\left(q(x),p(x)\right)
+\end{aligned}
+\]</span></p>
+<p>而第二项里</p>
+<p><span class="math display">\[\begin{gathered}
+\mathbb{P}(\tilde{x}\textit{ rejected})=1-\mathbb{P}(\tilde{x}\textit{
+accepted}) \\
+=1-\sum_{x^{\prime}}\mathbb{P}(X=x^{\prime},\tilde{x}\text{ ассерґе}d)
+\\
+=1-\sum_{x&#39;}\min(q(x&#39;),p(x&#39;)) \\
+=\sum_{x&#39;}\max(0,p(x&#39;)-q(x&#39;)) \\
+\end{gathered}\]</span></p>
+<p>上式第三行到第四行的解释：第三行相当于计算1减区域b的面积，而区域a+区域b的面积和为1，因此第三行相当于区域a的面积，即
+<span class="math inline">\(\sum_{x&#39;}\max(0,p(x&#39;)-q(x&#39;))\)</span>。</p>
+<img src="/f5c015c/formula.png" class title="图解">
+<p>从采样规则，有</p>
+<p><span class="math display">\[\mathbb{P}(X=x|\tilde{x}\text{
+rejected})=\frac{\max(0,p(x)-q(x))}{\sum_x\max(0,p(x)-q(x))}\]</span></p>
+<p>因此</p>
+<p><span class="math display">\[\mathbb{P}(\tilde{x}\text{
+rejected})\mathbb{P}(X=x|\tilde{x}\text{
+rejected})=\max(0,p(x)-q(x))\]</span></p>
+<p>最终有</p>
+<p><span class="math display">\[\mathbb{P}(X=x)\\=\min(q(x),p(x))+\max(0,p(x)-q(x))\\=p(x)\]</span></p>
+<p>因此按照前面设计的规则进行采样，就能保证结果和target
+model自己解码出来的一样。</p>
+<h1 id="approximation-model的评估">approximation model的评估</h1>
+<p>approximation model的一个采样 <span class="math inline">\(x\sim
+q(x)\)</span> 被target model接受的概率为 <span class="math inline">\(\beta\)</span>，我们把这个概率叫acceptance
+rate接受率。</p>
+<p>那么其期望值 <span class="math inline">\(E(\beta)\)</span>
+就是approximation model对target model拟合质量一个很好的评估指标。</p>
+<p><span class="math inline">\(E(\beta)\)</span>
+越大，每个token被接受的概率越大，那么每次投机解码能获得的输出token越多。</p>
+<p>我们令 <span class="math inline">\(\alpha=E(\beta)\)</span>，并且为简化起见，假设
+<span class="math inline">\(\beta\)</span>
+的分布是i.i.d.的，那么跑一次投机解码能够获得的token数量是一个capped
+geometric variable，其期望值如下式</p>
+<p><span class="math display">\[E(\#\textit{ generated
+tokens})=\frac{1-\alpha^{\gamma+1}}{1-\alpha}\]</span></p>
+<p>不同 <span class="math inline">\(\gamma\)</span> 下的图像如下</p>
+<img src="/f5c015c/fi_expected_token_num.png" class title="解码数量期望值">
+<p>而 <span class="math inline">\(\alpha\)</span> 是可以推算的。</p>
+<p>首先定义一个 <span class="math inline">\(M_p\)</span> 和 <span class="math inline">\(M_q\)</span> 之间的divergence <span class="math inline">\(D_{LK}\)</span></p>
+<p><span class="math display">\[\begin{aligned}D_{LK}(p,q)=\sum_x|p(x)-M(x)|=\sum_x|q(x)-M(x)|\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(M(x)=\frac{p(x)+q(x)}2\)</span>。</p>
+<p>而</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\sum_x|p(x)-M(x)|\\=&amp;\sum_x\frac{|p-q|}{2}\\=&amp;1-\sum_x\frac{p+q-|p-q|}2\\=&amp;1-\sum_x\min(p(x),q(x))
+\end{aligned}
+\]</span></p>
+<p>因此有</p>
+<p><span class="math display">\[D_{LK}(p,q)=1-\sum_x\min(p(x),q(x))\]</span></p>
+<p><span class="math inline">\(D_{LK}(p,q)\)</span>越小，则 <span class="math inline">\(M_p\)</span> 和 <span class="math inline">\(M_q\)</span> 越相近。如果 <span class="math inline">\(D_{LK}(p,q)=0\)</span>，说明 <span class="math inline">\(p=q\)</span>；如果 <span class="math inline">\(D_{LK}(p,q)=1\)</span>，说明 <span class="math inline">\(p\)</span> 和 <span class="math inline">\(q\)</span> 两个分布完全没有交叉的部分。</p>
+<p>根据 <span class="math inline">\(\beta\)</span> 的定义，有</p>
+<p><span class="math display">\[
+\begin{aligned}
+\beta=&amp;E_{x\sim q(x)}\begin{cases}1&amp;q(x)\leq
+p(x)\\\frac{p(x)}{q(x)}&amp;q(x)&gt;p(x)\end{cases}\\
+=&amp;E_{x\thicksim q(x)}\min(1,\frac{p(x)}{q(x)})\\
+=&amp;\sum_x\min(p(x),q(x))\\
+=&amp;1-D_{LK}(p,q)
+\end{aligned}
+\]</span></p>
+<p>最终得到</p>
+<p><span class="math display">\[\alpha=E(\beta)=1-E(D_{LK}(p,q))=E(\min(p,q))\]</span></p>
+<p>实验中，不同approximation model和target model之间测得的 <span class="math inline">\(\alpha\)</span> 值如下表所示</p>
+<img src="/f5c015c/fi_alpha.png" class title="各种模型的alpha">
+<h1 id="耗时优化的分析">耗时优化的分析</h1>
+<p>定义cost coefficient <span class="math inline">\(c\)</span>，表示
+<span class="math inline">\(M_q\)</span> 单次推理 和 <span class="math inline">\(M_p\)</span> 单次推理的比值。</p>
+<p>和仅与模型相关的 <span class="math inline">\(\alpha\)</span>
+不同，<span class="math inline">\(c\)</span>
+的具体值会受到硬件、推理框架等影响。在论文的实验中 <span class="math inline">\(c\)</span> 的值大部分小于0.05。</p>
+<p>假设 <span class="math inline">\(M_p\)</span> 每次推理所需的时间为
+<span class="math inline">\(T\)</span>，则一次投机解码所需的时间为 <span class="math inline">\(Tc\gamma+T\)</span>。</p>
+<p>根据前面的推算，投机解码每次能获得的token数为 <span class="math inline">\(E(\#\textit{ generated
+tokens})=\frac{1-\alpha^{\gamma+1}}{1-\alpha}\)</span>
+个，因此每个token所需的时间为 <span class="math inline">\(\frac{(c\gamma+1)(1-\alpha)}{1-\alpha^{\gamma+1}}T\)</span>。综上，使用投机解码在推理时间上的improvement
+factor为</p>
+<p><span class="math display">\[\frac{1-\alpha^{\gamma+1}}{(1-\alpha)(\gamma
+c+1)}\]</span></p>
+<p>只要 <span class="math inline">\(\alpha&gt;c\)</span>，就一定存在能提升解码效率的
+<span class="math inline">\(\gamma\)</span>，并且improvement
+factor至少为 <span class="math inline">\(\frac{1+\alpha}{1+c}\)</span>（<span class="math inline">\(\gamma=1\)</span>时）。</p>
+<h1 id="计算成本的分析">计算成本的分析</h1>
+<p><span class="math inline">\(M_p\)</span> 同时对 <span class="math inline">\(\gamma+1\)</span>
+个token进行验证。如果一个token被接受了，那么推理效率就获得了提升；如果token被拒绝了，那么相关的计算就没有实际收益，就会有计算的“浪费”。</p>
+<p>假设 <span class="math inline">\(\hat{c}\)</span> 是 <span class="math inline">\(M_q\)</span> 和 <span class="math inline">\(M_p\)</span> 计算一个token的arithmetic
+operations的比例，<span class="math inline">\(\hat{T}\)</span> 是 <span class="math inline">\(M_p\)</span> 解码一个token所需的arithmetic
+operations。</p>
+<p>那么一次投机解码的计算量就是 <span class="math inline">\(\hat{T}\hat{c}\gamma+\hat{T}(\gamma+1)\)</span>，这个计算量除以投机解码每次获得的token数
+<span class="math inline">\(\frac{1-\alpha^{\gamma+1}}{1-\alpha}\)</span>
+就得到平均每个token的计算量为 <span class="math inline">\(\hat{T}\frac{(1-\alpha)(\gamma\hat{c}+\gamma+1)}{1-\alpha^{\gamma+1}}\)</span>。</p>
+<p><span class="math inline">\(\alpha\)</span> 越大，<span class="math inline">\(\frac{(1-\alpha)(\gamma\hat{c}+\gamma+1)}{1-\alpha^{\gamma+1}}\)</span>
+这个比值越小，平均计算成本越低。</p>
+<p>另外，使用投机解码减少了KV cache和显存的读写。</p>
+<h1 id="gamma-的选择"><span class="math inline">\(\gamma\)</span>
+的选择</h1>
+<p>给定 <span class="math inline">\(\alpha\)</span> 和 <span class="math inline">\(c\)</span>，最佳的 <span class="math inline">\(\gamma\)</span> 应该最大化walltime improvement
+factor <span class="math inline">\(\frac{1-\alpha^{\gamma+1}}{(1-\alpha)(\gamma
+c+1)}\)</span>。</p>
+<p>下图给出不同 <span class="math inline">\(\alpha\)</span> 和 <span class="math inline">\(c\)</span> 下，最佳的 <span class="math inline">\(\gamma\)</span> 值</p>
+<img src="/f5c015c/fi_choose_gamma.png" class title="gamma的选择">
+<p>推理速度和总计算量之间有tradeoff，即增大 <span class="math inline">\(\gamma\)</span>
+会提升推理速度，同时也会带来更多的计算成本，如下所示</p>
+<img src="/f5c015c/fi_speed_and_op_table.png" class title="计算量和加速">
+<img src="/f5c015c/fi_speed_and_op.png" class title="计算量和加速">
+<img src="/f5c015c/fi_walltime.png" class title="walltime">
+<p>实际上，<span class="math inline">\(\beta\)</span>
+并不是固定的常数，因此实际上我们可以通过在投机解码的过程中预测 <span class="math inline">\(\beta\)</span> 值来选择 <span class="math inline">\(\gamma\)</span>，这是未来的一个改进方向。</p>
+<h1 id="approximation-model的选择">approximation model的选择</h1>
+<p>论文的实验中，一部分使用现成的模型作为approximation
+model。这种情况下，让approximation model的参数规模比target
+model小两个数量级是比较好的选择，能够平衡推理加速和计算量。</p>
+<p>有趣的是，即使使用很简单的模型，比如n-gram模型作为approximation
+model，也能获得不错的 <span class="math inline">\(\alpha\)</span>
+值。</p>
+<p>另外，在一些特殊的任务，比如摘要任务，由于生成结果往往会从输入的原文里摘取内容，因此使用一个会从输入里copy
+token的approximation model可能会得到较高的 <span class="math inline">\(\alpha\)</span> 值。</p>
+<p>approximation model的另一个选择是如《Blockwise parallel decoding for
+deep autoregressive models》使用的非自回归模型。</p>
+<h1 id="实验">实验</h1>
+<p>论文在翻译任务和摘要任务上测试了投机解码的效果。使用了T5的较小规模模型作为approximation
+model，来加速T5-XXL的推理，效果如下表，最高能达到3倍+的推理加速。</p>
+<img src="/f5c015c/fi_t5_result.png" class title="T5系列加速效果">
+<p>此外，论文对更多样的模型组合测试了 <span class="math inline">\(\alpha\)</span> 值，如下表所示</p>
+<img src="/f5c015c/fi_alpha.png" class title="各种模型的alpha">
+<p>可以观察到，比target model小几个数量级的approximation
+model倾向于产生介于0.5和0.9之间的 <span class="math inline">\(\alpha\)</span>
+值。还注意到，对于所有模型，用于采样的分布越尖（即T比较小，如argmax），
+<span class="math inline">\(\alpha\)</span> 值越高。</p>
+<h1 id="小结">小结</h1>
+<ul>
+<li>投机解码可以在完全无损的情况下，把推理速度提升2~3倍<br>
+</li>
+<li>即使使用最简单的n-gram模型，也能在投机解码的策略下获得推理速度提升<br>
+</li>
+<li>正常来说，使用比target model小两个数量级的approximation
+model就有较好的效果</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Fast Inference from Transformers via Speculative Decoding
+https://arxiv.org/abs/2211.17192<br>
+【2】Accelerating Large Language Model Decoding with Speculative
+Sampling https://arxiv.org/abs/2302.01318</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>推理加速</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>大模型算法题(5)</title>
     <url>/336f2f3e.html</url>
     <content><![CDATA[<p><img src="/images/cover.png"></p>
@@ -1247,6 +1567,93 @@ size=b，模型层数为L，计算推理时kv cache所需的空间。</h1>
 <p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
 <a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
 <a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(6)</title>
+    <url>/7c04944d.html</url>
+    <content><![CDATA[<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+<hr>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
+<p>如有错漏，欢迎指正~</p>
+<hr>
+<h1 id="xavier初始化思路是什么是怎么做的">1.Xavier初始化思路是什么，是怎么做的？</h1>
+<p>2010年的《Understanding the difficulty of training deep feedforward
+neural
+networks》提出Xavier初始化，目的是为了保持模型中每一层的输出方差大致相等，这样做的原因主要有：</p>
+<p>（1）避免梯度消失或梯度爆炸：在深度神经网络中，如果层与层之间的输出方差相差很大，就会有很大的值出现，那么在反向传播过程中，梯度可能会变得非常小（梯度消失）或者非常大（梯度爆炸）导致梯度更新缓慢，或者训练过程不稳定。</p>
+<p>（2）保持信号的传播：通过保持每一层的输出方差大致相等，可以确保网络中的信号在前向传播和反向传播时不会因为方差的变化而减弱或增强，从而有助于网络更好地学习和传递信息。</p>
+<p>（3）提高训练的稳定性和效率：当每一层的输出方差保持一致时，训练过程会更加稳定，因为权重更新的magnitude更加可控。这样可以提高训练的效率。</p>
+<p>（4）避免过拟合或欠拟合：适当的方差控制有助于网络在训练过程中保持适当的泛化能力。过大的方差可能导致过拟合，而过小的方差可能导致欠拟合。</p>
+<p>Xavier初始化方法通过考虑前一层的节点数（fan-in）和后一层的节点数（fan-out）来设置初始权重的分布范围。有三种方案：</p>
+<p>（1）只考虑输入，设置参数的方差为1/fan-in</p>
+<p>（2）只考虑输出，设置参数的方差为1/fan-out</p>
+<p>（3）同时考虑输入和输出，设置参数的方差为2/（fan-in +
+fan-out）。实际使用中1/fan-in效果就较好。</p>
+<h1 id="rlhf中reward模型和critic模型的作用分别是什么">2.RLHF中，Reward模型和Critic模型的作用分别是什么？</h1>
+<p>Critic模型主要负责评估当前策略下的行为，并预测未来的回报。在PPO中，Critic模型的输出用于计算优势函数（advantage
+function），这是一个衡量实际回报与预期回报之间差异的指标。优势函数是策略梯度方法中的关键组成部分，它帮助actor模型了解哪些行为比预期要好，哪些行为比预期要差。因此，Critic模型的评分直接影响actor模型的优化过程，指导其调整行为以提高整体性能。</p>
+<p>Reward模型是基于人类反馈训练的，用于评估和打分模型生成的文本或行为的质量。在RLHF中，Reward模型的评分通常被用作奖励信号，直接反馈给Actor模型。这些奖励信号反映了人类对生成内容的偏好和评价标准，Actor模型会根据这些信号调整其行为，以生成更符合人类期望的输出。
+RLHF中，Actor模型的优化目标是最大化期望回报。这个期望回报可以由Critic模型的预测和Reward模型的评分共同决定。具体来说，Actor模型的优化目标（objective）通常包括（1）策略损失：这部分损失来自于策略模型尝试最大化奖励信号（由Reward模型提供）和/或优势函数（由Critic模型提供）。（2）价值损失：在Actor-Critic架构中，Actor模型也负责优化Critic模型，那么价值损失会尝试最小化Critic模型预测的价值与实际回报之间的差异。（3）其他正则化项：可能还包括一些正则化项。</p>
+<p>因此，Critic模型的评分用于计算优势函数，而Reward模型的评分直接作为奖励信号。这两个模型共同作用于Actor模型，帮助其学习如何生成更符合人类偏好和期望的行为。</p>
+<h1 id="kaiming初始化是怎么做的">3.Kaiming初始化是怎么做的？</h1>
+<p>Kaiming初始化在Xavier初始化的基础上做了调整。Xavier初始化的推导是基于线性函数的，但实际上今天所有模型都会大量使用非线性函数，比如ReLU，这样就导致了Xavier初始化的失效。
+Kaiming初始化针对使用ReLU的模型提出。因为ReLU会抛弃掉小于0的值，对于一个均值为0的输入数据，这就相当于砍掉了一半的值，这样输出的方差和均值就变了。因此把Xavier初始化中使用的方差sqrt(1/N)改为sqrt(2/N)，这样数据不会因为ReLU而变得越来越小。</p>
+<h1 id="使用bert中的cls作为输出进行分类和相似度计算可能会有什么问题">4.使用Bert中的[CLS]作为输出进行分类和相似度计算，可能会有什么问题？</h1>
+<p>self-attention中，每个token都天然倾向于关注自己和附近的token，而对更远的内容分配较少的注意力。在Bert中，[CLS]一般是第一个token，放在最前面。这就导致[CLS]更容易关注到靠近它的输入，也就是文本的靠前部分。如果文本较长，且关键内容出现在靠后的位置，就有可能出现[CLS]中关注不够的情况，而导致效果下降。可以通过强制注意力分配，或者使用所有位置的输出而不单是[CLS]token的方法来缓解这个问题。</p>
+<h1 id="pytorch中的register_buffer是什么有什么用">5.pytorch中的register_buffer是什么，有什么用？</h1>
+<p>register_buffer是nn.Module类中的一个方法，它用于注册一个不需要梯度的缓冲区。一般会把模型中需要持续使用或者跟踪，但是不需要通过梯度来更新的参数使用register_buffer注册。使用register_buffer注册的参数可以和其他训练的参数一样，保存在state_dict中，比如旋转位置编码的旋转矩阵，batchnorm中的全局均值和方差，一般都会用register_buffer注册。如果不使用register_buffer注册，普通的常量或者参数保存的时候不会被state_dict跟踪到。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
 <a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
 <a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
 <a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
