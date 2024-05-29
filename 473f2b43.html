@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  要对齐大模型偏好并不容易，从预训练的数据内容、模型的结构到SFT数据配比甚至数据格式等都会影响最终结果。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大模型偏好对齐-DPO">
+<meta property="og:url" content="https://saicat.github.io/473f2b43.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  要对齐大模型偏好并不容易，从预训练的数据内容、模型的结构到SFT数据配比甚至数据格式等都会影响最终结果。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/473f2b43/intro.png">
+<meta property="og:image" content="https://saicat.github.io/473f2b43/dpo_loss_code.png">
+<meta property="og:image" content="https://saicat.github.io/473f2b43/gradient.png">
+<meta property="og:image" content="https://saicat.github.io/473f2b43/result_1.png">
+<meta property="og:image" content="https://saicat.github.io/473f2b43/result_2.png">
+<meta property="og:image" content="https://saicat.github.io/473f2b43/result_3.png">
+<meta property="og:image" content="https://saicat.github.io/473f2b43/result_4.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-05-26T14:01:48.000Z">
+<meta property="article:modified_time" content="2024-05-29T12:33:13.225Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="强化学习">
+<meta property="article:tag" content="微调">
+<meta property="article:tag" content="SFT">
+<meta property="article:tag" content="偏好对齐">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/473f2b43/intro.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/473f2b43.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/473f2b43.html","path":"473f2b43.html","title":"大模型偏好对齐-DPO"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>大模型偏好对齐-DPO | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%B9%E9%BD%90"><span class="nav-number">1.</span> <span class="nav-text">对齐</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#rlhf"><span class="nav-number">2.</span> <span class="nav-text">RLHF</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#direct-preference-optimization"><span class="nav-number">3.</span> <span class="nav-text">Direct Preference
+Optimization</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#dpo%E4%BC%98%E5%8C%96%E7%9B%AE%E6%A0%87%E7%9A%84%E6%8E%A8%E5%AF%BC"><span class="nav-number">3.1.</span> <span class="nav-text">DPO优化目标的推导</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%90%86%E8%A7%A3dpo%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0"><span class="nav-number">3.2.</span> <span class="nav-text">理解DPO损失函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dpo%E6%B5%81%E7%A8%8B"><span class="nav-number">3.3.</span> <span class="nav-text">DPO流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#your-language-model-is-secretly-a-reward-model"><span class="nav-number">3.4.</span> <span class="nav-text">Your Language
+Model Is Secretly a Reward Model</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">3.5.</span> <span class="nav-text">实验</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">19</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/473f2b43.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="大模型偏好对齐-DPO | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          大模型偏好对齐-DPO
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-05-26 22:01:48" itemprop="dateCreated datePublished" datetime="2024-05-26T22:01:48+08:00">2024-05-26</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-05-29 20:33:13" itemprop="dateModified" datetime="2024-05-29T20:33:13+08:00">2024-05-29</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>13k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>24 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>要对齐大模型偏好并不容易，从预训练的数据内容、模型的结构到SFT数据配比甚至数据格式等都会影响最终结果。</p>
+<p>按ChatGPT的技术路线，用SFT+RLHF
+PPO强化学习确实可以获得一定的提升，但是PPO比较复杂，训练过程不稳定，对微调后的模型、PPO的超参、reward模型的质量等都很敏感，且数据收集和训练的成本都较高，跑通大规模PPO有一定的成本门槛，因此PPO并没有被很广泛地应用。</p>
+<p>而DPO，Direct Preference
+Optimization，就是PPO的一个简化替代方案。DPO不需要训练reward模型，把PPO的两阶段训练变成一阶段训练，让模型可以直接从偏好数据里学习。</p>
+<p>DPO公式有点多，但是并不算太复杂，一步一步理解即可。</p>
+<h1 id="对齐">对齐</h1>
+<p>大模型在预训练中学到很多知识和技能，但是并不是所有知识和技能都是我们想要的。</p>
+<p>比如有一个常见的错误知识，有超过80%的人会有这样的错误认知，那么这个错误知识在预训练数据里也会经常出现。虽然数据集里也会有关于这个知识的正确认知，但是比例相对会比较低。</p>
+<p>如果让模型直接用在预训练中学到的知识进行回答，那么模型就有可能给出错误的知识。</p>
+<p>这不是我们所希望的。因此需要通过一些方法，让模型给出的结果能对齐人类的偏好，比如最基础的偏好，正确性。</p>
+<p>从模型非常广泛的知识和技能中选出我们所需的response和action是构建安全、高效、可控的AI系统的关键。</p>
+<p>SFT是最直接的偏好学习方法，而RLHF/RLAIF是上限更高的偏好对齐方案。但RLHF比较复杂，训练不稳定，成本也高。</p>
+<p>而DPO的优化目标和RLHF一样，但是实现更简单。</p>
+<h1 id="rlhf">RLHF</h1>
+<p>先回顾下RLHF的三个阶段。</p>
+<ol type="1">
+<li>SFT Phase</li>
+</ol>
+<p>基于预训练模型，在高质量的下游任务数据上训练，获得 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span>。</p>
+<ol start="2" type="1">
+<li>Reward Modelling Phase</li>
+</ol>
+<p>首先给定prompt <span class="math inline">\(x\)</span>，生成两个答案
+<span class="math inline">\((y_1,y_2)\sim\pi^\text{SFT}(y|x)\)</span>，并通过人工标注对比
+<span class="math inline">\(y_1,y_2\)</span>，获得偏好结果(preference)
+<span class="math inline">\(y_w\succ y_l\mid
+x\)</span>，其中w和l表示win和lose。</p>
+<p>假设在这些偏好结果中，有一个我们无法直接访问的latent reward model
+<span class="math inline">\(r^*(y,x)\)</span>，对每对 <span class="math inline">\((x,y)\)</span> 进行打分，这个 <span class="math inline">\(r^*(y,x)\)</span> 就是RLHF里reward
+model的拟合目标。</p>
+<p>基于 <span class="math inline">\(r^*(y,x)\)</span>，有很多方法对preference进行建模，Bradley-Terry
+model就是一个常用的选择。（当然在多个ranked
+answers的情况下，可以使用Plackett-Luce ranking models）</p>
+<p>基于Bradley-Terry model，人类偏好的分布 <span class="math inline">\(p^{*}\)</span> 写作</p>
+<p><span class="math display">\[\begin{aligned}p^*(y_1\succ y_2\mid
+x)=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\end{aligned}\]</span></p>
+<p>看起来不复杂，就是把两个答案的reward通过softmax归一化成概率。</p>
+<p>假设我们从 <span class="math inline">\(p^{*}\)</span>
+采样到一个静态的偏好对比数据集 <span class="math inline">\(\mathcal{D}=\left\{x^{(i)},y_w^{(i)},y_l^{(i)}\right\}_{i=1}^N\)</span>
+，那我们就可以用基于 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span> 初始化得到的reward模型
+<span class="math inline">\(r_\phi(x,y)\)</span>，通过maximum
+likelihood来拟合 <span class="math inline">\(r^*(y,x)\)</span>。将这个问题表述为二元分类问题，我们就得到negative
+log-likelihood loss：</p>
+<p><span class="math display">\[\mathcal{L}_R(r_\phi,\mathcal{D})=-\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\begin{bmatrix}\log\sigma(r_\phi(x,y_w)-r_\phi(x,y_l))\end{bmatrix}\]</span></p>
+<p>为了确保reward
+function有较低的方差，一般会对reward进行归一化，使得对于所有的 <span class="math inline">\(x\)</span>，有 <span class="math inline">\(\mathbb{E}_{x,y\thicksim\mathcal{D}}\left[r_\phi(x,y)\right]=0\)</span>。</p>
+<ol start="3" type="1">
+<li>RL Fine-Tuning Phase</li>
+</ol>
+<p>在强化学习阶段，我们用上一步中得到的reward给目标模型提供反馈，优化如下目标</p>
+<p><span class="math display">\[\max_{\pi_\theta}\mathbb{E}_{x\sim\mathcal{D},y\sim\pi_\theta(y|x)}\begin{bmatrix}r_\phi(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathrm{KL}}\begin{bmatrix}\pi_\theta(y\mid
+x)\mid\mid\pi_{\mathrm{ref}}(y\mid x)\end{bmatrix}\]</span></p>
+<p>上式中第一项是reward模型对目标模型（即RLHF中的actor
+model）给出的答案的reward打分，这一项是越高越好。</p>
+<p>而第二项是目标模型和参考模型之间的KL散度，用来限制经过训练后的目标模型，不要偏离参考模型（即
+<span class="math inline">\(\pi^{\mathrm{SFT}}\)</span>）太多。这样可以保证reward模型能在经过充分训练的区间工作，同时避免目标模型因过分向高reward分数优化而出现mode-collapse，失去回复的多样性。<span class="math inline">\(\beta\)</span> 用来控制这个限制项的比重。</p>
+<p>由于语言生成是离散的，因此上面这个优化目标是不可导的，需要通过RL优化。</p>
+<p>标准的RL把reward fucntion构建成</p>
+<p><span class="math display">\[r(x,y)=r_\phi(x,y)-\beta(\log\pi_\theta(y\mid
+x)-\log\pi_\text{ref}(y\mid x))\]</span></p>
+<p>并通过PPO优化。</p>
+<h1 id="direct-preference-optimization">Direct Preference
+Optimization</h1>
+<p>DPO的目标是推导出一种简单的方法，直接使用偏好来进行policy
+optimization，而省去训练reward模型的训练。</p>
+<img src="/473f2b43/intro.png" class title="DPO">
+<h2 id="dpo优化目标的推导">DPO优化目标的推导</h2>
+<p>首先，DPO起始的优化目标和RL是相同的：对于任意的reward function <span class="math inline">\(r(x,y)\)</span>，reference model <span class="math inline">\(\pi_{\mathrm{ref}}\)</span></p>
+<p><span class="math display">\[\max_\pi\mathbb{E}_{x\thicksim\mathcal{D},y\thicksim\pi}\begin{bmatrix}r(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathrm{KL}}\begin{bmatrix}\pi(y|x)||\pi_{\mathrm{ref}}(y|x)\end{bmatrix}\]</span></p>
+<p>由KL散度的定义，把上式中的第二项展开</p>
+<p><span class="math display">\[\beta\mathbb{D}_{\mathrm{KL}}(\pi\|\pi_{\mathrm{ref}})=\beta\sum_y\pi(y|x)\log\frac{\pi(y|x)}{\pi_{\mathrm{ref}}(y|x)}\]</span></p>
+<p>这里的条件概率求和其实就是期望值，因此有</p>
+<p><span class="math display">\[\max_\pi\mathbb{E}_{x\thicksim\mathcal{D},y\thicksim\pi}\begin{bmatrix}r(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathbf{KL}}\begin{bmatrix}\pi(y|x)&amp;\mid\mid\pi_{\mathrm{ref}}(y|x)\end{bmatrix}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\max_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[r(x,y)-\beta\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}\right]\end{aligned}\]</span></p>
+<p>然后我们把最大化问题转化成最小化问题</p>
+<p><span class="math display">\[\begin{aligned}\max_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[r(x,y)-\beta\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}-\frac{1}{\beta}r(x,y)\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)\exp{\left(\frac{1}{\beta}r(x,y)\right)}}\right]\end{aligned}\]</span></p>
+<p>在这里我们用配分函数，归一一下分母。令</p>
+<p><span class="math display">\[Z(x)=\sum_y\pi_\text{ref}(y|x)\exp\left(\frac1\beta
+r(x,y)\right)\]</span></p>
+<p>那我们就得到了一个新的有效的概率分布</p>
+<p><span class="math display">\[\begin{aligned}\pi^*(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p>那么就有</p>
+<p><span class="math display">\[\begin{aligned}\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)\exp{\left(\frac{1}{\beta}r(x,y)\right)}}\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}-\log
+Z(x)\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}-\log
+Z(x)\right]\end{aligned}\]</span></p>
+<p>由于 <span class="math inline">\(Z(x)\)</span> 不是 <span class="math inline">\(y\)</span> 的函数，我们可以把它拿出来</p>
+<p><span class="math display">\[\begin{aligned}\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}-\log
+Z(x)\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[=\min_\pi\mathbb{E}_{x\thicksim\mathcal{D}}\left[\mathbb{E}_{y\thicksim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}\right]-\log
+Z(x)\right]\]</span></p>
+<p><span class="math display">\[=\min_\pi\mathbb{E}_{x\thicksim\mathcal{D}}\left[\mathbb{D}_{\text{KL}}(\pi(y|x)\mid\mid\pi^*(y|x))-\log
+Z(x)\right]\]</span></p>
+<p><span class="math inline">\(Z(x)\)</span> 和 <span class="math inline">\(\pi\)</span>
+无关，因此最小化这个式子只要最小化第一项KL散度。而当且仅当两个分布完全相同的时候，KL散度取得最小值0，因此有</p>
+<p><span class="math display">\[\begin{aligned}\pi(y|x)=\pi^*(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p>虽然得到了显示解，但是这里的 <span class="math inline">\(Z(x)\)</span>
+没法求解，因为排列组合数太多，我们不可能去遍历。</p>
+<p>继续对这个式子做一些变换</p>
+<p><span class="math display">\[\begin{aligned}\pi_r(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}
+\log Z(x)+\log \pi_r(y|x)=\log \pi_{\text{ref}}(y|x)
++\frac{1}{\beta}r(x,y)
+\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
+x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
+<p>这里我们开始用上Bradley-Terry model了。前面我们提到了Bradley-Terry
+model是如下形式</p>
+<p><span class="math display">\[\begin{aligned}p^*(y_1\succ y_2\mid
+x)=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\end{aligned}\]</span></p>
+<p>在这个基础上做一点变换</p>
+<p><span class="math display">\[\begin{aligned}
+p^*(y_1\succ y_2\mid
+x)&amp;=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\\
+&amp;=\frac1{1+\frac{\exp(r^*(x,y_2))}{\exp(r^*(x,y_1))}}\\
+&amp;=\frac1{1+\exp(r^*(x,y_2)-r^*(x,y_1))}
+\end{aligned}\]</span></p>
+<p>然后我们把 <span class="math inline">\(r\)</span>
+代入进去，就得到</p>
+<p><span class="math display">\[p^*(y_1\succ y_2\mid
+x)=\frac{1}{1+\exp\left(\beta\log\frac{\pi^*(y_2|x)}{\pi_{\text{ref}}(y_2|x)}-\beta\log\frac{\pi^*(y_1|x)}{\pi_{\text{ref}}(y_1|x)}\right)}\]</span></p>
+<p>到这里，我们就有了关于optimal
+policy的人类偏好数据的概率，而无需经过reward模型。我们可以用MLE直接在这个概率模型上优化目标模型</p>
+<p><span class="math display">\[\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})=-\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\log\sigma\left(\beta\log\frac{\pi_\theta(y_w\mid
+x)}{\pi_{\text{ref}}(y_w\mid x)}-\beta\log\frac{\pi_\theta(y_l\mid
+x)}{\pi_{\text{ref}}(y_l\mid x)}\right)\right]\]</span></p>
+<p>DPO loss的实现如下</p>
+<img src="/473f2b43/dpo_loss_code.png" class title="DPO实现">
+<h2 id="理解dpo损失函数">理解DPO损失函数</h2>
+<p>首先我们了解一下DPO的loss在做什么，对DPO的损失函数求个导。</p>
+<p>方便起见，令</p>
+<p><span class="math display">\[u=\beta\log\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}-\beta\log\frac{\pi_{\theta}(y|x)}{\pi_{\mathrm{ref}}(y_{l}|x)}\]</span></p>
+<p>那么原损失函数可以写成</p>
+<p><span class="math display">\[L_{DPO}(\pi_{\theta};\pi_{\mathrm{ref}})=-\min_{\pi_{0}}E_{(x,y_{u},y_{t})\sim
+D}[\log\sigma(u)]\]</span></p>
+<p>对sigmoid求导，有</p>
+<p><span class="math display">\[\frac\partial{\partial
+u}\log\sigma(u)=\frac1{\sigma(u)}\cdot\sigma(u)(1-\sigma(u))=1-\sigma(u)\]</span></p>
+<p>由sigmoid函数性质，有</p>
+<p><span class="math display">\[1-\sigma(u)=\sigma(-u)\]</span></p>
+<p>对 <span class="math inline">\(u\)</span> 求导</p>
+<p><span class="math display">\[\frac{\partial
+u}{\partial\theta}=\beta\left(\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_w|x)}{\pi_{\mathrm{ref}}(y_w|x)}-\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)}\right)\]</span></p>
+<p>第一项对数求导，由于 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 不依赖 <span class="math inline">\(\theta\)</span>，可以视作常数，因此有</p>
+<p><span class="math display">\[\begin{aligned}
+\frac\partial{\partial\theta}\log\frac{\pi_\theta(y_w|x)}{\pi_\mathrm{ref}(y_w|x)}=&amp;\frac{1}{\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}}\cdot\frac{\partial}{\partial\theta}\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}\\
+=&amp;\frac{1}{\pi_{\theta}(y_{w}|x)}\cdot\frac{\partial}{\partial\theta}\pi_{\theta}(y_{w}|x)\\
+=&amp;\begin{aligned}\nabla_\theta\log\pi(y_w\mid x)\end{aligned}
+\end{aligned}\]</span></p>
+<p>类似地，第二项求导</p>
+<p><span class="math display">\[\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)}=\nabla_\theta\log\pi(y_l\mid
+x)\]</span></p>
+<p>因此，DPO损失的导数是</p>
+<p><span class="math display">\[\begin{aligned}
+&amp;\nabla_\theta\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})\\&amp;=-\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\beta\sigma\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)}-\beta\log\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)\left[\nabla_\theta\log\pi(y_w\mid
+x)–\nabla_\theta\log\pi(y_l\mid x)\right]\right]
+\end{aligned}\]</span></p>
+<p>再令</p>
+<p><span class="math display">\[\hat{r}_\theta(x,y)=\beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}\]</span></p>
+<p>那么DPO损失的梯度可以写作</p>
+<p><span class="math display">\[\begin{aligned}
+&amp;\nabla_\theta\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})\\&amp;=-\beta\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\sigma\left(\hat{r}_\theta(x,y_l)-\hat{r}_\theta(x,y_w)\right)\left[\nabla_\theta\log\pi(y_w\mid
+x)–\nabla_\theta\log\pi(y_l\mid x)\right]\right]
+\end{aligned}\]</span></p>
+<p>梯度各项的意义如下</p>
+<img src="/473f2b43/gradient.png" class title="DPO梯度">
+<p><span class="math inline">\(\hat{r}_\theta(x,y)\)</span> 相当于 <span class="math inline">\(\pi_{\theta}\)</span> 和 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span>
+共同确定的隐式reward。</p>
+<h2 id="dpo流程">DPO流程</h2>
+<p>DPO的一般流程是：<br>
+- 对于每个prompt <span class="math inline">\(x\)</span>，采样 <span class="math inline">\(y_1,y_2\sim\pi_{\text{ref}}(\cdot\mid
+x)\)</span>，然后进行人工标注构建偏好数据集 <span class="math inline">\(\mathcal{D}=\{x^{(i)},y_w^{(i)},y_l)^{(i)}\}_{i=1}^N\)</span><br>
+- 基于 <span class="math inline">\(\mathcal{L}_{\mathrm{DPO}}\)</span>，在已有的
+<span class="math inline">\(\pi_{\mathrm{ref}}\)</span>、<span class="math inline">\(\mathcal{D}\)</span> 和 <span class="math inline">\(\beta\)</span> 上优化 $$</p>
+<p>但是收集偏好数据的成本还是比较高的，因此实际使用中，人们更愿意使用开源的偏好数据集。</p>
+<p>当我们的偏好数据是来自 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span> 的时候，我们直接让
+<span class="math inline">\(\pi_{\mathrm{ref}}=\pi^{\mathrm{SFT}}\)</span>。如果我们使用开源偏好数据集的话，就可能没法直接使用生成这些数据的模型，这时可以用偏好数据集里
+<span class="math inline">\((x,y_w)\)</span> 数据对 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 进行微调，即</p>
+<p><span class="math display">\[\pi_{\text{ref}}=\arg\max_\pi\mathbb{E}_{x,y_w\thicksim\mathcal{D}}\left[\log\pi(y_w\mid
+x)\right]\]</span></p>
+<p>这个微调步骤有助于缓解 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 和真实 reference
+distribution 之间的distribution shift。</p>
+<h2 id="your-language-model-is-secretly-a-reward-model">Your Language
+Model Is Secretly a Reward Model</h2>
+<p>在前面推导DPO的loss函数的时候，我们把reward的公式显示表达成</p>
+<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
+x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
+<p>但是这里 <span class="math inline">\(Z(x)\)</span>
+的组合空间太大，实际上没法求解。</p>
+<p>好在"在Plackett-Luce/Bradley-Terry模型框架下，同一等价类中的两个reward
+function有相同的preference distribution"</p>
+<blockquote>
+<p>Under the Plackett-Luce preference framework, and in particular the
+BradleyTerry framework, two reward functions from the same equivalence
+class induce the same preference distribution</p>
+</blockquote>
+<p>如果两个reward function <span class="math inline">\(r(x,y)\)</span>
+和 <span class="math inline">\(r^{\prime}(x,y)\)</span> 可以写成</p>
+<p><span class="math display">\[r&#39;(x,y)=r(x,y)+f(x)\]</span></p>
+<p>即表示这两个reward function来自同一等价类(equivalence class)。</p>
+<p>对于prompt <span class="math inline">\(x\)</span> 和 answer <span class="math inline">\(y_1,\ldots,y_K\)</span>，以及对应的ranking <span class="math inline">\(\tau\)</span>，在Plackett-Luce
+framework（Bradley–Terry也是其中一个特例）下的证明如下</p>
+<p><span class="math display">\[\begin{aligned}
+p_{r&#39;}(\tau|y_1,\ldots,y_K,x)&amp;
+=\prod_{k=1}^K\frac{\exp(r&#39;(x,y_{\tau(k)}))}{\sum_{j=k}^K\exp(r&#39;(x,y_{\tau(j)}))}  \\
+&amp;=\prod_{k=1}^K\frac{\exp(r(x,y_{\tau(k)})+f(x))}{\sum_{j=k}^K\exp(r(x,y_{\tau(j)})+f(x))}
+\\
+&amp;=\prod_{k=1}^K\frac{\exp(f(x))\exp(r(x,y_{\tau(k)}))}{\exp(f(x))\sum_{j=k}^K\exp(r(x,y_{\tau(j)}))}
+\\
+&amp;=\prod_{k=1}^K\frac{\exp(r(x,y_{\tau(k)}))}{\sum_{j=k}^K\exp(r(x,y_{\tau(j)}))}
+\\
+&amp;=p_r(\tau|y_1,\ldots,y_K,x)
+\end{aligned}\]</span></p>
+<p>基于此，我们可以把上面的 <span class="math inline">\(\beta\log
+Z(x)\)</span> 项忽略掉，也就是说下面两个reward
+function是具有相同的preference distribution的</p>
+<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
+x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
+<p><span class="math display">\[\hat{r}_\theta(x,y)=\beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}\]</span></p>
+<p>更进一步地，两个来自同一等价类的reward
+function在相同的RL问题下会导向相同的optimal policy。</p>
+<p>在推导DPO的loss的部分中，我们得到了optimal policy的显式解</p>
+<p><span class="math display">\[\begin{aligned}\pi(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p>这里证明一下两个reward function可以导向相同的optimal
+policy。假设<span class="math inline">\(r&#39;(x,y)=r(x,y)+f(x)\)</span>，<span class="math inline">\(\pi_r\)</span> 和 <span class="math inline">\(\pi_{r&#39;}\)</span> 分别是它们对应的optimal
+policy，有</p>
+<p><span class="math display">\[\begin{aligned}
+\pi_{r^{\prime}}(y|x)&amp;
+\begin{aligned}&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r&#39;(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r&#39;(x,y)\right)\end{aligned}  \\
+&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}(r(x,y)+f(x))\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}(r(x,y)+f(x))\right)
+\\
+&amp;\begin{aligned}=\frac{1}{\exp\left(\frac{1}{\beta}f(x)\right)\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\exp\left(\frac{1}{\beta}f(x)\right)\end{aligned}
+\\
+&amp;\begin{aligned}&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}
+\\
+&amp;=\pi_r(y|x)
+\end{aligned}\]</span></p>
+<p>那么，与Plackett-Luce（特别是Bradley-Terry）模型一致的所有reward类别，都可以被某个模型
+<span class="math inline">\(\pi(y\mid x)\)</span> 和 一个给定的reference
+model <span class="math inline">\(\pi_{ref}(y\mid x)\)</span>
+所表示：</p>
+<p><span class="math display">\[r(x,y)=\beta\log\frac{\pi(y|x)}{\pi_{ref}(y|x)}\]</span></p>
+<p>也就是我们的语言模型都天然具有reward model的功能。</p>
+<h2 id="实验">实验</h2>
+<p>实际训练中，论文中所使用的超参和设置：<br>
+- <span class="math inline">\(\beta=0.1\)</span>（对于TL;DR
+summarization，设为0.5）<br>
+- batch size = 64<br>
+- RMSprop optimizer<br>
+- learning rate = 1e-6<br>
+- linearly warmup 0 to 1e-6 over 150 steps</p>
+<p>论文在对话、摘要等任务进行的效果评测，主要对比了PPO、SFT和DPO的效果。</p>
+<p>DPO即使在没有精细调参的情况下，也有比价好的效果</p>
+<img src="/473f2b43/result_1.png" class title="对比1">
+<img src="/473f2b43/result_2.png" class title="对比2">
+<img src="/473f2b43/result_3.png" class title="对比3">
+<img src="/473f2b43/result_4.png" class title="对比4">
+<h1 id="小结">小结</h1>
+<ul>
+<li>DPO在RLHF
+PPO相同的优化问题下，推导出了新的优化形式，省去了reward模型的部分，从而可以直接用偏好数据优化模型<br>
+</li>
+<li>DPO在效果和效率上相比PPO都有优势</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Direct Preference Optimization: Your Language Model is Secretly
+a Reward Model https://arxiv.org/abs/2305.18290v2</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/473f2b43.html" title="大模型偏好对齐-DPO">https://saicat.github.io/473f2b43.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0/" rel="tag"><i class="fa fa-tag"></i> 强化学习</a>
+              <a href="/tags/%E5%BE%AE%E8%B0%83/" rel="tag"><i class="fa fa-tag"></i> 微调</a>
+              <a href="/tags/SFT/" rel="tag"><i class="fa fa-tag"></i> SFT</a>
+              <a href="/tags/%E5%81%8F%E5%A5%BD%E5%AF%B9%E9%BD%90/" rel="tag"><i class="fa fa-tag"></i> 偏好对齐</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/7c04944d.html" rel="prev" title="大模型算法题(6)">
+                  <i class="fa fa-angle-left"></i> 大模型算法题(6)
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">185k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">5:36</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
