@@ -2437,6 +2437,389 @@ window attention</a></p>
       </tags>
   </entry>
   <entry>
+    <title>理解Attention:从起源到MHA,MQA和GQA</title>
+    <url>/3dc22f96.html</url>
+    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
+<p>Attention模块是现在几乎所有大模型的核心模块，因此也有很多工作致力于提升注意力计算的性能和效果。其中MHA（Multi-Head
+Attention）、MQA（Multi-Query Attention）和GQA（Grouped-Query
+Attention）这一路线的思路和做法被很多主流模型所采用，因此简单地梳理一些这几个变体的思路和做法，以及会涉及到的KV
+Cache相关内容。思路比较直白，但也有一些细节和原理值得思考。</p>
+<p>当然针对Attention优化，也有很多其他优秀的方案和思路，如线性注意力、FlashAttention和Sliding
+Window Attention等，这些在后续再开篇梳理。</p>
+<p>（应一些朋友的要求，会增加一些直观基础的内容，以及LLM应用的案例。也欢迎大家提出更多建议。）</p>
+<h1 id="关于attention从rnn到attention">关于Attention：从RNN到Attention</h1>
+<p>了解一个概念的诞生和演进，有助于我们更深入去理解它。我们先简单回顾下attention从起源到最初的实现。</p>
+<p>（熟悉attention的朋友可以跳过这一节）</p>
+<h2 id="从rnn说起">从RNN说起</h2>
+<blockquote>
+<p>Memory is attention through time. ~ Alex Graves 2020</p>
+</blockquote>
+<p>注意力机制最初起源是为了解决序列问题。回想在还没有Transformer的上一世代，使用RNN的Seq2Seq是这样的</p>
+<img src="/3dc22f96/seq2seq.png" class title="seq2seq">
+<img src="/3dc22f96/encoder.png" class title="encoder">
+<img src="/3dc22f96/decoder.png" class title="decoder">
+<p>（图来自<a href="https://theaisummer.com/attention/">AI
+Summer</a>）</p>
+<p>每个RNN cell接收两个输入，输出一个hidden state。比如在翻译任务中，RNN
+encoder把所有输入迭代地编码成context向量 <span class="math inline">\(z\)</span> ，然后由RNN decoder基于 <span class="math inline">\(z\)</span>
+迭代地解码。一般来说，这里decoder的第一个输入是一个特殊token，如[start]，表示解码开始。</p>
+<p>这样会有一个问题， <span class="math inline">\(z\)</span>
+能编码的长度显然有限，而且由于模型结构问题，会更加关注靠近尾部的输入。这样如果关键信息出现在开头，就容易被忽略。</p>
+<p>并且时间步骤上的传播由于有多次迭代相乘，梯度很容易就过小，导致梯度消失问题。</p>
+<p>当然我们有LSMT和GRU等变体来增强长距离记忆的能力，也缓解了梯度问题，但这些方案还是没有产生质变的能力。</p>
+<p>回到问题的核心，我们想要 <span class="math inline">\(z\)</span>
+能够编码所有前面的内容，但是显然， <span class="math inline">\(z\)</span>
+的生成方式天然会让它更容易注意到靠后的内容，而容易忽略靠前的输入。</p>
+<p>一个直觉的想法就是，我们需要想个办法跳过 <span class="math inline">\(z\)</span>
+，和前面的每个输入建立直接的联系。我们希望模型能够有机会学习到去“注意”关键的输入，不管这个输入是在前面还是后面。</p>
+<p>实际上神经网络天生就具有“注意力”的天赋。</p>
+<p>比如在CNN分类中，如果我们画出分类层前的heatmap，会是如下图这个样子</p>
+<img src="/3dc22f96/cnn_heatmap.png" class title="heatmap">
+<p>可以看到，值比较高的地方是在猫的鼻子胡子嘴巴区域，次之是身上和头上的花纹。直观来说，就是模型主要通过脸部的特征和身上的花纹，来识别出这是一只猫。这就是CNN学习到的注意力，这样的特征是神经网络implicitly学到的。</p>
+<p>回归到Seq2Seq，我们怎么来实现注意力，并且让这种implicit的机制变得explicit：单独抽离出来并具备一定可控制性？</p>
+<p>回想翻译场景，在RNN中，每一个时间步骤 <span class="math inline">\(i\)</span> 都会产生一个隐向量，<span class="math inline">\(h_i\)</span> 向量，我们把这些 <span class="math inline">\(h_i\)</span>
+保存起来，在最后要生成新的输出的时候，我们让模型回头看一下之前的这每一个
+<span class="math inline">\(h_i\)</span>
+，再决定要生成什么内容。相比原来只利用最后一个hidden
+state，现在我们可以访问之前所有的中间状态，如果发现前面有关键信息，就可以直接用上了，而不用担心输入太长而被覆盖了。</p>
+<p>那么问题又来了，我们怎么知道前面某一个中间状态对于当前的生成来说是否重要？如果我们不知道怎么定义是否重要，那我们就把这个问题交给模型自己解决好了
+--
+通过网络参数来学习识别某个输入状态是否重要，学习是否要“注意”到它，要给予多少的“注意力”。</p>
+<p>具体来说，我们定义在解码第 <span class="math inline">\(i\)</span>
+个输出是，decoder当前隐状态 <span class="math inline">\(y_{i-1}\)</span>
+和encoder的所有隐状态 <span class="math inline">\(\mathbf{h}\)</span>
+之间的一个score计算</p>
+<p><span class="math display">\[\mathbf{e}_i=\text{attention}_{\mathrm{net}}\left(y_{i-1},\mathbf{h}\right)\in
+R^n\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[e_{ij}=\text{attentiom}_{\text{net
+}(\mathbf{y}_{i-1},h_j)}\]</span></p>
+<p>注意力网络通过 <span class="math inline">\(\mathbf{y}_{i-1}\)</span>
+和 <span class="math inline">\(h_j\)</span> 来计算一个值 <span class="math inline">\(e_{ij}\)</span>，这里的注意力网络可以设计各种操作，比如对输入进行拼接再通过fc层进行计算等。</p>
+<p>这里 <span class="math inline">\(e_{ij}\)</span>
+是一个标量，但它还不是一个可用的权重值，还需要通过一个函数，把attention
+net对各个encoder hidden state的输出值转成一个分布：softmax。</p>
+<p><span class="math display">\[\alpha_{ij}=\frac{\exp\left(e_{ij}\right)}{\sum_{k=1}^{T_x}\exp\left(e_{ik}\right)}\]</span></p>
+<p>最后通过加权计算，获得最终输入给decoder的隐变量。</p>
+<p><span class="math display">\[z_i=\sum_{j=1}^T\alpha_{ij}\mathbf{h}_j\]</span></p>
+<img src="/3dc22f96/seq2seq_attention.png" class title="seq2seq attention">
+<p>可以看到，这里的attention net的任务就是找到decoder上一个hidden
+state和encoder hidden
+state之间的“相关”关系，使得模型能够将更多的注意力放在对应的输入信息上。</p>
+<p>实际上，上面这种attention的计算方式并不是唯一的，attention的计算方式有许多种</p>
+<img src="/3dc22f96/attention_calculation.png" class title="attention calculation">
+<p>这些attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(s, h)=\mathrm{Score}(s,h)\cdot
+h\)</span> 。这里的 <span class="math inline">\(s\)</span>
+就是decoder的hidden state（也就是前文的 <span class="math inline">\(y\)</span> ），<span class="math inline">\(h\)</span> 就是encoder的hidden state。</p>
+<p>（当然从结果上看，是scaled dot-product
+attention经受住了历史的考验，成为了主流。）</p>
+<h2 id="transformer的attention">Transformer的attention</h2>
+<p>从RNN attention到transformer
+attention，所做的事情就如论文题目所说：《Attention Is All You
+Need》，彻底抛弃RNN的在time
+step上的迭代计算，完全拥抱attention机制，只用最简单粗暴的方式同步计算出每个输入的hidden
+state，其他的就交给attention来解决。</p>
+<img src="/3dc22f96/transformer_structure.png" class title="transformer structure.png">
+<p>这里还是保留有encoder和decoder的结构，encoder中的attention都是self-attention，decoder则除了self-attention还有cross-attention。</p>
+<p>transformer结构下，attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(Q,K,V)=\mathrm{Score}(Q,K)V\)</span>，这里有
+<span class="math inline">\(Q=W_{Q}Y，K=W_{K}X，V=W_{V}X\)</span>
+。对于cross-attention， <span class="math inline">\(X\)</span>
+是encoder的hidden states，<span class="math inline">\(Y\)</span>
+是decoder的hidden states，而对于self-attention，则有 <span class="math inline">\(X=Y\)</span>。</p>
+<p>具体到我们熟悉的scaled dot-product attention，使用softmax计算，有</p>
+<p><span class="math display">\[\operatorname{Attention}(Q,K,V)=\operatorname{softmax}(\frac{QK^T}{\sqrt{d}})V\]</span></p>
+<p>到这里，终于见到我们熟悉的attention计算。</p>
+<p>用一张很直观的图来展示整个计算</p>
+<img src="/3dc22f96/Scaled-dot-product-self-attention.pbm" class title="self-attention">
+<p>这里的「query」，「key」和「value」的名称也暗示了整个attention计算的思路。</p>
+<p>类比到一个数据库查询+预测的例子。</p>
+<p>假设我们现在有一个“文章-阅读量”数据库，记录了每篇文章在发布30天内的阅读量。每篇文章就是一个key，对应的阅读量就是value。</p>
+<p>我们现在有一篇将要发布的文章，想要预测这篇文章在30天内的阅读量，那我们就把这篇新的文章，作为query，去和数据库里的文章（key）做一个相关性计算，取最相关的5篇文章。</p>
+<p>假设top5篇文章的相关性分别是 <span class="math inline">\([8,4,4,2,2]\)</span> ，对应阅读量是 <span class="math inline">\([5\text{w},2\text{w},8\text{w},3\text{w},6\text{w}]\)</span>
+。</p>
+<p>那我们把相关性得分归一化成和为1的概率值 <span class="math inline">\([0.4,0.2,0.2,0.1,0.1]\)</span>
+，那我们就可以预测新文章30天内的阅读量是 <span class="math inline">\(0.4\times5+0.2\times2+0.2\times8+0.1\times3+0.1\times6=4.9\text{w}\)</span>
+。</p>
+<p>这个例子中，我们计算相关性就相当于transformer attention中的 <span class="math inline">\(QK^T\)</span>
+，归一化就是softmax，然后通过加权求和取得最后的阅读量/特征向量。</p>
+<p>对于self-attention， <span class="math inline">\(Q、K、V\)</span>
+都来自输入 <span class="math inline">\(X\)</span>，sequence自己计算自己每个token的之间的相关性。而对于cross-attention，decoder中的输出sequence就是上面这个例子中的“将要发布的文章”，通过把这篇新的文章和数据库中的文章做相关计算，我们得到了新的预测结果。</p>
+<p>对于self-attention，由于 <span class="math inline">\(Q、K、V\)</span>
+都来自输入 <span class="math inline">\(X\)</span> ，在计算 <span class="math inline">\(QK^T\)</span>
+时，模型很容易关注到自身的位置上，也就是 <span class="math inline">\(QK^T\)</span>
+对角线上的激活值会明显比较大。这样的情况其实不是很好，因为这会削弱模型关注其他高价值位置的能力，也就限制模型的理解和表达能力。后面讲的MHA对这个问题会有一些缓解作用。</p>
+<p>顺着这样的思路梳理下来，会发现attention的大思路还是很好理解的。而计算上，怎么去获得更好的效果，就是接下来要分析的几个内容，MHA，MQA和GQA所关注的。</p>
+<p>代码上，实现也很容易，直接看<a href="https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention">pytorch
+forcasting</a>的代码</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ScaledDotProductAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, dropout: <span class="built_in">float</span> = <span class="literal">None</span>, scale: <span class="built_in">bool</span> = <span class="literal">True</span></span>):</span><br><span class="line">        <span class="built_in">super</span>(ScaledDotProductAttention, self).__init__()</span><br><span class="line">        <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            self.dropout = dropout</span><br><span class="line">        self.softmax = nn.Softmax(dim=<span class="number">2</span>)</span><br><span class="line">        self.scale = scale</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, q, k, v, mask=<span class="literal">None</span></span>):</span><br><span class="line">        attn = torch.bmm(q, k.permute(<span class="number">0</span>, <span class="number">2</span>, <span class="number">1</span>))  <span class="comment"># query-key overlap</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.scale:</span><br><span class="line">            dimension = torch.as_tensor(k.size(-<span class="number">1</span>), dtype=attn.dtype, device=attn.device).sqrt()</span><br><span class="line">            attn = attn / dimension</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = attn.masked_fill(mask, -<span class="number">1e9</span>)</span><br><span class="line">        attn = self.softmax(attn)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = self.dropout(attn)</span><br><span class="line">        output = torch.bmm(attn, v)</span><br><span class="line">        <span class="keyword">return</span> output, attn</span><br></pre></td></tr></table></figure>
+<h2 id="关于scaling">关于scaling</h2>
+<p>BTW，为什么计算中 <span class="math inline">\(QK^T\)</span>
+之后还要除以 <span class="math inline">\(\sqrt{d}\)</span> ？</p>
+<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。</p>
+<img src="/3dc22f96/softmax.png" class title="softmax">
+<p>苏剑林的<a href="https://spaces.ac.cn/archives/8620">博客</a>中也有详细分析，并提到如果不对attention值进行scaling，也可以通过在参数初始化是将方差除以一个
+<span class="math inline">\(\sqrt{d}\)</span>
+，同样可以起到预防softmax饱和的效果。类似地，通过normalization也可以做到类似的效果。不过实现上在attention里做scaling还是比较稳定高效的。</p>
+<h1 id="mha">MHA</h1>
+<p>只要理解了attention计算的细节，MHA（multi-head
+attention）其实就很好明白。</p>
+<p>MHA在2017年就随着《Attention Is All You
+Need》一起提出，主要干的就是一个事：把原来一个attention计算，拆成多个小份的attention，并行计算，分别得出结果，最后再合回原来的维度。</p>
+<p><span class="math display">\[\mathrm{MultiHeadAttention}(Q,K,V)=\mathrm{Concat}(head_1,\ldots,head_h)\]</span></p>
+<p><span class="math display">\[head_i=\text{Attention}(W_i^QQ,W_i^KK,W_i^VV)\]</span></p>
+<p>假设原来模型的hidden size是 <span class="math inline">\(d\)</span>
+，在MHA中，会把投影后的 <span class="math inline">\(Q、K、V\)</span>
+在hidden state的维度上切成 <span class="math inline">\(head_{num}\)</span> 份，每个头的维度是 <span class="math inline">\(d_{head}\)</span> 。这 <span class="math inline">\(head_{num}\)</span> 组小 <span class="math inline">\(Q、K、V\)</span>
+分别独立地进行attention计算，之后把得到的 <span class="math inline">\(head_{num}\)</span> 份维度 <span class="math inline">\(d_{head}\)</span> 的输出concat起来。</p>
+<p>直接看这个amazing的图，很直观</p>
+<img src="/3dc22f96/multihead_attention.png" class title="MHA">
+<p>操作是这么个操作，多头注意力相比单头有什么好处呢？</p>
+<p>《Attention Is All You Need》文章中给出的说法是</p>
+<blockquote>
+<p>Multi-head attention allows the model to jointly attend to
+information from different representation subspaces at different
+positions.</p>
+</blockquote>
+<p>我们希望多个头能够在训练中学会注意到不同的内容。例如在翻译任务里，一些attention
+head可以关注语法特征，另一些attention
+head可以关注单词特性。这样模型就可以从不同角度来分析和理解输入信息，获得更好的效果了。</p>
+<p>这有点类似CNN中，不同的卷积核来学习不同的信息。比如一个 <span class="math inline">\(3\times3\times128\)</span> 的卷积，有128个 <span class="math inline">\(3\times3\)</span>
+参数组，假设我们的输入是一个灰度图，其中一组 <span class="math inline">\(3\times3\)</span> 的参数是这样的</p>
+<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;0&amp;-1\\1&amp;0&amp;-1\\1&amp;0&amp;-1\end{matrix}\right.\right]\]</span></p>
+<p>那么这是一个检测纵向边界的卷积，而另外一组参数长这样</p>
+<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;1&amp;1\\0&amp;0&amp;0\\-1&amp;-1&amp;-1\end{matrix}\right.\right]\]</span></p>
+<p>这是一个检测横向边界的卷积。</p>
+<p>这128组 <span class="math inline">\(3\times3\)</span>
+就是128个不同特征的检测器，就同MHA中多个头一样，从不同的子空间学到不同的内容，最后再放到一起融合使用。</p>
+<p>但是这是我们expect模型能做到的事情，实际情况是否真的是这样？</p>
+<p>知乎上这篇<a href="https://zhuanlan.zhihu.com/p/626820422">文章</a>里对此做了一些实验和分析。简单来说就是（1）每个头确实学到东西有所不同，但大部分头之间的差异没有我们想的那么大（比如一个学句法，一个学词义这样明显的区分）（2）多个头的情况下，确实有少部分头可以比较好地捕捉到各种文本信息，而不会过分关注自身位置，一定程度缓解了上文提到的计算
+<span class="math inline">\(QK^T\)</span> 之后对角线元素过大的问题。</p>
+<p>我们可以把MHA的多个attention计算视为多个独立的小模型，那么最终整体的attention计算相当于把来自多个小模型的结果进行了融合，这样效果比较好也是比较符合直觉的。</p>
+<p>另外还有一个问题是，使用几个头比较好呢？</p>
+<p>实际上这个问题比较难有确定性的答案，首先可以确定的是头的数量不是越多约好（毕竟头的数量多了，各个子空间小了，子空间能表达的内容就少了），具体多少要视模型规模，任务而定。另外<a href="https://arxiv.org/pdf/1905.10650.pdf">《Are Sixteen Heads Really
+Better than One?》</a>中也指出MHA并不总是优于单头的情况。</p>
+<p>目前可以看到的趋势是，模型越大（也就是hidden
+size越大），头数的增多越能带来平均效果上的收益（或者说允许注意力头增大而不影响子空间的学习能力）。目前LLM主流的头数视乎模型结构和规模，大致有12、16、24、48、96这样一些主流设置。这里面又有比较多的方向和工作，在此暂时不展开，挖个坑，以后专门开一篇讲。</p>
+<p>最后看一下<a href="https://nlp.seas.harvard.edu/2018/04/03/attention.html">The
+Annotated Transformer</a>中的MHA代码实现</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">attention</span>(<span class="params">query, key, value, mask=<span class="literal">None</span>, dropout=<span class="literal">None</span></span>):</span><br><span class="line">    <span class="string">&quot;Compute &#x27;Scaled Dot Product Attention&#x27;&quot;</span></span><br><span class="line">    d_k = query.size(-<span class="number">1</span>)</span><br><span class="line">    scores = torch.matmul(query, key.transpose(-<span class="number">2</span>, -<span class="number">1</span>)) \</span><br><span class="line">             / math.sqrt(d_k)</span><br><span class="line">    <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        scores = scores.masked_fill(mask == <span class="number">0</span>, -<span class="number">1e9</span>)</span><br><span class="line">    p_attn = F.softmax(scores, dim = -<span class="number">1</span>)</span><br><span class="line">    <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        p_attn = dropout(p_attn)</span><br><span class="line">    <span class="keyword">return</span> torch.matmul(p_attn, value), p_attn</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MultiHeadedAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, h, d_model, dropout=<span class="number">0.1</span></span>):</span><br><span class="line">        <span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">        h: head number</span></span><br><span class="line"><span class="string">        &#x27;&#x27;&#x27;</span></span><br><span class="line">        <span class="built_in">super</span>(MultiHeadedAttention, self).__init__()</span><br><span class="line">        <span class="keyword">assert</span> d_model % h == <span class="number">0</span></span><br><span class="line">        <span class="comment"># We assume d_v always equals d</span></span><br><span class="line">        self.d = d_model // h</span><br><span class="line">        self.h = h</span><br><span class="line">        self.linears = clones(nn.Linear(d_model, d_model), <span class="number">4</span>)</span><br><span class="line">        self.attn = <span class="literal">None</span></span><br><span class="line">        self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, query, key, value, mask=<span class="literal">None</span></span>):</span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="comment"># Same mask applied to all h heads.</span></span><br><span class="line">            mask = mask.unsqueeze(<span class="number">1</span>)</span><br><span class="line">        nbatches = query.size(<span class="number">0</span>)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 1) Do all the linear projections in batch from d_model =&gt; h x d </span></span><br><span class="line">        query, key, value = \</span><br><span class="line">            [l(x).view(nbatches, -<span class="number">1</span>, self.h, self.d).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line">             <span class="keyword">for</span> l, x <span class="keyword">in</span> <span class="built_in">zip</span>(self.linears, (query, key, value))]</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2) Apply attention on all the projected vectors in batch. </span></span><br><span class="line">        x, self.attn = attention(query, key, value, mask=mask, </span><br><span class="line">                                 dropout=self.dropout)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 3) &quot;Concat&quot; using a view and apply a final linear. </span></span><br><span class="line">        x = x.transpose(<span class="number">1</span>, <span class="number">2</span>).contiguous() \</span><br><span class="line">             .view(nbatches, -<span class="number">1</span>, self.h * self.d)</span><br><span class="line">        <span class="keyword">return</span> self.linears[-<span class="number">1</span>](x)</span><br></pre></td></tr></table></figure>
+<p>（<a href="https://github.com/huggingface/transformers">transformers</a>中的写法就更为成熟一点，不过里面兼容了比较多的功能，代码太长就不放上来了）</p>
+<h1 id="解码中的kv-cache">解码中的KV Cache</h1>
+<p>在讲MQA和GQA之前，还需要了解一点背景，那就是解码的计算问题，以及KV
+Cache的方案。</p>
+<p>无论是encoder-decoder结构，还是现在我们最接近AGI的decoder-only的LLM，解码生成时都是自回归auto-regressive的方式。</p>
+<p>也就是，解码的时候，先根据当前输入 <span class="math inline">\(\text{input}_{i-1}\)</span> ，生成下一个 <span class="math inline">\(\text{token}_{i}\)</span> ，然后把新生成的 <span class="math inline">\(\text{token}_{i}\)</span> 拼接在 <span class="math inline">\(\text{input}_{i-1}\)</span> 后面，获得新的输入
+<span class="math inline">\(\text{input}_{i}\)</span> ，再用 <span class="math inline">\(\text{input}_{i}\)</span> 生成 <span class="math inline">\(\text{token}_{i+1}\)</span>
+，依此迭代，直到生成结束。</p>
+<p>比如我们输入“窗前明月光下一句是”，那么模型每次生成一个token，输入输出会是这样（方便起见，默认每个token都是一个字符）</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">step0: 输入=[BOS]窗前明月光下一句是；输出=疑</span><br><span class="line">step1: 输入=[BOS]窗前明月光下一句是疑；输出=是</span><br><span class="line">step2: 输入=[BOS]窗前明月光下一句是疑是；输出=地</span><br><span class="line">step3: 输入=[BOS]窗前明月光下一句是疑是地；输出=上</span><br><span class="line">step4: 输入=[BOS]窗前明月光下一句是疑是地上；输出=霜</span><br><span class="line">step5: 输入=[BOS]窗前明月光下一句是疑是地上霜；输出=[EOS]</span><br></pre></td></tr></table></figure>
+<p>（其中[BOS]和[EOS]分别是起始符号和终止符号）</p>
+<p>仔细想一下，我们在生成“疑”字的时候，用的是输入序列中“是”字的最后一层hidden
+state，通过最后的分类头预测出来的。以此类推，后面每生成一个字，使用的都是输入序列中最后一个字的输出。</p>
+<p>我们可以注意到，下一个step的输入其实包含了上一个step的内容，而且只在最后面多了一点点（一个token）。那么下一个step的计算应该也包含了上一个step的计算。</p>
+<p>从公式上来看是这样的：</p>
+<p>回想一下我们attention的计算</p>
+<p><span class="math display">\[
+\alpha_{i,j}=\text{softmax}(q_{i}k_{j}^\top)\\
+o_{i}=\sum_{j=0}^{i}{\alpha_{i,j}v_{j}}
+\]</span></p>
+<p>注意对于decoder的时候，由于mask
+attention的存在，每个输入只能看到自己和前面的内容，而看不到后面的内容</p>
+<p>假设我们当前输入的长度是3，预测第4个字，那每层attention所做的计算有</p>
+<p><span class="math display">\[
+\begin{aligned}
+o_{0}&amp;=\alpha_{0,0}v_{0}\\
+o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
+o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
+\end{aligned}
+\]</span></p>
+<p>预测完第4个字，放到输入里，继续预测第5个字，每层attention所做的计算有</p>
+<p><span class="math display">\[
+\begin{aligned}
+o_{0}&amp;=\alpha_{0,0}v_{0}\\
+o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
+o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
+o_{3}&amp;=\alpha_{3,0}v_{0}+\alpha_{3,1}v_{1}+\alpha_{3,2}v_{2}+\alpha_{3,3}v_{3}\\
+\end{aligned}
+\]</span></p>
+<p>可以看到，在预测第5个字时，只有最后一步引入了新的计算，而 <span class="math inline">\(o_{0}\)</span> 到 <span class="math inline">\(o_{2}\)</span> 的计算和前面是完全重复的。</p>
+<p>但是模型在推理的时候可不管这些，无论你是不是只要最后一个字的输出，它都把所有输入计算一遍，给出所有输出结果。</p>
+<p>也就是说中间有很多我们用不到的计算，这样就造成了浪费。</p>
+<p>而且随着生成的结果越来越多，输入的长度也越来越长。上面这个例子里，输入长度就从step0的10个，每步增长1，直到step5的15个。如果输入的instruction是让模型写高考作文，那可能就有800个step或者更多。这个情况下，step0被算了800次，step1被算了799次...</p>
+<p>有没有什么办法可以重复利用上一个step里已经计算过的结果，减少浪费呢？</p>
+<p>答案就是KV
+Cache。利用缓存空间，把需要重复利用的中间计算结果存下来，减少重复计算。</p>
+<p>而 <span class="math inline">\(k\)</span> 和 <span class="math inline">\(v\)</span> 就是要缓存的对象。</p>
+<p>想象一下，在上面的例子中，假设我们一开始的输入就是3个字，我们第一次预测就是预测第4个字，那么由于一开始没有任何缓存，所有我们每一层还是要踏踏实实地计算一遍。然后把
+<span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值缓存起来。</p>
+<p>则有</p>
+<p><span class="math display">\[
+\text{cache}_l=\text{None}\\
+\]</span></p>
+<center>
+↓
+</center>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
+\]</span></p>
+<p>kv_cache的下标 <span class="math inline">\(l\)</span>
+表示模型层数。</p>
+<p>在进行第二次预测，也就是预测第5个字的时候，在第 <span class="math inline">\(l\)</span>
+层的时候，由于前面我们缓存了<u><strong>每层</strong></u>的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，那本层就只需要算新的 <span class="math inline">\(o_{3}\)</span> ，而不用算 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span> 。</p>
+<p>因为第 <span class="math inline">\(l\)</span> 层的 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span>
+本来会经过FNN层之后进到 <span class="math inline">\(l+1\)</span>
+层，再经过新的投影变换，成为 <span class="math inline">\(l+1\)</span>
+层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，但是 <span class="math inline">\(l+1\)</span> 层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值我们已经缓存过了！</p>
+<p>然后我们把本次新增算出来的 <span class="math inline">\(k\)</span> 、
+<span class="math inline">\(v\)</span> 值也存入缓存。</p>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
+\]</span></p>
+<center>
+↓
+</center>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l}),(k_{3}^{l}, v_{3}^{l})]
+\]</span></p>
+<p>这样就节省了attention和FFN的很多重复计算。</p>
+<p>transformers中，生成的时候传入use_cache=True就会开启KV Cache。</p>
+<p>也可以简单看下GPT2中的实现，中文注释的部分就是使用缓存结果和更新缓存结果</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Class GPT2Attention(nn.Module):</span><br><span class="line">    ...</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params"></span></span><br><span class="line"><span class="params">        self,</span></span><br><span class="line"><span class="params">        hidden_states: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.FloatTensor]],</span></span><br><span class="line"><span class="params">        layer_past: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.Tensor]] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        head_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_hidden_states: <span class="type">Optional</span>[torch.Tensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        use_cache: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">        output_attentions: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">    </span>) -&gt; <span class="type">Tuple</span>[<span class="type">Union</span>[torch.Tensor, <span class="type">Tuple</span>[torch.Tensor]], ...]:</span><br><span class="line">        <span class="keyword">if</span> encoder_hidden_states <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">not</span> <span class="built_in">hasattr</span>(self, <span class="string">&quot;q_attn&quot;</span>):</span><br><span class="line">                <span class="keyword">raise</span> ValueError(</span><br><span class="line">                    <span class="string">&quot;If class is used as cross attention, the weights `q_attn` have to be defined. &quot;</span></span><br><span class="line">                    <span class="string">&quot;Please make sure to instantiate class with `GPT2Attention(..., is_cross_attention=True)`.&quot;</span></span><br><span class="line">                )</span><br><span class="line"></span><br><span class="line">            query = self.q_attn(hidden_states)</span><br><span class="line">            key, value = self.c_attn(encoder_hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line">            attention_mask = encoder_attention_mask</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            query, key, value = self.c_attn(hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">        query = self._split_heads(query, self.num_heads, self.head_dim)</span><br><span class="line">        key = self._split_heads(key, self.num_heads, self.head_dim)</span><br><span class="line">        value = self._split_heads(value, self.num_heads, self.head_dim)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 过去所存的值</span></span><br><span class="line">        <span class="keyword">if</span> layer_past <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            past_key, past_value = layer_past</span><br><span class="line">            key = torch.cat((past_key, key), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的key加入</span></span><br><span class="line">            value = torch.cat((past_value, value), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的value加入</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> use_cache <span class="keyword">is</span> <span class="literal">True</span>:</span><br><span class="line">            present = (key, value)  <span class="comment"># 输出用于保存</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            present = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.reorder_and_upcast_attn:</span><br><span class="line">            attn_output, attn_weights = self._upcast_and_reordered_attn(query, key, value, attention_mask, head_mask)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)</span><br><span class="line"></span><br><span class="line">        attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)</span><br><span class="line">        attn_output = self.c_proj(attn_output)</span><br><span class="line">        attn_output = self.resid_dropout(attn_output)</span><br><span class="line"></span><br><span class="line">        outputs = (attn_output, present)</span><br><span class="line">        <span class="keyword">if</span> output_attentions:</span><br><span class="line">            outputs += (attn_weights,)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> outputs  <span class="comment"># a, present, (attentions)</span></span><br></pre></td></tr></table></figure>
+<p>总的来说，KV
+Cache是以空间换时间的做法，通过使用快速的缓存存取，减少了重复计算。（注意，只有decoder结构的模型可用，因为有mask
+attention的存在，使得前面的token可以不用关注后面的token）</p>
+<p>但是，用了KV Cache之后也不是立刻万事大吉。</p>
+<p>我们简单算一下，对于输入长度为 <span class="math inline">\(s\)</span>
+，层数为 <span class="math inline">\(L\)</span> ，hidden size为 <span class="math inline">\(d\)</span> 的模型，需要缓存的参数量为</p>
+<p><span class="math display">\[
+2\times L\times s\times d
+\]</span></p>
+<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
+<p><span class="math display">\[
+2\times 2\times L\times s\times d
+\]</span></p>
+<p>以Llama2 7B为例，有 <span class="math inline">\(L=32\)</span> ，
+<span class="math inline">\(L=4096\)</span>
+，那么每个token所需的缓存空间就是524,288 bytes，约52K，当 <span class="math inline">\(s=1024\)</span> 时，则需要536,870,912
+bytes，超过500M的空间。</p>
+<p>这里考虑的还只是batch size=1的情况，如果batch
+size增大，这个值更是很容易就超过1G。</p>
+<p>（MHA相比单头的情况，相当于只是把 <span class="math inline">\(q、k、v\)</span>
+切成多份并行计算了，对于实际需要缓存的大小没有影响）</p>
+<p>看下现在主流的科学计算卡配置</p>
+<img src="/3dc22f96/gpu_cache.png" class title="gpu cache">
+<p>强如H100也只有50M的L2 Cache（L1
+Cache的大小更是可以忽略不计），大概只能支持Llama2
+7B总共100个token左右的输入。</p>
+<p>想想我们现在用的LLM动辄34B/70B的规模，长度更是以千为基础单位，这样明显是不够用的。</p>
+<p>那么超出L2 Cache的部分只能走到显存中去了，但是HBM速度比L2
+Cache慢多了。</p>
+<img src="/3dc22f96/sram_dram.png" class title="储存空间与速度">
+<p>看来还需要进一步优化。</p>
+<p>要保证模型的推理加速，要么增大Cache的大小，而且是需要一到两个数量级的增强，那这个只能靠黄老板了。</p>
+<p>要么就是减少需要缓存的量。</p>
+<h1 id="mqa">MQA</h1>
+<p>MQA就是来减少缓存所需要的量的。</p>
+<p>Google在2019年就在《Fast Transformer Decoding: One Write-Head is All
+You
+Need》提出了MQA，不过那时候主要到的人不多，那是大家主要还是关注在用Bert把榜刷出新高上。</p>
+<p>MQA的做法其实很简单。在MHA中，输入分别经过 <span class="math inline">\(W_{Q}、W_{K}、W_{V}\)</span>
+的变换之后，都切成了n份（n=头数），维度也从 <span class="math inline">\(d_{model}\)</span> 降到了 <span class="math inline">\(d_{head}\)</span>
+，分别进行attention计算再拼接。而MQA这里，在线性变换之后，只对 <span class="math inline">\(Q\)</span> 进行切分（和MHA一样），而 <span class="math inline">\(K、V\)</span> 则直接在线性变换的时候把维度降到了
+<span class="math inline">\(d_{head}\)</span>
+（而不是切分变小），然后这n个Query头分别和同一份 <span class="math inline">\(K、V\)</span>
+进行attention计算，之后把结果拼接起来。</p>
+<p>简单来说，就是MHA中，每个注意力头的 <span class="math inline">\(K、V\)</span>
+是不一样的，而MQA这里，每个注意力头的 <span class="math inline">\(K、V\)</span>
+是一样的，值是共享的。而其他步骤都和MHA一样。</p>
+<img src="/3dc22f96/MQA.webp" class title="MQA">
+<p>这样一来，需要缓存的 <span class="math inline">\(K、V\)</span>
+值一下就从所有头变成一个头的量。</p>
+<p>比如在Llama2
+7B中用的是32个头，那用MQA后，1024个token需要缓存的量就变成1/32，536,870,912
+bytes / 32 = 16,777,216 bytes，差不多是16M，这就能全塞进缓存中了。</p>
+<p>（实现上，就是改一下线性变换矩阵，然后把 <span class="math inline">\(K、V\)</span>
+的处理从切分变成复制，就不再赘述。）</p>
+<p>当然，由于共享了多个头的参数，限制了模型的表达能力，MQA虽然能好地支持推理加速，但是在效果上略略比MHA差一点，但是并不多，且相比其他修改hidden
+size或者head num的做法效果都好。</p>
+<img src="/3dc22f96/mqa_result_1.png" class title="MQA results 1">
+<img src="/3dc22f96/mqa_result_3.png" class title="MQA results 3">
+<h1 id="gqa">GQA</h1>
+<p>既然MQA对效果有点影响，MHA缓存又存不下，那GQA（Grouped-Query
+Attention）就提出了一个折中的办法，既能减少MQA效果的损失，又相比MHA需要更少的缓存。</p>
+<p>（文章：《GQA: Training Generalized Multi-Query Transformer Models
+from Multi-Head Checkpoints》，2023年）</p>
+<p>GQA里， <span class="math inline">\(Q\)</span>
+还是按原来MHA/MQA的做法不变。只使用一套共享的 <span class="math inline">\(K、V\)</span>
+不是效果不好吗，那就还是多弄几套。但是不要太多，数量还是比 <span class="math inline">\(Q\)</span> 的头数少一些。这样相当于把 <span class="math inline">\(Q\)</span> 的多个头给分了group，同一个group内的
+<span class="math inline">\(Q\)</span> 共享同一套 <span class="math inline">\(K、V\)</span> ，不同group的 <span class="math inline">\(Q\)</span> 所用的 <span class="math inline">\(K、V\)</span> 不同。</p>
+<p>MHA可以认为是 <span class="math inline">\(K、V\)</span>
+头数最大时的GQA，而MQA可以任务是 <span class="math inline">\(K、V\)</span> 头数最少时的GQA。</p>
+<p>看论文里的图就很直观</p>
+<img src="/3dc22f96/GQA.png" class title="GQA">
+<p>效果怎么样呢？</p>
+<img src="/3dc22f96/GQA_result_1.png" class title="GQA result">
+<p>看表中2/3/4行对比，GQA的速度相比MHA有明显提升，而效果上比MQA也好一些，能做到和MHA基本没差距。文中提到，这里的MQA和GQA都是通过average
+pooling从MHA初始化而来，然后进行了少量的训练得到的。如果我们想要把之前用MHA训练的模型改造成GQA，也可以通过这样的方法，增加少量训练来实现。当然如果从一开始就加上，从零开始训练，也是没有问题的。</p>
+<p>Llama2用的就是GQA，在tech
+report中也做了MHA、MQA、GQA的效果对比，可以看到效果确实很不错。</p>
+<img src="/3dc22f96/llama2_qga.png" class title="llama2 GQA result">
+<h1 id="小结">小结</h1>
+<p>MHA、MQA、GQA的实现其实并不复杂，效果也很好，理解上并没有太多困难。但是想要真正理解它们的出发点，还是需要深入每一个细节，去了解当时要解决的事什么问题。</p>
+<p>目前来看GQA是LLM比较好的方案，但未来肯定还会有针对不同方向的进一步优化方案，计算效率、推理速度、显存消耗这些方向都值得我们继续去探索优化。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<h1 id="reference">Reference</h1>
+<p>【1】The Annotated Transformer
+https://nlp.seas.harvard.edu/2018/04/03/attention.html<br>
+【2】Attention Is All You Need
+https://arxiv.org/pdf/1706.03762.pdf<br>
+【3】Fast Transformer Decoding: One Write-Head is All You Need
+https://arxiv.org/pdf/1911.02150.pdf<br>
+【4】https://www.researchgate.net/figure/Scaled-dot-product-self-attention-mechanism_fig1_363923096<br>
+【5】GQA: Training Generalized Multi-Query Transformer Models from
+Multi-Head Checkpoints https://arxiv.org/pdf/2305.13245.pdf<br>
+【6】How Attention works in Deep Learning: understanding the attention
+mechanism in sequence models https://theaisummer.com/attention/<br>
+【7】A simple overview of RNN, LSTM and Attention Mechanism
+https://medium.com/swlh/a-simple-overview-of-rnn-lstm-and-attention-mechanism-9e844763d07b<br>
+【8】https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention<br>
+【9】浅谈Transformer的初始化、参数化与标准化
+https://spaces.ac.cn/archives/8620<br>
+【10】https://theaisummer.com/self-attention/
+https://theaisummer.com/self-attention/<br>
+【11】https://zhuanlan.zhihu.com/p/626820422
+https://zhuanlan.zhihu.com/p/626820422<br>
+【12】Are Sixteen Heads Really Better than One?
+https://arxiv.org/pdf/1905.10650.pdf<br>
+【13】This post is all you need（上卷）——层层剥开Transformer
+https://zhuanlan.zhihu.com/p/420820453<br>
+【14】The Illustrated Transformer
+https://jalammar.github.io/illustrated-transformer/<br>
+【15】Multi-Query Attention is All You Need
+https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>attention</tag>
+        <tag>KV Cache</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>MoE模型的前世今生</title>
     <url>/44e38c1b.html</url>
     <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
@@ -3577,374 +3960,308 @@ Parameters https://qwenlm.github.io/zh/blog/qwen-moe/</p>
       </tags>
   </entry>
   <entry>
-    <title>理解Attention:从起源到MHA,MQA和GQA</title>
-    <url>/3dc22f96.html</url>
-    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
-<p>Attention模块是现在几乎所有大模型的核心模块，因此也有很多工作致力于提升注意力计算的性能和效果。其中MHA（Multi-Head
-Attention）、MQA（Multi-Query Attention）和GQA（Grouped-Query
-Attention）这一路线的思路和做法被很多主流模型所采用，因此简单地梳理一些这几个变体的思路和做法，以及会涉及到的KV
-Cache相关内容。思路比较直白，但也有一些细节和原理值得思考。</p>
-<p>当然针对Attention优化，也有很多其他优秀的方案和思路，如线性注意力、FlashAttention和Sliding
-Window Attention等，这些在后续再开篇梳理。</p>
-<p>（应一些朋友的要求，会增加一些直观基础的内容，以及LLM应用的案例。也欢迎大家提出更多建议。）</p>
-<h1 id="关于attention从rnn到attention">关于Attention：从RNN到Attention</h1>
-<p>了解一个概念的诞生和演进，有助于我们更深入去理解它。我们先简单回顾下attention从起源到最初的实现。</p>
-<p>（熟悉attention的朋友可以跳过这一节）</p>
-<h2 id="从rnn说起">从RNN说起</h2>
+    <title>大模型偏好对齐-DPO</title>
+    <url>/473f2b43.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>要对齐大模型偏好并不容易，从预训练的数据内容、模型的结构到SFT数据配比甚至数据格式等都会影响最终结果。</p>
+<p>按ChatGPT的技术路线，用SFT+RLHF
+PPO强化学习确实可以获得一定的提升，但是PPO比较复杂，训练过程不稳定，对微调后的模型、PPO的超参、reward模型的质量等都很敏感，且数据收集和训练的成本都较高，跑通大规模PPO有一定的成本门槛，因此PPO并没有被很广泛地应用。</p>
+<p>而DPO，Direct Preference
+Optimization，就是PPO的一个简化替代方案。DPO不需要训练reward模型，把PPO的两阶段训练变成一阶段训练，让模型可以直接从偏好数据里学习。</p>
+<p>DPO公式有点多，但是并不算太复杂，一步一步理解即可。</p>
+<h1 id="对齐">对齐</h1>
+<p>大模型在预训练中学到很多知识和技能，但是并不是所有知识和技能都是我们想要的。</p>
+<p>比如有一个常见的错误知识，有超过80%的人会有这样的错误认知，那么这个错误知识在预训练数据里也会经常出现。虽然数据集里也会有关于这个知识的正确认知，但是比例相对会比较低。</p>
+<p>如果让模型直接用在预训练中学到的知识进行回答，那么模型就有可能给出错误的知识。</p>
+<p>这不是我们所希望的。因此需要通过一些方法，让模型给出的结果能对齐人类的偏好，比如最基础的偏好，正确性。</p>
+<p>从模型非常广泛的知识和技能中选出我们所需的response和action是构建安全、高效、可控的AI系统的关键。</p>
+<p>SFT是最直接的偏好学习方法，而RLHF/RLAIF是上限更高的偏好对齐方案。但RLHF比较复杂，训练不稳定，成本也高。</p>
+<p>而DPO的优化目标和RLHF一样，但是实现更简单。</p>
+<h1 id="rlhf">RLHF</h1>
+<p>先回顾下RLHF的三个阶段。</p>
+<ol type="1">
+<li>SFT Phase</li>
+</ol>
+<p>基于预训练模型，在高质量的下游任务数据上训练，获得 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span>。</p>
+<ol start="2" type="1">
+<li>Reward Modelling Phase</li>
+</ol>
+<p>首先给定prompt <span class="math inline">\(x\)</span>，生成两个答案
+<span class="math inline">\((y_1,y_2)\sim\pi^\text{SFT}(y|x)\)</span>，并通过人工标注对比
+<span class="math inline">\(y_1,y_2\)</span>，获得偏好结果(preference)
+<span class="math inline">\(y_w\succ y_l\mid
+x\)</span>，其中w和l表示win和lose。</p>
+<p>假设在这些偏好结果中，有一个我们无法直接访问的latent reward model
+<span class="math inline">\(r^*(y,x)\)</span>，对每对 <span class="math inline">\((x,y)\)</span> 进行打分，这个 <span class="math inline">\(r^*(y,x)\)</span> 就是RLHF里reward
+model的拟合目标。</p>
+<p>基于 <span class="math inline">\(r^*(y,x)\)</span>，有很多方法对preference进行建模，Bradley-Terry
+model就是一个常用的选择。（当然在多个ranked
+answers的情况下，可以使用Plackett-Luce ranking models）</p>
+<p>基于Bradley-Terry model，人类偏好的分布 <span class="math inline">\(p^{*}\)</span> 写作</p>
+<p><span class="math display">\[\begin{aligned}p^*(y_1\succ y_2\mid
+x)=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\end{aligned}\]</span></p>
+<p>看起来不复杂，就是把两个答案的reward通过softmax归一化成概率。</p>
+<p>假设我们从 <span class="math inline">\(p^{*}\)</span>
+采样到一个静态的偏好对比数据集 <span class="math inline">\(\mathcal{D}=\left\{x^{(i)},y_w^{(i)},y_l^{(i)}\right\}_{i=1}^N\)</span>
+，那我们就可以用基于 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span> 初始化得到的reward模型
+<span class="math inline">\(r_\phi(x,y)\)</span>，通过maximum
+likelihood来拟合 <span class="math inline">\(r^*(y,x)\)</span>。将这个问题表述为二元分类问题，我们就得到negative
+log-likelihood loss：</p>
+<p><span class="math display">\[\mathcal{L}_R(r_\phi,\mathcal{D})=-\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\begin{bmatrix}\log\sigma(r_\phi(x,y_w)-r_\phi(x,y_l))\end{bmatrix}\]</span></p>
+<p>为了确保reward
+function有较低的方差，一般会对reward进行归一化，使得对于所有的 <span class="math inline">\(x\)</span>，有 <span class="math inline">\(\mathbb{E}_{x,y\thicksim\mathcal{D}}\left[r_\phi(x,y)\right]=0\)</span>。</p>
+<ol start="3" type="1">
+<li>RL Fine-Tuning Phase</li>
+</ol>
+<p>在强化学习阶段，我们用上一步中得到的reward给目标模型提供反馈，优化如下目标</p>
+<p><span class="math display">\[\max_{\pi_\theta}\mathbb{E}_{x\sim\mathcal{D},y\sim\pi_\theta(y|x)}\begin{bmatrix}r_\phi(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathrm{KL}}\begin{bmatrix}\pi_\theta(y\mid
+x)\mid\mid\pi_{\mathrm{ref}}(y\mid x)\end{bmatrix}\]</span></p>
+<p>上式中第一项是reward模型对目标模型（即RLHF中的actor
+model）给出的答案的reward打分，这一项是越高越好。</p>
+<p>而第二项是目标模型和参考模型之间的KL散度，用来限制经过训练后的目标模型，不要偏离参考模型（即
+<span class="math inline">\(\pi^{\mathrm{SFT}}\)</span>）太多。这样可以保证reward模型能在经过充分训练的区间工作，同时避免目标模型因过分向高reward分数优化而出现mode-collapse，失去回复的多样性。<span class="math inline">\(\beta\)</span> 用来控制这个限制项的比重。</p>
+<p>由于语言生成是离散的，因此上面这个优化目标是不可导的，需要通过RL优化。</p>
+<p>标准的RL把reward fucntion构建成</p>
+<p><span class="math display">\[r(x,y)=r_\phi(x,y)-\beta(\log\pi_\theta(y\mid
+x)-\log\pi_\text{ref}(y\mid x))\]</span></p>
+<p>并通过PPO优化。</p>
+<h1 id="direct-preference-optimization">Direct Preference
+Optimization</h1>
+<p>DPO的目标是推导出一种简单的方法，直接使用偏好来进行policy
+optimization，而省去训练reward模型的训练。</p>
+<img src="/473f2b43/intro.png" class title="DPO">
+<h2 id="dpo优化目标的推导">DPO优化目标的推导</h2>
+<p>首先，DPO起始的优化目标和RL是相同的：对于任意的reward function <span class="math inline">\(r(x,y)\)</span>，reference model <span class="math inline">\(\pi_{\mathrm{ref}}\)</span></p>
+<p><span class="math display">\[\max_\pi\mathbb{E}_{x\thicksim\mathcal{D},y\thicksim\pi}\begin{bmatrix}r(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathrm{KL}}\begin{bmatrix}\pi(y|x)||\pi_{\mathrm{ref}}(y|x)\end{bmatrix}\]</span></p>
+<p>由KL散度的定义，把上式中的第二项展开</p>
+<p><span class="math display">\[\beta\mathbb{D}_{\mathrm{KL}}(\pi\|\pi_{\mathrm{ref}})=\beta\sum_y\pi(y|x)\log\frac{\pi(y|x)}{\pi_{\mathrm{ref}}(y|x)}\]</span></p>
+<p>这里的条件概率求和其实就是期望值，因此有</p>
+<p><span class="math display">\[\max_\pi\mathbb{E}_{x\thicksim\mathcal{D},y\thicksim\pi}\begin{bmatrix}r(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathbf{KL}}\begin{bmatrix}\pi(y|x)&amp;\mid\mid\pi_{\mathrm{ref}}(y|x)\end{bmatrix}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\max_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[r(x,y)-\beta\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}\right]\end{aligned}\]</span></p>
+<p>然后我们把最大化问题转化成最小化问题</p>
+<p><span class="math display">\[\begin{aligned}\max_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[r(x,y)-\beta\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}-\frac{1}{\beta}r(x,y)\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)\exp{\left(\frac{1}{\beta}r(x,y)\right)}}\right]\end{aligned}\]</span></p>
+<p>在这里我们用配分函数，归一一下分母。令</p>
+<p><span class="math display">\[Z(x)=\sum_y\pi_\text{ref}(y|x)\exp\left(\frac1\beta
+r(x,y)\right)\]</span></p>
+<p>那我们就得到了一个新的有效的概率分布</p>
+<p><span class="math display">\[\begin{aligned}\pi^*(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p>那么就有</p>
+<p><span class="math display">\[\begin{aligned}\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)\exp{\left(\frac{1}{\beta}r(x,y)\right)}}\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}-\log
+Z(x)\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}-\log
+Z(x)\right]\end{aligned}\]</span></p>
+<p>由于 <span class="math inline">\(Z(x)\)</span> 不是 <span class="math inline">\(y\)</span> 的函数，我们可以把它拿出来</p>
+<p><span class="math display">\[\begin{aligned}\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}-\log
+Z(x)\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[=\min_\pi\mathbb{E}_{x\thicksim\mathcal{D}}\left[\mathbb{E}_{y\thicksim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}\right]-\log
+Z(x)\right]\]</span></p>
+<p><span class="math display">\[=\min_\pi\mathbb{E}_{x\thicksim\mathcal{D}}\left[\mathbb{D}_{\text{KL}}(\pi(y|x)\mid\mid\pi^*(y|x))-\log
+Z(x)\right]\]</span></p>
+<p><span class="math inline">\(Z(x)\)</span> 和 <span class="math inline">\(\pi\)</span>
+无关，因此最小化这个式子只要最小化第一项KL散度。而当且仅当两个分布完全相同的时候，KL散度取得最小值0，因此有</p>
+<p><span class="math display">\[\begin{aligned}\pi(y|x)=\pi^*(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p>虽然得到了显示解，但是这里的 <span class="math inline">\(Z(x)\)</span>
+没法求解，因为排列组合数太多，我们不可能去遍历。</p>
+<p>继续对这个式子做一些变换</p>
+<p><span class="math display">\[\begin{aligned}\pi_r(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}
+\log Z(x)+\log \pi_r(y|x)=\log \pi_{\text{ref}}(y|x)
++\frac{1}{\beta}r(x,y)
+\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
+x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
+<p>这里我们开始用上Bradley-Terry model了。前面我们提到了Bradley-Terry
+model是如下形式</p>
+<p><span class="math display">\[\begin{aligned}p^*(y_1\succ y_2\mid
+x)=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\end{aligned}\]</span></p>
+<p>在这个基础上做一点变换</p>
+<p><span class="math display">\[\begin{aligned}
+p^*(y_1\succ y_2\mid
+x)&amp;=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\\
+&amp;=\frac1{1+\frac{\exp(r^*(x,y_2))}{\exp(r^*(x,y_1))}}\\
+&amp;=\frac1{1+\exp(r^*(x,y_2)-r^*(x,y_1))}
+\end{aligned}\]</span></p>
+<p>然后我们把 <span class="math inline">\(r\)</span>
+代入进去，就得到</p>
+<p><span class="math display">\[p^*(y_1\succ y_2\mid
+x)=\frac{1}{1+\exp\left(\beta\log\frac{\pi^*(y_2|x)}{\pi_{\text{ref}}(y_2|x)}-\beta\log\frac{\pi^*(y_1|x)}{\pi_{\text{ref}}(y_1|x)}\right)}\]</span></p>
+<p>到这里，我们就有了关于optimal
+policy的人类偏好数据的概率，而无需经过reward模型。我们可以用MLE直接在这个概率模型上优化目标模型</p>
+<p><span class="math display">\[\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})=-\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\log\sigma\left(\beta\log\frac{\pi_\theta(y_w\mid
+x)}{\pi_{\text{ref}}(y_w\mid x)}-\beta\log\frac{\pi_\theta(y_l\mid
+x)}{\pi_{\text{ref}}(y_l\mid x)}\right)\right]\]</span></p>
+<p>DPO loss的实现如下</p>
+<img src="/473f2b43/dpo_loss_code.png" class title="DPO实现">
+<h2 id="理解dpo损失函数">理解DPO损失函数</h2>
+<p>首先我们了解一下DPO的loss在做什么，对DPO的损失函数求个导。</p>
+<p>方便起见，令</p>
+<p><span class="math display">\[u=\beta\log\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}-\beta\log\frac{\pi_{\theta}(y|x)}{\pi_{\mathrm{ref}}(y_{l}|x)}\]</span></p>
+<p>那么原损失函数可以写成</p>
+<p><span class="math display">\[L_{DPO}(\pi_{\theta};\pi_{\mathrm{ref}})=-\min_{\pi_{0}}E_{(x,y_{u},y_{t})\sim
+D}[\log\sigma(u)]\]</span></p>
+<p>对sigmoid求导，有</p>
+<p><span class="math display">\[\frac\partial{\partial
+u}\log\sigma(u)=\frac1{\sigma(u)}\cdot\sigma(u)(1-\sigma(u))=1-\sigma(u)\]</span></p>
+<p>由sigmoid函数性质，有</p>
+<p><span class="math display">\[1-\sigma(u)=\sigma(-u)\]</span></p>
+<p>对 <span class="math inline">\(u\)</span> 求导</p>
+<p><span class="math display">\[\frac{\partial
+u}{\partial\theta}=\beta\left(\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_w|x)}{\pi_{\mathrm{ref}}(y_w|x)}-\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)}\right)\]</span></p>
+<p>第一项对数求导，由于 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 不依赖 <span class="math inline">\(\theta\)</span>，可以视作常数，因此有</p>
+<p><span class="math display">\[\begin{aligned}
+\frac\partial{\partial\theta}\log\frac{\pi_\theta(y_w|x)}{\pi_\mathrm{ref}(y_w|x)}=&amp;\frac{1}{\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}}\cdot\frac{\partial}{\partial\theta}\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}\\
+=&amp;\frac{1}{\pi_{\theta}(y_{w}|x)}\cdot\frac{\partial}{\partial\theta}\pi_{\theta}(y_{w}|x)\\
+=&amp;\begin{aligned}\nabla_\theta\log\pi(y_w\mid x)\end{aligned}
+\end{aligned}\]</span></p>
+<p>类似地，第二项求导</p>
+<p><span class="math display">\[\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)}=\nabla_\theta\log\pi(y_l\mid
+x)\]</span></p>
+<p>因此，DPO损失的导数是</p>
+<p><span class="math display">\[\begin{aligned}
+&amp;\nabla_\theta\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})\\&amp;=-\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\beta\sigma\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)}-\beta\log\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)\left[\nabla_\theta\log\pi(y_w\mid
+x)–\nabla_\theta\log\pi(y_l\mid x)\right]\right]
+\end{aligned}\]</span></p>
+<p>再令</p>
+<p><span class="math display">\[\hat{r}_\theta(x,y)=\beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}\]</span></p>
+<p>那么DPO损失的梯度可以写作</p>
+<p><span class="math display">\[\begin{aligned}
+&amp;\nabla_\theta\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})\\&amp;=-\beta\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\sigma\left(\hat{r}_\theta(x,y_l)-\hat{r}_\theta(x,y_w)\right)\left[\nabla_\theta\log\pi(y_w\mid
+x)–\nabla_\theta\log\pi(y_l\mid x)\right]\right]
+\end{aligned}\]</span></p>
+<p>梯度各项的意义如下</p>
+<img src="/473f2b43/gradient.png" class title="DPO梯度">
+<p><span class="math inline">\(\hat{r}_\theta(x,y)\)</span> 相当于 <span class="math inline">\(\pi_{\theta}\)</span> 和 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span>
+共同确定的隐式reward。</p>
+<h2 id="dpo流程">DPO流程</h2>
+<p>DPO的一般流程是：<br>
+- 对于每个prompt <span class="math inline">\(x\)</span>，采样 <span class="math inline">\(y_1,y_2\sim\pi_{\text{ref}}(\cdot\mid
+x)\)</span>，然后进行人工标注构建偏好数据集 <span class="math inline">\(\mathcal{D}=\{x^{(i)},y_w^{(i)},y_l)^{(i)}\}_{i=1}^N\)</span><br>
+- 基于 <span class="math inline">\(\mathcal{L}_{\mathrm{DPO}}\)</span>，在已有的
+<span class="math inline">\(\pi_{\mathrm{ref}}\)</span>、<span class="math inline">\(\mathcal{D}\)</span> 和 <span class="math inline">\(\beta\)</span> 上优化 $$</p>
+<p>但是收集偏好数据的成本还是比较高的，因此实际使用中，人们更愿意使用开源的偏好数据集。</p>
+<p>当我们的偏好数据是来自 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span> 的时候，我们直接让
+<span class="math inline">\(\pi_{\mathrm{ref}}=\pi^{\mathrm{SFT}}\)</span>。如果我们使用开源偏好数据集的话，就可能没法直接使用生成这些数据的模型，这时可以用偏好数据集里
+<span class="math inline">\((x,y_w)\)</span> 数据对 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 进行微调，即</p>
+<p><span class="math display">\[\pi_{\text{ref}}=\arg\max_\pi\mathbb{E}_{x,y_w\thicksim\mathcal{D}}\left[\log\pi(y_w\mid
+x)\right]\]</span></p>
+<p>这个微调步骤有助于缓解 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 和真实 reference
+distribution 之间的distribution shift。</p>
+<h2 id="your-language-model-is-secretly-a-reward-model">Your Language
+Model Is Secretly a Reward Model</h2>
+<p>在前面推导DPO的loss函数的时候，我们把reward的公式显示表达成</p>
+<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
+x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
+<p>但是这里 <span class="math inline">\(Z(x)\)</span>
+的组合空间太大，实际上没法求解。</p>
+<p>好在"在Plackett-Luce/Bradley-Terry模型框架下，同一等价类中的两个reward
+function有相同的preference distribution"</p>
 <blockquote>
-<p>Memory is attention through time. ~ Alex Graves 2020</p>
+<p>Under the Plackett-Luce preference framework, and in particular the
+BradleyTerry framework, two reward functions from the same equivalence
+class induce the same preference distribution</p>
 </blockquote>
-<p>注意力机制最初起源是为了解决序列问题。回想在还没有Transformer的上一世代，使用RNN的Seq2Seq是这样的</p>
-<img src="/3dc22f96/seq2seq.png" class title="seq2seq">
-<img src="/3dc22f96/encoder.png" class title="encoder">
-<img src="/3dc22f96/decoder.png" class title="decoder">
-<p>（图来自<a href="https://theaisummer.com/attention/">AI
-Summer</a>）</p>
-<p>每个RNN cell接收两个输入，输出一个hidden state。比如在翻译任务中，RNN
-encoder把所有输入迭代地编码成context向量 <span class="math inline">\(z\)</span> ，然后由RNN decoder基于 <span class="math inline">\(z\)</span>
-迭代地解码。一般来说，这里decoder的第一个输入是一个特殊token，如[start]，表示解码开始。</p>
-<p>这样会有一个问题， <span class="math inline">\(z\)</span>
-能编码的长度显然有限，而且由于模型结构问题，会更加关注靠近尾部的输入。这样如果关键信息出现在开头，就容易被忽略。</p>
-<p>并且时间步骤上的传播由于有多次迭代相乘，梯度很容易就过小，导致梯度消失问题。</p>
-<p>当然我们有LSMT和GRU等变体来增强长距离记忆的能力，也缓解了梯度问题，但这些方案还是没有产生质变的能力。</p>
-<p>回到问题的核心，我们想要 <span class="math inline">\(z\)</span>
-能够编码所有前面的内容，但是显然， <span class="math inline">\(z\)</span>
-的生成方式天然会让它更容易注意到靠后的内容，而容易忽略靠前的输入。</p>
-<p>一个直觉的想法就是，我们需要想个办法跳过 <span class="math inline">\(z\)</span>
-，和前面的每个输入建立直接的联系。我们希望模型能够有机会学习到去“注意”关键的输入，不管这个输入是在前面还是后面。</p>
-<p>实际上神经网络天生就具有“注意力”的天赋。</p>
-<p>比如在CNN分类中，如果我们画出分类层前的heatmap，会是如下图这个样子</p>
-<img src="/3dc22f96/cnn_heatmap.png" class title="heatmap">
-<p>可以看到，值比较高的地方是在猫的鼻子胡子嘴巴区域，次之是身上和头上的花纹。直观来说，就是模型主要通过脸部的特征和身上的花纹，来识别出这是一只猫。这就是CNN学习到的注意力，这样的特征是神经网络implicitly学到的。</p>
-<p>回归到Seq2Seq，我们怎么来实现注意力，并且让这种implicit的机制变得explicit：单独抽离出来并具备一定可控制性？</p>
-<p>回想翻译场景，在RNN中，每一个时间步骤 <span class="math inline">\(i\)</span> 都会产生一个隐向量，<span class="math inline">\(h_i\)</span> 向量，我们把这些 <span class="math inline">\(h_i\)</span>
-保存起来，在最后要生成新的输出的时候，我们让模型回头看一下之前的这每一个
-<span class="math inline">\(h_i\)</span>
-，再决定要生成什么内容。相比原来只利用最后一个hidden
-state，现在我们可以访问之前所有的中间状态，如果发现前面有关键信息，就可以直接用上了，而不用担心输入太长而被覆盖了。</p>
-<p>那么问题又来了，我们怎么知道前面某一个中间状态对于当前的生成来说是否重要？如果我们不知道怎么定义是否重要，那我们就把这个问题交给模型自己解决好了
---
-通过网络参数来学习识别某个输入状态是否重要，学习是否要“注意”到它，要给予多少的“注意力”。</p>
-<p>具体来说，我们定义在解码第 <span class="math inline">\(i\)</span>
-个输出是，decoder当前隐状态 <span class="math inline">\(y_{i-1}\)</span>
-和encoder的所有隐状态 <span class="math inline">\(\mathbf{h}\)</span>
-之间的一个score计算</p>
-<p><span class="math display">\[\mathbf{e}_i=\text{attention}_{\mathrm{net}}\left(y_{i-1},\mathbf{h}\right)\in
-R^n\]</span></p>
-<p>其中</p>
-<p><span class="math display">\[e_{ij}=\text{attentiom}_{\text{net
-}(\mathbf{y}_{i-1},h_j)}\]</span></p>
-<p>注意力网络通过 <span class="math inline">\(\mathbf{y}_{i-1}\)</span>
-和 <span class="math inline">\(h_j\)</span> 来计算一个值 <span class="math inline">\(e_{ij}\)</span>，这里的注意力网络可以设计各种操作，比如对输入进行拼接再通过fc层进行计算等。</p>
-<p>这里 <span class="math inline">\(e_{ij}\)</span>
-是一个标量，但它还不是一个可用的权重值，还需要通过一个函数，把attention
-net对各个encoder hidden state的输出值转成一个分布：softmax。</p>
-<p><span class="math display">\[\alpha_{ij}=\frac{\exp\left(e_{ij}\right)}{\sum_{k=1}^{T_x}\exp\left(e_{ik}\right)}\]</span></p>
-<p>最后通过加权计算，获得最终输入给decoder的隐变量。</p>
-<p><span class="math display">\[z_i=\sum_{j=1}^T\alpha_{ij}\mathbf{h}_j\]</span></p>
-<img src="/3dc22f96/seq2seq_attention.png" class title="seq2seq attention">
-<p>可以看到，这里的attention net的任务就是找到decoder上一个hidden
-state和encoder hidden
-state之间的“相关”关系，使得模型能够将更多的注意力放在对应的输入信息上。</p>
-<p>实际上，上面这种attention的计算方式并不是唯一的，attention的计算方式有许多种</p>
-<img src="/3dc22f96/attention_calculation.png" class title="attention calculation">
-<p>这些attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(s, h)=\mathrm{Score}(s,h)\cdot
-h\)</span> 。这里的 <span class="math inline">\(s\)</span>
-就是decoder的hidden state（也就是前文的 <span class="math inline">\(y\)</span> ），<span class="math inline">\(h\)</span> 就是encoder的hidden state。</p>
-<p>（当然从结果上看，是scaled dot-product
-attention经受住了历史的考验，成为了主流。）</p>
-<h2 id="transformer的attention">Transformer的attention</h2>
-<p>从RNN attention到transformer
-attention，所做的事情就如论文题目所说：《Attention Is All You
-Need》，彻底抛弃RNN的在time
-step上的迭代计算，完全拥抱attention机制，只用最简单粗暴的方式同步计算出每个输入的hidden
-state，其他的就交给attention来解决。</p>
-<img src="/3dc22f96/transformer_structure.png" class title="transformer structure.png">
-<p>这里还是保留有encoder和decoder的结构，encoder中的attention都是self-attention，decoder则除了self-attention还有cross-attention。</p>
-<p>transformer结构下，attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(Q,K,V)=\mathrm{Score}(Q,K)V\)</span>，这里有
-<span class="math inline">\(Q=W_{Q}Y，K=W_{K}X，V=W_{V}X\)</span>
-。对于cross-attention， <span class="math inline">\(X\)</span>
-是encoder的hidden states，<span class="math inline">\(Y\)</span>
-是decoder的hidden states，而对于self-attention，则有 <span class="math inline">\(X=Y\)</span>。</p>
-<p>具体到我们熟悉的scaled dot-product attention，使用softmax计算，有</p>
-<p><span class="math display">\[\operatorname{Attention}(Q,K,V)=\operatorname{softmax}(\frac{QK^T}{\sqrt{d}})V\]</span></p>
-<p>到这里，终于见到我们熟悉的attention计算。</p>
-<p>用一张很直观的图来展示整个计算</p>
-<img src="/3dc22f96/Scaled-dot-product-self-attention.pbm" class title="self-attention">
-<p>这里的「query」，「key」和「value」的名称也暗示了整个attention计算的思路。</p>
-<p>类比到一个数据库查询+预测的例子。</p>
-<p>假设我们现在有一个“文章-阅读量”数据库，记录了每篇文章在发布30天内的阅读量。每篇文章就是一个key，对应的阅读量就是value。</p>
-<p>我们现在有一篇将要发布的文章，想要预测这篇文章在30天内的阅读量，那我们就把这篇新的文章，作为query，去和数据库里的文章（key）做一个相关性计算，取最相关的5篇文章。</p>
-<p>假设top5篇文章的相关性分别是 <span class="math inline">\([8,4,4,2,2]\)</span> ，对应阅读量是 <span class="math inline">\([5\text{w},2\text{w},8\text{w},3\text{w},6\text{w}]\)</span>
-。</p>
-<p>那我们把相关性得分归一化成和为1的概率值 <span class="math inline">\([0.4,0.2,0.2,0.1,0.1]\)</span>
-，那我们就可以预测新文章30天内的阅读量是 <span class="math inline">\(0.4\times5+0.2\times2+0.2\times8+0.1\times3+0.1\times6=4.9\text{w}\)</span>
-。</p>
-<p>这个例子中，我们计算相关性就相当于transformer attention中的 <span class="math inline">\(QK^T\)</span>
-，归一化就是softmax，然后通过加权求和取得最后的阅读量/特征向量。</p>
-<p>对于self-attention， <span class="math inline">\(Q、K、V\)</span>
-都来自输入 <span class="math inline">\(X\)</span>，sequence自己计算自己每个token的之间的相关性。而对于cross-attention，decoder中的输出sequence就是上面这个例子中的“将要发布的文章”，通过把这篇新的文章和数据库中的文章做相关计算，我们得到了新的预测结果。</p>
-<p>对于self-attention，由于 <span class="math inline">\(Q、K、V\)</span>
-都来自输入 <span class="math inline">\(X\)</span> ，在计算 <span class="math inline">\(QK^T\)</span>
-时，模型很容易关注到自身的位置上，也就是 <span class="math inline">\(QK^T\)</span>
-对角线上的激活值会明显比较大。这样的情况其实不是很好，因为这会削弱模型关注其他高价值位置的能力，也就限制模型的理解和表达能力。后面讲的MHA对这个问题会有一些缓解作用。</p>
-<p>顺着这样的思路梳理下来，会发现attention的大思路还是很好理解的。而计算上，怎么去获得更好的效果，就是接下来要分析的几个内容，MHA，MQA和GQA所关注的。</p>
-<p>代码上，实现也很容易，直接看<a href="https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention">pytorch
-forcasting</a>的代码</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ScaledDotProductAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, dropout: <span class="built_in">float</span> = <span class="literal">None</span>, scale: <span class="built_in">bool</span> = <span class="literal">True</span></span>):</span><br><span class="line">        <span class="built_in">super</span>(ScaledDotProductAttention, self).__init__()</span><br><span class="line">        <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            self.dropout = dropout</span><br><span class="line">        self.softmax = nn.Softmax(dim=<span class="number">2</span>)</span><br><span class="line">        self.scale = scale</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, q, k, v, mask=<span class="literal">None</span></span>):</span><br><span class="line">        attn = torch.bmm(q, k.permute(<span class="number">0</span>, <span class="number">2</span>, <span class="number">1</span>))  <span class="comment"># query-key overlap</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.scale:</span><br><span class="line">            dimension = torch.as_tensor(k.size(-<span class="number">1</span>), dtype=attn.dtype, device=attn.device).sqrt()</span><br><span class="line">            attn = attn / dimension</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = attn.masked_fill(mask, -<span class="number">1e9</span>)</span><br><span class="line">        attn = self.softmax(attn)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = self.dropout(attn)</span><br><span class="line">        output = torch.bmm(attn, v)</span><br><span class="line">        <span class="keyword">return</span> output, attn</span><br></pre></td></tr></table></figure>
-<h2 id="关于scaling">关于scaling</h2>
-<p>BTW，为什么计算中 <span class="math inline">\(QK^T\)</span>
-之后还要除以 <span class="math inline">\(\sqrt{d}\)</span> ？</p>
-<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。</p>
-<img src="/3dc22f96/softmax.png" class title="softmax">
-<p>苏剑林的<a href="https://spaces.ac.cn/archives/8620">博客</a>中也有详细分析，并提到如果不对attention值进行scaling，也可以通过在参数初始化是将方差除以一个
-<span class="math inline">\(\sqrt{d}\)</span>
-，同样可以起到预防softmax饱和的效果。类似地，通过normalization也可以做到类似的效果。不过实现上在attention里做scaling还是比较稳定高效的。</p>
-<h1 id="mha">MHA</h1>
-<p>只要理解了attention计算的细节，MHA（multi-head
-attention）其实就很好明白。</p>
-<p>MHA在2017年就随着《Attention Is All You
-Need》一起提出，主要干的就是一个事：把原来一个attention计算，拆成多个小份的attention，并行计算，分别得出结果，最后再合回原来的维度。</p>
-<p><span class="math display">\[\mathrm{MultiHeadAttention}(Q,K,V)=\mathrm{Concat}(head_1,\ldots,head_h)\]</span></p>
-<p><span class="math display">\[head_i=\text{Attention}(W_i^QQ,W_i^KK,W_i^VV)\]</span></p>
-<p>假设原来模型的hidden size是 <span class="math inline">\(d\)</span>
-，在MHA中，会把投影后的 <span class="math inline">\(Q、K、V\)</span>
-在hidden state的维度上切成 <span class="math inline">\(head_{num}\)</span> 份，每个头的维度是 <span class="math inline">\(d_{head}\)</span> 。这 <span class="math inline">\(head_{num}\)</span> 组小 <span class="math inline">\(Q、K、V\)</span>
-分别独立地进行attention计算，之后把得到的 <span class="math inline">\(head_{num}\)</span> 份维度 <span class="math inline">\(d_{head}\)</span> 的输出concat起来。</p>
-<p>直接看这个amazing的图，很直观</p>
-<img src="/3dc22f96/multihead_attention.png" class title="MHA">
-<p>操作是这么个操作，多头注意力相比单头有什么好处呢？</p>
-<p>《Attention Is All You Need》文章中给出的说法是</p>
-<blockquote>
-<p>Multi-head attention allows the model to jointly attend to
-information from different representation subspaces at different
-positions.</p>
-</blockquote>
-<p>我们希望多个头能够在训练中学会注意到不同的内容。例如在翻译任务里，一些attention
-head可以关注语法特征，另一些attention
-head可以关注单词特性。这样模型就可以从不同角度来分析和理解输入信息，获得更好的效果了。</p>
-<p>这有点类似CNN中，不同的卷积核来学习不同的信息。比如一个 <span class="math inline">\(3\times3\times128\)</span> 的卷积，有128个 <span class="math inline">\(3\times3\)</span>
-参数组，假设我们的输入是一个灰度图，其中一组 <span class="math inline">\(3\times3\)</span> 的参数是这样的</p>
-<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;0&amp;-1\\1&amp;0&amp;-1\\1&amp;0&amp;-1\end{matrix}\right.\right]\]</span></p>
-<p>那么这是一个检测纵向边界的卷积，而另外一组参数长这样</p>
-<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;1&amp;1\\0&amp;0&amp;0\\-1&amp;-1&amp;-1\end{matrix}\right.\right]\]</span></p>
-<p>这是一个检测横向边界的卷积。</p>
-<p>这128组 <span class="math inline">\(3\times3\)</span>
-就是128个不同特征的检测器，就同MHA中多个头一样，从不同的子空间学到不同的内容，最后再放到一起融合使用。</p>
-<p>但是这是我们expect模型能做到的事情，实际情况是否真的是这样？</p>
-<p>知乎上这篇<a href="https://zhuanlan.zhihu.com/p/626820422">文章</a>里对此做了一些实验和分析。简单来说就是（1）每个头确实学到东西有所不同，但大部分头之间的差异没有我们想的那么大（比如一个学句法，一个学词义这样明显的区分）（2）多个头的情况下，确实有少部分头可以比较好地捕捉到各种文本信息，而不会过分关注自身位置，一定程度缓解了上文提到的计算
-<span class="math inline">\(QK^T\)</span> 之后对角线元素过大的问题。</p>
-<p>我们可以把MHA的多个attention计算视为多个独立的小模型，那么最终整体的attention计算相当于把来自多个小模型的结果进行了融合，这样效果比较好也是比较符合直觉的。</p>
-<p>另外还有一个问题是，使用几个头比较好呢？</p>
-<p>实际上这个问题比较难有确定性的答案，首先可以确定的是头的数量不是越多约好（毕竟头的数量多了，各个子空间小了，子空间能表达的内容就少了），具体多少要视模型规模，任务而定。另外<a href="https://arxiv.org/pdf/1905.10650.pdf">《Are Sixteen Heads Really
-Better than One?》</a>中也指出MHA并不总是优于单头的情况。</p>
-<p>目前可以看到的趋势是，模型越大（也就是hidden
-size越大），头数的增多越能带来平均效果上的收益（或者说允许注意力头增大而不影响子空间的学习能力）。目前LLM主流的头数视乎模型结构和规模，大致有12、16、24、48、96这样一些主流设置。这里面又有比较多的方向和工作，在此暂时不展开，挖个坑，以后专门开一篇讲。</p>
-<p>最后看一下<a href="https://nlp.seas.harvard.edu/2018/04/03/attention.html">The
-Annotated Transformer</a>中的MHA代码实现</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">attention</span>(<span class="params">query, key, value, mask=<span class="literal">None</span>, dropout=<span class="literal">None</span></span>):</span><br><span class="line">    <span class="string">&quot;Compute &#x27;Scaled Dot Product Attention&#x27;&quot;</span></span><br><span class="line">    d_k = query.size(-<span class="number">1</span>)</span><br><span class="line">    scores = torch.matmul(query, key.transpose(-<span class="number">2</span>, -<span class="number">1</span>)) \</span><br><span class="line">             / math.sqrt(d_k)</span><br><span class="line">    <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        scores = scores.masked_fill(mask == <span class="number">0</span>, -<span class="number">1e9</span>)</span><br><span class="line">    p_attn = F.softmax(scores, dim = -<span class="number">1</span>)</span><br><span class="line">    <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        p_attn = dropout(p_attn)</span><br><span class="line">    <span class="keyword">return</span> torch.matmul(p_attn, value), p_attn</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MultiHeadedAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, h, d_model, dropout=<span class="number">0.1</span></span>):</span><br><span class="line">        <span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">        h: head number</span></span><br><span class="line"><span class="string">        &#x27;&#x27;&#x27;</span></span><br><span class="line">        <span class="built_in">super</span>(MultiHeadedAttention, self).__init__()</span><br><span class="line">        <span class="keyword">assert</span> d_model % h == <span class="number">0</span></span><br><span class="line">        <span class="comment"># We assume d_v always equals d</span></span><br><span class="line">        self.d = d_model // h</span><br><span class="line">        self.h = h</span><br><span class="line">        self.linears = clones(nn.Linear(d_model, d_model), <span class="number">4</span>)</span><br><span class="line">        self.attn = <span class="literal">None</span></span><br><span class="line">        self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, query, key, value, mask=<span class="literal">None</span></span>):</span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="comment"># Same mask applied to all h heads.</span></span><br><span class="line">            mask = mask.unsqueeze(<span class="number">1</span>)</span><br><span class="line">        nbatches = query.size(<span class="number">0</span>)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 1) Do all the linear projections in batch from d_model =&gt; h x d </span></span><br><span class="line">        query, key, value = \</span><br><span class="line">            [l(x).view(nbatches, -<span class="number">1</span>, self.h, self.d).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line">             <span class="keyword">for</span> l, x <span class="keyword">in</span> <span class="built_in">zip</span>(self.linears, (query, key, value))]</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2) Apply attention on all the projected vectors in batch. </span></span><br><span class="line">        x, self.attn = attention(query, key, value, mask=mask, </span><br><span class="line">                                 dropout=self.dropout)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 3) &quot;Concat&quot; using a view and apply a final linear. </span></span><br><span class="line">        x = x.transpose(<span class="number">1</span>, <span class="number">2</span>).contiguous() \</span><br><span class="line">             .view(nbatches, -<span class="number">1</span>, self.h * self.d)</span><br><span class="line">        <span class="keyword">return</span> self.linears[-<span class="number">1</span>](x)</span><br></pre></td></tr></table></figure>
-<p>（<a href="https://github.com/huggingface/transformers">transformers</a>中的写法就更为成熟一点，不过里面兼容了比较多的功能，代码太长就不放上来了）</p>
-<h1 id="解码中的kv-cache">解码中的KV Cache</h1>
-<p>在讲MQA和GQA之前，还需要了解一点背景，那就是解码的计算问题，以及KV
-Cache的方案。</p>
-<p>无论是encoder-decoder结构，还是现在我们最接近AGI的decoder-only的LLM，解码生成时都是自回归auto-regressive的方式。</p>
-<p>也就是，解码的时候，先根据当前输入 <span class="math inline">\(\text{input}_{i-1}\)</span> ，生成下一个 <span class="math inline">\(\text{token}_{i}\)</span> ，然后把新生成的 <span class="math inline">\(\text{token}_{i}\)</span> 拼接在 <span class="math inline">\(\text{input}_{i-1}\)</span> 后面，获得新的输入
-<span class="math inline">\(\text{input}_{i}\)</span> ，再用 <span class="math inline">\(\text{input}_{i}\)</span> 生成 <span class="math inline">\(\text{token}_{i+1}\)</span>
-，依此迭代，直到生成结束。</p>
-<p>比如我们输入“窗前明月光下一句是”，那么模型每次生成一个token，输入输出会是这样（方便起见，默认每个token都是一个字符）</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">step0: 输入=[BOS]窗前明月光下一句是；输出=疑</span><br><span class="line">step1: 输入=[BOS]窗前明月光下一句是疑；输出=是</span><br><span class="line">step2: 输入=[BOS]窗前明月光下一句是疑是；输出=地</span><br><span class="line">step3: 输入=[BOS]窗前明月光下一句是疑是地；输出=上</span><br><span class="line">step4: 输入=[BOS]窗前明月光下一句是疑是地上；输出=霜</span><br><span class="line">step5: 输入=[BOS]窗前明月光下一句是疑是地上霜；输出=[EOS]</span><br></pre></td></tr></table></figure>
-<p>（其中[BOS]和[EOS]分别是起始符号和终止符号）</p>
-<p>仔细想一下，我们在生成“疑”字的时候，用的是输入序列中“是”字的最后一层hidden
-state，通过最后的分类头预测出来的。以此类推，后面每生成一个字，使用的都是输入序列中最后一个字的输出。</p>
-<p>我们可以注意到，下一个step的输入其实包含了上一个step的内容，而且只在最后面多了一点点（一个token）。那么下一个step的计算应该也包含了上一个step的计算。</p>
-<p>从公式上来看是这样的：</p>
-<p>回想一下我们attention的计算</p>
-<p><span class="math display">\[
-\alpha_{i,j}=\text{softmax}(q_{i}k_{j}^\top)\\
-o_{i}=\sum_{j=0}^{i}{\alpha_{i,j}v_{j}}
-\]</span></p>
-<p>注意对于decoder的时候，由于mask
-attention的存在，每个输入只能看到自己和前面的内容，而看不到后面的内容</p>
-<p>假设我们当前输入的长度是3，预测第4个字，那每层attention所做的计算有</p>
-<p><span class="math display">\[
-\begin{aligned}
-o_{0}&amp;=\alpha_{0,0}v_{0}\\
-o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
-o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
-\end{aligned}
-\]</span></p>
-<p>预测完第4个字，放到输入里，继续预测第5个字，每层attention所做的计算有</p>
-<p><span class="math display">\[
-\begin{aligned}
-o_{0}&amp;=\alpha_{0,0}v_{0}\\
-o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
-o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
-o_{3}&amp;=\alpha_{3,0}v_{0}+\alpha_{3,1}v_{1}+\alpha_{3,2}v_{2}+\alpha_{3,3}v_{3}\\
-\end{aligned}
-\]</span></p>
-<p>可以看到，在预测第5个字时，只有最后一步引入了新的计算，而 <span class="math inline">\(o_{0}\)</span> 到 <span class="math inline">\(o_{2}\)</span> 的计算和前面是完全重复的。</p>
-<p>但是模型在推理的时候可不管这些，无论你是不是只要最后一个字的输出，它都把所有输入计算一遍，给出所有输出结果。</p>
-<p>也就是说中间有很多我们用不到的计算，这样就造成了浪费。</p>
-<p>而且随着生成的结果越来越多，输入的长度也越来越长。上面这个例子里，输入长度就从step0的10个，每步增长1，直到step5的15个。如果输入的instruction是让模型写高考作文，那可能就有800个step或者更多。这个情况下，step0被算了800次，step1被算了799次...</p>
-<p>有没有什么办法可以重复利用上一个step里已经计算过的结果，减少浪费呢？</p>
-<p>答案就是KV
-Cache。利用缓存空间，把需要重复利用的中间计算结果存下来，减少重复计算。</p>
-<p>而 <span class="math inline">\(k\)</span> 和 <span class="math inline">\(v\)</span> 就是要缓存的对象。</p>
-<p>想象一下，在上面的例子中，假设我们一开始的输入就是3个字，我们第一次预测就是预测第4个字，那么由于一开始没有任何缓存，所有我们每一层还是要踏踏实实地计算一遍。然后把
-<span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值缓存起来。</p>
-<p>则有</p>
-<p><span class="math display">\[
-\text{cache}_l=\text{None}\\
-\]</span></p>
-<center>
-↓
-</center>
-<p><span class="math display">\[
-\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
-v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
-\]</span></p>
-<p>kv_cache的下标 <span class="math inline">\(l\)</span>
-表示模型层数。</p>
-<p>在进行第二次预测，也就是预测第5个字的时候，在第 <span class="math inline">\(l\)</span>
-层的时候，由于前面我们缓存了<u><strong>每层</strong></u>的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，那本层就只需要算新的 <span class="math inline">\(o_{3}\)</span> ，而不用算 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span> 。</p>
-<p>因为第 <span class="math inline">\(l\)</span> 层的 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span>
-本来会经过FNN层之后进到 <span class="math inline">\(l+1\)</span>
-层，再经过新的投影变换，成为 <span class="math inline">\(l+1\)</span>
-层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，但是 <span class="math inline">\(l+1\)</span> 层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值我们已经缓存过了！</p>
-<p>然后我们把本次新增算出来的 <span class="math inline">\(k\)</span> 、
-<span class="math inline">\(v\)</span> 值也存入缓存。</p>
-<p><span class="math display">\[
-\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
-v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
-\]</span></p>
-<center>
-↓
-</center>
-<p><span class="math display">\[
-\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
-v_{1}^{l}),(k_{2}^{l}, v_{2}^{l}),(k_{3}^{l}, v_{3}^{l})]
-\]</span></p>
-<p>这样就节省了attention和FFN的很多重复计算。</p>
-<p>transformers中，生成的时候传入use_cache=True就会开启KV Cache。</p>
-<p>也可以简单看下GPT2中的实现，中文注释的部分就是使用缓存结果和更新缓存结果</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Class GPT2Attention(nn.Module):</span><br><span class="line">    ...</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params"></span></span><br><span class="line"><span class="params">        self,</span></span><br><span class="line"><span class="params">        hidden_states: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.FloatTensor]],</span></span><br><span class="line"><span class="params">        layer_past: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.Tensor]] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        head_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_hidden_states: <span class="type">Optional</span>[torch.Tensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        use_cache: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">        output_attentions: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">    </span>) -&gt; <span class="type">Tuple</span>[<span class="type">Union</span>[torch.Tensor, <span class="type">Tuple</span>[torch.Tensor]], ...]:</span><br><span class="line">        <span class="keyword">if</span> encoder_hidden_states <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">not</span> <span class="built_in">hasattr</span>(self, <span class="string">&quot;q_attn&quot;</span>):</span><br><span class="line">                <span class="keyword">raise</span> ValueError(</span><br><span class="line">                    <span class="string">&quot;If class is used as cross attention, the weights `q_attn` have to be defined. &quot;</span></span><br><span class="line">                    <span class="string">&quot;Please make sure to instantiate class with `GPT2Attention(..., is_cross_attention=True)`.&quot;</span></span><br><span class="line">                )</span><br><span class="line"></span><br><span class="line">            query = self.q_attn(hidden_states)</span><br><span class="line">            key, value = self.c_attn(encoder_hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line">            attention_mask = encoder_attention_mask</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            query, key, value = self.c_attn(hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">        query = self._split_heads(query, self.num_heads, self.head_dim)</span><br><span class="line">        key = self._split_heads(key, self.num_heads, self.head_dim)</span><br><span class="line">        value = self._split_heads(value, self.num_heads, self.head_dim)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 过去所存的值</span></span><br><span class="line">        <span class="keyword">if</span> layer_past <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            past_key, past_value = layer_past</span><br><span class="line">            key = torch.cat((past_key, key), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的key加入</span></span><br><span class="line">            value = torch.cat((past_value, value), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的value加入</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> use_cache <span class="keyword">is</span> <span class="literal">True</span>:</span><br><span class="line">            present = (key, value)  <span class="comment"># 输出用于保存</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            present = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.reorder_and_upcast_attn:</span><br><span class="line">            attn_output, attn_weights = self._upcast_and_reordered_attn(query, key, value, attention_mask, head_mask)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)</span><br><span class="line"></span><br><span class="line">        attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)</span><br><span class="line">        attn_output = self.c_proj(attn_output)</span><br><span class="line">        attn_output = self.resid_dropout(attn_output)</span><br><span class="line"></span><br><span class="line">        outputs = (attn_output, present)</span><br><span class="line">        <span class="keyword">if</span> output_attentions:</span><br><span class="line">            outputs += (attn_weights,)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> outputs  <span class="comment"># a, present, (attentions)</span></span><br></pre></td></tr></table></figure>
-<p>总的来说，KV
-Cache是以空间换时间的做法，通过使用快速的缓存存取，减少了重复计算。（注意，只有decoder结构的模型可用，因为有mask
-attention的存在，使得前面的token可以不用关注后面的token）</p>
-<p>但是，用了KV Cache之后也不是立刻万事大吉。</p>
-<p>我们简单算一下，对于输入长度为 <span class="math inline">\(s\)</span>
-，层数为 <span class="math inline">\(L\)</span> ，hidden size为 <span class="math inline">\(d\)</span> 的模型，需要缓存的参数量为</p>
-<p><span class="math display">\[
-2\times L\times s\times d
-\]</span></p>
-<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
-<p><span class="math display">\[
-2\times 2\times L\times s\times d
-\]</span></p>
-<p>以Llama2 7B为例，有 <span class="math inline">\(L=32\)</span> ，
-<span class="math inline">\(L=4096\)</span>
-，那么每个token所需的缓存空间就是524,288 bytes，约52K，当 <span class="math inline">\(s=1024\)</span> 时，则需要536,870,912
-bytes，超过500M的空间。</p>
-<p>这里考虑的还只是batch size=1的情况，如果batch
-size增大，这个值更是很容易就超过1G。</p>
-<p>（MHA相比单头的情况，相当于只是把 <span class="math inline">\(q、k、v\)</span>
-切成多份并行计算了，对于实际需要缓存的大小没有影响）</p>
-<p>看下现在主流的科学计算卡配置</p>
-<img src="/3dc22f96/gpu_cache.png" class title="gpu cache">
-<p>强如H100也只有50M的L2 Cache（L1
-Cache的大小更是可以忽略不计），大概只能支持Llama2
-7B总共100个token左右的输入。</p>
-<p>想想我们现在用的LLM动辄34B/70B的规模，长度更是以千为基础单位，这样明显是不够用的。</p>
-<p>那么超出L2 Cache的部分只能走到显存中去了，但是HBM速度比L2
-Cache慢多了。</p>
-<img src="/3dc22f96/sram_dram.png" class title="储存空间与速度">
-<p>看来还需要进一步优化。</p>
-<p>要保证模型的推理加速，要么增大Cache的大小，而且是需要一到两个数量级的增强，那这个只能靠黄老板了。</p>
-<p>要么就是减少需要缓存的量。</p>
-<h1 id="mqa">MQA</h1>
-<p>MQA就是来减少缓存所需要的量的。</p>
-<p>Google在2019年就在《Fast Transformer Decoding: One Write-Head is All
-You
-Need》提出了MQA，不过那时候主要到的人不多，那是大家主要还是关注在用Bert把榜刷出新高上。</p>
-<p>MQA的做法其实很简单。在MHA中，输入分别经过 <span class="math inline">\(W_{Q}、W_{K}、W_{V}\)</span>
-的变换之后，都切成了n份（n=头数），维度也从 <span class="math inline">\(d_{model}\)</span> 降到了 <span class="math inline">\(d_{head}\)</span>
-，分别进行attention计算再拼接。而MQA这里，在线性变换之后，只对 <span class="math inline">\(Q\)</span> 进行切分（和MHA一样），而 <span class="math inline">\(K、V\)</span> 则直接在线性变换的时候把维度降到了
-<span class="math inline">\(d_{head}\)</span>
-（而不是切分变小），然后这n个Query头分别和同一份 <span class="math inline">\(K、V\)</span>
-进行attention计算，之后把结果拼接起来。</p>
-<p>简单来说，就是MHA中，每个注意力头的 <span class="math inline">\(K、V\)</span>
-是不一样的，而MQA这里，每个注意力头的 <span class="math inline">\(K、V\)</span>
-是一样的，值是共享的。而其他步骤都和MHA一样。</p>
-<img src="/3dc22f96/MQA.webp" class title="MQA">
-<p>这样一来，需要缓存的 <span class="math inline">\(K、V\)</span>
-值一下就从所有头变成一个头的量。</p>
-<p>比如在Llama2
-7B中用的是32个头，那用MQA后，1024个token需要缓存的量就变成1/32，536,870,912
-bytes / 32 = 16,777,216 bytes，差不多是16M，这就能全塞进缓存中了。</p>
-<p>（实现上，就是改一下线性变换矩阵，然后把 <span class="math inline">\(K、V\)</span>
-的处理从切分变成复制，就不再赘述。）</p>
-<p>当然，由于共享了多个头的参数，限制了模型的表达能力，MQA虽然能好地支持推理加速，但是在效果上略略比MHA差一点，但是并不多，且相比其他修改hidden
-size或者head num的做法效果都好。</p>
-<img src="/3dc22f96/mqa_result_1.png" class title="MQA results 1">
-<img src="/3dc22f96/mqa_result_3.png" class title="MQA results 3">
-<h1 id="gqa">GQA</h1>
-<p>既然MQA对效果有点影响，MHA缓存又存不下，那GQA（Grouped-Query
-Attention）就提出了一个折中的办法，既能减少MQA效果的损失，又相比MHA需要更少的缓存。</p>
-<p>（文章：《GQA: Training Generalized Multi-Query Transformer Models
-from Multi-Head Checkpoints》，2023年）</p>
-<p>GQA里， <span class="math inline">\(Q\)</span>
-还是按原来MHA/MQA的做法不变。只使用一套共享的 <span class="math inline">\(K、V\)</span>
-不是效果不好吗，那就还是多弄几套。但是不要太多，数量还是比 <span class="math inline">\(Q\)</span> 的头数少一些。这样相当于把 <span class="math inline">\(Q\)</span> 的多个头给分了group，同一个group内的
-<span class="math inline">\(Q\)</span> 共享同一套 <span class="math inline">\(K、V\)</span> ，不同group的 <span class="math inline">\(Q\)</span> 所用的 <span class="math inline">\(K、V\)</span> 不同。</p>
-<p>MHA可以认为是 <span class="math inline">\(K、V\)</span>
-头数最大时的GQA，而MQA可以任务是 <span class="math inline">\(K、V\)</span> 头数最少时的GQA。</p>
-<p>看论文里的图就很直观</p>
-<img src="/3dc22f96/GQA.png" class title="GQA">
-<p>效果怎么样呢？</p>
-<img src="/3dc22f96/GQA_result_1.png" class title="GQA result">
-<p>看表中2/3/4行对比，GQA的速度相比MHA有明显提升，而效果上比MQA也好一些，能做到和MHA基本没差距。文中提到，这里的MQA和GQA都是通过average
-pooling从MHA初始化而来，然后进行了少量的训练得到的。如果我们想要把之前用MHA训练的模型改造成GQA，也可以通过这样的方法，增加少量训练来实现。当然如果从一开始就加上，从零开始训练，也是没有问题的。</p>
-<p>Llama2用的就是GQA，在tech
-report中也做了MHA、MQA、GQA的效果对比，可以看到效果确实很不错。</p>
-<img src="/3dc22f96/llama2_qga.png" class title="llama2 GQA result">
+<p>如果两个reward function <span class="math inline">\(r(x,y)\)</span>
+和 <span class="math inline">\(r^{\prime}(x,y)\)</span> 可以写成</p>
+<p><span class="math display">\[r&#39;(x,y)=r(x,y)+f(x)\]</span></p>
+<p>即表示这两个reward function来自同一等价类(equivalence class)。</p>
+<p>对于prompt <span class="math inline">\(x\)</span> 和 answer <span class="math inline">\(y_1,\ldots,y_K\)</span>，以及对应的ranking <span class="math inline">\(\tau\)</span>，在Plackett-Luce
+framework（Bradley–Terry也是其中一个特例）下的证明如下</p>
+<p><span class="math display">\[\begin{aligned}
+p_{r&#39;}(\tau|y_1,\ldots,y_K,x)&amp;
+=\prod_{k=1}^K\frac{\exp(r&#39;(x,y_{\tau(k)}))}{\sum_{j=k}^K\exp(r&#39;(x,y_{\tau(j)}))}  \\
+&amp;=\prod_{k=1}^K\frac{\exp(r(x,y_{\tau(k)})+f(x))}{\sum_{j=k}^K\exp(r(x,y_{\tau(j)})+f(x))}
+\\
+&amp;=\prod_{k=1}^K\frac{\exp(f(x))\exp(r(x,y_{\tau(k)}))}{\exp(f(x))\sum_{j=k}^K\exp(r(x,y_{\tau(j)}))}
+\\
+&amp;=\prod_{k=1}^K\frac{\exp(r(x,y_{\tau(k)}))}{\sum_{j=k}^K\exp(r(x,y_{\tau(j)}))}
+\\
+&amp;=p_r(\tau|y_1,\ldots,y_K,x)
+\end{aligned}\]</span></p>
+<p>基于此，我们可以把上面的 <span class="math inline">\(\beta\log
+Z(x)\)</span> 项忽略掉，也就是说下面两个reward
+function是具有相同的preference distribution的</p>
+<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
+x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
+<p><span class="math display">\[\hat{r}_\theta(x,y)=\beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}\]</span></p>
+<p>更进一步地，两个来自同一等价类的reward
+function在相同的RL问题下会导向相同的optimal policy。</p>
+<p>在推导DPO的loss的部分中，我们得到了optimal policy的显式解</p>
+<p><span class="math display">\[\begin{aligned}\pi(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p>这里证明一下两个reward function可以导向相同的optimal
+policy。假设<span class="math inline">\(r&#39;(x,y)=r(x,y)+f(x)\)</span>，<span class="math inline">\(\pi_r\)</span> 和 <span class="math inline">\(\pi_{r&#39;}\)</span> 分别是它们对应的optimal
+policy，有</p>
+<p><span class="math display">\[\begin{aligned}
+\pi_{r^{\prime}}(y|x)&amp;
+\begin{aligned}&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r&#39;(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r&#39;(x,y)\right)\end{aligned}  \\
+&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}(r(x,y)+f(x))\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}(r(x,y)+f(x))\right)
+\\
+&amp;\begin{aligned}=\frac{1}{\exp\left(\frac{1}{\beta}f(x)\right)\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\exp\left(\frac{1}{\beta}f(x)\right)\end{aligned}
+\\
+&amp;\begin{aligned}&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}
+\\
+&amp;=\pi_r(y|x)
+\end{aligned}\]</span></p>
+<p>那么，与Plackett-Luce（特别是Bradley-Terry）模型一致的所有reward类别，都可以被某个模型
+<span class="math inline">\(\pi(y\mid x)\)</span> 和 一个给定的reference
+model <span class="math inline">\(\pi_{ref}(y\mid x)\)</span>
+所表示：</p>
+<p><span class="math display">\[r(x,y)=\beta\log\frac{\pi(y|x)}{\pi_{ref}(y|x)}\]</span></p>
+<p>也就是我们的语言模型都天然具有reward model的功能。</p>
+<h2 id="实验">实验</h2>
+<p>实际训练中，论文中所使用的超参和设置：<br>
+- <span class="math inline">\(\beta=0.1\)</span>（对于TL;DR
+summarization，设为0.5）<br>
+- batch size = 64<br>
+- RMSprop optimizer<br>
+- learning rate = 1e-6<br>
+- linearly warmup 0 to 1e-6 over 150 steps</p>
+<p>论文在对话、摘要等任务进行的效果评测，主要对比了PPO、SFT和DPO的效果。</p>
+<p>DPO即使在没有精细调参的情况下，也有比价好的效果</p>
+<img src="/473f2b43/result_1.png" class title="对比1">
+<img src="/473f2b43/result_2.png" class title="对比2">
+<img src="/473f2b43/result_3.png" class title="对比3">
+<img src="/473f2b43/result_4.png" class title="对比4">
 <h1 id="小结">小结</h1>
-<p>MHA、MQA、GQA的实现其实并不复杂，效果也很好，理解上并没有太多困难。但是想要真正理解它们的出发点，还是需要深入每一个细节，去了解当时要解决的事什么问题。</p>
-<p>目前来看GQA是LLM比较好的方案，但未来肯定还会有针对不同方向的进一步优化方案，计算效率、推理速度、显存消耗这些方向都值得我们继续去探索优化。</p>
+<ul>
+<li>DPO在RLHF
+PPO相同的优化问题下，推导出了新的优化形式，省去了reward模型的部分，从而可以直接用偏好数据优化模型<br>
+</li>
+<li>DPO在效果和效率上相比PPO都有优势</li>
+</ul>
 <hr>
 <p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
 知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
 微信公众号：Linsight<br>
 <img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+<hr>
 <h1 id="reference">Reference</h1>
-<p>【1】The Annotated Transformer
-https://nlp.seas.harvard.edu/2018/04/03/attention.html<br>
-【2】Attention Is All You Need
-https://arxiv.org/pdf/1706.03762.pdf<br>
-【3】Fast Transformer Decoding: One Write-Head is All You Need
-https://arxiv.org/pdf/1911.02150.pdf<br>
-【4】https://www.researchgate.net/figure/Scaled-dot-product-self-attention-mechanism_fig1_363923096<br>
-【5】GQA: Training Generalized Multi-Query Transformer Models from
-Multi-Head Checkpoints https://arxiv.org/pdf/2305.13245.pdf<br>
-【6】How Attention works in Deep Learning: understanding the attention
-mechanism in sequence models https://theaisummer.com/attention/<br>
-【7】A simple overview of RNN, LSTM and Attention Mechanism
-https://medium.com/swlh/a-simple-overview-of-rnn-lstm-and-attention-mechanism-9e844763d07b<br>
-【8】https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention<br>
-【9】浅谈Transformer的初始化、参数化与标准化
-https://spaces.ac.cn/archives/8620<br>
-【10】https://theaisummer.com/self-attention/
-https://theaisummer.com/self-attention/<br>
-【11】https://zhuanlan.zhihu.com/p/626820422
-https://zhuanlan.zhihu.com/p/626820422<br>
-【12】Are Sixteen Heads Really Better than One?
-https://arxiv.org/pdf/1905.10650.pdf<br>
-【13】This post is all you need（上卷）——层层剥开Transformer
-https://zhuanlan.zhihu.com/p/420820453<br>
-【14】The Illustrated Transformer
-https://jalammar.github.io/illustrated-transformer/<br>
-【15】Multi-Query Attention is All You Need
-https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055</p>
+<p>【1】Direct Preference Optimization: Your Language Model is Secretly
+a Reward Model https://arxiv.org/abs/2305.18290v2</p>
 ]]></content>
       <categories>
         <category>CS</category>
@@ -3955,8 +4272,10 @@ https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055</p>
         <tag>NLP</tag>
         <tag>LLM</tag>
         <tag>transformer</tag>
-        <tag>attention</tag>
-        <tag>KV Cache</tag>
+        <tag>强化学习</tag>
+        <tag>微调</tag>
+        <tag>SFT</tag>
+        <tag>偏好对齐</tag>
       </tags>
   </entry>
   <entry>
@@ -4280,278 +4599,52 @@ Sampling https://arxiv.org/abs/2302.01318</p>
       </tags>
   </entry>
   <entry>
-    <title>大模型偏好对齐-DPO</title>
-    <url>/473f2b43.html</url>
-    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+    <title>大模型算法题(5)</title>
+    <url>/336f2f3e.html</url>
+    <content><![CDATA[<p><img src="/images/cover.png"></p>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
 <hr>
-<p>要对齐大模型偏好并不容易，从预训练的数据内容、模型的结构到SFT数据配比甚至数据格式等都会影响最终结果。</p>
-<p>按ChatGPT的技术路线，用SFT+RLHF
-PPO强化学习确实可以获得一定的提升，但是PPO比较复杂，训练过程不稳定，对微调后的模型、PPO的超参、reward模型的质量等都很敏感，且数据收集和训练的成本都较高，跑通大规模PPO有一定的成本门槛，因此PPO并没有被很广泛地应用。</p>
-<p>而DPO，Direct Preference
-Optimization，就是PPO的一个简化替代方案。DPO不需要训练reward模型，把PPO的两阶段训练变成一阶段训练，让模型可以直接从偏好数据里学习。</p>
-<p>DPO公式有点多，但是并不算太复杂，一步一步理解即可。</p>
-<h1 id="对齐">对齐</h1>
-<p>大模型在预训练中学到很多知识和技能，但是并不是所有知识和技能都是我们想要的。</p>
-<p>比如有一个常见的错误知识，有超过80%的人会有这样的错误认知，那么这个错误知识在预训练数据里也会经常出现。虽然数据集里也会有关于这个知识的正确认知，但是比例相对会比较低。</p>
-<p>如果让模型直接用在预训练中学到的知识进行回答，那么模型就有可能给出错误的知识。</p>
-<p>这不是我们所希望的。因此需要通过一些方法，让模型给出的结果能对齐人类的偏好，比如最基础的偏好，正确性。</p>
-<p>从模型非常广泛的知识和技能中选出我们所需的response和action是构建安全、高效、可控的AI系统的关键。</p>
-<p>SFT是最直接的偏好学习方法，而RLHF/RLAIF是上限更高的偏好对齐方案。但RLHF比较复杂，训练不稳定，成本也高。</p>
-<p>而DPO的优化目标和RLHF一样，但是实现更简单。</p>
-<h1 id="rlhf">RLHF</h1>
-<p>先回顾下RLHF的三个阶段。</p>
-<ol type="1">
-<li>SFT Phase</li>
-</ol>
-<p>基于预训练模型，在高质量的下游任务数据上训练，获得 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span>。</p>
-<ol start="2" type="1">
-<li>Reward Modelling Phase</li>
-</ol>
-<p>首先给定prompt <span class="math inline">\(x\)</span>，生成两个答案
-<span class="math inline">\((y_1,y_2)\sim\pi^\text{SFT}(y|x)\)</span>，并通过人工标注对比
-<span class="math inline">\(y_1,y_2\)</span>，获得偏好结果(preference)
-<span class="math inline">\(y_w\succ y_l\mid
-x\)</span>，其中w和l表示win和lose。</p>
-<p>假设在这些偏好结果中，有一个我们无法直接访问的latent reward model
-<span class="math inline">\(r^*(y,x)\)</span>，对每对 <span class="math inline">\((x,y)\)</span> 进行打分，这个 <span class="math inline">\(r^*(y,x)\)</span> 就是RLHF里reward
-model的拟合目标。</p>
-<p>基于 <span class="math inline">\(r^*(y,x)\)</span>，有很多方法对preference进行建模，Bradley-Terry
-model就是一个常用的选择。（当然在多个ranked
-answers的情况下，可以使用Plackett-Luce ranking models）</p>
-<p>基于Bradley-Terry model，人类偏好的分布 <span class="math inline">\(p^{*}\)</span> 写作</p>
-<p><span class="math display">\[\begin{aligned}p^*(y_1\succ y_2\mid
-x)=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\end{aligned}\]</span></p>
-<p>看起来不复杂，就是把两个答案的reward通过softmax归一化成概率。</p>
-<p>假设我们从 <span class="math inline">\(p^{*}\)</span>
-采样到一个静态的偏好对比数据集 <span class="math inline">\(\mathcal{D}=\left\{x^{(i)},y_w^{(i)},y_l^{(i)}\right\}_{i=1}^N\)</span>
-，那我们就可以用基于 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span> 初始化得到的reward模型
-<span class="math inline">\(r_\phi(x,y)\)</span>，通过maximum
-likelihood来拟合 <span class="math inline">\(r^*(y,x)\)</span>。将这个问题表述为二元分类问题，我们就得到negative
-log-likelihood loss：</p>
-<p><span class="math display">\[\mathcal{L}_R(r_\phi,\mathcal{D})=-\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\begin{bmatrix}\log\sigma(r_\phi(x,y_w)-r_\phi(x,y_l))\end{bmatrix}\]</span></p>
-<p>为了确保reward
-function有较低的方差，一般会对reward进行归一化，使得对于所有的 <span class="math inline">\(x\)</span>，有 <span class="math inline">\(\mathbb{E}_{x,y\thicksim\mathcal{D}}\left[r_\phi(x,y)\right]=0\)</span>。</p>
-<ol start="3" type="1">
-<li>RL Fine-Tuning Phase</li>
-</ol>
-<p>在强化学习阶段，我们用上一步中得到的reward给目标模型提供反馈，优化如下目标</p>
-<p><span class="math display">\[\max_{\pi_\theta}\mathbb{E}_{x\sim\mathcal{D},y\sim\pi_\theta(y|x)}\begin{bmatrix}r_\phi(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathrm{KL}}\begin{bmatrix}\pi_\theta(y\mid
-x)\mid\mid\pi_{\mathrm{ref}}(y\mid x)\end{bmatrix}\]</span></p>
-<p>上式中第一项是reward模型对目标模型（即RLHF中的actor
-model）给出的答案的reward打分，这一项是越高越好。</p>
-<p>而第二项是目标模型和参考模型之间的KL散度，用来限制经过训练后的目标模型，不要偏离参考模型（即
-<span class="math inline">\(\pi^{\mathrm{SFT}}\)</span>）太多。这样可以保证reward模型能在经过充分训练的区间工作，同时避免目标模型因过分向高reward分数优化而出现mode-collapse，失去回复的多样性。<span class="math inline">\(\beta\)</span> 用来控制这个限制项的比重。</p>
-<p>由于语言生成是离散的，因此上面这个优化目标是不可导的，需要通过RL优化。</p>
-<p>标准的RL把reward fucntion构建成</p>
-<p><span class="math display">\[r(x,y)=r_\phi(x,y)-\beta(\log\pi_\theta(y\mid
-x)-\log\pi_\text{ref}(y\mid x))\]</span></p>
-<p>并通过PPO优化。</p>
-<h1 id="direct-preference-optimization">Direct Preference
-Optimization</h1>
-<p>DPO的目标是推导出一种简单的方法，直接使用偏好来进行policy
-optimization，而省去训练reward模型的训练。</p>
-<img src="/473f2b43/intro.png" class title="DPO">
-<h2 id="dpo优化目标的推导">DPO优化目标的推导</h2>
-<p>首先，DPO起始的优化目标和RL是相同的：对于任意的reward function <span class="math inline">\(r(x,y)\)</span>，reference model <span class="math inline">\(\pi_{\mathrm{ref}}\)</span></p>
-<p><span class="math display">\[\max_\pi\mathbb{E}_{x\thicksim\mathcal{D},y\thicksim\pi}\begin{bmatrix}r(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathrm{KL}}\begin{bmatrix}\pi(y|x)||\pi_{\mathrm{ref}}(y|x)\end{bmatrix}\]</span></p>
-<p>由KL散度的定义，把上式中的第二项展开</p>
-<p><span class="math display">\[\beta\mathbb{D}_{\mathrm{KL}}(\pi\|\pi_{\mathrm{ref}})=\beta\sum_y\pi(y|x)\log\frac{\pi(y|x)}{\pi_{\mathrm{ref}}(y|x)}\]</span></p>
-<p>这里的条件概率求和其实就是期望值，因此有</p>
-<p><span class="math display">\[\max_\pi\mathbb{E}_{x\thicksim\mathcal{D},y\thicksim\pi}\begin{bmatrix}r(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathbf{KL}}\begin{bmatrix}\pi(y|x)&amp;\mid\mid\pi_{\mathrm{ref}}(y|x)\end{bmatrix}\]</span></p>
-<p><span class="math display">\[\begin{aligned}&amp;=\max_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[r(x,y)-\beta\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}\right]\end{aligned}\]</span></p>
-<p>然后我们把最大化问题转化成最小化问题</p>
-<p><span class="math display">\[\begin{aligned}\max_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[r(x,y)-\beta\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}\right]\end{aligned}\]</span></p>
-<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}-\frac{1}{\beta}r(x,y)\right]\end{aligned}\]</span></p>
-<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)\exp{\left(\frac{1}{\beta}r(x,y)\right)}}\right]\end{aligned}\]</span></p>
-<p>在这里我们用配分函数，归一一下分母。令</p>
-<p><span class="math display">\[Z(x)=\sum_y\pi_\text{ref}(y|x)\exp\left(\frac1\beta
-r(x,y)\right)\]</span></p>
-<p>那我们就得到了一个新的有效的概率分布</p>
-<p><span class="math display">\[\begin{aligned}\pi^*(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
-<p>那么就有</p>
-<p><span class="math display">\[\begin{aligned}\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)\exp{\left(\frac{1}{\beta}r(x,y)\right)}}\right]\end{aligned}\]</span></p>
-<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}-\log
-Z(x)\right]\end{aligned}\]</span></p>
-<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}-\log
-Z(x)\right]\end{aligned}\]</span></p>
-<p>由于 <span class="math inline">\(Z(x)\)</span> 不是 <span class="math inline">\(y\)</span> 的函数，我们可以把它拿出来</p>
-<p><span class="math display">\[\begin{aligned}\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}-\log
-Z(x)\right]\end{aligned}\]</span></p>
-<p><span class="math display">\[=\min_\pi\mathbb{E}_{x\thicksim\mathcal{D}}\left[\mathbb{E}_{y\thicksim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}\right]-\log
-Z(x)\right]\]</span></p>
-<p><span class="math display">\[=\min_\pi\mathbb{E}_{x\thicksim\mathcal{D}}\left[\mathbb{D}_{\text{KL}}(\pi(y|x)\mid\mid\pi^*(y|x))-\log
-Z(x)\right]\]</span></p>
-<p><span class="math inline">\(Z(x)\)</span> 和 <span class="math inline">\(\pi\)</span>
-无关，因此最小化这个式子只要最小化第一项KL散度。而当且仅当两个分布完全相同的时候，KL散度取得最小值0，因此有</p>
-<p><span class="math display">\[\begin{aligned}\pi(y|x)=\pi^*(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
-<p>虽然得到了显示解，但是这里的 <span class="math inline">\(Z(x)\)</span>
-没法求解，因为排列组合数太多，我们不可能去遍历。</p>
-<p>继续对这个式子做一些变换</p>
-<p><span class="math display">\[\begin{aligned}\pi_r(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
-<p><span class="math display">\[\begin{aligned}
-\log Z(x)+\log \pi_r(y|x)=\log \pi_{\text{ref}}(y|x)
-+\frac{1}{\beta}r(x,y)
-\end{aligned}\]</span></p>
-<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
-x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
-<p>这里我们开始用上Bradley-Terry model了。前面我们提到了Bradley-Terry
-model是如下形式</p>
-<p><span class="math display">\[\begin{aligned}p^*(y_1\succ y_2\mid
-x)=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\end{aligned}\]</span></p>
-<p>在这个基础上做一点变换</p>
-<p><span class="math display">\[\begin{aligned}
-p^*(y_1\succ y_2\mid
-x)&amp;=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\\
-&amp;=\frac1{1+\frac{\exp(r^*(x,y_2))}{\exp(r^*(x,y_1))}}\\
-&amp;=\frac1{1+\exp(r^*(x,y_2)-r^*(x,y_1))}
-\end{aligned}\]</span></p>
-<p>然后我们把 <span class="math inline">\(r\)</span>
-代入进去，就得到</p>
-<p><span class="math display">\[p^*(y_1\succ y_2\mid
-x)=\frac{1}{1+\exp\left(\beta\log\frac{\pi^*(y_2|x)}{\pi_{\text{ref}}(y_2|x)}-\beta\log\frac{\pi^*(y_1|x)}{\pi_{\text{ref}}(y_1|x)}\right)}\]</span></p>
-<p>到这里，我们就有了关于optimal
-policy的人类偏好数据的概率，而无需经过reward模型。我们可以用MLE直接在这个概率模型上优化目标模型</p>
-<p><span class="math display">\[\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})=-\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\log\sigma\left(\beta\log\frac{\pi_\theta(y_w\mid
-x)}{\pi_{\text{ref}}(y_w\mid x)}-\beta\log\frac{\pi_\theta(y_l\mid
-x)}{\pi_{\text{ref}}(y_l\mid x)}\right)\right]\]</span></p>
-<p>DPO loss的实现如下</p>
-<img src="/473f2b43/dpo_loss_code.png" class title="DPO实现">
-<h2 id="理解dpo损失函数">理解DPO损失函数</h2>
-<p>首先我们了解一下DPO的loss在做什么，对DPO的损失函数求个导。</p>
-<p>方便起见，令</p>
-<p><span class="math display">\[u=\beta\log\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}-\beta\log\frac{\pi_{\theta}(y|x)}{\pi_{\mathrm{ref}}(y_{l}|x)}\]</span></p>
-<p>那么原损失函数可以写成</p>
-<p><span class="math display">\[L_{DPO}(\pi_{\theta};\pi_{\mathrm{ref}})=-\min_{\pi_{0}}E_{(x,y_{u},y_{t})\sim
-D}[\log\sigma(u)]\]</span></p>
-<p>对sigmoid求导，有</p>
-<p><span class="math display">\[\frac\partial{\partial
-u}\log\sigma(u)=\frac1{\sigma(u)}\cdot\sigma(u)(1-\sigma(u))=1-\sigma(u)\]</span></p>
-<p>由sigmoid函数性质，有</p>
-<p><span class="math display">\[1-\sigma(u)=\sigma(-u)\]</span></p>
-<p>对 <span class="math inline">\(u\)</span> 求导</p>
-<p><span class="math display">\[\frac{\partial
-u}{\partial\theta}=\beta\left(\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_w|x)}{\pi_{\mathrm{ref}}(y_w|x)}-\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)}\right)\]</span></p>
-<p>第一项对数求导，由于 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 不依赖 <span class="math inline">\(\theta\)</span>，可以视作常数，因此有</p>
-<p><span class="math display">\[\begin{aligned}
-\frac\partial{\partial\theta}\log\frac{\pi_\theta(y_w|x)}{\pi_\mathrm{ref}(y_w|x)}=&amp;\frac{1}{\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}}\cdot\frac{\partial}{\partial\theta}\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}\\
-=&amp;\frac{1}{\pi_{\theta}(y_{w}|x)}\cdot\frac{\partial}{\partial\theta}\pi_{\theta}(y_{w}|x)\\
-=&amp;\begin{aligned}\nabla_\theta\log\pi(y_w\mid x)\end{aligned}
-\end{aligned}\]</span></p>
-<p>类似地，第二项求导</p>
-<p><span class="math display">\[\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)}=\nabla_\theta\log\pi(y_l\mid
-x)\]</span></p>
-<p>因此，DPO损失的导数是</p>
-<p><span class="math display">\[\begin{aligned}
-&amp;\nabla_\theta\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})\\&amp;=-\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\beta\sigma\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)}-\beta\log\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)\left[\nabla_\theta\log\pi(y_w\mid
-x)–\nabla_\theta\log\pi(y_l\mid x)\right]\right]
-\end{aligned}\]</span></p>
-<p>再令</p>
-<p><span class="math display">\[\hat{r}_\theta(x,y)=\beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}\]</span></p>
-<p>那么DPO损失的梯度可以写作</p>
-<p><span class="math display">\[\begin{aligned}
-&amp;\nabla_\theta\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})\\&amp;=-\beta\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\sigma\left(\hat{r}_\theta(x,y_l)-\hat{r}_\theta(x,y_w)\right)\left[\nabla_\theta\log\pi(y_w\mid
-x)–\nabla_\theta\log\pi(y_l\mid x)\right]\right]
-\end{aligned}\]</span></p>
-<p>梯度各项的意义如下</p>
-<img src="/473f2b43/gradient.png" class title="DPO梯度">
-<p><span class="math inline">\(\hat{r}_\theta(x,y)\)</span> 相当于 <span class="math inline">\(\pi_{\theta}\)</span> 和 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span>
-共同确定的隐式reward。</p>
-<h2 id="dpo流程">DPO流程</h2>
-<p>DPO的一般流程是：<br>
-- 对于每个prompt <span class="math inline">\(x\)</span>，采样 <span class="math inline">\(y_1,y_2\sim\pi_{\text{ref}}(\cdot\mid
-x)\)</span>，然后进行人工标注构建偏好数据集 <span class="math inline">\(\mathcal{D}=\{x^{(i)},y_w^{(i)},y_l)^{(i)}\}_{i=1}^N\)</span><br>
-- 基于 <span class="math inline">\(\mathcal{L}_{\mathrm{DPO}}\)</span>，在已有的
-<span class="math inline">\(\pi_{\mathrm{ref}}\)</span>、<span class="math inline">\(\mathcal{D}\)</span> 和 <span class="math inline">\(\beta\)</span> 上优化 $$</p>
-<p>但是收集偏好数据的成本还是比较高的，因此实际使用中，人们更愿意使用开源的偏好数据集。</p>
-<p>当我们的偏好数据是来自 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span> 的时候，我们直接让
-<span class="math inline">\(\pi_{\mathrm{ref}}=\pi^{\mathrm{SFT}}\)</span>。如果我们使用开源偏好数据集的话，就可能没法直接使用生成这些数据的模型，这时可以用偏好数据集里
-<span class="math inline">\((x,y_w)\)</span> 数据对 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 进行微调，即</p>
-<p><span class="math display">\[\pi_{\text{ref}}=\arg\max_\pi\mathbb{E}_{x,y_w\thicksim\mathcal{D}}\left[\log\pi(y_w\mid
-x)\right]\]</span></p>
-<p>这个微调步骤有助于缓解 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 和真实 reference
-distribution 之间的distribution shift。</p>
-<h2 id="your-language-model-is-secretly-a-reward-model">Your Language
-Model Is Secretly a Reward Model</h2>
-<p>在前面推导DPO的loss函数的时候，我们把reward的公式显示表达成</p>
-<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
-x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
-<p>但是这里 <span class="math inline">\(Z(x)\)</span>
-的组合空间太大，实际上没法求解。</p>
-<p>好在"在Plackett-Luce/Bradley-Terry模型框架下，同一等价类中的两个reward
-function有相同的preference distribution"</p>
-<blockquote>
-<p>Under the Plackett-Luce preference framework, and in particular the
-BradleyTerry framework, two reward functions from the same equivalence
-class induce the same preference distribution</p>
-</blockquote>
-<p>如果两个reward function <span class="math inline">\(r(x,y)\)</span>
-和 <span class="math inline">\(r^{\prime}(x,y)\)</span> 可以写成</p>
-<p><span class="math display">\[r&#39;(x,y)=r(x,y)+f(x)\]</span></p>
-<p>即表示这两个reward function来自同一等价类(equivalence class)。</p>
-<p>对于prompt <span class="math inline">\(x\)</span> 和 answer <span class="math inline">\(y_1,\ldots,y_K\)</span>，以及对应的ranking <span class="math inline">\(\tau\)</span>，在Plackett-Luce
-framework（Bradley–Terry也是其中一个特例）下的证明如下</p>
-<p><span class="math display">\[\begin{aligned}
-p_{r&#39;}(\tau|y_1,\ldots,y_K,x)&amp;
-=\prod_{k=1}^K\frac{\exp(r&#39;(x,y_{\tau(k)}))}{\sum_{j=k}^K\exp(r&#39;(x,y_{\tau(j)}))}  \\
-&amp;=\prod_{k=1}^K\frac{\exp(r(x,y_{\tau(k)})+f(x))}{\sum_{j=k}^K\exp(r(x,y_{\tau(j)})+f(x))}
-\\
-&amp;=\prod_{k=1}^K\frac{\exp(f(x))\exp(r(x,y_{\tau(k)}))}{\exp(f(x))\sum_{j=k}^K\exp(r(x,y_{\tau(j)}))}
-\\
-&amp;=\prod_{k=1}^K\frac{\exp(r(x,y_{\tau(k)}))}{\sum_{j=k}^K\exp(r(x,y_{\tau(j)}))}
-\\
-&amp;=p_r(\tau|y_1,\ldots,y_K,x)
-\end{aligned}\]</span></p>
-<p>基于此，我们可以把上面的 <span class="math inline">\(\beta\log
-Z(x)\)</span> 项忽略掉，也就是说下面两个reward
-function是具有相同的preference distribution的</p>
-<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
-x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
-<p><span class="math display">\[\hat{r}_\theta(x,y)=\beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}\]</span></p>
-<p>更进一步地，两个来自同一等价类的reward
-function在相同的RL问题下会导向相同的optimal policy。</p>
-<p>在推导DPO的loss的部分中，我们得到了optimal policy的显式解</p>
-<p><span class="math display">\[\begin{aligned}\pi(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
-<p>这里证明一下两个reward function可以导向相同的optimal
-policy。假设<span class="math inline">\(r&#39;(x,y)=r(x,y)+f(x)\)</span>，<span class="math inline">\(\pi_r\)</span> 和 <span class="math inline">\(\pi_{r&#39;}\)</span> 分别是它们对应的optimal
-policy，有</p>
-<p><span class="math display">\[\begin{aligned}
-\pi_{r^{\prime}}(y|x)&amp;
-\begin{aligned}&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r&#39;(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r&#39;(x,y)\right)\end{aligned}  \\
-&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}(r(x,y)+f(x))\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}(r(x,y)+f(x))\right)
-\\
-&amp;\begin{aligned}=\frac{1}{\exp\left(\frac{1}{\beta}f(x)\right)\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\exp\left(\frac{1}{\beta}f(x)\right)\end{aligned}
-\\
-&amp;\begin{aligned}&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}
-\\
-&amp;=\pi_r(y|x)
-\end{aligned}\]</span></p>
-<p>那么，与Plackett-Luce（特别是Bradley-Terry）模型一致的所有reward类别，都可以被某个模型
-<span class="math inline">\(\pi(y\mid x)\)</span> 和 一个给定的reference
-model <span class="math inline">\(\pi_{ref}(y\mid x)\)</span>
-所表示：</p>
-<p><span class="math display">\[r(x,y)=\beta\log\frac{\pi(y|x)}{\pi_{ref}(y|x)}\]</span></p>
-<p>也就是我们的语言模型都天然具有reward model的功能。</p>
-<h2 id="实验">实验</h2>
-<p>实际训练中，论文中所使用的超参和设置：<br>
-- <span class="math inline">\(\beta=0.1\)</span>（对于TL;DR
-summarization，设为0.5）<br>
-- batch size = 64<br>
-- RMSprop optimizer<br>
-- learning rate = 1e-6<br>
-- linearly warmup 0 to 1e-6 over 150 steps</p>
-<p>论文在对话、摘要等任务进行的效果评测，主要对比了PPO、SFT和DPO的效果。</p>
-<p>DPO即使在没有精细调参的情况下，也有比价好的效果</p>
-<img src="/473f2b43/result_1.png" class title="对比1">
-<img src="/473f2b43/result_2.png" class title="对比2">
-<img src="/473f2b43/result_3.png" class title="对比3">
-<img src="/473f2b43/result_4.png" class title="对比4">
-<h1 id="小结">小结</h1>
-<ul>
-<li>DPO在RLHF
-PPO相同的优化问题下，推导出了新的优化形式，省去了reward模型的部分，从而可以直接用偏好数据优化模型<br>
-</li>
-<li>DPO在效果和效率上相比PPO都有优势</li>
-</ul>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
+<p>如有错漏，欢迎指正~</p>
+<hr>
+<h1 id="使用半精度训练时bf16和fp16格式有什么异同">1.使用半精度训练时，bf16和fp16格式有什么异同？</h1>
+<p>二者都是占用16bit空间。</p>
+<p>fp16由1个符号位、5个指数位和10个尾数位组成。fp16在表达小数时具有较高的精度，但表示的最大范围相对bf16比较小。相比bf16，在表达较大的数时更容易出现上溢的情况。</p>
+<p>bf16由1个符号位、8个指数位和7个尾数位组成。相比于fp16，bf16牺牲了一些尾数位以增加指数位，扩大了表达的范围，但是精度降低了，因此对于对精度需求比较高的模型，模型可能效果不如fp16。</p>
+<p>模型训练时使用bf16和fp16都可以降低内存使用和传输量，提高训练效率。</p>
+<img src="/336f2f3e/bfloat16.jpeg" class title="bf16">
+<h1 id="支持模型长上下文的方案ntk-aware-interpolation的思路是什么">2.支持模型长上下文的方案「NTK-aware
+interpolation」的思路是什么？</h1>
+<p>1.在NTK插值之前，线性插值通过在原模型训练的两个位置编码中间，插入新的位置编码，使得同样的取值范围可以容纳更多位置。</p>
+<p>2.而NTK插值则是一种非线性插值的方法。它通过仅改变RoPE的base，使得位置编码中不同频率的信号有不同的表现，具体来说就是“高频外推，低频内插”。高频信号使用外推，防止分辨率太低，而低频信号沿用插值的方式，实现方便。</p>
+<h1 id="llm长度外推方案ntk-by-parts的思路是什么">3.LLM长度外推方案NTK-by-parts的思路是什么？</h1>
+<p>NTK-by-parts的方法在NTK插值的基础上又多想了一层。它认为无论是线性插值还是NTK-aware插值，都认为RoPE的所有分量都对网络有同样的重要性。而NTK-by-parts的思路认为，应该区别对待不同分量，他们对网络的影响有所不同。对于波长远小于上下文长度的分量（如波长&lt;=1/32上下文），就不插值只外推；而对于波长大于等于上下文长度的分量，就只外推不插值；对于介于两者之间的分量，就使用外推和插值的加权和。</p>
+<p>使用一个斜坡函数来定义NTK-by-parts的分段插值方法，如下所示</p>
+<img src="/336f2f3e/ntk_by_parts.png" class title="NTK-by-parts">
+<h1 id="llm长度外推方案yarn是怎做的">4.LLM长度外推方案YaRN是怎做的？</h1>
+<p>PI/NTK/NTK-by-parts主要的做法都是使用插值，而随着插值进行，token之间的距离变得更近（因为现在每一个位置旋转角度变小了），平均最小距离在减小，这样注意力softmax的分布会变得更尖，也就是都集中在某个区间。</p>
+<p>换句话说，就是RoPE原本远距离衰减的特性变弱了，衰减得更不明显，就会导致模型更平均地关注到更多的token，这样就削弱了注意力机制，导致输出质量下降。</p>
+<p>可以通过在softmax之前，将中间注意力矩阵乘以温度
+t&gt;1来缓解这个问题。由于RoPE被编码为一个旋转矩阵，就可以简单地给旋转矩阵乘以一个系数根号t来实现，这样可以不必修改注意力的代码。</p>
+<p>YaRN结合NTK-by-parts和这个温度系数，对attention score进行调整。</p>
+<img src="/336f2f3e/yarn.png" class title="YaRN">
+<h1 id="对于使用group-query-attention的模型假设hidden-sizedq的注意力头数量为h每个头维度为d假设有ddhkv组数为n输入上下文长度为sbatch-sizeb模型层数为l计算推理时kv-cache所需的空间">5.对于使用Group-Query
+Attention的模型，假设hidden
+size=D，Q的注意力头数量为h，每个头维度为d（假设有D=d×h），kv组数为n，输入上下文长度为s，batch
+size=b，模型层数为L，计算推理时kv cache所需的空间。</h1>
+<p>kv cache缓存的是经过投影变换之后的K和V矩阵。</p>
+<p>对于GQA，每层有n组K和V，每组的特征维度和Q的每个头的特征维度相同，为D/h。则每层每组K和V数据量为sD/h，整个模型共有2LnsD/h个数据，因此整个batch需要缓存2bLnsD/h个数据。
+如果使用的是半精度浮点数，每个浮点需要两个字节，因此共需要4bLnsD/h字节的空间。</p>
 <hr>
 <p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
@@ -4563,9 +4656,7 @@ PPO相同的优化问题下，推导出了新的优化形式，省去了reward�
 <p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
 <a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
 <a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
 <a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
 <a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
 <a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
 <a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
@@ -4576,12 +4667,7 @@ window attention</a><br>
 <a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
 <a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
 <a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
-<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
-<hr>
-<h1 id="reference">Reference</h1>
-<p>【1】Direct Preference Optimization: Your Language Model is Secretly
-a Reward Model https://arxiv.org/abs/2305.18290v2</p>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
 ]]></content>
       <categories>
         <category>CS</category>
@@ -4591,11 +4677,7 @@ a Reward Model https://arxiv.org/abs/2305.18290v2</p>
       <tags>
         <tag>NLP</tag>
         <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>强化学习</tag>
-        <tag>微调</tag>
-        <tag>SFT</tag>
-        <tag>偏好对齐</tag>
+        <tag>算法题</tag>
       </tags>
   </entry>
   <entry>
@@ -4998,88 +5080,6 @@ Language Models https://arxiv.org/abs/2308.16137</p>
         <tag>微调</tag>
         <tag>无限大</tag>
         <tag>预训练</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大模型算法题(5)</title>
-    <url>/336f2f3e.html</url>
-    <content><![CDATA[<p><img src="/images/cover.png"></p>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
-<hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
-<p>如有错漏，欢迎指正~</p>
-<hr>
-<h1 id="使用半精度训练时bf16和fp16格式有什么异同">1.使用半精度训练时，bf16和fp16格式有什么异同？</h1>
-<p>二者都是占用16bit空间。</p>
-<p>fp16由1个符号位、5个指数位和10个尾数位组成。fp16在表达小数时具有较高的精度，但表示的最大范围相对bf16比较小。相比bf16，在表达较大的数时更容易出现上溢的情况。</p>
-<p>bf16由1个符号位、8个指数位和7个尾数位组成。相比于fp16，bf16牺牲了一些尾数位以增加指数位，扩大了表达的范围，但是精度降低了，因此对于对精度需求比较高的模型，模型可能效果不如fp16。</p>
-<p>模型训练时使用bf16和fp16都可以降低内存使用和传输量，提高训练效率。</p>
-<img src="/336f2f3e/bfloat16.jpeg" class title="bf16">
-<h1 id="支持模型长上下文的方案ntk-aware-interpolation的思路是什么">2.支持模型长上下文的方案「NTK-aware
-interpolation」的思路是什么？</h1>
-<p>1.在NTK插值之前，线性插值通过在原模型训练的两个位置编码中间，插入新的位置编码，使得同样的取值范围可以容纳更多位置。</p>
-<p>2.而NTK插值则是一种非线性插值的方法。它通过仅改变RoPE的base，使得位置编码中不同频率的信号有不同的表现，具体来说就是“高频外推，低频内插”。高频信号使用外推，防止分辨率太低，而低频信号沿用插值的方式，实现方便。</p>
-<h1 id="llm长度外推方案ntk-by-parts的思路是什么">3.LLM长度外推方案NTK-by-parts的思路是什么？</h1>
-<p>NTK-by-parts的方法在NTK插值的基础上又多想了一层。它认为无论是线性插值还是NTK-aware插值，都认为RoPE的所有分量都对网络有同样的重要性。而NTK-by-parts的思路认为，应该区别对待不同分量，他们对网络的影响有所不同。对于波长远小于上下文长度的分量（如波长&lt;=1/32上下文），就不插值只外推；而对于波长大于等于上下文长度的分量，就只外推不插值；对于介于两者之间的分量，就使用外推和插值的加权和。</p>
-<p>使用一个斜坡函数来定义NTK-by-parts的分段插值方法，如下所示</p>
-<img src="/336f2f3e/ntk_by_parts.png" class title="NTK-by-parts">
-<h1 id="llm长度外推方案yarn是怎做的">4.LLM长度外推方案YaRN是怎做的？</h1>
-<p>PI/NTK/NTK-by-parts主要的做法都是使用插值，而随着插值进行，token之间的距离变得更近（因为现在每一个位置旋转角度变小了），平均最小距离在减小，这样注意力softmax的分布会变得更尖，也就是都集中在某个区间。</p>
-<p>换句话说，就是RoPE原本远距离衰减的特性变弱了，衰减得更不明显，就会导致模型更平均地关注到更多的token，这样就削弱了注意力机制，导致输出质量下降。</p>
-<p>可以通过在softmax之前，将中间注意力矩阵乘以温度
-t&gt;1来缓解这个问题。由于RoPE被编码为一个旋转矩阵，就可以简单地给旋转矩阵乘以一个系数根号t来实现，这样可以不必修改注意力的代码。</p>
-<p>YaRN结合NTK-by-parts和这个温度系数，对attention score进行调整。</p>
-<img src="/336f2f3e/yarn.png" class title="YaRN">
-<h1 id="对于使用group-query-attention的模型假设hidden-sizedq的注意力头数量为h每个头维度为d假设有ddhkv组数为n输入上下文长度为sbatch-sizeb模型层数为l计算推理时kv-cache所需的空间">5.对于使用Group-Query
-Attention的模型，假设hidden
-size=D，Q的注意力头数量为h，每个头维度为d（假设有D=d×h），kv组数为n，输入上下文长度为s，batch
-size=b，模型层数为L，计算推理时kv cache所需的空间。</h1>
-<p>kv cache缓存的是经过投影变换之后的K和V矩阵。</p>
-<p>对于GQA，每层有n组K和V，每组的特征维度和Q的每个头的特征维度相同，为D/h。则每层每组K和V数据量为sD/h，整个模型共有2LnsD/h个数据，因此整个batch需要缓存2bLnsD/h个数据。
-如果使用的是半精度浮点数，每个浮点需要两个字节，因此共需要4bLnsD/h字节的空间。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
       </tags>
   </entry>
   <entry>
