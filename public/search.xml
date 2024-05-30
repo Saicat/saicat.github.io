@@ -1190,754 +1190,6 @@ window attention</a><br>
       </tags>
   </entry>
   <entry>
-    <title>大模型算法题(5)</title>
-    <url>/336f2f3e.html</url>
-    <content><![CDATA[<p><img src="/images/cover.png"></p>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
-<hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
-<p>如有错漏，欢迎指正~</p>
-<hr>
-<h1 id="使用半精度训练时bf16和fp16格式有什么异同">1.使用半精度训练时，bf16和fp16格式有什么异同？</h1>
-<p>二者都是占用16bit空间。</p>
-<p>fp16由1个符号位、5个指数位和10个尾数位组成。fp16在表达小数时具有较高的精度，但表示的最大范围相对bf16比较小。相比bf16，在表达较大的数时更容易出现上溢的情况。</p>
-<p>bf16由1个符号位、8个指数位和7个尾数位组成。相比于fp16，bf16牺牲了一些尾数位以增加指数位，扩大了表达的范围，但是精度降低了，因此对于对精度需求比较高的模型，模型可能效果不如fp16。</p>
-<p>模型训练时使用bf16和fp16都可以降低内存使用和传输量，提高训练效率。</p>
-<img src="/336f2f3e/bfloat16.jpeg" class title="bf16">
-<h1 id="支持模型长上下文的方案ntk-aware-interpolation的思路是什么">2.支持模型长上下文的方案「NTK-aware
-interpolation」的思路是什么？</h1>
-<p>1.在NTK插值之前，线性插值通过在原模型训练的两个位置编码中间，插入新的位置编码，使得同样的取值范围可以容纳更多位置。</p>
-<p>2.而NTK插值则是一种非线性插值的方法。它通过仅改变RoPE的base，使得位置编码中不同频率的信号有不同的表现，具体来说就是“高频外推，低频内插”。高频信号使用外推，防止分辨率太低，而低频信号沿用插值的方式，实现方便。</p>
-<h1 id="llm长度外推方案ntk-by-parts的思路是什么">3.LLM长度外推方案NTK-by-parts的思路是什么？</h1>
-<p>NTK-by-parts的方法在NTK插值的基础上又多想了一层。它认为无论是线性插值还是NTK-aware插值，都认为RoPE的所有分量都对网络有同样的重要性。而NTK-by-parts的思路认为，应该区别对待不同分量，他们对网络的影响有所不同。对于波长远小于上下文长度的分量（如波长&lt;=1/32上下文），就不插值只外推；而对于波长大于等于上下文长度的分量，就只外推不插值；对于介于两者之间的分量，就使用外推和插值的加权和。</p>
-<p>使用一个斜坡函数来定义NTK-by-parts的分段插值方法，如下所示</p>
-<img src="/336f2f3e/ntk_by_parts.png" class title="NTK-by-parts">
-<h1 id="llm长度外推方案yarn是怎做的">4.LLM长度外推方案YaRN是怎做的？</h1>
-<p>PI/NTK/NTK-by-parts主要的做法都是使用插值，而随着插值进行，token之间的距离变得更近（因为现在每一个位置旋转角度变小了），平均最小距离在减小，这样注意力softmax的分布会变得更尖，也就是都集中在某个区间。</p>
-<p>换句话说，就是RoPE原本远距离衰减的特性变弱了，衰减得更不明显，就会导致模型更平均地关注到更多的token，这样就削弱了注意力机制，导致输出质量下降。</p>
-<p>可以通过在softmax之前，将中间注意力矩阵乘以温度
-t&gt;1来缓解这个问题。由于RoPE被编码为一个旋转矩阵，就可以简单地给旋转矩阵乘以一个系数根号t来实现，这样可以不必修改注意力的代码。</p>
-<p>YaRN结合NTK-by-parts和这个温度系数，对attention score进行调整。</p>
-<img src="/336f2f3e/yarn.png" class title="YaRN">
-<h1 id="对于使用group-query-attention的模型假设hidden-sizedq的注意力头数量为h每个头维度为d假设有ddhkv组数为n输入上下文长度为sbatch-sizeb模型层数为l计算推理时kv-cache所需的空间">5.对于使用Group-Query
-Attention的模型，假设hidden
-size=D，Q的注意力头数量为h，每个头维度为d（假设有D=d×h），kv组数为n，输入上下文长度为s，batch
-size=b，模型层数为L，计算推理时kv cache所需的空间。</h1>
-<p>kv cache缓存的是经过投影变换之后的K和V矩阵。</p>
-<p>对于GQA，每层有n组K和V，每组的特征维度和Q的每个头的特征维度相同，为D/h。则每层每组K和V数据量为sD/h，整个模型共有2LnsD/h个数据，因此整个batch需要缓存2bLnsD/h个数据。
-如果使用的是半精度浮点数，每个浮点需要两个字节，因此共需要4bLnsD/h字节的空间。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大模型推理窗口-从有限到无限大</title>
-    <url>/45ee1a6d.html</url>
-    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<hr>
-<p>步入2024年Q2，大模型在RAG、文档对话、大模型Agent能力等方向的发展持续升温。在平时的日常生活和工作中，大模型工具提供的文档总结、文本润色、代码生成等能力已经是提高效率的必备帮手，甚至在一些复杂或者不熟悉的场景上，大模型也已经能提供一些比较专业的帮助。</p>
-<p>在这些方向上，大模型(超)长上下文的能力都是基础。目前不少模型已经在128k+的长度上展示出比较强的能力，这些模型有的收集了超长训练数据，有的优化位置编码，有的则暴力训练，以提升模型的长上下文能力。</p>
-<p>另外一些工作则另辟蹊径，直接让模型具备无限大窗口的能力。本篇将梳理几个理论上支持无限大上下文长度的工作。</p>
-<h1 id="streamingllm">StreamingLLM</h1>
-<p>论文：Efficient Streaming Language Models with Attention Sinks</p>
-<p>时间：2023年9月</p>
-<p>长度：测试4M，理论∞</p>
-<p>阶段：无需训练，直接应用在推理阶段</p>
-<p>这是一篇由MIT，CMU，NVIDIA，META联合发布的论文。论文提出了一个在流式输出场景下支持无限大上下文长度的方法StreamingLLM，并且不需要进行任何形式的训练或微调
--- 在有限长度上训练，在无限长度上推理。论文用LLAMA2, MPT,
-Falcon和Pythia作为基线模型进行验证，在4M的上下文长度，StreamingLLM仍然能够保持较低的PPL。</p>
-<p>需要注意的是，StreamingLLM主要关注在超长上下文的情况下，让模型能够生成低PPL的内容，但是在内容的准确性上并没有保证。</p>
-<h2 id="背景">背景</h2>
-<p>大模型流式应用，比如现在大部分对话机器人，在部署推理的时候，在长上下文的情况下通常会面临两个问题：<br>
--
-缓存不足：流式应用下，为了提升响应速度，KV缓存目前是不可缺少的。而随着对话交互的进行，KV缓存所需的空间也以线性速度在增长。鉴于目前模型的规模动辄百亿千亿的参数量，即使较强的GPU
-H100、A100拥有40G/80G的显存，推理时也捉襟见肘。在显存不足的情况下，我们就不得不抛弃部分旧的KV缓存值，这也导致了模型效果的下降。<br>
--
-训练长度：主流模型大部分使用旋转位置编码RoPE或其变体，而RoPE的外推能力一般，因此当推理输入的上下文长度远超训练的长度时，模型效果也会迅速下降。</p>
-<p>现有一些工作针对其中的部分问题进行优化：<br>
-- 类似Longformer那样的window
-attention通过只保存最近的KV值来缓解缓存不足的问题，同时保持一定的窗口扩展能力。但是论文观察到，一旦上下文长度超过缓存大小，window
-attention的机制会把最初的部分token移出缓存，这时模型的效果依然会迅速下滑。<br>
-- sliding window with
-recomputation（https://github.com/mit-han-lab/streaming-llm/issues/51），可以节省KV所需的空间，但是recomputation计算量和长度是平方关系。这个方案也是论文基线方案里效果最接近可用的。<br>
--
-针对位置编码的工作，比如线性插值、NTK插值、YaRN，已经被证明是有效的，但是优化的窗口依然是有限的，大概能在原来的训练长度的基础上，提升一倍或者几倍的推理窗口。论文还提到长窗口的一个实践工作，一个关注在NSFW内容(手动滑稽)的模型：https://kaiokendev.github.io/til#extending-context-to-8k<br>
-- 针对推理效率，也有一些工作：《Efficiently scaling transformer
-inference，SmoothQuant: Accurate and efficient post-training
-quantization for large language models》、《Dynamic context pruning for
-efficient and interpretable autoregressive transformers》、《Spatten:
-Efficient sparse attention architecture with cascade token and head
-pruning》、《H2o: Heavyhitter oracle for efficient generative inference
-of large language models》，但是在支持的最大长度依然有限制。<br>
--
-无损的FlashAttention已经被广泛采用，无论是训练还是推理都很有帮助。<br>
-- 其他一些有损的扩展方案，比如Big Bird、Linformer等。</p>
-<p>StreamingLLM这篇论文发现在长上下文的情况下，存在attention
-sink的现象，这也是window
-attention在上下文超过缓存大小之后效果迅速变差的原因。通过利用attention
-sink，让模型在超长上下文的情况还可以保持较低的PPL。并且和基线里唯一效果比较好的sliding
-window with
-recomputation方案相比，StreamingLLM在速度上有22+倍的提升。</p>
-<p>StreamingLLM和其他方案在长上下文上的PPL对比如下图所示，StreamingLLM在各个模型上都能保持稳定较低的PPL。</p>
-<img src="/45ee1a6d/streamingllm_model_ppl.png" class title="PPL对比">
-<h2 id="attention-sink">attention sink</h2>
-<p>从window
-attention在上下文超过缓存大小之后的失效，论文发现自回归LLM存在的一个有趣现象：对于输入文本最靠前的少量几个token，无论它们在语义上与语言建模任务的相关性如何，大量的注意力分数都会分配给他们，如下图所示</p>
-<img src="/45ee1a6d/stremingllm_attention_sink.png" class title="attention sink">
-<p>模型的前两层还能保持attention
-score更多分配给当前token附近位置的特性，而在其他层，靠前的几个token都会接受到大量的注意力。</p>
-<p>论文里把这些token称为attention
-sink。尽管这些token在语义上很可能并没有什么重要性，但它们却聚集了大量的注意力分数。</p>
-<p>出现这个现象的原因就是softmax操作。softmax要求所有上下文token的注意力分数加起来等于1，因此，即使当前token跟前面的其他token都没有匹配的需要，模型仍然需要将多余的注意力值分配到前面的某些token，以使得总和为1。</p>
-<p>那么文本最开头的几个初始token就会承担“接收多余的、不需要的注意力”的任务。为什么是初始token来承担这个任务，最简单的原因就是，对于自回归语言建模，初始token对所有后续token都是可见的，这使得它们更容易被训练成attention
-sink。</p>
-<p>上面这个解释还只是猜想，于是论文做了一个实验来验证这个猜想：把初始的4个token都换成没有重要实际语义的换行符号，结果发现模型依然会把大量的注意力分配给这些token，这就说明attention
-sink这个现象和内容语义无关，而只和这些token所在的位置相关。</p>
-<p>这个现象在一些quant的工作里也有发现，比如《SmoothQuant: Accurate and
-efficient post-training quantization for large language
-models》和《Quantizable transformers: Removing outliers by helping
-attention heads do nothing》等。</p>
-<h2 id="推理到无限长">推理到无限长</h2>
-<p>基于以上的发现，论文提出了StreamingLLM。StreamingLLM利用了attention
-sink具有高注意力值的事实，认为保留它们可以保持注意力分数的分布接近正常。</p>
-<p>因此，StreamingLLM的方案就是，在window
-attention的基础上，增加一个策略，保留了attention sink
-token的KV值，这些token的KV值会和滑动窗口内的token一起构成完整的KV
-cache，用于进行新token的推理计算，StreamingLLM和其他方案的attention计算如下图所示。</p>
-<img src="/45ee1a6d/streamingllm_compare.png" class title="StreamingLLM对比">
-<p>这里有一个问题，要保留多少个初始token才足够。论文在几个不同的模型上做了实验，结果如下表所示。</p>
-<img src="/45ee1a6d/stremingllm_init_token_num.png" class title="attention sink number">
-<p>实验发现，使用4个初始token就可以基本把PPL降下来，而只使用一个或者两个初始token则仍有很大损失。</p>
-<p>最终方案是，在window attention的基础上，StreamingLLM把KV
-cache分成两部分：<br>
-- 包含4个初始token的attention sink<br>
-- 正常滚动的KV cache</p>
-<p>StreamingLLM的KV缓存如下所示</p>
-<img src="/45ee1a6d/stremingllm_kv_cache.png" class title="cache">
-<p>一个重要的点是，StreamingLLM在实际应用上，位置编码中的相对位置，不再直接使用原文中的distance，而是改成使用这些token在cache中的distance。对于像RoPE这样的位置编码，需要缓存引入旋转变换之前token的KV值，解码时再把这些token在缓存内的相对位置加上。这样做使得模型不用处理大于预训练窗口大小的位置编码，而保证了效果。（关于这一点，在下面一篇论文《LM-Infinite》有相关实验）</p>
-<p>当前的大模型基本都没有针对attention
-sink的现象而做针对性的设计，论文提出可以在训练的时候增加一个特殊的token作为attention
-sink token使用，方便模型把多余的注意力值放在这个特殊token上。</p>
-<p>如果不增加一个特殊的token，那另外一个方法就是使用softmax的变体，softmax-off-by-one，替换attention中的softmax。</p>
-<p>softmax-off-by-one的公式如下所示</p>
-<p><span class="math display">\[\text{SoftMax}_1(x)_i=\frac{e^{x_i}}{1+\sum_{j=1}^Ne^{x_j}}\]</span></p>
-<p>softmax-off-by-one在分母增加了一个常数1，这样就不要求所有attention
-score的和为1。这相当于有一个K和V全都是0的虚拟token，固定和所有其他token的注意力得分为1，这个虚拟token在一定程度上也起到了attention
-sink的作用。</p>
-<p>为了验证增加特殊token作为attention
-sink，以及使用softmax-off-by-one的方案效果，论文在相同设置下训练了3个160M参数的模型，效果如下</p>
-<img src="/45ee1a6d/stremingllm_exp.png" class title="实验">
-<p>从结果上看，即使使用softmax-off-by-one（zero
-sink），模型还是会依赖前几个token作为attention sink。</p>
-<p>最后，论文在LLAMA2, MPT,
-Falcon和Pythia模型验证StreamingLLM在4M长度上的效果。MPT使用的位置编码是ALIBI，其他模型则是RoPE。效果如下图</p>
-<img src="/45ee1a6d/stremingllm_perf_4m.png" class title="效果">
-<p>在4M的长度上，StreamingLLM仍然能保持PPL较为稳定。</p>
-<p>理论上StreamingLLM可以把窗口推到无限长，但是由于本质上还是window
-attention，因此超过cache大小的部分还是会被丢弃。因此StreamingLLM虽然能保持PPL较低，但是对于需要高精度阅读理解和推理的任务，StreamingLLM还是有局限。</p>
-<h1 id="lm-infinite">LM-Infinite</h1>
-<p>论文：LM-Infinite: Zero-Shot Extreme Length Generalization for Large
-Language Models</p>
-<p>时间：2023年8月</p>
-<p>长度：在2k或者4k长度上训练，在200M长度上推理保持较低PPL</p>
-<p>阶段：无需训练，直接应用在推理阶段</p>
-<p>LM-Infinite可以和现有的LLM结合使用，在Passkey
-Retrieval和Qasper任务上有比较好的效果，且和原始模型相比，在解码速度上有2.7倍提升，显存上节省7.5倍。</p>
-<h2 id="三个挑战">三个挑战</h2>
-<p>LM-Infinite认为，Transformer
-LLM无法有效地泛化到长上下文的情况，主要是因为会面临3个挑战。</p>
-<ul>
-<li>挑战1：challenges in handling unseen distances among tokens</li>
-</ul>
-<p>对于使用相对位置编码的模型，两个token的位置对注意力值的影响取决于两个token之间的距离。当推理的长度越来越长，就会出现在训练时没有见过的相对距离，此时attention
-logits就会倾向于爆炸增长到无穷大，以区分在训练时从未见过的距离。论文对此给出了数学证明。</p>
-<p>而从实践上来看，把LLAMA2所有注意力头在ArXiv数据集上8k以内的attention
-logits抽取出来，其均值和方差如下图所示。</p>
-<img src="/45ee1a6d/lm_infinite_attention_logits_explode.png" class title="logits爆炸">
-<p>LLAMA2的预训练窗口大小为4k，可以看到4k之后，attention
-logits的均值和方差开始有明显的上升。</p>
-<p>那么为了缓解这个问题，一个自然的想法是将token之间的相对距离值限制在模型预训练期间看到过的最大值，即设置一个距离上限。这样可以解决logits爆炸，但是会导致下面这个问题。</p>
-<ul>
-<li>挑战2：attending to unseen numbers of tokens</li>
-</ul>
-<p>对于较长的上下文，位置靠后的token需要在更大的上下文长度范围内，分配它的注意力权重。论文提出，如果注意力logits有界，那么随着上下文长度变长，注意力熵(attention
-entropy)将增长至无穷大。这里原文也给出了数学证明。</p>
-<p>直观来说，在注意力权重分配为平均分配的时候，注意力熵最大。而注意力熵增大，表示当前的token不能确定应该将主要注意力放在上文的哪些token，即无法集中注意力。</p>
-<p>同样地，我们把模型在8k内的注意力熵画出来，结果如下图所示，随着长度增大，注意力熵也逐渐增大。</p>
-<img src="/45ee1a6d/lm_infinite_attention_entropy.png" class title="注意力熵爆炸">
-<p>这表明我们应该限制attention context
-size，以确保注意力熵保持在预训练见过的范围内。</p>
-<p>如果简单地使用一个window
-attention，使得每个token只能关注到一定距离内的token，在一定程度上可以一定程度上handle挑战1和挑战2。这样的思路和XPos、Longformer类似。</p>
-<p>但是使用window attention，又会引入新的问题。</p>
-<ul>
-<li>挑战3：starting tokens occupy a distinct feature space</li>
-</ul>
-<p>即使没有显式的绝对位置编码，位置最靠前的几个初始token的注意力输出和其他位置相比，也会占据一个独特的表示空间。</p>
-<p>这一结论来自于《The impact of positional encoding on length
-generalization in
-transformers》中的定理1，该定理证明了即使没有使用位置编码，单向注意力使得单个注意力层中的token输出也可以隐式地编码绝对位置，而初始token的信号是最强的，且很容易和其他token区分开来。</p>
-<p>这个观察和StreamingLLM中指出的attention
-sink很相似，总之就是最靠前的几个初始token有很大的影响，因此使用window
-attention把初始token忽略会带来很大的效果损失。</p>
-<p>论文把LLAMA2中各层的hidden state
-output做了PCA，降到2维之后画出来，如下图所示</p>
-<img src="/45ee1a6d/lm_infinite_starting_tokens.png" class title="初始token">
-<p>蓝色的点表示初始token，红色的点表示靠后的token。上图显示了初始token的特征在特征空间中占据了和其他token很不同的区域。这就解释了为什么简单地将注意力窗口限制在最近的token上会效果不好：由于注意力本质上是加权平均，丢弃初始的几个token影响了注意力输出到达它们应占据的空间。</p>
-<p>因此，我们需要保留初始token。</p>
-<h2 id="解决方案">解决方案</h2>
-<p>基于上面的这些观察和发现，论文提出LM-Infinite，给LLM做zero-shot的长度泛化。LM-Infinite设计了两个主要机制，Λ-shaped
-attention mask和Distance ceiling。</p>
-<ul>
-<li>Λ-shaped attention mask</li>
-</ul>
-<p>Λ-shaped attention mask在概念上和Longformer、LongNet、Big
-Bird的思路类似。</p>
-<p>Λ-shaped attention mask在window
-attention的基础上，保持了初始token对后续所有token可见。具体来说，每个token能关注到两部分：（1）<span class="math inline">\(n_{\mathrm{starting}}\)</span>
-个初始token（2）<span class="math inline">\(L_{\mathrm{pretrain}}\)</span>
-个最近的token。其中<span class="math inline">\(n_{\mathrm{starting}}\)</span> 为超参，<span class="math inline">\(L_{\mathrm{pretrain}}\)</span>
-是预训练时的最大窗口大小。除了这两个部分的token之外，其他token都会被直接忽略。</p>
-<p>论文对 <span class="math inline">\(n_{\mathrm{starting}}\)</span>
-的数量进行了实验，发现 <span class="math inline">\(n_{\mathrm{starting}}\in[5,100]\)</span>
-时的效果比较好，如下图所示。</p>
-<img src="/45ee1a6d/lm_infinite_starting_tokens_num.png" class title="初始token数量实验">
-<p>注意这里不需要对模型进行任何训练和微调，只需要修改推理的方式即可。</p>
-<p>Λ-shaped attention mask可以解决挑战2和挑战3。</p>
-<ul>
-<li>Distance ceiling</li>
-</ul>
-<p>LM-Infinite把最大距离限制在 <span class="math inline">\(L_{\mathrm{pretrain}}\)</span>，这样做基本只影响初始token的位置编码。</p>
-<p>具体来说，对于相对位置编码，假设原来的attention logit是 <span class="math inline">\(w(\mathbf{q},\mathbf{k},d)\)</span>，其中 <span class="math inline">\(d\)</span> 是两个token之间的距离；那么Distance
-ceiling就是把attention logit的计算变成：</p>
-<p><span class="math display">\[\text{attention
-logits}=w(\mathbf{q},\mathbf{k},d&#39;)\]</span></p>
-<p><span class="math display">\[d&#39;=\min(d,L_\text{pretrain})\]</span></p>
-<p>Distance ceiling限制了最大距离，可以解决挑战1。</p>
-<ul>
-<li>Optionally attending to top-k tokens in the middle</li>
-</ul>
-<p>除了Λ-shaped attention mask和Distance
-ceiling以外，论文还设计了一个可选的机制，用于把“除了当前窗口内的最近token和初始token”以外的中间部分token也加入到attention计算中，这部分token本来是会被直接丢弃的。</p>
-<p>具体来说，会从原本被抛弃的中间token里，选择 <span class="math inline">\(k\)</span> 个attention
-logits最大的token加入到attention 计算中来。这 <span class="math inline">\(k\)</span> 个token的距离都会被统一设置为 <span class="math inline">\(d=\frac12L_\text{pre-train}\)</span>。</p>
-<p>对 <span class="math inline">\(k\)</span> 的取值，论文在Passkey
-Retrieval的validation set上做了实验，结果如下</p>
-<img src="/45ee1a6d/lm_infinite_middle_k.png" class title="k的数量">
-<p>最终取了 <span class="math inline">\(k=5\)</span>，并且只在模型&gt;5的层中加入。</p>
-<p>加入middle
-token主要用于优化需要精准获取中间信息的任务，对于没有这个需要的任务，加入过多的middle
-token不仅无益，甚至有害，原因如前面挑战2所分析的，会增大注意力熵。</p>
-<p>最终，LM-Infinite的整体方案如下图所示</p>
-<img src="/45ee1a6d/lm_infinite_design.png" class title="设计">
-<h2 id="实验">实验</h2>
-<p>论文在LLaMA-7B、LLaMA2-7B、MPT-7B和GPT-J-6B这几个模型验证LM-Infinite的效果。除了MPT-7B使用Alibi之外，其他模型都是用RoPE。</p>
-<ul>
-<li>Language Modeling</li>
-</ul>
-<p>首先是语言建模的评测，使用的数据集是ArXiv和OpenWebText2。</p>
-<p>选择的几个基线模型，以及这些模型使用LM-Infinite的推理策略之后，在0-12k长度上的PPL如下图所示</p>
-<img src="/45ee1a6d/lm_infinite_ppl_figure.png" class title="PPL">
-<p>LLAMA2在略长于10K的长度上就输出了NaN，因此其曲线较短。所有原始模型在约32K的时候就出现OOM。</p>
-<p>当测试长度超过训练长度时，基线模型的PPL会迅速爆炸。而使用LM-Infinite之后，所有模型都可以泛化到比训练长度长得多，而仍然保持较低PPL。</p>
-<p>为了验证LM-Infinite在更大长度上的效果，用LM-Infinite +
-Llama2，在由ArXiv数据重复抽样拼接构成的200M
-token长度上的评估PPL。结果如下图所示，在200M长度下，依然可以保持稳定较低的PPL。</p>
-<img src="/45ee1a6d/lm_infinite_ppl_200m.png" class title="PPL 200M">
-<ul>
-<li>Passkey Retrieval and Qapser</li>
-</ul>
-<p>Passkey
-Retrieval和Qapser就是需要对整个上下文有精确理解的任务，因此对于这两个任务，加入了top-5个middle
-token到attention计算中。</p>
-<p>结果如下表。原始模型在长度超出训练长度之后，几乎无法输出有效内容，因此Passkey
-Retrieval上全得0分。而LM-Infinite相比简单的长度裁剪方案，在两个任务上都有更好效果。</p>
-<img src="/45ee1a6d/lm_infinite_downstream.png" class title="下游任务">
-<ul>
-<li>Ablation study</li>
-</ul>
-<p>对于LM-Infinite的两个主要设计，Λ-shaped attention mask和Distance
-ceiling，论文做了消融实验，如下图所示。</p>
-<img src="/45ee1a6d/lm_infinite_ablation.png" class title="消融实验">
-<p>只使用Λ-shaped attention mask或者distance
-ceiling单一策略的情况下，PPL仍然会出现较明显的上升，说明这两个组件都是必须的。</p>
-<h1 id="transformer-xl">Transformer-XL</h1>
-<p>讲下一篇Infini-Transformer之前，先简单回顾下Transformer-XL的思路。</p>
-<p>Transformer-XL是2019年6月，由CMU和Google
-Brain发布的一个工作，目的是赋予在固定长度上训练的模型，在更大长度上的推理能力。</p>
-<p>一般来说，transformer的训练和推理如下图所示，训练的时候模型在固定的长度上训练，如果输入文本超过了模型的训练窗口大小，那就把输入切分成多个segment，模型在各个segment分别独立地进行训练；而推理的时候，如果文本超过了模型的推理窗口大小，模型可以使用滑动窗口的方式，逐步进行推理。</p>
-<img src="/45ee1a6d/xl_vanilla_sw.png" class title="vanilla transformer">
-<p>在窗口滑动的过程中，模型始终只能看到窗口内的内容，对于超出的部分则无法把信息纳入计算中，这显然对有长距离依赖的任务有损害。</p>
-<p>为了让模型看得更远，Transformer-XL把attention计算修改成下面的样子：把输入切分成多个segment，每个的长度为L，对于两个相邻的segment
-<span class="math inline">\([\mathbf{s}_{\tau}=x_{\tau,1},\cdots,x_{\tau,L}]\)</span>
-和 <span class="math inline">\(\mathbf{s}_{\tau+1}=[x_{\tau+1,1},\cdots,x_{\tau+1,L}]\)</span>，计算如下</p>
-<p><span class="math display">\[\begin{aligned}&amp;\widetilde{\mathbf{h}}_{\tau+1}^{n-1}=\left[\mathrm{SG}(\mathbf{h}_\tau^{n-1})\circ\mathbf{h}_{\tau+1}^{n-1}\right]\\&amp;\mathbf{q}_{\tau+1}^n,\mathbf{k}_{\tau+1}^n,\mathbf{v}_{\tau+1}^n=\mathbf{h}_{\tau+1}^{n-1}\mathbf{W}_q^\top,\widetilde{\mathbf{h}}_{\tau+1}^{n-1}\mathbf{W}_k^\top,\widetilde{\mathbf{h}}_{\tau+1}^{n-1}\mathbf{W}_v^\top\\&amp;\mathbf{h}_{\tau+1}^n=\text{Transformer-Layer}\left(\mathbf{q}_{\tau+1}^n,\mathbf{k}_{\tau+1}^n,\mathbf{v}_{\tau+1}^n\right)\end{aligned}\]</span></p>
-<p>其中SG是stop
-gradient的操作，这样在训练的时候能保持仍然只有固定窗口大小的参数进行梯度计算和更新，而不会扩大显存需求。<span class="math inline">\(\begin{bmatrix}\mathrm{SG}(\mathbf{h}_\tau^{n-1})\circ\mathbf{h}_{\tau+1}^{n-1}\end{bmatrix}\)</span>
-表示在序列长度维度进行拼接。h、q、k、v的上标 <span class="math inline">\(n\)</span> 和 <span class="math inline">\(n-1\)</span> 是模型的层序号。</p>
-<p>对于当前segment的每一层attention计算，Transformer-XL把上一个segment的信息加入到当前的K和V中再进行注意力计算，这样相当于每层相比上一层，都能往前多关注到一个segment长度的信息，模型的层数越多，模型最终能关注的长度越长，最后一个segment的最终输出依赖第一个segment的第一层输出，如下图所示。</p>
-<img src="/45ee1a6d/xl_attention.png" class title="Transformer-XL">
-<h1 id="infini-transformer">Infini-Transformer</h1>
-<p>论文：Leave No Context Behind:Efficient Infinite Context Transformers
-with Infini-attention</p>
-<p>时间：2024年4月</p>
-<p>长度：实验500k/1M，理论∞</p>
-<p>阶段：继续预训练/微调</p>
-<p>Google提出的一种叫Infini-attention的注意力计算方式，可以使用有限的显存计算无限长的上下文。</p>
-<h2 id="背景-1">背景</h2>
-<p>记忆能力是智能的基石，因为它使得针对特定上下文的高效计算成为可能。</p>
-<p>但是transformer的注意力计算在时间和空间上都跟输入长度是二次的关系，这就使得在长上下文的场景下很难高效、准确地处理信息。</p>
-<p>使用记忆模块可以在大大减少计算量和显存需求的前提下，依然保持长上下文完整信息对模型的可见性。理论上所有输入信息都可以保存在记忆模块中，因此模型具备处理“有长距离依赖，且需要对输入信息进行准确检索”的任务。从这点上看，和StreamingLLM相比，记忆模块的效果上限更高。</p>
-<p>针对高效的记忆，目前也有一些相关工作，比如《Metalearned neural
-memory》/《Enhancing the transformer with explicit relational encoding
-for math problem solving》所使用的compressive
-memory，可以用固定大小的记忆模块来编码context，但是现有的记忆模块在效果和设计的simplicity上仍然存在tradeoff，比较难平衡。</p>
-<h2 id="infini-attention">Infini-attention</h2>
-<p>基于此，Infini-Transformer主要的改进点就在记忆模块的设计上。Infini-attention的结构设计如下图所示，每个Transformer
-block内包括了常规的mask local attention，和储存长期记忆的long term
-linear attention。</p>
-<img src="/45ee1a6d/infini_attention_structure.png" class title="infini-attention结构">
-<p>Infini-attention机制复用了标准注意力计算中的所有QKV值，构建了固定大小的注意力模块，用于长期记忆。在处理后续序列时，根据当前的Q从记忆模块中检索相关内容。Infini-attention将长期记忆检索到的值与局部注意力上下文通过concat进行聚合，共同计算最终的输出。</p>
-<p>这种对Transformer注意力层的微小但关键的修改，使得现有的LLM能够通过继续预训练和微调自然地扩展到无限长的上下文。</p>
-<p>Infini-attention和Transformer-XL的对比如下图所示</p>
-<img src="/45ee1a6d/infini_attention_process.png" class title="infini-attention计算方式">
-<p>和Transformer-XL类似，Infini-Transformer也把输入分成多个segment来处理。不同的是，Transformer-XL每层只能比前一层多看到一个segment的信息，因此需要通过堆叠模型的层数来提升模型处理窗口的大小；而由于层数是有限的，最终窗口的大小还是有限的。</p>
-<p>Infini-Transformer则是每层都有对之前所有segment的长期记忆，因此不受模型层数的影响，可以扩展到无限大的窗口。</p>
-<p>compressive memory的具体设计，出于simplicity和computational
-efficiency的考虑，论文参考《Learning associative inference using fast
-weight memory》，把memory设计成一个associative matrix。</p>
-<p>对于记忆模块，最重要的就是记忆的更新和检索。</p>
-<ul>
-<li>记忆检索</li>
-</ul>
-<p>先看下记忆的检索。假设每个segment的长度为 <span class="math inline">\(N\)</span>，我们使用当前的 <span class="math inline">\(Q\in\mathbf{R}^{N\times d_{key}}\)</span> 从memory
-<span class="math inline">\(M_{s-1}\in\mathbf{R}^{d_{key}\times
-d_{value}}\)</span> 中检索，计算如下</p>
-<p><span class="math display">\[A_{\text{mеm}}=\frac{\sigma(Q)M_{s-1}}{\sigma(Q)z_{s-1}}\]</span></p>
-<p>其中<span class="math inline">\(\sigma\)</span>是激活函数，使用的是element-wise
-ELU + 1。</p>
-<p><span class="math inline">\(z_{s-1}\in\mathbf{R}^{d_{key}}\)</span>是normalization
-term。这里normalization term参考《Transformers are rnns: Fast
-autoregressive transformers with linear
-attention》的做法，使用所有K值的求和值。</p>
-<ul>
-<li>记忆更新</li>
-</ul>
-<p>完成检索之后，就要更新记忆。需要更新的有normalization
-term和memory两项，更新方式如下。</p>
-<p><span class="math display">\[M_s\leftarrow
-M_{s-1}+\sigma(K)^TV\]</span></p>
-<p><span class="math display">\[z_s\leftarrow
-z_{s-1}+\sum_{t=1}^N\sigma(K_t)\]</span></p>
-<p>memory的更新，参考《Metalearned neural memory》和《Learning
-associative inference using fast weight memory》所使用的delta
-rule，进一步优化成如下形式</p>
-<p><span class="math display">\[M_s\leftarrow
-M_{s-1}+\sigma(K)^T(V-\frac{\sigma(K)M_{s-1}}{\sigma(K)z_{s-1}})\]</span></p>
-<ul>
-<li>长期记忆和local attention结合</li>
-</ul>
-<p>回到当前segment的注意力计算中，需要把长期记忆检索项 <span class="math inline">\(A_{mem}\)</span> 和local attention state <span class="math inline">\(A_{dot}\)</span> 结合</p>
-<p><span class="math display">\[A=sigmoid(\beta)\odot
-A_{mem}+(1-sigmoid(\beta))\odot A_{dot}\]</span></p>
-<p>其中 <span class="math inline">\(\beta\)</span>
-是一个可学习的标量参数。</p>
-<p>在训练中， <span class="math inline">\(\beta\)</span>
-所学习到的值如下，0则表示这个头只关注当前segment，1则表示值关注长期记忆的内容，介于0和1之间的则是两种的混合，可以看到大部分的注意力头会使用二者的混合结果</p>
-<img src="/45ee1a6d/infini_attention_gating.png" class title="gating分布">
-<p>整体策略上，和其他包含segment-level
-memory的模型在方案设计上的比较如下</p>
-<img src="/45ee1a6d/infini_attention_compare.png" class title="方案比较">
-<h2 id="实验-1">实验</h2>
-<p>实验上，每个segment的长度 <span class="math inline">\(N\)</span>
-设为2048，模型的训练窗口大小为32768，即总共有16个segment。</p>
-<ul>
-<li>语言建模能力</li>
-</ul>
-<p>Infini-Transformer和Transformer-XL/Memorzing
-Transformer/RMT在PG-19和Arxiv数据集上的language modeling能力对比如下</p>
-<img src="/45ee1a6d/infini_attention_language_modeling.png" class title="语言建模能力对比">
-<p>Infini-Transformer的效果显著更好，而且所需的记忆空间只有Memorizing
-Transformers的不到1%。</p>
-<p>原文指出，把训练的数据长度提升到100k，Infini-Transformer的PPL还能进一步降低。</p>
-<ul>
-<li>下游任务</li>
-</ul>
-<p>用1B的模型进行轻量级的继续预训练，训练配置如下：<br>
-- batch size = 64 - step = 30k - 训练数据长度 &gt; 4k - segment length =
-2k</p>
-<p>之后在1M长度的passkey
-retrieval任务上评测，zero-shot和fine-tune模型在各个长度的效果如下表</p>
-<img src="/45ee1a6d/infini_attention_passkey.png" class title="passkey效果">
-<p>Infini-Transformer（linear + delta）在1M长度的passkey
-retrieval任务上做到完全正确。</p>
-<p>另外在8B模型上，用8k长度训练30k步，在500k的BookSum任务上评测，结果如下</p>
-<img src="/45ee1a6d/infini_attention_booksum.png" class title="booksum效果">
-<p>Infini-Transformer（linear + delta）相比其他模型有一定优势。</p>
-<h1 id="小结">小结</h1>
-<ol type="1">
-<li>Streaming和LM-Infinite思路有些相似，都观察到attention
-sink对模型效果的影响，并设计了相关的注意力计算机制保留初始token以稳定PPL，而LM-Infinite在这个基础上使用distance
-ceiling，使得模型在推理时不会使用超出训练所用的token相对距离。虽然这两个工作使得模型可以在M级别的长度仍然保持较低PPL，但是实际大量中间token被丢弃，导致对需要在上下文精准检索的任务效果有损害。<br>
-</li>
-<li>Infini-Transformer使用记忆模块，把输入进行分段，并把靠前的内容通过固定大小的记忆矩阵进行压缩。理论上记忆模块可以提供所有上文的信息，能够应用在更精细和困难的任务。记忆模块的检索和更新的设计是方案的核心，需要考虑复杂度和效果的平衡。</li>
-</ol>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
-<hr>
-<h1 id="reference">Reference</h1>
-<p>【1】Efficient Streaming Language Models with Attention Sinks
-https://arxiv.org/abs/2309.17453<br>
-【2】Transformer-XL: Attentive Language Models Beyond a Fixed-Length
-Context https://arxiv.org/abs/1901.02860<br>
-【3】Leave No Context Behind: Efficient Infinite Context Transformers
-with Infini-attention https://arxiv.org/abs/2404.07143<br>
-【4】LM-Infinite: Zero-Shot Extreme Length Generalization for Large
-Language Models https://arxiv.org/abs/2308.16137</p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>长上下文</tag>
-        <tag>无限大</tag>
-        <tag>预训练</tag>
-        <tag>微调</tag>
-        <tag>attention</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>解锁大模型长上下文能力</title>
-    <url>/cc852861.html</url>
-    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<hr>
-<p>步入2024年Q2，大模型在RAG、文档对话、大模型Agent能力等方向的发展持续升温。在平时的日常生活和工作中，大模型工具提供的文档总结、文本润色、代码生成等能力已经是提高效率的必备帮手，甚至在一些复杂或者不熟悉的场景上，大模型也已经能提供一些比较专业的帮助。</p>
-<p>在这些方向上，大模型(超)长上下文的能力都是基础。无论是使用详细的CoT/ToT，还是通过多篇检索文档提供专业知识，抑或是使用相关样例提升回复质量，都需要模型具备处理很长的输入输出信息的能力。这不仅要求模型在较长的位置编码下依然具有良好的语言建模能力，而且还需要模型能够进行长距离的、细致的阅、准确的阅读和理解。</p>
-<p>本篇将梳理几个通过轻量级训练解锁大模型长上下文能力的工作。</p>
-<h1 id="支持128k上下文的数据工程">支持128k上下文的数据工程</h1>
-<p>论文：Data Engineering for Scaling Language Models to 128K
-Context</p>
-<p>时间：2024年2月</p>
-<p>阶段：预训练</p>
-<p>长度：128k</p>
-<h2 id="评测指标">评测指标</h2>
-<p>模型的长上下文能力不仅体现在文本较长的时候，模型的PPL依然能保持在较低的水平，还体现在对于长上下文输入，模型依然能够进行准确的阅读理解和推理。</p>
-<p>以往一些工作仅使用validation
-dataset上的PPL作为评测指标，并不能很好地表征模型的真实长上下文能力。而目前被广泛使用的
-Needle in a
-Haystack，或者叫大海捞针任务，是对长上下文能力的一个比较好的评测。这篇论文主要就以大海捞针任务为标准，对不同的模型和方案进行对比。</p>
-<p>两个PPL几乎相同的模型，在大海捞针任务上的差距可以很大，如下图所示，颜色越绿代表正确率越高</p>
-<img src="/cc852861/eng_ppl.png" class title="PPL和大海捞针">
-<p>目前已有的一些扩展大模型上下文窗口的方法，比如LongLoRA和Mistral所采用的YaRN，虽然理论上来说，能够支持&gt;100k的上下文长度，但是实际上在大海捞针任务的表现却不太好。相关模型在大海捞针任务上的效果对比如下所示，只有GPT-4的效果比较好。</p>
-<img src="/cc852861/eng_needle_comp.png" class title="大海捞针任务对比">
-<h2 id="数据分布">数据分布</h2>
-<p>这篇论文认为，在&lt;=4k窗口长度完成预训练的模型，其实就已经基本具备在128k或者更大的上下文窗口进行推理的能力，只需要进行轻量级的继续预训练（e.g.
-&lt;5B token），就能够解锁这种能力。</p>
-<p>（而一些其他的工作在这方面则有着相反的观点，比如在32k窗口训练了400B
-token的《Effective long-context scaling of foundation
-models》，以及Xverse）</p>
-<p>要做继续预训练，最重要的一点就是要决定使用什么样的数据。</p>
-<p>这篇论文里的实验是基于LLAMA的，因此使用了和LLAMA预训练数据具有相近领域分布的SlimPajama数据集作为基础。</p>
-<p>对于长上下文的继续预训练数据，需要仔细考虑数据长度和领域分布的影响。通常来说，某些领域天然会有更高比例的长文本数据，比如书籍、论文和github，而一些其他领域的长数据就较少，比如新闻。如果直接从整体数据中挑选长数据而忽略领域分布，就可能造成训练数据在领域分布上的偏移。</p>
-<p>论文使用了几种不同的数据处理策略，用于后面的实验对比：<br>
-- Cut at
-4K：把所有的数据按4k长度进行分块，这样不会影响领域分布。这也是很多4k预训练模型所采样的方案，比如LLAMA。<br>
-- Cut at
-128K：截断长度提升到128k，可以保留长文本内部信息的依赖关系。LongLoRA就是这么做的。<br>
-- Per-source
-Upsampling：在保持各个领域的比例不变的前提下，对长文本进行上采样，提高长文本的比例。这是这篇论文所推荐的方法，实验效果最好。<br>
-- Global Upsampling：不管领域，直接对长文本进行上采样。<br>
-- Upsample Arxiv/ Book/
-Github：提高特定领域的数据比例，对长文本进行上采样。</p>
-<p>这些策略基本涵盖了大部分长文本相关工作在数据上的处理策略。</p>
-<p>不同数据处理策略下，SlimPajama数据内各领域的分布如下图所示</p>
-<img src="/cc852861/eng_data_dist.png" class title="数据分布">
-<p>Per-source
-Upsampling是效果最好的，也是这篇论文所推荐的数据工程策略。</p>
-<h2 id="实验配置">实验配置</h2>
-<p>实验上，用80k的窗口长度训练LLAMA2-7B模型，用64k的窗口训练LLAMA2-13B模型。</p>
-<p>虽然理论上，计算复杂度度和模型训练窗口长度是平方关系，但是实际实现上，由于有FlashAttention等方案，可以把Attention的计算通过设备间通讯，在多个设备间并行起来。而设备间的通讯（包括GPU和CPU，GPU和GPU之间）成本都是constant或者linear，因此实际上80k窗口的的训练耗时只是4k长度的训练的3倍，而不是理论上的400倍。</p>
-<p>当然，实际所需的计算量并没有减少，但是至少时间成本从平方变成了线性。剩下的，只要堆jia卡qian就可以提速。</p>
-<img src="/cc852861/add_money.jpg" class title="加钱就行">
-<p>Per-source Upsampling和其他工作的数据处理策略的对比如下</p>
-<img src="/cc852861/eng_data.png" class title="模型策略">
-<p>训练的配置和耗时如下所示</p>
-<img src="/cc852861/eng_config.png" class title="训练配置">
-<p>实验的其他配置：<br>
-- lr = 2e-5<br>
-- RoPE base从1,0000改为500,000<br>
-- batch size = 4M token</p>
-<h2 id="训练量">训练量</h2>
-<p>前面提到，论文认为只需要轻量级的继续预训练就可以解锁长上下文能力，那么到底需要训练多少token呢？</p>
-<p>论文分别取了训练了100M、300M、500M、1B、5B、10B
-token的中间checkpoint进行PPL和海底捞针任务评测，结果如下</p>
-<img src="/cc852861/eng_tokens.png" class title="训练量">
-<p>结论是，在训练了500M
-token的时候，模型基本解锁了长上下文的能力；在训练了5B
-token的时候，模型已经收敛，而且继续训练到10B
-token也没有进一步收益了。</p>
-<h2 id="数据策略对比">数据策略对比</h2>
-<p>使用前面提到的不同数据策略在LLAMA2-7B模型用5B
-token进行训练，并对比效果。</p>
-<p>LLAMA2的预训练长度为4k，因此对比的时候分成了0-4k和4k-128k两段，分别评测模型经过长文本训练后，在短文本上的效果是否有变差，以及在长文本上是否有提升。</p>
-<p>各个数据策略在不同领域的效果变化如下</p>
-<img src="/cc852861/eng_sample.png" class title="采样的影响">
-<p>可以得到几个结论：<br>
-- 在0-4k长度上，除了Per-source
-Upsampling以外，各种数据策略都会对模型效果有损害<br>
--
-在一些领域上的提升，并不能很好地迁移到其他领域，比如Book和Github之间就有点跷跷板效应，其中一个效果好了，另一个可能就有损失<br>
-- 在4k-128k，Per-source
-Upsampling在各个领域的效果相对较为平衡（绿色的数量最多）</p>
-<p>此外，length upsampling很重要。Per-source
-Upsampling的策略在领域上可以和源数据保持一致，而提升长文本的比例。</p>
-<p>用同样80k的训练窗口在LLAMA2-7B进行实验，一个使用原数据进行拼接，另一个使用Per-source
-Upsampling，结果如下。在PPL基本相同的情况下，Per-source
-Upsampling在大海捞针的效果远超原数据。这说明提高长文本的比例，能极大优化模型远距离建模的能力。</p>
-<img src="/cc852861/eng_ppl.png" class title="PPL和大海捞针">
-<h2 id="结论">结论</h2>
-<p>通过实验，论文提出提升模型长上下文能力的数据工程实践的几个关键点：<br>
--
-在长窗口上进行轻量级训练，可以提升模型实际的远距离建模能力，而不仅仅是保持PPL较低<br>
-- 领域之间有竞争关系，最好和原预训练模型所用的分布保持一致<br>
-- 长度上采样对最终效果有很大影响，要提高各领域内长文本的比例</p>
-<h1 id="paraphrasing">Paraphrasing</h1>
-<p>论文：Training With "Paraphrasing the Original Text" Improves
-Long-Context Performance</p>
-<p>时间：2023年12月</p>
-<p>阶段：微调</p>
-<p>长度：在50k长度依然能有较好的效果，如下所示。</p>
-<img src="/cc852861/paraphrasing_intro.png" class title="paraphrasing">
-<h2 id="检索能力">检索能力</h2>
-<p>对于长上下文的任务，有用的信息通常是稀疏的，一般只有少量的句子或者段落包含了可以用于回答问题的有用信息。可以隐式地将这样长上下文的任务拆分成两个子任务，即相关信息的检索，和根据相关信息回答问题两个任务。</p>
-<p>目前一些支持长上下文的方法，比如位置编码相关的线性插值、NTK插值、YaRN等，虽然使得模型在形式上支持了长上下文的任务，但是在任务的准确性上效果却不佳。</p>
-<p>使用这些优化方案的模型依然会遇到lost in the
-middle的问题，即模型天然更容易关注到输入文本的开头和结尾部分的信息，而更容易忽略中间部分的信息，注意力迷失在大量无关内容上，而无法集中到少数相关的位置上。而对于长上下文的任务，大量的信息是处于middle的位置的，如果忽略这些信息自然会使得任务效果不好。而效果不好的原因就是模型在长上下文的情况下，retrieval能力偏弱，不能找到有用的信息。</p>
-<h2 id="相关工作">相关工作</h2>
-<p>一些工作直接把模型在长窗口下进行训练，比如：<br>
--
-Together的LLaMA-2-7B-32K（https://huggingface.co/datasets/togethercomputer/Long-Data-Collections）；Together开源了Multipassage-QA-from-Natural-Questions和BookSum微调数据集。<br>
-- LongAlpaca（《LongLoRA: Efficient Fine-tuning of Long-Context Large
-Language Models》）<br>
-- Ziya-Reader（《Never Lost in the Middle:Improving Large Language
-Models via Attention Strengthening Question Answering》）</p>
-<p>直接在长窗口训练有一定的效果，但是依然有几个问题：<br>
-- 模型推理窗口越来越大，所需的训练数据集长度也要不断更新。<br>
-- 随着长度增大，训练成本变高。<br>
--
-构建长上下文数据集的成本比价高，高质量的数据并不容易获得。虽然有一些开源的数据集，但是在实际场景上可能还需要做领域适配，分布调整等工作。</p>
-<p>一个更简单一点的方法是优化prompt的设计，比如CoT。</p>
-<p>在长上下文的场景下，可以通过prompt让模型显式地先找到原文的相关信息再进行回答。比如Claude-2.1就通过在prompt增加“Here
-is the most relevant sentence in the
-context”让长文本问答的准确率从27%提升到98%（https://www.anthropic.com/news/claude-2-1-prompting）。</p>
-<p>也可以对输入内容进行重新的编排：<br>
-- LongLLMLingua（《LongLLMLingua: Accelerating and Enhancing LLMs in
-Long Context Scenarios via Prompt
-Compression》）对输入文本进行了压缩。<br>
-- Attention Sorting（《Attention Sorting Combats Recency Bias In Long
-Context Language
-Models》）在decode过程中根据各个文档被分配到的注意力值，对文档进行重新排序。</p>
-<h2 id="提高检索能力">提高检索能力</h2>
-<p>这篇论文提出了一个叫检索相关度（retrieval
-relevance）的指标，一个token（或者n-gram） <span class="math inline">\(x\)</span> 的检索相关度 <span class="math inline">\(R(x)\)</span> 定义如下。</p>
-<p><span class="math display">\[R(x)=\frac{n^\prime}n\log\frac
-N{N^\prime+1}\]</span></p>
-<p>这个指标和TF-IDF很像。其中，<span class="math inline">\(n^\prime\)</span> 表示 <span class="math inline">\(x\)</span> 在gold-chunk中的频率，而 <span class="math inline">\(n\)</span> 是gold-chunk中的总token数；<span class="math inline">\(N\)</span> 表示整个上下文中总chunk数，<span class="math inline">\(N^\prime\)</span> 是包含x的chunk的数量。</p>
-<p>基于token <span class="math inline">\(x\)</span> 的检索相关度 <span class="math inline">\(R(x)\)</span> ，定义训练样本 <span class="math inline">\(S\)</span> 的检索相关度如下</p>
-<p><span class="math display">\[\mathcal{R}(S)=\frac{1}{|S_a|}\sum_{x\in\mathcal{S}_a}R(x)\]</span></p>
-<p>其中 <span class="math inline">\(S_a\)</span> 表示 <span class="math inline">\(S\)</span> 的答案部分。</p>
-<p>通过 <span class="math inline">\(\mathcal{R}(S)\)</span>
-这个指标可以反映出一个训练样本对模型提高检索能力的贡献。<span class="math inline">\(\mathcal{R}(S)\)</span>
-越高，这个样本对提高模型检索能力的贡献越大。</p>
-<p>那么一个简单有效提升训练样本检索相关度的做法，就是把gold-chunk放到答案中，即paraphrasing
-the original text。</p>
-<p>一个paraphrasing和其他答案设计方案对比的例子如下</p>
-<img src="/cc852861/paraphrasing_example.png" class title="paraphrasing例子">
-<p>其中高亮部分的token是高检索相关度的token，明显paraphrasing拥有更高的比例。</p>
-<p>论文使用GPT-4来构建包含paraphrasing的问答对，流程实际如下</p>
-<img src="/cc852861/paraphrasing_dataset.png" class title="构建数据集">
-<p>这种方式收集了一批单文档问答和多文档问答的数据，再加上一些传统文本摘要数据（摘要不好用这种方式构建，因此直接使用）等，构成一个包含10,825条英文数据，8,454条中文数据，长度在8k和32k之间的数据集。数据集详细的领域分布如下所示</p>
-<img src="/cc852861/paraphrasing_dataset_dist.png" class title="数据集分布">
-<p>论文构建的数据集和Multi-passage-QA-from-NQ的检索相关性指标对比如下</p>
-<img src="/cc852861/paraphrasing_quality.png" class title="数据集检索相关性对比">
-<p>使用这个数据集微调的模型，和其他模型在LongBench上的效果对比如下</p>
-<img src="/cc852861/paraphrasing_perf.png" class title="效果对比">
-<p>另外，在这个数据集上微调之后，模型对于lost in the
-middle的问题也有一定的缓解，如下所示</p>
-<img src="/cc852861/paraphrasing_lost.png" class title="缓解lost in the middle">
-<h1 id="pose">PoSE</h1>
-<p>论文：PoSE: Efficient Context Window Extension of LLMs via Positional
-Skip-wise Training</p>
-<p>时间：2023年9月</p>
-<p>阶段：微调</p>
-<p>长度：128k</p>
-<h2 id="背景">背景</h2>
-<p>目前大部分流行的大模型使用旋转位置编码RoPE。在短文本上训练的模型，在长输入上效果不好的原因之一，就是长文本有很多模型没有见过没有训练过的位置编码。</p>
-<p>基于位置编码的长上下文优化，比如线性插值、NTK插值和YaRN等，依然需要进行目标长度的训练才能有比价好的效果。而随着目标长度越来越长（8k，32k，128k...），这样的训练成本也越来越高，逐渐变得不容易进行。</p>
-<p>这篇论文提出<strong>Po</strong>sitional
-<strong>S</strong>kip-wis<strong>E</strong>，PoSE，通过在短的训练窗口模拟长距离的位置编码，提升模型处理长上下文的能力。模型可以在2k的训练窗口进行训练，而在128k的长度进行推理。相比直接训练128k模型效率更高。</p>
-<p>也有一些工作的思路和这篇文章有相近之处，比如RandPos（《Randomized
-positional encodings boost length generalization of
-transformers》），但是RandPos主要用于预训练阶段，并且相邻token之间的位置是不连续的，而PoSE主要用于微调阶段，相邻token之间的位置是连续的。</p>
-<h2 id="位置模拟">位置模拟</h2>
-<p>PoSE提出两个设计原则：<br>
--
-模拟所用的位置编码index要覆盖目标长度的范围。如果我们想在128k的窗口进行推理，那就要保证训练的时候，模型从1-128k的位置编码都见过。<br>
--
-为了不损害原模型的能力，位置编码应该尽量保持原来预训练的结构，即尽量连续，和保持顺序关系。</p>
-<p>假设我们的训练窗口长度为 <span class="math inline">\(L_c\)</span>，首先我们随机把它切成 <span class="math inline">\(N\)</span> 个chunk， <span class="math inline">\(c_0,c_1,\ldots,c_{N-1}\)</span>，长度分别为 <span class="math inline">\(l_0,l_1,\ldots,l_{N-1}\)</span>。对于chunk <span class="math inline">\(i\)</span>，其中token的位置编码下标如下</p>
-<p><span class="math display">\[\mathrm{Pos}(c_i)=\{st_i,st_i+1,\ldots,st_i+l_i-1\},\quad
-st_i=\sum_{j=0}^{i-1}l_j\]</span></p>
-<p>然后我们给每个chunk，从uniform distribution <span class="math inline">\(\mathcal{U}(S)\)</span> 中随机采样一个skipping
-bias <span class="math inline">\(u_i\)</span>，把这个bias加到这个对应chunk的token的位置编码下标中，就有</p>
-<p><span class="math display">\[\mathrm{PoSE}(c_i)=\{u_i+st_i,u_i+st_i+1,\ldots,u_i+st_i+l_i-1\}\]</span></p>
-<p>这里要注意，处理后各个chunk的位置编码下标不能有overlap，所以要求
-<span class="math inline">\(u_i\geq u_{i-1}\)</span>。</p>
-<p>直观地说，引入skipping
-bias使模型能接触到更大范围的位置编码。为了全面覆盖目标上下文窗口，我们为每个训练sample单独采样每个chunk的长度和skipping
-bias。</p>
-<p>此外，位置编码index在每个chunk内的连续性，与原模型预训练期间所采用的结构非常相似。因此，在这些新的index上进行微调，不会损害模型原有的能力。</p>
-<p>现在，位置编码的下标决定好了，我们还需要决定每个chunk的token使用哪些。</p>
-<p>token的采样和位置编码下标的采样类似，具体来说，我们采样<span class="math inline">\(v_i\sim\mathcal{U}(\{v_{i-1},\ldots,L_x-L_c\})\)</span>，那么
-<span class="math inline">\(c_i\)</span> 的token如下</p>
-<p><span class="math display">\[c_i=\boldsymbol{x}[v_i+st_i:v_i+st_i+l_i]\]</span></p>
-<p>论文对一些采样变体，比如 <span class="math inline">\(v_i=u_i\)</span>，<span class="math inline">\(v_i=0\)</span>
-等进行了探索，发现基本没有什么影响，因此 <span class="math inline">\(v_i\)</span> 保持原来的采样方案即可。</p>
-<p>在实际训练中，<span class="math inline">\(N\)</span>
-设置为2，因为如果太大可能对原模型的能力造成损害。而 <span class="math inline">\(u_0\)</span> 和 <span class="math inline">\(v_0\)</span> 设为了0。</p>
-<p>PoSE方案如下图所示</p>
-<img src="/cc852861/pose_method.png" class title="PoSE">
-<p>实验上，使用了LLAMA-7B模型，在2k的窗口上进行了1,000步的训练，batch
-size为64。使用lr=2e-5，warmup step=10。</p>
-<p>PoSE和其他模型在PPL上的对比如下，基本能达到和Full-length训练相近的水平。</p>
-<img src="/cc852861/pose_ppl.png" class title="PPL">
-<p>而在passkey retrieval任务上，也有不错的效果，如下图所示</p>
-<img src="/cc852861/pose_passkey.png" class title="passkey">
-<p>相比其他方案，PoSE的一个优势是可以在没有任何成本增加的情况下，支持更长的推理长度。比如可以通过简单修改采样策略的参数，PoSE就可以支持到1M，甚至更大的窗口长度，这是其他方法难以做到的。</p>
-<h1 id="小结">小结</h1>
-<ol type="1">
-<li>有了FlashAttention等方案之后，在128k这个长度，我们也有能力在合理的成本下，进行继续预训练，使用5B左右的token解锁模型的长上下文能力。<br>
-</li>
-<li>预训练中，长文本对模型的远距离建模能力很重要，要提高长文本的比例才有更好的效果。此外，领域的分布也是一个需要关注的点。<br>
-</li>
-<li>在长窗口的微调上，精心设计输入输出形式能带来一些收益。</li>
-<li>对于更长的窗口，比如M级别这种几乎无法直接训练/微调的长度，PoSE这种模拟的方案能够在不增加成本的情况下，在效果上达到接近直接训练/微调的表现。</li>
-</ol>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
-<hr>
-<h1 id="reference">Reference</h1>
-<p>【1】Data Engineering for Scaling Language Models to 128K Context
-https://arxiv.org/abs/2402.10171<br>
-【2】Training With "Paraphrasing the Original Text" Improves
-Long-Context Performance https://arxiv.org/abs/2312.11193<br>
-【3】PoSE: Efficient Context Window Extension of LLMs via Positional
-Skip-wise Training https://arxiv.org/abs/2309.10400</p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>长上下文</tag>
-        <tag>预训练</tag>
-        <tag>微调</tag>
-        <tag>attention</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>稀疏注意力计算:sliding window attention</title>
     <url>/c61d17e3.html</url>
     <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
@@ -3185,6 +2437,389 @@ window attention</a></p>
       </tags>
   </entry>
   <entry>
+    <title>理解Attention:从起源到MHA,MQA和GQA</title>
+    <url>/3dc22f96.html</url>
+    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
+<p>Attention模块是现在几乎所有大模型的核心模块，因此也有很多工作致力于提升注意力计算的性能和效果。其中MHA（Multi-Head
+Attention）、MQA（Multi-Query Attention）和GQA（Grouped-Query
+Attention）这一路线的思路和做法被很多主流模型所采用，因此简单地梳理一些这几个变体的思路和做法，以及会涉及到的KV
+Cache相关内容。思路比较直白，但也有一些细节和原理值得思考。</p>
+<p>当然针对Attention优化，也有很多其他优秀的方案和思路，如线性注意力、FlashAttention和Sliding
+Window Attention等，这些在后续再开篇梳理。</p>
+<p>（应一些朋友的要求，会增加一些直观基础的内容，以及LLM应用的案例。也欢迎大家提出更多建议。）</p>
+<h1 id="关于attention从rnn到attention">关于Attention：从RNN到Attention</h1>
+<p>了解一个概念的诞生和演进，有助于我们更深入去理解它。我们先简单回顾下attention从起源到最初的实现。</p>
+<p>（熟悉attention的朋友可以跳过这一节）</p>
+<h2 id="从rnn说起">从RNN说起</h2>
+<blockquote>
+<p>Memory is attention through time. ~ Alex Graves 2020</p>
+</blockquote>
+<p>注意力机制最初起源是为了解决序列问题。回想在还没有Transformer的上一世代，使用RNN的Seq2Seq是这样的</p>
+<img src="/3dc22f96/seq2seq.png" class title="seq2seq">
+<img src="/3dc22f96/encoder.png" class title="encoder">
+<img src="/3dc22f96/decoder.png" class title="decoder">
+<p>（图来自<a href="https://theaisummer.com/attention/">AI
+Summer</a>）</p>
+<p>每个RNN cell接收两个输入，输出一个hidden state。比如在翻译任务中，RNN
+encoder把所有输入迭代地编码成context向量 <span class="math inline">\(z\)</span> ，然后由RNN decoder基于 <span class="math inline">\(z\)</span>
+迭代地解码。一般来说，这里decoder的第一个输入是一个特殊token，如[start]，表示解码开始。</p>
+<p>这样会有一个问题， <span class="math inline">\(z\)</span>
+能编码的长度显然有限，而且由于模型结构问题，会更加关注靠近尾部的输入。这样如果关键信息出现在开头，就容易被忽略。</p>
+<p>并且时间步骤上的传播由于有多次迭代相乘，梯度很容易就过小，导致梯度消失问题。</p>
+<p>当然我们有LSMT和GRU等变体来增强长距离记忆的能力，也缓解了梯度问题，但这些方案还是没有产生质变的能力。</p>
+<p>回到问题的核心，我们想要 <span class="math inline">\(z\)</span>
+能够编码所有前面的内容，但是显然， <span class="math inline">\(z\)</span>
+的生成方式天然会让它更容易注意到靠后的内容，而容易忽略靠前的输入。</p>
+<p>一个直觉的想法就是，我们需要想个办法跳过 <span class="math inline">\(z\)</span>
+，和前面的每个输入建立直接的联系。我们希望模型能够有机会学习到去“注意”关键的输入，不管这个输入是在前面还是后面。</p>
+<p>实际上神经网络天生就具有“注意力”的天赋。</p>
+<p>比如在CNN分类中，如果我们画出分类层前的heatmap，会是如下图这个样子</p>
+<img src="/3dc22f96/cnn_heatmap.png" class title="heatmap">
+<p>可以看到，值比较高的地方是在猫的鼻子胡子嘴巴区域，次之是身上和头上的花纹。直观来说，就是模型主要通过脸部的特征和身上的花纹，来识别出这是一只猫。这就是CNN学习到的注意力，这样的特征是神经网络implicitly学到的。</p>
+<p>回归到Seq2Seq，我们怎么来实现注意力，并且让这种implicit的机制变得explicit：单独抽离出来并具备一定可控制性？</p>
+<p>回想翻译场景，在RNN中，每一个时间步骤 <span class="math inline">\(i\)</span> 都会产生一个隐向量，<span class="math inline">\(h_i\)</span> 向量，我们把这些 <span class="math inline">\(h_i\)</span>
+保存起来，在最后要生成新的输出的时候，我们让模型回头看一下之前的这每一个
+<span class="math inline">\(h_i\)</span>
+，再决定要生成什么内容。相比原来只利用最后一个hidden
+state，现在我们可以访问之前所有的中间状态，如果发现前面有关键信息，就可以直接用上了，而不用担心输入太长而被覆盖了。</p>
+<p>那么问题又来了，我们怎么知道前面某一个中间状态对于当前的生成来说是否重要？如果我们不知道怎么定义是否重要，那我们就把这个问题交给模型自己解决好了
+--
+通过网络参数来学习识别某个输入状态是否重要，学习是否要“注意”到它，要给予多少的“注意力”。</p>
+<p>具体来说，我们定义在解码第 <span class="math inline">\(i\)</span>
+个输出是，decoder当前隐状态 <span class="math inline">\(y_{i-1}\)</span>
+和encoder的所有隐状态 <span class="math inline">\(\mathbf{h}\)</span>
+之间的一个score计算</p>
+<p><span class="math display">\[\mathbf{e}_i=\text{attention}_{\mathrm{net}}\left(y_{i-1},\mathbf{h}\right)\in
+R^n\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[e_{ij}=\text{attentiom}_{\text{net
+}(\mathbf{y}_{i-1},h_j)}\]</span></p>
+<p>注意力网络通过 <span class="math inline">\(\mathbf{y}_{i-1}\)</span>
+和 <span class="math inline">\(h_j\)</span> 来计算一个值 <span class="math inline">\(e_{ij}\)</span>，这里的注意力网络可以设计各种操作，比如对输入进行拼接再通过fc层进行计算等。</p>
+<p>这里 <span class="math inline">\(e_{ij}\)</span>
+是一个标量，但它还不是一个可用的权重值，还需要通过一个函数，把attention
+net对各个encoder hidden state的输出值转成一个分布：softmax。</p>
+<p><span class="math display">\[\alpha_{ij}=\frac{\exp\left(e_{ij}\right)}{\sum_{k=1}^{T_x}\exp\left(e_{ik}\right)}\]</span></p>
+<p>最后通过加权计算，获得最终输入给decoder的隐变量。</p>
+<p><span class="math display">\[z_i=\sum_{j=1}^T\alpha_{ij}\mathbf{h}_j\]</span></p>
+<img src="/3dc22f96/seq2seq_attention.png" class title="seq2seq attention">
+<p>可以看到，这里的attention net的任务就是找到decoder上一个hidden
+state和encoder hidden
+state之间的“相关”关系，使得模型能够将更多的注意力放在对应的输入信息上。</p>
+<p>实际上，上面这种attention的计算方式并不是唯一的，attention的计算方式有许多种</p>
+<img src="/3dc22f96/attention_calculation.png" class title="attention calculation">
+<p>这些attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(s, h)=\mathrm{Score}(s,h)\cdot
+h\)</span> 。这里的 <span class="math inline">\(s\)</span>
+就是decoder的hidden state（也就是前文的 <span class="math inline">\(y\)</span> ），<span class="math inline">\(h\)</span> 就是encoder的hidden state。</p>
+<p>（当然从结果上看，是scaled dot-product
+attention经受住了历史的考验，成为了主流。）</p>
+<h2 id="transformer的attention">Transformer的attention</h2>
+<p>从RNN attention到transformer
+attention，所做的事情就如论文题目所说：《Attention Is All You
+Need》，彻底抛弃RNN的在time
+step上的迭代计算，完全拥抱attention机制，只用最简单粗暴的方式同步计算出每个输入的hidden
+state，其他的就交给attention来解决。</p>
+<img src="/3dc22f96/transformer_structure.png" class title="transformer structure.png">
+<p>这里还是保留有encoder和decoder的结构，encoder中的attention都是self-attention，decoder则除了self-attention还有cross-attention。</p>
+<p>transformer结构下，attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(Q,K,V)=\mathrm{Score}(Q,K)V\)</span>，这里有
+<span class="math inline">\(Q=W_{Q}Y，K=W_{K}X，V=W_{V}X\)</span>
+。对于cross-attention， <span class="math inline">\(X\)</span>
+是encoder的hidden states，<span class="math inline">\(Y\)</span>
+是decoder的hidden states，而对于self-attention，则有 <span class="math inline">\(X=Y\)</span>。</p>
+<p>具体到我们熟悉的scaled dot-product attention，使用softmax计算，有</p>
+<p><span class="math display">\[\operatorname{Attention}(Q,K,V)=\operatorname{softmax}(\frac{QK^T}{\sqrt{d}})V\]</span></p>
+<p>到这里，终于见到我们熟悉的attention计算。</p>
+<p>用一张很直观的图来展示整个计算</p>
+<img src="/3dc22f96/Scaled-dot-product-self-attention.pbm" class title="self-attention">
+<p>这里的「query」，「key」和「value」的名称也暗示了整个attention计算的思路。</p>
+<p>类比到一个数据库查询+预测的例子。</p>
+<p>假设我们现在有一个“文章-阅读量”数据库，记录了每篇文章在发布30天内的阅读量。每篇文章就是一个key，对应的阅读量就是value。</p>
+<p>我们现在有一篇将要发布的文章，想要预测这篇文章在30天内的阅读量，那我们就把这篇新的文章，作为query，去和数据库里的文章（key）做一个相关性计算，取最相关的5篇文章。</p>
+<p>假设top5篇文章的相关性分别是 <span class="math inline">\([8,4,4,2,2]\)</span> ，对应阅读量是 <span class="math inline">\([5\text{w},2\text{w},8\text{w},3\text{w},6\text{w}]\)</span>
+。</p>
+<p>那我们把相关性得分归一化成和为1的概率值 <span class="math inline">\([0.4,0.2,0.2,0.1,0.1]\)</span>
+，那我们就可以预测新文章30天内的阅读量是 <span class="math inline">\(0.4\times5+0.2\times2+0.2\times8+0.1\times3+0.1\times6=4.9\text{w}\)</span>
+。</p>
+<p>这个例子中，我们计算相关性就相当于transformer attention中的 <span class="math inline">\(QK^T\)</span>
+，归一化就是softmax，然后通过加权求和取得最后的阅读量/特征向量。</p>
+<p>对于self-attention， <span class="math inline">\(Q、K、V\)</span>
+都来自输入 <span class="math inline">\(X\)</span>，sequence自己计算自己每个token的之间的相关性。而对于cross-attention，decoder中的输出sequence就是上面这个例子中的“将要发布的文章”，通过把这篇新的文章和数据库中的文章做相关计算，我们得到了新的预测结果。</p>
+<p>对于self-attention，由于 <span class="math inline">\(Q、K、V\)</span>
+都来自输入 <span class="math inline">\(X\)</span> ，在计算 <span class="math inline">\(QK^T\)</span>
+时，模型很容易关注到自身的位置上，也就是 <span class="math inline">\(QK^T\)</span>
+对角线上的激活值会明显比较大。这样的情况其实不是很好，因为这会削弱模型关注其他高价值位置的能力，也就限制模型的理解和表达能力。后面讲的MHA对这个问题会有一些缓解作用。</p>
+<p>顺着这样的思路梳理下来，会发现attention的大思路还是很好理解的。而计算上，怎么去获得更好的效果，就是接下来要分析的几个内容，MHA，MQA和GQA所关注的。</p>
+<p>代码上，实现也很容易，直接看<a href="https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention">pytorch
+forcasting</a>的代码</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ScaledDotProductAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, dropout: <span class="built_in">float</span> = <span class="literal">None</span>, scale: <span class="built_in">bool</span> = <span class="literal">True</span></span>):</span><br><span class="line">        <span class="built_in">super</span>(ScaledDotProductAttention, self).__init__()</span><br><span class="line">        <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            self.dropout = dropout</span><br><span class="line">        self.softmax = nn.Softmax(dim=<span class="number">2</span>)</span><br><span class="line">        self.scale = scale</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, q, k, v, mask=<span class="literal">None</span></span>):</span><br><span class="line">        attn = torch.bmm(q, k.permute(<span class="number">0</span>, <span class="number">2</span>, <span class="number">1</span>))  <span class="comment"># query-key overlap</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.scale:</span><br><span class="line">            dimension = torch.as_tensor(k.size(-<span class="number">1</span>), dtype=attn.dtype, device=attn.device).sqrt()</span><br><span class="line">            attn = attn / dimension</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = attn.masked_fill(mask, -<span class="number">1e9</span>)</span><br><span class="line">        attn = self.softmax(attn)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = self.dropout(attn)</span><br><span class="line">        output = torch.bmm(attn, v)</span><br><span class="line">        <span class="keyword">return</span> output, attn</span><br></pre></td></tr></table></figure>
+<h2 id="关于scaling">关于scaling</h2>
+<p>BTW，为什么计算中 <span class="math inline">\(QK^T\)</span>
+之后还要除以 <span class="math inline">\(\sqrt{d}\)</span> ？</p>
+<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。</p>
+<img src="/3dc22f96/softmax.png" class title="softmax">
+<p>苏剑林的<a href="https://spaces.ac.cn/archives/8620">博客</a>中也有详细分析，并提到如果不对attention值进行scaling，也可以通过在参数初始化是将方差除以一个
+<span class="math inline">\(\sqrt{d}\)</span>
+，同样可以起到预防softmax饱和的效果。类似地，通过normalization也可以做到类似的效果。不过实现上在attention里做scaling还是比较稳定高效的。</p>
+<h1 id="mha">MHA</h1>
+<p>只要理解了attention计算的细节，MHA（multi-head
+attention）其实就很好明白。</p>
+<p>MHA在2017年就随着《Attention Is All You
+Need》一起提出，主要干的就是一个事：把原来一个attention计算，拆成多个小份的attention，并行计算，分别得出结果，最后再合回原来的维度。</p>
+<p><span class="math display">\[\mathrm{MultiHeadAttention}(Q,K,V)=\mathrm{Concat}(head_1,\ldots,head_h)\]</span></p>
+<p><span class="math display">\[head_i=\text{Attention}(W_i^QQ,W_i^KK,W_i^VV)\]</span></p>
+<p>假设原来模型的hidden size是 <span class="math inline">\(d\)</span>
+，在MHA中，会把投影后的 <span class="math inline">\(Q、K、V\)</span>
+在hidden state的维度上切成 <span class="math inline">\(head_{num}\)</span> 份，每个头的维度是 <span class="math inline">\(d_{head}\)</span> 。这 <span class="math inline">\(head_{num}\)</span> 组小 <span class="math inline">\(Q、K、V\)</span>
+分别独立地进行attention计算，之后把得到的 <span class="math inline">\(head_{num}\)</span> 份维度 <span class="math inline">\(d_{head}\)</span> 的输出concat起来。</p>
+<p>直接看这个amazing的图，很直观</p>
+<img src="/3dc22f96/multihead_attention.png" class title="MHA">
+<p>操作是这么个操作，多头注意力相比单头有什么好处呢？</p>
+<p>《Attention Is All You Need》文章中给出的说法是</p>
+<blockquote>
+<p>Multi-head attention allows the model to jointly attend to
+information from different representation subspaces at different
+positions.</p>
+</blockquote>
+<p>我们希望多个头能够在训练中学会注意到不同的内容。例如在翻译任务里，一些attention
+head可以关注语法特征，另一些attention
+head可以关注单词特性。这样模型就可以从不同角度来分析和理解输入信息，获得更好的效果了。</p>
+<p>这有点类似CNN中，不同的卷积核来学习不同的信息。比如一个 <span class="math inline">\(3\times3\times128\)</span> 的卷积，有128个 <span class="math inline">\(3\times3\)</span>
+参数组，假设我们的输入是一个灰度图，其中一组 <span class="math inline">\(3\times3\)</span> 的参数是这样的</p>
+<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;0&amp;-1\\1&amp;0&amp;-1\\1&amp;0&amp;-1\end{matrix}\right.\right]\]</span></p>
+<p>那么这是一个检测纵向边界的卷积，而另外一组参数长这样</p>
+<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;1&amp;1\\0&amp;0&amp;0\\-1&amp;-1&amp;-1\end{matrix}\right.\right]\]</span></p>
+<p>这是一个检测横向边界的卷积。</p>
+<p>这128组 <span class="math inline">\(3\times3\)</span>
+就是128个不同特征的检测器，就同MHA中多个头一样，从不同的子空间学到不同的内容，最后再放到一起融合使用。</p>
+<p>但是这是我们expect模型能做到的事情，实际情况是否真的是这样？</p>
+<p>知乎上这篇<a href="https://zhuanlan.zhihu.com/p/626820422">文章</a>里对此做了一些实验和分析。简单来说就是（1）每个头确实学到东西有所不同，但大部分头之间的差异没有我们想的那么大（比如一个学句法，一个学词义这样明显的区分）（2）多个头的情况下，确实有少部分头可以比较好地捕捉到各种文本信息，而不会过分关注自身位置，一定程度缓解了上文提到的计算
+<span class="math inline">\(QK^T\)</span> 之后对角线元素过大的问题。</p>
+<p>我们可以把MHA的多个attention计算视为多个独立的小模型，那么最终整体的attention计算相当于把来自多个小模型的结果进行了融合，这样效果比较好也是比较符合直觉的。</p>
+<p>另外还有一个问题是，使用几个头比较好呢？</p>
+<p>实际上这个问题比较难有确定性的答案，首先可以确定的是头的数量不是越多约好（毕竟头的数量多了，各个子空间小了，子空间能表达的内容就少了），具体多少要视模型规模，任务而定。另外<a href="https://arxiv.org/pdf/1905.10650.pdf">《Are Sixteen Heads Really
+Better than One?》</a>中也指出MHA并不总是优于单头的情况。</p>
+<p>目前可以看到的趋势是，模型越大（也就是hidden
+size越大），头数的增多越能带来平均效果上的收益（或者说允许注意力头增大而不影响子空间的学习能力）。目前LLM主流的头数视乎模型结构和规模，大致有12、16、24、48、96这样一些主流设置。这里面又有比较多的方向和工作，在此暂时不展开，挖个坑，以后专门开一篇讲。</p>
+<p>最后看一下<a href="https://nlp.seas.harvard.edu/2018/04/03/attention.html">The
+Annotated Transformer</a>中的MHA代码实现</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">attention</span>(<span class="params">query, key, value, mask=<span class="literal">None</span>, dropout=<span class="literal">None</span></span>):</span><br><span class="line">    <span class="string">&quot;Compute &#x27;Scaled Dot Product Attention&#x27;&quot;</span></span><br><span class="line">    d_k = query.size(-<span class="number">1</span>)</span><br><span class="line">    scores = torch.matmul(query, key.transpose(-<span class="number">2</span>, -<span class="number">1</span>)) \</span><br><span class="line">             / math.sqrt(d_k)</span><br><span class="line">    <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        scores = scores.masked_fill(mask == <span class="number">0</span>, -<span class="number">1e9</span>)</span><br><span class="line">    p_attn = F.softmax(scores, dim = -<span class="number">1</span>)</span><br><span class="line">    <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        p_attn = dropout(p_attn)</span><br><span class="line">    <span class="keyword">return</span> torch.matmul(p_attn, value), p_attn</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MultiHeadedAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, h, d_model, dropout=<span class="number">0.1</span></span>):</span><br><span class="line">        <span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">        h: head number</span></span><br><span class="line"><span class="string">        &#x27;&#x27;&#x27;</span></span><br><span class="line">        <span class="built_in">super</span>(MultiHeadedAttention, self).__init__()</span><br><span class="line">        <span class="keyword">assert</span> d_model % h == <span class="number">0</span></span><br><span class="line">        <span class="comment"># We assume d_v always equals d</span></span><br><span class="line">        self.d = d_model // h</span><br><span class="line">        self.h = h</span><br><span class="line">        self.linears = clones(nn.Linear(d_model, d_model), <span class="number">4</span>)</span><br><span class="line">        self.attn = <span class="literal">None</span></span><br><span class="line">        self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, query, key, value, mask=<span class="literal">None</span></span>):</span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="comment"># Same mask applied to all h heads.</span></span><br><span class="line">            mask = mask.unsqueeze(<span class="number">1</span>)</span><br><span class="line">        nbatches = query.size(<span class="number">0</span>)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 1) Do all the linear projections in batch from d_model =&gt; h x d </span></span><br><span class="line">        query, key, value = \</span><br><span class="line">            [l(x).view(nbatches, -<span class="number">1</span>, self.h, self.d).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line">             <span class="keyword">for</span> l, x <span class="keyword">in</span> <span class="built_in">zip</span>(self.linears, (query, key, value))]</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2) Apply attention on all the projected vectors in batch. </span></span><br><span class="line">        x, self.attn = attention(query, key, value, mask=mask, </span><br><span class="line">                                 dropout=self.dropout)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 3) &quot;Concat&quot; using a view and apply a final linear. </span></span><br><span class="line">        x = x.transpose(<span class="number">1</span>, <span class="number">2</span>).contiguous() \</span><br><span class="line">             .view(nbatches, -<span class="number">1</span>, self.h * self.d)</span><br><span class="line">        <span class="keyword">return</span> self.linears[-<span class="number">1</span>](x)</span><br></pre></td></tr></table></figure>
+<p>（<a href="https://github.com/huggingface/transformers">transformers</a>中的写法就更为成熟一点，不过里面兼容了比较多的功能，代码太长就不放上来了）</p>
+<h1 id="解码中的kv-cache">解码中的KV Cache</h1>
+<p>在讲MQA和GQA之前，还需要了解一点背景，那就是解码的计算问题，以及KV
+Cache的方案。</p>
+<p>无论是encoder-decoder结构，还是现在我们最接近AGI的decoder-only的LLM，解码生成时都是自回归auto-regressive的方式。</p>
+<p>也就是，解码的时候，先根据当前输入 <span class="math inline">\(\text{input}_{i-1}\)</span> ，生成下一个 <span class="math inline">\(\text{token}_{i}\)</span> ，然后把新生成的 <span class="math inline">\(\text{token}_{i}\)</span> 拼接在 <span class="math inline">\(\text{input}_{i-1}\)</span> 后面，获得新的输入
+<span class="math inline">\(\text{input}_{i}\)</span> ，再用 <span class="math inline">\(\text{input}_{i}\)</span> 生成 <span class="math inline">\(\text{token}_{i+1}\)</span>
+，依此迭代，直到生成结束。</p>
+<p>比如我们输入“窗前明月光下一句是”，那么模型每次生成一个token，输入输出会是这样（方便起见，默认每个token都是一个字符）</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">step0: 输入=[BOS]窗前明月光下一句是；输出=疑</span><br><span class="line">step1: 输入=[BOS]窗前明月光下一句是疑；输出=是</span><br><span class="line">step2: 输入=[BOS]窗前明月光下一句是疑是；输出=地</span><br><span class="line">step3: 输入=[BOS]窗前明月光下一句是疑是地；输出=上</span><br><span class="line">step4: 输入=[BOS]窗前明月光下一句是疑是地上；输出=霜</span><br><span class="line">step5: 输入=[BOS]窗前明月光下一句是疑是地上霜；输出=[EOS]</span><br></pre></td></tr></table></figure>
+<p>（其中[BOS]和[EOS]分别是起始符号和终止符号）</p>
+<p>仔细想一下，我们在生成“疑”字的时候，用的是输入序列中“是”字的最后一层hidden
+state，通过最后的分类头预测出来的。以此类推，后面每生成一个字，使用的都是输入序列中最后一个字的输出。</p>
+<p>我们可以注意到，下一个step的输入其实包含了上一个step的内容，而且只在最后面多了一点点（一个token）。那么下一个step的计算应该也包含了上一个step的计算。</p>
+<p>从公式上来看是这样的：</p>
+<p>回想一下我们attention的计算</p>
+<p><span class="math display">\[
+\alpha_{i,j}=\text{softmax}(q_{i}k_{j}^\top)\\
+o_{i}=\sum_{j=0}^{i}{\alpha_{i,j}v_{j}}
+\]</span></p>
+<p>注意对于decoder的时候，由于mask
+attention的存在，每个输入只能看到自己和前面的内容，而看不到后面的内容</p>
+<p>假设我们当前输入的长度是3，预测第4个字，那每层attention所做的计算有</p>
+<p><span class="math display">\[
+\begin{aligned}
+o_{0}&amp;=\alpha_{0,0}v_{0}\\
+o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
+o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
+\end{aligned}
+\]</span></p>
+<p>预测完第4个字，放到输入里，继续预测第5个字，每层attention所做的计算有</p>
+<p><span class="math display">\[
+\begin{aligned}
+o_{0}&amp;=\alpha_{0,0}v_{0}\\
+o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
+o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
+o_{3}&amp;=\alpha_{3,0}v_{0}+\alpha_{3,1}v_{1}+\alpha_{3,2}v_{2}+\alpha_{3,3}v_{3}\\
+\end{aligned}
+\]</span></p>
+<p>可以看到，在预测第5个字时，只有最后一步引入了新的计算，而 <span class="math inline">\(o_{0}\)</span> 到 <span class="math inline">\(o_{2}\)</span> 的计算和前面是完全重复的。</p>
+<p>但是模型在推理的时候可不管这些，无论你是不是只要最后一个字的输出，它都把所有输入计算一遍，给出所有输出结果。</p>
+<p>也就是说中间有很多我们用不到的计算，这样就造成了浪费。</p>
+<p>而且随着生成的结果越来越多，输入的长度也越来越长。上面这个例子里，输入长度就从step0的10个，每步增长1，直到step5的15个。如果输入的instruction是让模型写高考作文，那可能就有800个step或者更多。这个情况下，step0被算了800次，step1被算了799次...</p>
+<p>有没有什么办法可以重复利用上一个step里已经计算过的结果，减少浪费呢？</p>
+<p>答案就是KV
+Cache。利用缓存空间，把需要重复利用的中间计算结果存下来，减少重复计算。</p>
+<p>而 <span class="math inline">\(k\)</span> 和 <span class="math inline">\(v\)</span> 就是要缓存的对象。</p>
+<p>想象一下，在上面的例子中，假设我们一开始的输入就是3个字，我们第一次预测就是预测第4个字，那么由于一开始没有任何缓存，所有我们每一层还是要踏踏实实地计算一遍。然后把
+<span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值缓存起来。</p>
+<p>则有</p>
+<p><span class="math display">\[
+\text{cache}_l=\text{None}\\
+\]</span></p>
+<center>
+↓
+</center>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
+\]</span></p>
+<p>kv_cache的下标 <span class="math inline">\(l\)</span>
+表示模型层数。</p>
+<p>在进行第二次预测，也就是预测第5个字的时候，在第 <span class="math inline">\(l\)</span>
+层的时候，由于前面我们缓存了<u><strong>每层</strong></u>的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，那本层就只需要算新的 <span class="math inline">\(o_{3}\)</span> ，而不用算 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span> 。</p>
+<p>因为第 <span class="math inline">\(l\)</span> 层的 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span>
+本来会经过FNN层之后进到 <span class="math inline">\(l+1\)</span>
+层，再经过新的投影变换，成为 <span class="math inline">\(l+1\)</span>
+层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，但是 <span class="math inline">\(l+1\)</span> 层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值我们已经缓存过了！</p>
+<p>然后我们把本次新增算出来的 <span class="math inline">\(k\)</span> 、
+<span class="math inline">\(v\)</span> 值也存入缓存。</p>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
+\]</span></p>
+<center>
+↓
+</center>
+<p><span class="math display">\[
+\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
+v_{1}^{l}),(k_{2}^{l}, v_{2}^{l}),(k_{3}^{l}, v_{3}^{l})]
+\]</span></p>
+<p>这样就节省了attention和FFN的很多重复计算。</p>
+<p>transformers中，生成的时候传入use_cache=True就会开启KV Cache。</p>
+<p>也可以简单看下GPT2中的实现，中文注释的部分就是使用缓存结果和更新缓存结果</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Class GPT2Attention(nn.Module):</span><br><span class="line">    ...</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params"></span></span><br><span class="line"><span class="params">        self,</span></span><br><span class="line"><span class="params">        hidden_states: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.FloatTensor]],</span></span><br><span class="line"><span class="params">        layer_past: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.Tensor]] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        head_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_hidden_states: <span class="type">Optional</span>[torch.Tensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        use_cache: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">        output_attentions: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">    </span>) -&gt; <span class="type">Tuple</span>[<span class="type">Union</span>[torch.Tensor, <span class="type">Tuple</span>[torch.Tensor]], ...]:</span><br><span class="line">        <span class="keyword">if</span> encoder_hidden_states <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">not</span> <span class="built_in">hasattr</span>(self, <span class="string">&quot;q_attn&quot;</span>):</span><br><span class="line">                <span class="keyword">raise</span> ValueError(</span><br><span class="line">                    <span class="string">&quot;If class is used as cross attention, the weights `q_attn` have to be defined. &quot;</span></span><br><span class="line">                    <span class="string">&quot;Please make sure to instantiate class with `GPT2Attention(..., is_cross_attention=True)`.&quot;</span></span><br><span class="line">                )</span><br><span class="line"></span><br><span class="line">            query = self.q_attn(hidden_states)</span><br><span class="line">            key, value = self.c_attn(encoder_hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line">            attention_mask = encoder_attention_mask</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            query, key, value = self.c_attn(hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">        query = self._split_heads(query, self.num_heads, self.head_dim)</span><br><span class="line">        key = self._split_heads(key, self.num_heads, self.head_dim)</span><br><span class="line">        value = self._split_heads(value, self.num_heads, self.head_dim)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 过去所存的值</span></span><br><span class="line">        <span class="keyword">if</span> layer_past <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            past_key, past_value = layer_past</span><br><span class="line">            key = torch.cat((past_key, key), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的key加入</span></span><br><span class="line">            value = torch.cat((past_value, value), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的value加入</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> use_cache <span class="keyword">is</span> <span class="literal">True</span>:</span><br><span class="line">            present = (key, value)  <span class="comment"># 输出用于保存</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            present = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.reorder_and_upcast_attn:</span><br><span class="line">            attn_output, attn_weights = self._upcast_and_reordered_attn(query, key, value, attention_mask, head_mask)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)</span><br><span class="line"></span><br><span class="line">        attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)</span><br><span class="line">        attn_output = self.c_proj(attn_output)</span><br><span class="line">        attn_output = self.resid_dropout(attn_output)</span><br><span class="line"></span><br><span class="line">        outputs = (attn_output, present)</span><br><span class="line">        <span class="keyword">if</span> output_attentions:</span><br><span class="line">            outputs += (attn_weights,)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> outputs  <span class="comment"># a, present, (attentions)</span></span><br></pre></td></tr></table></figure>
+<p>总的来说，KV
+Cache是以空间换时间的做法，通过使用快速的缓存存取，减少了重复计算。（注意，只有decoder结构的模型可用，因为有mask
+attention的存在，使得前面的token可以不用关注后面的token）</p>
+<p>但是，用了KV Cache之后也不是立刻万事大吉。</p>
+<p>我们简单算一下，对于输入长度为 <span class="math inline">\(s\)</span>
+，层数为 <span class="math inline">\(L\)</span> ，hidden size为 <span class="math inline">\(d\)</span> 的模型，需要缓存的参数量为</p>
+<p><span class="math display">\[
+2\times L\times s\times d
+\]</span></p>
+<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
+<p><span class="math display">\[
+2\times 2\times L\times s\times d
+\]</span></p>
+<p>以Llama2 7B为例，有 <span class="math inline">\(L=32\)</span> ，
+<span class="math inline">\(L=4096\)</span>
+，那么每个token所需的缓存空间就是524,288 bytes，约52K，当 <span class="math inline">\(s=1024\)</span> 时，则需要536,870,912
+bytes，超过500M的空间。</p>
+<p>这里考虑的还只是batch size=1的情况，如果batch
+size增大，这个值更是很容易就超过1G。</p>
+<p>（MHA相比单头的情况，相当于只是把 <span class="math inline">\(q、k、v\)</span>
+切成多份并行计算了，对于实际需要缓存的大小没有影响）</p>
+<p>看下现在主流的科学计算卡配置</p>
+<img src="/3dc22f96/gpu_cache.png" class title="gpu cache">
+<p>强如H100也只有50M的L2 Cache（L1
+Cache的大小更是可以忽略不计），大概只能支持Llama2
+7B总共100个token左右的输入。</p>
+<p>想想我们现在用的LLM动辄34B/70B的规模，长度更是以千为基础单位，这样明显是不够用的。</p>
+<p>那么超出L2 Cache的部分只能走到显存中去了，但是HBM速度比L2
+Cache慢多了。</p>
+<img src="/3dc22f96/sram_dram.png" class title="储存空间与速度">
+<p>看来还需要进一步优化。</p>
+<p>要保证模型的推理加速，要么增大Cache的大小，而且是需要一到两个数量级的增强，那这个只能靠黄老板了。</p>
+<p>要么就是减少需要缓存的量。</p>
+<h1 id="mqa">MQA</h1>
+<p>MQA就是来减少缓存所需要的量的。</p>
+<p>Google在2019年就在《Fast Transformer Decoding: One Write-Head is All
+You
+Need》提出了MQA，不过那时候主要到的人不多，那是大家主要还是关注在用Bert把榜刷出新高上。</p>
+<p>MQA的做法其实很简单。在MHA中，输入分别经过 <span class="math inline">\(W_{Q}、W_{K}、W_{V}\)</span>
+的变换之后，都切成了n份（n=头数），维度也从 <span class="math inline">\(d_{model}\)</span> 降到了 <span class="math inline">\(d_{head}\)</span>
+，分别进行attention计算再拼接。而MQA这里，在线性变换之后，只对 <span class="math inline">\(Q\)</span> 进行切分（和MHA一样），而 <span class="math inline">\(K、V\)</span> 则直接在线性变换的时候把维度降到了
+<span class="math inline">\(d_{head}\)</span>
+（而不是切分变小），然后这n个Query头分别和同一份 <span class="math inline">\(K、V\)</span>
+进行attention计算，之后把结果拼接起来。</p>
+<p>简单来说，就是MHA中，每个注意力头的 <span class="math inline">\(K、V\)</span>
+是不一样的，而MQA这里，每个注意力头的 <span class="math inline">\(K、V\)</span>
+是一样的，值是共享的。而其他步骤都和MHA一样。</p>
+<img src="/3dc22f96/MQA.webp" class title="MQA">
+<p>这样一来，需要缓存的 <span class="math inline">\(K、V\)</span>
+值一下就从所有头变成一个头的量。</p>
+<p>比如在Llama2
+7B中用的是32个头，那用MQA后，1024个token需要缓存的量就变成1/32，536,870,912
+bytes / 32 = 16,777,216 bytes，差不多是16M，这就能全塞进缓存中了。</p>
+<p>（实现上，就是改一下线性变换矩阵，然后把 <span class="math inline">\(K、V\)</span>
+的处理从切分变成复制，就不再赘述。）</p>
+<p>当然，由于共享了多个头的参数，限制了模型的表达能力，MQA虽然能好地支持推理加速，但是在效果上略略比MHA差一点，但是并不多，且相比其他修改hidden
+size或者head num的做法效果都好。</p>
+<img src="/3dc22f96/mqa_result_1.png" class title="MQA results 1">
+<img src="/3dc22f96/mqa_result_3.png" class title="MQA results 3">
+<h1 id="gqa">GQA</h1>
+<p>既然MQA对效果有点影响，MHA缓存又存不下，那GQA（Grouped-Query
+Attention）就提出了一个折中的办法，既能减少MQA效果的损失，又相比MHA需要更少的缓存。</p>
+<p>（文章：《GQA: Training Generalized Multi-Query Transformer Models
+from Multi-Head Checkpoints》，2023年）</p>
+<p>GQA里， <span class="math inline">\(Q\)</span>
+还是按原来MHA/MQA的做法不变。只使用一套共享的 <span class="math inline">\(K、V\)</span>
+不是效果不好吗，那就还是多弄几套。但是不要太多，数量还是比 <span class="math inline">\(Q\)</span> 的头数少一些。这样相当于把 <span class="math inline">\(Q\)</span> 的多个头给分了group，同一个group内的
+<span class="math inline">\(Q\)</span> 共享同一套 <span class="math inline">\(K、V\)</span> ，不同group的 <span class="math inline">\(Q\)</span> 所用的 <span class="math inline">\(K、V\)</span> 不同。</p>
+<p>MHA可以认为是 <span class="math inline">\(K、V\)</span>
+头数最大时的GQA，而MQA可以任务是 <span class="math inline">\(K、V\)</span> 头数最少时的GQA。</p>
+<p>看论文里的图就很直观</p>
+<img src="/3dc22f96/GQA.png" class title="GQA">
+<p>效果怎么样呢？</p>
+<img src="/3dc22f96/GQA_result_1.png" class title="GQA result">
+<p>看表中2/3/4行对比，GQA的速度相比MHA有明显提升，而效果上比MQA也好一些，能做到和MHA基本没差距。文中提到，这里的MQA和GQA都是通过average
+pooling从MHA初始化而来，然后进行了少量的训练得到的。如果我们想要把之前用MHA训练的模型改造成GQA，也可以通过这样的方法，增加少量训练来实现。当然如果从一开始就加上，从零开始训练，也是没有问题的。</p>
+<p>Llama2用的就是GQA，在tech
+report中也做了MHA、MQA、GQA的效果对比，可以看到效果确实很不错。</p>
+<img src="/3dc22f96/llama2_qga.png" class title="llama2 GQA result">
+<h1 id="小结">小结</h1>
+<p>MHA、MQA、GQA的实现其实并不复杂，效果也很好，理解上并没有太多困难。但是想要真正理解它们的出发点，还是需要深入每一个细节，去了解当时要解决的事什么问题。</p>
+<p>目前来看GQA是LLM比较好的方案，但未来肯定还会有针对不同方向的进一步优化方案，计算效率、推理速度、显存消耗这些方向都值得我们继续去探索优化。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<h1 id="reference">Reference</h1>
+<p>【1】The Annotated Transformer
+https://nlp.seas.harvard.edu/2018/04/03/attention.html<br>
+【2】Attention Is All You Need
+https://arxiv.org/pdf/1706.03762.pdf<br>
+【3】Fast Transformer Decoding: One Write-Head is All You Need
+https://arxiv.org/pdf/1911.02150.pdf<br>
+【4】https://www.researchgate.net/figure/Scaled-dot-product-self-attention-mechanism_fig1_363923096<br>
+【5】GQA: Training Generalized Multi-Query Transformer Models from
+Multi-Head Checkpoints https://arxiv.org/pdf/2305.13245.pdf<br>
+【6】How Attention works in Deep Learning: understanding the attention
+mechanism in sequence models https://theaisummer.com/attention/<br>
+【7】A simple overview of RNN, LSTM and Attention Mechanism
+https://medium.com/swlh/a-simple-overview-of-rnn-lstm-and-attention-mechanism-9e844763d07b<br>
+【8】https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention<br>
+【9】浅谈Transformer的初始化、参数化与标准化
+https://spaces.ac.cn/archives/8620<br>
+【10】https://theaisummer.com/self-attention/
+https://theaisummer.com/self-attention/<br>
+【11】https://zhuanlan.zhihu.com/p/626820422
+https://zhuanlan.zhihu.com/p/626820422<br>
+【12】Are Sixteen Heads Really Better than One?
+https://arxiv.org/pdf/1905.10650.pdf<br>
+【13】This post is all you need（上卷）——层层剥开Transformer
+https://zhuanlan.zhihu.com/p/420820453<br>
+【14】The Illustrated Transformer
+https://jalammar.github.io/illustrated-transformer/<br>
+【15】Multi-Query Attention is All You Need
+https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>attention</tag>
+        <tag>KV Cache</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>MoE模型的前世今生</title>
     <url>/44e38c1b.html</url>
     <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
@@ -4325,374 +3960,308 @@ Parameters https://qwenlm.github.io/zh/blog/qwen-moe/</p>
       </tags>
   </entry>
   <entry>
-    <title>理解Attention:从起源到MHA,MQA和GQA</title>
-    <url>/3dc22f96.html</url>
-    <content><![CDATA[<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
-<p>Attention模块是现在几乎所有大模型的核心模块，因此也有很多工作致力于提升注意力计算的性能和效果。其中MHA（Multi-Head
-Attention）、MQA（Multi-Query Attention）和GQA（Grouped-Query
-Attention）这一路线的思路和做法被很多主流模型所采用，因此简单地梳理一些这几个变体的思路和做法，以及会涉及到的KV
-Cache相关内容。思路比较直白，但也有一些细节和原理值得思考。</p>
-<p>当然针对Attention优化，也有很多其他优秀的方案和思路，如线性注意力、FlashAttention和Sliding
-Window Attention等，这些在后续再开篇梳理。</p>
-<p>（应一些朋友的要求，会增加一些直观基础的内容，以及LLM应用的案例。也欢迎大家提出更多建议。）</p>
-<h1 id="关于attention从rnn到attention">关于Attention：从RNN到Attention</h1>
-<p>了解一个概念的诞生和演进，有助于我们更深入去理解它。我们先简单回顾下attention从起源到最初的实现。</p>
-<p>（熟悉attention的朋友可以跳过这一节）</p>
-<h2 id="从rnn说起">从RNN说起</h2>
+    <title>大模型偏好对齐-DPO</title>
+    <url>/473f2b43.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>要对齐大模型偏好并不容易，从预训练的数据内容、模型的结构到SFT数据配比甚至数据格式等都会影响最终结果。</p>
+<p>按ChatGPT的技术路线，用SFT+RLHF
+PPO强化学习确实可以获得一定的提升，但是PPO比较复杂，训练过程不稳定，对微调后的模型、PPO的超参、reward模型的质量等都很敏感，且数据收集和训练的成本都较高，跑通大规模PPO有一定的成本门槛，因此PPO并没有被很广泛地应用。</p>
+<p>而DPO，Direct Preference
+Optimization，就是PPO的一个简化替代方案。DPO不需要训练reward模型，把PPO的两阶段训练变成一阶段训练，让模型可以直接从偏好数据里学习。</p>
+<p>DPO公式有点多，但是并不算太复杂，一步一步理解即可。</p>
+<h1 id="对齐">对齐</h1>
+<p>大模型在预训练中学到很多知识和技能，但是并不是所有知识和技能都是我们想要的。</p>
+<p>比如有一个常见的错误知识，有超过80%的人会有这样的错误认知，那么这个错误知识在预训练数据里也会经常出现。虽然数据集里也会有关于这个知识的正确认知，但是比例相对会比较低。</p>
+<p>如果让模型直接用在预训练中学到的知识进行回答，那么模型就有可能给出错误的知识。</p>
+<p>这不是我们所希望的。因此需要通过一些方法，让模型给出的结果能对齐人类的偏好，比如最基础的偏好，正确性。</p>
+<p>从模型非常广泛的知识和技能中选出我们所需的response和action是构建安全、高效、可控的AI系统的关键。</p>
+<p>SFT是最直接的偏好学习方法，而RLHF/RLAIF是上限更高的偏好对齐方案。但RLHF比较复杂，训练不稳定，成本也高。</p>
+<p>而DPO的优化目标和RLHF一样，但是实现更简单。</p>
+<h1 id="rlhf">RLHF</h1>
+<p>先回顾下RLHF的三个阶段。</p>
+<ol type="1">
+<li>SFT Phase</li>
+</ol>
+<p>基于预训练模型，在高质量的下游任务数据上训练，获得 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span>。</p>
+<ol start="2" type="1">
+<li>Reward Modelling Phase</li>
+</ol>
+<p>首先给定prompt <span class="math inline">\(x\)</span>，生成两个答案
+<span class="math inline">\((y_1,y_2)\sim\pi^\text{SFT}(y|x)\)</span>，并通过人工标注对比
+<span class="math inline">\(y_1,y_2\)</span>，获得偏好结果(preference)
+<span class="math inline">\(y_w\succ y_l\mid
+x\)</span>，其中w和l表示win和lose。</p>
+<p>假设在这些偏好结果中，有一个我们无法直接访问的latent reward model
+<span class="math inline">\(r^*(y,x)\)</span>，对每对 <span class="math inline">\((x,y)\)</span> 进行打分，这个 <span class="math inline">\(r^*(y,x)\)</span> 就是RLHF里reward
+model的拟合目标。</p>
+<p>基于 <span class="math inline">\(r^*(y,x)\)</span>，有很多方法对preference进行建模，Bradley-Terry
+model就是一个常用的选择。（当然在多个ranked
+answers的情况下，可以使用Plackett-Luce ranking models）</p>
+<p>基于Bradley-Terry model，人类偏好的分布 <span class="math inline">\(p^{*}\)</span> 写作</p>
+<p><span class="math display">\[\begin{aligned}p^*(y_1\succ y_2\mid
+x)=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\end{aligned}\]</span></p>
+<p>看起来不复杂，就是把两个答案的reward通过softmax归一化成概率。</p>
+<p>假设我们从 <span class="math inline">\(p^{*}\)</span>
+采样到一个静态的偏好对比数据集 <span class="math inline">\(\mathcal{D}=\left\{x^{(i)},y_w^{(i)},y_l^{(i)}\right\}_{i=1}^N\)</span>
+，那我们就可以用基于 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span> 初始化得到的reward模型
+<span class="math inline">\(r_\phi(x,y)\)</span>，通过maximum
+likelihood来拟合 <span class="math inline">\(r^*(y,x)\)</span>。将这个问题表述为二元分类问题，我们就得到negative
+log-likelihood loss：</p>
+<p><span class="math display">\[\mathcal{L}_R(r_\phi,\mathcal{D})=-\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\begin{bmatrix}\log\sigma(r_\phi(x,y_w)-r_\phi(x,y_l))\end{bmatrix}\]</span></p>
+<p>为了确保reward
+function有较低的方差，一般会对reward进行归一化，使得对于所有的 <span class="math inline">\(x\)</span>，有 <span class="math inline">\(\mathbb{E}_{x,y\thicksim\mathcal{D}}\left[r_\phi(x,y)\right]=0\)</span>。</p>
+<ol start="3" type="1">
+<li>RL Fine-Tuning Phase</li>
+</ol>
+<p>在强化学习阶段，我们用上一步中得到的reward给目标模型提供反馈，优化如下目标</p>
+<p><span class="math display">\[\max_{\pi_\theta}\mathbb{E}_{x\sim\mathcal{D},y\sim\pi_\theta(y|x)}\begin{bmatrix}r_\phi(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathrm{KL}}\begin{bmatrix}\pi_\theta(y\mid
+x)\mid\mid\pi_{\mathrm{ref}}(y\mid x)\end{bmatrix}\]</span></p>
+<p>上式中第一项是reward模型对目标模型（即RLHF中的actor
+model）给出的答案的reward打分，这一项是越高越好。</p>
+<p>而第二项是目标模型和参考模型之间的KL散度，用来限制经过训练后的目标模型，不要偏离参考模型（即
+<span class="math inline">\(\pi^{\mathrm{SFT}}\)</span>）太多。这样可以保证reward模型能在经过充分训练的区间工作，同时避免目标模型因过分向高reward分数优化而出现mode-collapse，失去回复的多样性。<span class="math inline">\(\beta\)</span> 用来控制这个限制项的比重。</p>
+<p>由于语言生成是离散的，因此上面这个优化目标是不可导的，需要通过RL优化。</p>
+<p>标准的RL把reward fucntion构建成</p>
+<p><span class="math display">\[r(x,y)=r_\phi(x,y)-\beta(\log\pi_\theta(y\mid
+x)-\log\pi_\text{ref}(y\mid x))\]</span></p>
+<p>并通过PPO优化。</p>
+<h1 id="direct-preference-optimization">Direct Preference
+Optimization</h1>
+<p>DPO的目标是推导出一种简单的方法，直接使用偏好来进行policy
+optimization，而省去训练reward模型的训练。</p>
+<img src="/473f2b43/intro.png" class title="DPO">
+<h2 id="dpo优化目标的推导">DPO优化目标的推导</h2>
+<p>首先，DPO起始的优化目标和RL是相同的：对于任意的reward function <span class="math inline">\(r(x,y)\)</span>，reference model <span class="math inline">\(\pi_{\mathrm{ref}}\)</span></p>
+<p><span class="math display">\[\max_\pi\mathbb{E}_{x\thicksim\mathcal{D},y\thicksim\pi}\begin{bmatrix}r(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathrm{KL}}\begin{bmatrix}\pi(y|x)||\pi_{\mathrm{ref}}(y|x)\end{bmatrix}\]</span></p>
+<p>由KL散度的定义，把上式中的第二项展开</p>
+<p><span class="math display">\[\beta\mathbb{D}_{\mathrm{KL}}(\pi\|\pi_{\mathrm{ref}})=\beta\sum_y\pi(y|x)\log\frac{\pi(y|x)}{\pi_{\mathrm{ref}}(y|x)}\]</span></p>
+<p>这里的条件概率求和其实就是期望值，因此有</p>
+<p><span class="math display">\[\max_\pi\mathbb{E}_{x\thicksim\mathcal{D},y\thicksim\pi}\begin{bmatrix}r(x,y)\end{bmatrix}-\beta\mathbb{D}_{\mathbf{KL}}\begin{bmatrix}\pi(y|x)&amp;\mid\mid\pi_{\mathrm{ref}}(y|x)\end{bmatrix}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\max_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[r(x,y)-\beta\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}\right]\end{aligned}\]</span></p>
+<p>然后我们把最大化问题转化成最小化问题</p>
+<p><span class="math display">\[\begin{aligned}\max_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[r(x,y)-\beta\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)}-\frac{1}{\beta}r(x,y)\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)\exp{\left(\frac{1}{\beta}r(x,y)\right)}}\right]\end{aligned}\]</span></p>
+<p>在这里我们用配分函数，归一一下分母。令</p>
+<p><span class="math display">\[Z(x)=\sum_y\pi_\text{ref}(y|x)\exp\left(\frac1\beta
+r(x,y)\right)\]</span></p>
+<p>那我们就得到了一个新的有效的概率分布</p>
+<p><span class="math display">\[\begin{aligned}\pi^*(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p>那么就有</p>
+<p><span class="math display">\[\begin{aligned}\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi_{\text{ref}}(y|x)\exp{\left(\frac{1}{\beta}r(x,y)\right)}}\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}-\log
+Z(x)\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;=\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}-\log
+Z(x)\right]\end{aligned}\]</span></p>
+<p>由于 <span class="math inline">\(Z(x)\)</span> 不是 <span class="math inline">\(y\)</span> 的函数，我们可以把它拿出来</p>
+<p><span class="math display">\[\begin{aligned}\min_\pi\mathbb{E}_{x\sim\mathcal{D}}\mathbb{E}_{y\sim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}-\log
+Z(x)\right]\end{aligned}\]</span></p>
+<p><span class="math display">\[=\min_\pi\mathbb{E}_{x\thicksim\mathcal{D}}\left[\mathbb{E}_{y\thicksim\pi(y|x)}\left[\log\frac{\pi(y|x)}{\pi^*(y|x)}\right]-\log
+Z(x)\right]\]</span></p>
+<p><span class="math display">\[=\min_\pi\mathbb{E}_{x\thicksim\mathcal{D}}\left[\mathbb{D}_{\text{KL}}(\pi(y|x)\mid\mid\pi^*(y|x))-\log
+Z(x)\right]\]</span></p>
+<p><span class="math inline">\(Z(x)\)</span> 和 <span class="math inline">\(\pi\)</span>
+无关，因此最小化这个式子只要最小化第一项KL散度。而当且仅当两个分布完全相同的时候，KL散度取得最小值0，因此有</p>
+<p><span class="math display">\[\begin{aligned}\pi(y|x)=\pi^*(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p>虽然得到了显示解，但是这里的 <span class="math inline">\(Z(x)\)</span>
+没法求解，因为排列组合数太多，我们不可能去遍历。</p>
+<p>继续对这个式子做一些变换</p>
+<p><span class="math display">\[\begin{aligned}\pi_r(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}
+\log Z(x)+\log \pi_r(y|x)=\log \pi_{\text{ref}}(y|x)
++\frac{1}{\beta}r(x,y)
+\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
+x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
+<p>这里我们开始用上Bradley-Terry model了。前面我们提到了Bradley-Terry
+model是如下形式</p>
+<p><span class="math display">\[\begin{aligned}p^*(y_1\succ y_2\mid
+x)=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\end{aligned}\]</span></p>
+<p>在这个基础上做一点变换</p>
+<p><span class="math display">\[\begin{aligned}
+p^*(y_1\succ y_2\mid
+x)&amp;=\frac{\exp\left(r^*(x,y_1)\right)}{\exp\left(r^*(x,y_1)\right)+\exp\left(r^*(x,y_2)\right)}\\
+&amp;=\frac1{1+\frac{\exp(r^*(x,y_2))}{\exp(r^*(x,y_1))}}\\
+&amp;=\frac1{1+\exp(r^*(x,y_2)-r^*(x,y_1))}
+\end{aligned}\]</span></p>
+<p>然后我们把 <span class="math inline">\(r\)</span>
+代入进去，就得到</p>
+<p><span class="math display">\[p^*(y_1\succ y_2\mid
+x)=\frac{1}{1+\exp\left(\beta\log\frac{\pi^*(y_2|x)}{\pi_{\text{ref}}(y_2|x)}-\beta\log\frac{\pi^*(y_1|x)}{\pi_{\text{ref}}(y_1|x)}\right)}\]</span></p>
+<p>到这里，我们就有了关于optimal
+policy的人类偏好数据的概率，而无需经过reward模型。我们可以用MLE直接在这个概率模型上优化目标模型</p>
+<p><span class="math display">\[\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})=-\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\log\sigma\left(\beta\log\frac{\pi_\theta(y_w\mid
+x)}{\pi_{\text{ref}}(y_w\mid x)}-\beta\log\frac{\pi_\theta(y_l\mid
+x)}{\pi_{\text{ref}}(y_l\mid x)}\right)\right]\]</span></p>
+<p>DPO loss的实现如下</p>
+<img src="/473f2b43/dpo_loss_code.png" class title="DPO实现">
+<h2 id="理解dpo损失函数">理解DPO损失函数</h2>
+<p>首先我们了解一下DPO的loss在做什么，对DPO的损失函数求个导。</p>
+<p>方便起见，令</p>
+<p><span class="math display">\[u=\beta\log\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}-\beta\log\frac{\pi_{\theta}(y|x)}{\pi_{\mathrm{ref}}(y_{l}|x)}\]</span></p>
+<p>那么原损失函数可以写成</p>
+<p><span class="math display">\[L_{DPO}(\pi_{\theta};\pi_{\mathrm{ref}})=-\min_{\pi_{0}}E_{(x,y_{u},y_{t})\sim
+D}[\log\sigma(u)]\]</span></p>
+<p>对sigmoid求导，有</p>
+<p><span class="math display">\[\frac\partial{\partial
+u}\log\sigma(u)=\frac1{\sigma(u)}\cdot\sigma(u)(1-\sigma(u))=1-\sigma(u)\]</span></p>
+<p>由sigmoid函数性质，有</p>
+<p><span class="math display">\[1-\sigma(u)=\sigma(-u)\]</span></p>
+<p>对 <span class="math inline">\(u\)</span> 求导</p>
+<p><span class="math display">\[\frac{\partial
+u}{\partial\theta}=\beta\left(\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_w|x)}{\pi_{\mathrm{ref}}(y_w|x)}-\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)}\right)\]</span></p>
+<p>第一项对数求导，由于 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 不依赖 <span class="math inline">\(\theta\)</span>，可以视作常数，因此有</p>
+<p><span class="math display">\[\begin{aligned}
+\frac\partial{\partial\theta}\log\frac{\pi_\theta(y_w|x)}{\pi_\mathrm{ref}(y_w|x)}=&amp;\frac{1}{\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}}\cdot\frac{\partial}{\partial\theta}\frac{\pi_{\theta}(y_{w}|x)}{\pi_{\mathrm{ref}}(y_{w}|x)}\\
+=&amp;\frac{1}{\pi_{\theta}(y_{w}|x)}\cdot\frac{\partial}{\partial\theta}\pi_{\theta}(y_{w}|x)\\
+=&amp;\begin{aligned}\nabla_\theta\log\pi(y_w\mid x)\end{aligned}
+\end{aligned}\]</span></p>
+<p>类似地，第二项求导</p>
+<p><span class="math display">\[\frac{\partial}{\partial\theta}\log\frac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)}=\nabla_\theta\log\pi(y_l\mid
+x)\]</span></p>
+<p>因此，DPO损失的导数是</p>
+<p><span class="math display">\[\begin{aligned}
+&amp;\nabla_\theta\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})\\&amp;=-\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\beta\sigma\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)}-\beta\log\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)\left[\nabla_\theta\log\pi(y_w\mid
+x)–\nabla_\theta\log\pi(y_l\mid x)\right]\right]
+\end{aligned}\]</span></p>
+<p>再令</p>
+<p><span class="math display">\[\hat{r}_\theta(x,y)=\beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}\]</span></p>
+<p>那么DPO损失的梯度可以写作</p>
+<p><span class="math display">\[\begin{aligned}
+&amp;\nabla_\theta\mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_{\text{ref}})\\&amp;=-\beta\mathbb{E}_{(x,y_w,y_l)\thicksim\mathcal{D}}\left[\sigma\left(\hat{r}_\theta(x,y_l)-\hat{r}_\theta(x,y_w)\right)\left[\nabla_\theta\log\pi(y_w\mid
+x)–\nabla_\theta\log\pi(y_l\mid x)\right]\right]
+\end{aligned}\]</span></p>
+<p>梯度各项的意义如下</p>
+<img src="/473f2b43/gradient.png" class title="DPO梯度">
+<p><span class="math inline">\(\hat{r}_\theta(x,y)\)</span> 相当于 <span class="math inline">\(\pi_{\theta}\)</span> 和 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span>
+共同确定的隐式reward。</p>
+<h2 id="dpo流程">DPO流程</h2>
+<p>DPO的一般流程是：<br>
+- 对于每个prompt <span class="math inline">\(x\)</span>，采样 <span class="math inline">\(y_1,y_2\sim\pi_{\text{ref}}(\cdot\mid
+x)\)</span>，然后进行人工标注构建偏好数据集 <span class="math inline">\(\mathcal{D}=\{x^{(i)},y_w^{(i)},y_l)^{(i)}\}_{i=1}^N\)</span><br>
+- 基于 <span class="math inline">\(\mathcal{L}_{\mathrm{DPO}}\)</span>，在已有的
+<span class="math inline">\(\pi_{\mathrm{ref}}\)</span>、<span class="math inline">\(\mathcal{D}\)</span> 和 <span class="math inline">\(\beta\)</span> 上优化 $$</p>
+<p>但是收集偏好数据的成本还是比较高的，因此实际使用中，人们更愿意使用开源的偏好数据集。</p>
+<p>当我们的偏好数据是来自 <span class="math inline">\(\pi^{\mathrm{SFT}}\)</span> 的时候，我们直接让
+<span class="math inline">\(\pi_{\mathrm{ref}}=\pi^{\mathrm{SFT}}\)</span>。如果我们使用开源偏好数据集的话，就可能没法直接使用生成这些数据的模型，这时可以用偏好数据集里
+<span class="math inline">\((x,y_w)\)</span> 数据对 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 进行微调，即</p>
+<p><span class="math display">\[\pi_{\text{ref}}=\arg\max_\pi\mathbb{E}_{x,y_w\thicksim\mathcal{D}}\left[\log\pi(y_w\mid
+x)\right]\]</span></p>
+<p>这个微调步骤有助于缓解 <span class="math inline">\(\pi_{\mathrm{ref}}\)</span> 和真实 reference
+distribution 之间的distribution shift。</p>
+<h2 id="your-language-model-is-secretly-a-reward-model">Your Language
+Model Is Secretly a Reward Model</h2>
+<p>在前面推导DPO的loss函数的时候，我们把reward的公式显示表达成</p>
+<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
+x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
+<p>但是这里 <span class="math inline">\(Z(x)\)</span>
+的组合空间太大，实际上没法求解。</p>
+<p>好在"在Plackett-Luce/Bradley-Terry模型框架下，同一等价类中的两个reward
+function有相同的preference distribution"</p>
 <blockquote>
-<p>Memory is attention through time. ~ Alex Graves 2020</p>
+<p>Under the Plackett-Luce preference framework, and in particular the
+BradleyTerry framework, two reward functions from the same equivalence
+class induce the same preference distribution</p>
 </blockquote>
-<p>注意力机制最初起源是为了解决序列问题。回想在还没有Transformer的上一世代，使用RNN的Seq2Seq是这样的</p>
-<img src="/3dc22f96/seq2seq.png" class title="seq2seq">
-<img src="/3dc22f96/encoder.png" class title="encoder">
-<img src="/3dc22f96/decoder.png" class title="decoder">
-<p>（图来自<a href="https://theaisummer.com/attention/">AI
-Summer</a>）</p>
-<p>每个RNN cell接收两个输入，输出一个hidden state。比如在翻译任务中，RNN
-encoder把所有输入迭代地编码成context向量 <span class="math inline">\(z\)</span> ，然后由RNN decoder基于 <span class="math inline">\(z\)</span>
-迭代地解码。一般来说，这里decoder的第一个输入是一个特殊token，如[start]，表示解码开始。</p>
-<p>这样会有一个问题， <span class="math inline">\(z\)</span>
-能编码的长度显然有限，而且由于模型结构问题，会更加关注靠近尾部的输入。这样如果关键信息出现在开头，就容易被忽略。</p>
-<p>并且时间步骤上的传播由于有多次迭代相乘，梯度很容易就过小，导致梯度消失问题。</p>
-<p>当然我们有LSMT和GRU等变体来增强长距离记忆的能力，也缓解了梯度问题，但这些方案还是没有产生质变的能力。</p>
-<p>回到问题的核心，我们想要 <span class="math inline">\(z\)</span>
-能够编码所有前面的内容，但是显然， <span class="math inline">\(z\)</span>
-的生成方式天然会让它更容易注意到靠后的内容，而容易忽略靠前的输入。</p>
-<p>一个直觉的想法就是，我们需要想个办法跳过 <span class="math inline">\(z\)</span>
-，和前面的每个输入建立直接的联系。我们希望模型能够有机会学习到去“注意”关键的输入，不管这个输入是在前面还是后面。</p>
-<p>实际上神经网络天生就具有“注意力”的天赋。</p>
-<p>比如在CNN分类中，如果我们画出分类层前的heatmap，会是如下图这个样子</p>
-<img src="/3dc22f96/cnn_heatmap.png" class title="heatmap">
-<p>可以看到，值比较高的地方是在猫的鼻子胡子嘴巴区域，次之是身上和头上的花纹。直观来说，就是模型主要通过脸部的特征和身上的花纹，来识别出这是一只猫。这就是CNN学习到的注意力，这样的特征是神经网络implicitly学到的。</p>
-<p>回归到Seq2Seq，我们怎么来实现注意力，并且让这种implicit的机制变得explicit：单独抽离出来并具备一定可控制性？</p>
-<p>回想翻译场景，在RNN中，每一个时间步骤 <span class="math inline">\(i\)</span> 都会产生一个隐向量，<span class="math inline">\(h_i\)</span> 向量，我们把这些 <span class="math inline">\(h_i\)</span>
-保存起来，在最后要生成新的输出的时候，我们让模型回头看一下之前的这每一个
-<span class="math inline">\(h_i\)</span>
-，再决定要生成什么内容。相比原来只利用最后一个hidden
-state，现在我们可以访问之前所有的中间状态，如果发现前面有关键信息，就可以直接用上了，而不用担心输入太长而被覆盖了。</p>
-<p>那么问题又来了，我们怎么知道前面某一个中间状态对于当前的生成来说是否重要？如果我们不知道怎么定义是否重要，那我们就把这个问题交给模型自己解决好了
---
-通过网络参数来学习识别某个输入状态是否重要，学习是否要“注意”到它，要给予多少的“注意力”。</p>
-<p>具体来说，我们定义在解码第 <span class="math inline">\(i\)</span>
-个输出是，decoder当前隐状态 <span class="math inline">\(y_{i-1}\)</span>
-和encoder的所有隐状态 <span class="math inline">\(\mathbf{h}\)</span>
-之间的一个score计算</p>
-<p><span class="math display">\[\mathbf{e}_i=\text{attention}_{\mathrm{net}}\left(y_{i-1},\mathbf{h}\right)\in
-R^n\]</span></p>
-<p>其中</p>
-<p><span class="math display">\[e_{ij}=\text{attentiom}_{\text{net
-}(\mathbf{y}_{i-1},h_j)}\]</span></p>
-<p>注意力网络通过 <span class="math inline">\(\mathbf{y}_{i-1}\)</span>
-和 <span class="math inline">\(h_j\)</span> 来计算一个值 <span class="math inline">\(e_{ij}\)</span>，这里的注意力网络可以设计各种操作，比如对输入进行拼接再通过fc层进行计算等。</p>
-<p>这里 <span class="math inline">\(e_{ij}\)</span>
-是一个标量，但它还不是一个可用的权重值，还需要通过一个函数，把attention
-net对各个encoder hidden state的输出值转成一个分布：softmax。</p>
-<p><span class="math display">\[\alpha_{ij}=\frac{\exp\left(e_{ij}\right)}{\sum_{k=1}^{T_x}\exp\left(e_{ik}\right)}\]</span></p>
-<p>最后通过加权计算，获得最终输入给decoder的隐变量。</p>
-<p><span class="math display">\[z_i=\sum_{j=1}^T\alpha_{ij}\mathbf{h}_j\]</span></p>
-<img src="/3dc22f96/seq2seq_attention.png" class title="seq2seq attention">
-<p>可以看到，这里的attention net的任务就是找到decoder上一个hidden
-state和encoder hidden
-state之间的“相关”关系，使得模型能够将更多的注意力放在对应的输入信息上。</p>
-<p>实际上，上面这种attention的计算方式并不是唯一的，attention的计算方式有许多种</p>
-<img src="/3dc22f96/attention_calculation.png" class title="attention calculation">
-<p>这些attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(s, h)=\mathrm{Score}(s,h)\cdot
-h\)</span> 。这里的 <span class="math inline">\(s\)</span>
-就是decoder的hidden state（也就是前文的 <span class="math inline">\(y\)</span> ），<span class="math inline">\(h\)</span> 就是encoder的hidden state。</p>
-<p>（当然从结果上看，是scaled dot-product
-attention经受住了历史的考验，成为了主流。）</p>
-<h2 id="transformer的attention">Transformer的attention</h2>
-<p>从RNN attention到transformer
-attention，所做的事情就如论文题目所说：《Attention Is All You
-Need》，彻底抛弃RNN的在time
-step上的迭代计算，完全拥抱attention机制，只用最简单粗暴的方式同步计算出每个输入的hidden
-state，其他的就交给attention来解决。</p>
-<img src="/3dc22f96/transformer_structure.png" class title="transformer structure.png">
-<p>这里还是保留有encoder和decoder的结构，encoder中的attention都是self-attention，decoder则除了self-attention还有cross-attention。</p>
-<p>transformer结构下，attention的一般形式可以写作 <span class="math inline">\(\mathrm{Attention}(Q,K,V)=\mathrm{Score}(Q,K)V\)</span>，这里有
-<span class="math inline">\(Q=W_{Q}Y，K=W_{K}X，V=W_{V}X\)</span>
-。对于cross-attention， <span class="math inline">\(X\)</span>
-是encoder的hidden states，<span class="math inline">\(Y\)</span>
-是decoder的hidden states，而对于self-attention，则有 <span class="math inline">\(X=Y\)</span>。</p>
-<p>具体到我们熟悉的scaled dot-product attention，使用softmax计算，有</p>
-<p><span class="math display">\[\operatorname{Attention}(Q,K,V)=\operatorname{softmax}(\frac{QK^T}{\sqrt{d}})V\]</span></p>
-<p>到这里，终于见到我们熟悉的attention计算。</p>
-<p>用一张很直观的图来展示整个计算</p>
-<img src="/3dc22f96/Scaled-dot-product-self-attention.pbm" class title="self-attention">
-<p>这里的「query」，「key」和「value」的名称也暗示了整个attention计算的思路。</p>
-<p>类比到一个数据库查询+预测的例子。</p>
-<p>假设我们现在有一个“文章-阅读量”数据库，记录了每篇文章在发布30天内的阅读量。每篇文章就是一个key，对应的阅读量就是value。</p>
-<p>我们现在有一篇将要发布的文章，想要预测这篇文章在30天内的阅读量，那我们就把这篇新的文章，作为query，去和数据库里的文章（key）做一个相关性计算，取最相关的5篇文章。</p>
-<p>假设top5篇文章的相关性分别是 <span class="math inline">\([8,4,4,2,2]\)</span> ，对应阅读量是 <span class="math inline">\([5\text{w},2\text{w},8\text{w},3\text{w},6\text{w}]\)</span>
-。</p>
-<p>那我们把相关性得分归一化成和为1的概率值 <span class="math inline">\([0.4,0.2,0.2,0.1,0.1]\)</span>
-，那我们就可以预测新文章30天内的阅读量是 <span class="math inline">\(0.4\times5+0.2\times2+0.2\times8+0.1\times3+0.1\times6=4.9\text{w}\)</span>
-。</p>
-<p>这个例子中，我们计算相关性就相当于transformer attention中的 <span class="math inline">\(QK^T\)</span>
-，归一化就是softmax，然后通过加权求和取得最后的阅读量/特征向量。</p>
-<p>对于self-attention， <span class="math inline">\(Q、K、V\)</span>
-都来自输入 <span class="math inline">\(X\)</span>，sequence自己计算自己每个token的之间的相关性。而对于cross-attention，decoder中的输出sequence就是上面这个例子中的“将要发布的文章”，通过把这篇新的文章和数据库中的文章做相关计算，我们得到了新的预测结果。</p>
-<p>对于self-attention，由于 <span class="math inline">\(Q、K、V\)</span>
-都来自输入 <span class="math inline">\(X\)</span> ，在计算 <span class="math inline">\(QK^T\)</span>
-时，模型很容易关注到自身的位置上，也就是 <span class="math inline">\(QK^T\)</span>
-对角线上的激活值会明显比较大。这样的情况其实不是很好，因为这会削弱模型关注其他高价值位置的能力，也就限制模型的理解和表达能力。后面讲的MHA对这个问题会有一些缓解作用。</p>
-<p>顺着这样的思路梳理下来，会发现attention的大思路还是很好理解的。而计算上，怎么去获得更好的效果，就是接下来要分析的几个内容，MHA，MQA和GQA所关注的。</p>
-<p>代码上，实现也很容易，直接看<a href="https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention">pytorch
-forcasting</a>的代码</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ScaledDotProductAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, dropout: <span class="built_in">float</span> = <span class="literal">None</span>, scale: <span class="built_in">bool</span> = <span class="literal">True</span></span>):</span><br><span class="line">        <span class="built_in">super</span>(ScaledDotProductAttention, self).__init__()</span><br><span class="line">        <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            self.dropout = dropout</span><br><span class="line">        self.softmax = nn.Softmax(dim=<span class="number">2</span>)</span><br><span class="line">        self.scale = scale</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, q, k, v, mask=<span class="literal">None</span></span>):</span><br><span class="line">        attn = torch.bmm(q, k.permute(<span class="number">0</span>, <span class="number">2</span>, <span class="number">1</span>))  <span class="comment"># query-key overlap</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.scale:</span><br><span class="line">            dimension = torch.as_tensor(k.size(-<span class="number">1</span>), dtype=attn.dtype, device=attn.device).sqrt()</span><br><span class="line">            attn = attn / dimension</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = attn.masked_fill(mask, -<span class="number">1e9</span>)</span><br><span class="line">        attn = self.softmax(attn)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            attn = self.dropout(attn)</span><br><span class="line">        output = torch.bmm(attn, v)</span><br><span class="line">        <span class="keyword">return</span> output, attn</span><br></pre></td></tr></table></figure>
-<h2 id="关于scaling">关于scaling</h2>
-<p>BTW，为什么计算中 <span class="math inline">\(QK^T\)</span>
-之后还要除以 <span class="math inline">\(\sqrt{d}\)</span> ？</p>
-<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。</p>
-<img src="/3dc22f96/softmax.png" class title="softmax">
-<p>苏剑林的<a href="https://spaces.ac.cn/archives/8620">博客</a>中也有详细分析，并提到如果不对attention值进行scaling，也可以通过在参数初始化是将方差除以一个
-<span class="math inline">\(\sqrt{d}\)</span>
-，同样可以起到预防softmax饱和的效果。类似地，通过normalization也可以做到类似的效果。不过实现上在attention里做scaling还是比较稳定高效的。</p>
-<h1 id="mha">MHA</h1>
-<p>只要理解了attention计算的细节，MHA（multi-head
-attention）其实就很好明白。</p>
-<p>MHA在2017年就随着《Attention Is All You
-Need》一起提出，主要干的就是一个事：把原来一个attention计算，拆成多个小份的attention，并行计算，分别得出结果，最后再合回原来的维度。</p>
-<p><span class="math display">\[\mathrm{MultiHeadAttention}(Q,K,V)=\mathrm{Concat}(head_1,\ldots,head_h)\]</span></p>
-<p><span class="math display">\[head_i=\text{Attention}(W_i^QQ,W_i^KK,W_i^VV)\]</span></p>
-<p>假设原来模型的hidden size是 <span class="math inline">\(d\)</span>
-，在MHA中，会把投影后的 <span class="math inline">\(Q、K、V\)</span>
-在hidden state的维度上切成 <span class="math inline">\(head_{num}\)</span> 份，每个头的维度是 <span class="math inline">\(d_{head}\)</span> 。这 <span class="math inline">\(head_{num}\)</span> 组小 <span class="math inline">\(Q、K、V\)</span>
-分别独立地进行attention计算，之后把得到的 <span class="math inline">\(head_{num}\)</span> 份维度 <span class="math inline">\(d_{head}\)</span> 的输出concat起来。</p>
-<p>直接看这个amazing的图，很直观</p>
-<img src="/3dc22f96/multihead_attention.png" class title="MHA">
-<p>操作是这么个操作，多头注意力相比单头有什么好处呢？</p>
-<p>《Attention Is All You Need》文章中给出的说法是</p>
-<blockquote>
-<p>Multi-head attention allows the model to jointly attend to
-information from different representation subspaces at different
-positions.</p>
-</blockquote>
-<p>我们希望多个头能够在训练中学会注意到不同的内容。例如在翻译任务里，一些attention
-head可以关注语法特征，另一些attention
-head可以关注单词特性。这样模型就可以从不同角度来分析和理解输入信息，获得更好的效果了。</p>
-<p>这有点类似CNN中，不同的卷积核来学习不同的信息。比如一个 <span class="math inline">\(3\times3\times128\)</span> 的卷积，有128个 <span class="math inline">\(3\times3\)</span>
-参数组，假设我们的输入是一个灰度图，其中一组 <span class="math inline">\(3\times3\)</span> 的参数是这样的</p>
-<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;0&amp;-1\\1&amp;0&amp;-1\\1&amp;0&amp;-1\end{matrix}\right.\right]\]</span></p>
-<p>那么这是一个检测纵向边界的卷积，而另外一组参数长这样</p>
-<p><span class="math display">\[\left.\left[\begin{matrix}1&amp;1&amp;1\\0&amp;0&amp;0\\-1&amp;-1&amp;-1\end{matrix}\right.\right]\]</span></p>
-<p>这是一个检测横向边界的卷积。</p>
-<p>这128组 <span class="math inline">\(3\times3\)</span>
-就是128个不同特征的检测器，就同MHA中多个头一样，从不同的子空间学到不同的内容，最后再放到一起融合使用。</p>
-<p>但是这是我们expect模型能做到的事情，实际情况是否真的是这样？</p>
-<p>知乎上这篇<a href="https://zhuanlan.zhihu.com/p/626820422">文章</a>里对此做了一些实验和分析。简单来说就是（1）每个头确实学到东西有所不同，但大部分头之间的差异没有我们想的那么大（比如一个学句法，一个学词义这样明显的区分）（2）多个头的情况下，确实有少部分头可以比较好地捕捉到各种文本信息，而不会过分关注自身位置，一定程度缓解了上文提到的计算
-<span class="math inline">\(QK^T\)</span> 之后对角线元素过大的问题。</p>
-<p>我们可以把MHA的多个attention计算视为多个独立的小模型，那么最终整体的attention计算相当于把来自多个小模型的结果进行了融合，这样效果比较好也是比较符合直觉的。</p>
-<p>另外还有一个问题是，使用几个头比较好呢？</p>
-<p>实际上这个问题比较难有确定性的答案，首先可以确定的是头的数量不是越多约好（毕竟头的数量多了，各个子空间小了，子空间能表达的内容就少了），具体多少要视模型规模，任务而定。另外<a href="https://arxiv.org/pdf/1905.10650.pdf">《Are Sixteen Heads Really
-Better than One?》</a>中也指出MHA并不总是优于单头的情况。</p>
-<p>目前可以看到的趋势是，模型越大（也就是hidden
-size越大），头数的增多越能带来平均效果上的收益（或者说允许注意力头增大而不影响子空间的学习能力）。目前LLM主流的头数视乎模型结构和规模，大致有12、16、24、48、96这样一些主流设置。这里面又有比较多的方向和工作，在此暂时不展开，挖个坑，以后专门开一篇讲。</p>
-<p>最后看一下<a href="https://nlp.seas.harvard.edu/2018/04/03/attention.html">The
-Annotated Transformer</a>中的MHA代码实现</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">attention</span>(<span class="params">query, key, value, mask=<span class="literal">None</span>, dropout=<span class="literal">None</span></span>):</span><br><span class="line">    <span class="string">&quot;Compute &#x27;Scaled Dot Product Attention&#x27;&quot;</span></span><br><span class="line">    d_k = query.size(-<span class="number">1</span>)</span><br><span class="line">    scores = torch.matmul(query, key.transpose(-<span class="number">2</span>, -<span class="number">1</span>)) \</span><br><span class="line">             / math.sqrt(d_k)</span><br><span class="line">    <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        scores = scores.masked_fill(mask == <span class="number">0</span>, -<span class="number">1e9</span>)</span><br><span class="line">    p_attn = F.softmax(scores, dim = -<span class="number">1</span>)</span><br><span class="line">    <span class="keyword">if</span> dropout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        p_attn = dropout(p_attn)</span><br><span class="line">    <span class="keyword">return</span> torch.matmul(p_attn, value), p_attn</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MultiHeadedAttention</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, h, d_model, dropout=<span class="number">0.1</span></span>):</span><br><span class="line">        <span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">        h: head number</span></span><br><span class="line"><span class="string">        &#x27;&#x27;&#x27;</span></span><br><span class="line">        <span class="built_in">super</span>(MultiHeadedAttention, self).__init__()</span><br><span class="line">        <span class="keyword">assert</span> d_model % h == <span class="number">0</span></span><br><span class="line">        <span class="comment"># We assume d_v always equals d</span></span><br><span class="line">        self.d = d_model // h</span><br><span class="line">        self.h = h</span><br><span class="line">        self.linears = clones(nn.Linear(d_model, d_model), <span class="number">4</span>)</span><br><span class="line">        self.attn = <span class="literal">None</span></span><br><span class="line">        self.dropout = nn.Dropout(p=dropout)</span><br><span class="line">        </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, query, key, value, mask=<span class="literal">None</span></span>):</span><br><span class="line">        <span class="keyword">if</span> mask <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="comment"># Same mask applied to all h heads.</span></span><br><span class="line">            mask = mask.unsqueeze(<span class="number">1</span>)</span><br><span class="line">        nbatches = query.size(<span class="number">0</span>)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 1) Do all the linear projections in batch from d_model =&gt; h x d </span></span><br><span class="line">        query, key, value = \</span><br><span class="line">            [l(x).view(nbatches, -<span class="number">1</span>, self.h, self.d).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line">             <span class="keyword">for</span> l, x <span class="keyword">in</span> <span class="built_in">zip</span>(self.linears, (query, key, value))]</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2) Apply attention on all the projected vectors in batch. </span></span><br><span class="line">        x, self.attn = attention(query, key, value, mask=mask, </span><br><span class="line">                                 dropout=self.dropout)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 3) &quot;Concat&quot; using a view and apply a final linear. </span></span><br><span class="line">        x = x.transpose(<span class="number">1</span>, <span class="number">2</span>).contiguous() \</span><br><span class="line">             .view(nbatches, -<span class="number">1</span>, self.h * self.d)</span><br><span class="line">        <span class="keyword">return</span> self.linears[-<span class="number">1</span>](x)</span><br></pre></td></tr></table></figure>
-<p>（<a href="https://github.com/huggingface/transformers">transformers</a>中的写法就更为成熟一点，不过里面兼容了比较多的功能，代码太长就不放上来了）</p>
-<h1 id="解码中的kv-cache">解码中的KV Cache</h1>
-<p>在讲MQA和GQA之前，还需要了解一点背景，那就是解码的计算问题，以及KV
-Cache的方案。</p>
-<p>无论是encoder-decoder结构，还是现在我们最接近AGI的decoder-only的LLM，解码生成时都是自回归auto-regressive的方式。</p>
-<p>也就是，解码的时候，先根据当前输入 <span class="math inline">\(\text{input}_{i-1}\)</span> ，生成下一个 <span class="math inline">\(\text{token}_{i}\)</span> ，然后把新生成的 <span class="math inline">\(\text{token}_{i}\)</span> 拼接在 <span class="math inline">\(\text{input}_{i-1}\)</span> 后面，获得新的输入
-<span class="math inline">\(\text{input}_{i}\)</span> ，再用 <span class="math inline">\(\text{input}_{i}\)</span> 生成 <span class="math inline">\(\text{token}_{i+1}\)</span>
-，依此迭代，直到生成结束。</p>
-<p>比如我们输入“窗前明月光下一句是”，那么模型每次生成一个token，输入输出会是这样（方便起见，默认每个token都是一个字符）</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">step0: 输入=[BOS]窗前明月光下一句是；输出=疑</span><br><span class="line">step1: 输入=[BOS]窗前明月光下一句是疑；输出=是</span><br><span class="line">step2: 输入=[BOS]窗前明月光下一句是疑是；输出=地</span><br><span class="line">step3: 输入=[BOS]窗前明月光下一句是疑是地；输出=上</span><br><span class="line">step4: 输入=[BOS]窗前明月光下一句是疑是地上；输出=霜</span><br><span class="line">step5: 输入=[BOS]窗前明月光下一句是疑是地上霜；输出=[EOS]</span><br></pre></td></tr></table></figure>
-<p>（其中[BOS]和[EOS]分别是起始符号和终止符号）</p>
-<p>仔细想一下，我们在生成“疑”字的时候，用的是输入序列中“是”字的最后一层hidden
-state，通过最后的分类头预测出来的。以此类推，后面每生成一个字，使用的都是输入序列中最后一个字的输出。</p>
-<p>我们可以注意到，下一个step的输入其实包含了上一个step的内容，而且只在最后面多了一点点（一个token）。那么下一个step的计算应该也包含了上一个step的计算。</p>
-<p>从公式上来看是这样的：</p>
-<p>回想一下我们attention的计算</p>
-<p><span class="math display">\[
-\alpha_{i,j}=\text{softmax}(q_{i}k_{j}^\top)\\
-o_{i}=\sum_{j=0}^{i}{\alpha_{i,j}v_{j}}
-\]</span></p>
-<p>注意对于decoder的时候，由于mask
-attention的存在，每个输入只能看到自己和前面的内容，而看不到后面的内容</p>
-<p>假设我们当前输入的长度是3，预测第4个字，那每层attention所做的计算有</p>
-<p><span class="math display">\[
-\begin{aligned}
-o_{0}&amp;=\alpha_{0,0}v_{0}\\
-o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
-o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
-\end{aligned}
-\]</span></p>
-<p>预测完第4个字，放到输入里，继续预测第5个字，每层attention所做的计算有</p>
-<p><span class="math display">\[
-\begin{aligned}
-o_{0}&amp;=\alpha_{0,0}v_{0}\\
-o_{1}&amp;=\alpha_{1,0}v_{0}+\alpha_{1,1}v_{1}\\
-o_{2}&amp;=\alpha_{2,0}v_{0}+\alpha_{2,1}v_{1}+\alpha_{2,2}v_{2}\\
-o_{3}&amp;=\alpha_{3,0}v_{0}+\alpha_{3,1}v_{1}+\alpha_{3,2}v_{2}+\alpha_{3,3}v_{3}\\
-\end{aligned}
-\]</span></p>
-<p>可以看到，在预测第5个字时，只有最后一步引入了新的计算，而 <span class="math inline">\(o_{0}\)</span> 到 <span class="math inline">\(o_{2}\)</span> 的计算和前面是完全重复的。</p>
-<p>但是模型在推理的时候可不管这些，无论你是不是只要最后一个字的输出，它都把所有输入计算一遍，给出所有输出结果。</p>
-<p>也就是说中间有很多我们用不到的计算，这样就造成了浪费。</p>
-<p>而且随着生成的结果越来越多，输入的长度也越来越长。上面这个例子里，输入长度就从step0的10个，每步增长1，直到step5的15个。如果输入的instruction是让模型写高考作文，那可能就有800个step或者更多。这个情况下，step0被算了800次，step1被算了799次...</p>
-<p>有没有什么办法可以重复利用上一个step里已经计算过的结果，减少浪费呢？</p>
-<p>答案就是KV
-Cache。利用缓存空间，把需要重复利用的中间计算结果存下来，减少重复计算。</p>
-<p>而 <span class="math inline">\(k\)</span> 和 <span class="math inline">\(v\)</span> 就是要缓存的对象。</p>
-<p>想象一下，在上面的例子中，假设我们一开始的输入就是3个字，我们第一次预测就是预测第4个字，那么由于一开始没有任何缓存，所有我们每一层还是要踏踏实实地计算一遍。然后把
-<span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值缓存起来。</p>
-<p>则有</p>
-<p><span class="math display">\[
-\text{cache}_l=\text{None}\\
-\]</span></p>
-<center>
-↓
-</center>
-<p><span class="math display">\[
-\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
-v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
-\]</span></p>
-<p>kv_cache的下标 <span class="math inline">\(l\)</span>
-表示模型层数。</p>
-<p>在进行第二次预测，也就是预测第5个字的时候，在第 <span class="math inline">\(l\)</span>
-层的时候，由于前面我们缓存了<u><strong>每层</strong></u>的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，那本层就只需要算新的 <span class="math inline">\(o_{3}\)</span> ，而不用算 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span> 。</p>
-<p>因为第 <span class="math inline">\(l\)</span> 层的 <span class="math inline">\(o_{0}、o_{1}、o_{2}\)</span>
-本来会经过FNN层之后进到 <span class="math inline">\(l+1\)</span>
-层，再经过新的投影变换，成为 <span class="math inline">\(l+1\)</span>
-层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值，但是 <span class="math inline">\(l+1\)</span> 层的 <span class="math inline">\(k\)</span> 、 <span class="math inline">\(v\)</span> 值我们已经缓存过了！</p>
-<p>然后我们把本次新增算出来的 <span class="math inline">\(k\)</span> 、
-<span class="math inline">\(v\)</span> 值也存入缓存。</p>
-<p><span class="math display">\[
-\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
-v_{1}^{l}),(k_{2}^{l}, v_{2}^{l})]
-\]</span></p>
-<center>
-↓
-</center>
-<p><span class="math display">\[
-\text{cache}_l=[(k_{0}^{l}, v_{0}^{l}),(k_{1}^{l},
-v_{1}^{l}),(k_{2}^{l}, v_{2}^{l}),(k_{3}^{l}, v_{3}^{l})]
-\]</span></p>
-<p>这样就节省了attention和FFN的很多重复计算。</p>
-<p>transformers中，生成的时候传入use_cache=True就会开启KV Cache。</p>
-<p>也可以简单看下GPT2中的实现，中文注释的部分就是使用缓存结果和更新缓存结果</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Class GPT2Attention(nn.Module):</span><br><span class="line">    ...</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params"></span></span><br><span class="line"><span class="params">        self,</span></span><br><span class="line"><span class="params">        hidden_states: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.FloatTensor]],</span></span><br><span class="line"><span class="params">        layer_past: <span class="type">Optional</span>[<span class="type">Tuple</span>[torch.Tensor]] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        head_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_hidden_states: <span class="type">Optional</span>[torch.Tensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        encoder_attention_mask: <span class="type">Optional</span>[torch.FloatTensor] = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">        use_cache: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">        output_attentions: <span class="type">Optional</span>[<span class="built_in">bool</span>] = <span class="literal">False</span>,</span></span><br><span class="line"><span class="params">    </span>) -&gt; <span class="type">Tuple</span>[<span class="type">Union</span>[torch.Tensor, <span class="type">Tuple</span>[torch.Tensor]], ...]:</span><br><span class="line">        <span class="keyword">if</span> encoder_hidden_states <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">not</span> <span class="built_in">hasattr</span>(self, <span class="string">&quot;q_attn&quot;</span>):</span><br><span class="line">                <span class="keyword">raise</span> ValueError(</span><br><span class="line">                    <span class="string">&quot;If class is used as cross attention, the weights `q_attn` have to be defined. &quot;</span></span><br><span class="line">                    <span class="string">&quot;Please make sure to instantiate class with `GPT2Attention(..., is_cross_attention=True)`.&quot;</span></span><br><span class="line">                )</span><br><span class="line"></span><br><span class="line">            query = self.q_attn(hidden_states)</span><br><span class="line">            key, value = self.c_attn(encoder_hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line">            attention_mask = encoder_attention_mask</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            query, key, value = self.c_attn(hidden_states).split(self.split_size, dim=<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">        query = self._split_heads(query, self.num_heads, self.head_dim)</span><br><span class="line">        key = self._split_heads(key, self.num_heads, self.head_dim)</span><br><span class="line">        value = self._split_heads(value, self.num_heads, self.head_dim)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 过去所存的值</span></span><br><span class="line">        <span class="keyword">if</span> layer_past <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            past_key, past_value = layer_past</span><br><span class="line">            key = torch.cat((past_key, key), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的key加入</span></span><br><span class="line">            value = torch.cat((past_value, value), dim=-<span class="number">2</span>)  <span class="comment"># 把当前新的value加入</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> use_cache <span class="keyword">is</span> <span class="literal">True</span>:</span><br><span class="line">            present = (key, value)  <span class="comment"># 输出用于保存</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            present = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> self.reorder_and_upcast_attn:</span><br><span class="line">            attn_output, attn_weights = self._upcast_and_reordered_attn(query, key, value, attention_mask, head_mask)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)</span><br><span class="line"></span><br><span class="line">        attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)</span><br><span class="line">        attn_output = self.c_proj(attn_output)</span><br><span class="line">        attn_output = self.resid_dropout(attn_output)</span><br><span class="line"></span><br><span class="line">        outputs = (attn_output, present)</span><br><span class="line">        <span class="keyword">if</span> output_attentions:</span><br><span class="line">            outputs += (attn_weights,)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> outputs  <span class="comment"># a, present, (attentions)</span></span><br></pre></td></tr></table></figure>
-<p>总的来说，KV
-Cache是以空间换时间的做法，通过使用快速的缓存存取，减少了重复计算。（注意，只有decoder结构的模型可用，因为有mask
-attention的存在，使得前面的token可以不用关注后面的token）</p>
-<p>但是，用了KV Cache之后也不是立刻万事大吉。</p>
-<p>我们简单算一下，对于输入长度为 <span class="math inline">\(s\)</span>
-，层数为 <span class="math inline">\(L\)</span> ，hidden size为 <span class="math inline">\(d\)</span> 的模型，需要缓存的参数量为</p>
-<p><span class="math display">\[
-2\times L\times s\times d
-\]</span></p>
-<p>如果使用的是半精度浮点数，那么总共所需的空间就是</p>
-<p><span class="math display">\[
-2\times 2\times L\times s\times d
-\]</span></p>
-<p>以Llama2 7B为例，有 <span class="math inline">\(L=32\)</span> ，
-<span class="math inline">\(L=4096\)</span>
-，那么每个token所需的缓存空间就是524,288 bytes，约52K，当 <span class="math inline">\(s=1024\)</span> 时，则需要536,870,912
-bytes，超过500M的空间。</p>
-<p>这里考虑的还只是batch size=1的情况，如果batch
-size增大，这个值更是很容易就超过1G。</p>
-<p>（MHA相比单头的情况，相当于只是把 <span class="math inline">\(q、k、v\)</span>
-切成多份并行计算了，对于实际需要缓存的大小没有影响）</p>
-<p>看下现在主流的科学计算卡配置</p>
-<img src="/3dc22f96/gpu_cache.png" class title="gpu cache">
-<p>强如H100也只有50M的L2 Cache（L1
-Cache的大小更是可以忽略不计），大概只能支持Llama2
-7B总共100个token左右的输入。</p>
-<p>想想我们现在用的LLM动辄34B/70B的规模，长度更是以千为基础单位，这样明显是不够用的。</p>
-<p>那么超出L2 Cache的部分只能走到显存中去了，但是HBM速度比L2
-Cache慢多了。</p>
-<img src="/3dc22f96/sram_dram.png" class title="储存空间与速度">
-<p>看来还需要进一步优化。</p>
-<p>要保证模型的推理加速，要么增大Cache的大小，而且是需要一到两个数量级的增强，那这个只能靠黄老板了。</p>
-<p>要么就是减少需要缓存的量。</p>
-<h1 id="mqa">MQA</h1>
-<p>MQA就是来减少缓存所需要的量的。</p>
-<p>Google在2019年就在《Fast Transformer Decoding: One Write-Head is All
-You
-Need》提出了MQA，不过那时候主要到的人不多，那是大家主要还是关注在用Bert把榜刷出新高上。</p>
-<p>MQA的做法其实很简单。在MHA中，输入分别经过 <span class="math inline">\(W_{Q}、W_{K}、W_{V}\)</span>
-的变换之后，都切成了n份（n=头数），维度也从 <span class="math inline">\(d_{model}\)</span> 降到了 <span class="math inline">\(d_{head}\)</span>
-，分别进行attention计算再拼接。而MQA这里，在线性变换之后，只对 <span class="math inline">\(Q\)</span> 进行切分（和MHA一样），而 <span class="math inline">\(K、V\)</span> 则直接在线性变换的时候把维度降到了
-<span class="math inline">\(d_{head}\)</span>
-（而不是切分变小），然后这n个Query头分别和同一份 <span class="math inline">\(K、V\)</span>
-进行attention计算，之后把结果拼接起来。</p>
-<p>简单来说，就是MHA中，每个注意力头的 <span class="math inline">\(K、V\)</span>
-是不一样的，而MQA这里，每个注意力头的 <span class="math inline">\(K、V\)</span>
-是一样的，值是共享的。而其他步骤都和MHA一样。</p>
-<img src="/3dc22f96/MQA.webp" class title="MQA">
-<p>这样一来，需要缓存的 <span class="math inline">\(K、V\)</span>
-值一下就从所有头变成一个头的量。</p>
-<p>比如在Llama2
-7B中用的是32个头，那用MQA后，1024个token需要缓存的量就变成1/32，536,870,912
-bytes / 32 = 16,777,216 bytes，差不多是16M，这就能全塞进缓存中了。</p>
-<p>（实现上，就是改一下线性变换矩阵，然后把 <span class="math inline">\(K、V\)</span>
-的处理从切分变成复制，就不再赘述。）</p>
-<p>当然，由于共享了多个头的参数，限制了模型的表达能力，MQA虽然能好地支持推理加速，但是在效果上略略比MHA差一点，但是并不多，且相比其他修改hidden
-size或者head num的做法效果都好。</p>
-<img src="/3dc22f96/mqa_result_1.png" class title="MQA results 1">
-<img src="/3dc22f96/mqa_result_3.png" class title="MQA results 3">
-<h1 id="gqa">GQA</h1>
-<p>既然MQA对效果有点影响，MHA缓存又存不下，那GQA（Grouped-Query
-Attention）就提出了一个折中的办法，既能减少MQA效果的损失，又相比MHA需要更少的缓存。</p>
-<p>（文章：《GQA: Training Generalized Multi-Query Transformer Models
-from Multi-Head Checkpoints》，2023年）</p>
-<p>GQA里， <span class="math inline">\(Q\)</span>
-还是按原来MHA/MQA的做法不变。只使用一套共享的 <span class="math inline">\(K、V\)</span>
-不是效果不好吗，那就还是多弄几套。但是不要太多，数量还是比 <span class="math inline">\(Q\)</span> 的头数少一些。这样相当于把 <span class="math inline">\(Q\)</span> 的多个头给分了group，同一个group内的
-<span class="math inline">\(Q\)</span> 共享同一套 <span class="math inline">\(K、V\)</span> ，不同group的 <span class="math inline">\(Q\)</span> 所用的 <span class="math inline">\(K、V\)</span> 不同。</p>
-<p>MHA可以认为是 <span class="math inline">\(K、V\)</span>
-头数最大时的GQA，而MQA可以任务是 <span class="math inline">\(K、V\)</span> 头数最少时的GQA。</p>
-<p>看论文里的图就很直观</p>
-<img src="/3dc22f96/GQA.png" class title="GQA">
-<p>效果怎么样呢？</p>
-<img src="/3dc22f96/GQA_result_1.png" class title="GQA result">
-<p>看表中2/3/4行对比，GQA的速度相比MHA有明显提升，而效果上比MQA也好一些，能做到和MHA基本没差距。文中提到，这里的MQA和GQA都是通过average
-pooling从MHA初始化而来，然后进行了少量的训练得到的。如果我们想要把之前用MHA训练的模型改造成GQA，也可以通过这样的方法，增加少量训练来实现。当然如果从一开始就加上，从零开始训练，也是没有问题的。</p>
-<p>Llama2用的就是GQA，在tech
-report中也做了MHA、MQA、GQA的效果对比，可以看到效果确实很不错。</p>
-<img src="/3dc22f96/llama2_qga.png" class title="llama2 GQA result">
+<p>如果两个reward function <span class="math inline">\(r(x,y)\)</span>
+和 <span class="math inline">\(r^{\prime}(x,y)\)</span> 可以写成</p>
+<p><span class="math display">\[r&#39;(x,y)=r(x,y)+f(x)\]</span></p>
+<p>即表示这两个reward function来自同一等价类(equivalence class)。</p>
+<p>对于prompt <span class="math inline">\(x\)</span> 和 answer <span class="math inline">\(y_1,\ldots,y_K\)</span>，以及对应的ranking <span class="math inline">\(\tau\)</span>，在Plackett-Luce
+framework（Bradley–Terry也是其中一个特例）下的证明如下</p>
+<p><span class="math display">\[\begin{aligned}
+p_{r&#39;}(\tau|y_1,\ldots,y_K,x)&amp;
+=\prod_{k=1}^K\frac{\exp(r&#39;(x,y_{\tau(k)}))}{\sum_{j=k}^K\exp(r&#39;(x,y_{\tau(j)}))}  \\
+&amp;=\prod_{k=1}^K\frac{\exp(r(x,y_{\tau(k)})+f(x))}{\sum_{j=k}^K\exp(r(x,y_{\tau(j)})+f(x))}
+\\
+&amp;=\prod_{k=1}^K\frac{\exp(f(x))\exp(r(x,y_{\tau(k)}))}{\exp(f(x))\sum_{j=k}^K\exp(r(x,y_{\tau(j)}))}
+\\
+&amp;=\prod_{k=1}^K\frac{\exp(r(x,y_{\tau(k)}))}{\sum_{j=k}^K\exp(r(x,y_{\tau(j)}))}
+\\
+&amp;=p_r(\tau|y_1,\ldots,y_K,x)
+\end{aligned}\]</span></p>
+<p>基于此，我们可以把上面的 <span class="math inline">\(\beta\log
+Z(x)\)</span> 项忽略掉，也就是说下面两个reward
+function是具有相同的preference distribution的</p>
+<p><span class="math display">\[\begin{aligned}r(x,y)=\beta\log\frac{\pi_r(y\mid
+x)}{\pi_\text{ref}(y\mid x)}+\beta\log Z(x)\end{aligned}\]</span></p>
+<p><span class="math display">\[\hat{r}_\theta(x,y)=\beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}\]</span></p>
+<p>更进一步地，两个来自同一等价类的reward
+function在相同的RL问题下会导向相同的optimal policy。</p>
+<p>在推导DPO的loss的部分中，我们得到了optimal policy的显式解</p>
+<p><span class="math display">\[\begin{aligned}\pi(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}\]</span></p>
+<p>这里证明一下两个reward function可以导向相同的optimal
+policy。假设<span class="math inline">\(r&#39;(x,y)=r(x,y)+f(x)\)</span>，<span class="math inline">\(\pi_r\)</span> 和 <span class="math inline">\(\pi_{r&#39;}\)</span> 分别是它们对应的optimal
+policy，有</p>
+<p><span class="math display">\[\begin{aligned}
+\pi_{r^{\prime}}(y|x)&amp;
+\begin{aligned}&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r&#39;(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r&#39;(x,y)\right)\end{aligned}  \\
+&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}(r(x,y)+f(x))\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}(r(x,y)+f(x))\right)
+\\
+&amp;\begin{aligned}=\frac{1}{\exp\left(\frac{1}{\beta}f(x)\right)\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\exp\left(\frac{1}{\beta}f(x)\right)\end{aligned}
+\\
+&amp;\begin{aligned}&amp;=\frac{1}{\sum_y\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)}\pi_{\text{ref}}(y|x)\exp\left(\frac{1}{\beta}r(x,y)\right)\end{aligned}
+\\
+&amp;=\pi_r(y|x)
+\end{aligned}\]</span></p>
+<p>那么，与Plackett-Luce（特别是Bradley-Terry）模型一致的所有reward类别，都可以被某个模型
+<span class="math inline">\(\pi(y\mid x)\)</span> 和 一个给定的reference
+model <span class="math inline">\(\pi_{ref}(y\mid x)\)</span>
+所表示：</p>
+<p><span class="math display">\[r(x,y)=\beta\log\frac{\pi(y|x)}{\pi_{ref}(y|x)}\]</span></p>
+<p>也就是我们的语言模型都天然具有reward model的功能。</p>
+<h2 id="实验">实验</h2>
+<p>实际训练中，论文中所使用的超参和设置：<br>
+- <span class="math inline">\(\beta=0.1\)</span>（对于TL;DR
+summarization，设为0.5）<br>
+- batch size = 64<br>
+- RMSprop optimizer<br>
+- learning rate = 1e-6<br>
+- linearly warmup 0 to 1e-6 over 150 steps</p>
+<p>论文在对话、摘要等任务进行的效果评测，主要对比了PPO、SFT和DPO的效果。</p>
+<p>DPO即使在没有精细调参的情况下，也有比价好的效果</p>
+<img src="/473f2b43/result_1.png" class title="对比1">
+<img src="/473f2b43/result_2.png" class title="对比2">
+<img src="/473f2b43/result_3.png" class title="对比3">
+<img src="/473f2b43/result_4.png" class title="对比4">
 <h1 id="小结">小结</h1>
-<p>MHA、MQA、GQA的实现其实并不复杂，效果也很好，理解上并没有太多困难。但是想要真正理解它们的出发点，还是需要深入每一个细节，去了解当时要解决的事什么问题。</p>
-<p>目前来看GQA是LLM比较好的方案，但未来肯定还会有针对不同方向的进一步优化方案，计算效率、推理速度、显存消耗这些方向都值得我们继续去探索优化。</p>
+<ul>
+<li>DPO在RLHF
+PPO相同的优化问题下，推导出了新的优化形式，省去了reward模型的部分，从而可以直接用偏好数据优化模型<br>
+</li>
+<li>DPO在效果和效率上相比PPO都有优势</li>
+</ul>
 <hr>
 <p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
 知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
 微信公众号：Linsight<br>
 <img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+<hr>
 <h1 id="reference">Reference</h1>
-<p>【1】The Annotated Transformer
-https://nlp.seas.harvard.edu/2018/04/03/attention.html<br>
-【2】Attention Is All You Need
-https://arxiv.org/pdf/1706.03762.pdf<br>
-【3】Fast Transformer Decoding: One Write-Head is All You Need
-https://arxiv.org/pdf/1911.02150.pdf<br>
-【4】https://www.researchgate.net/figure/Scaled-dot-product-self-attention-mechanism_fig1_363923096<br>
-【5】GQA: Training Generalized Multi-Query Transformer Models from
-Multi-Head Checkpoints https://arxiv.org/pdf/2305.13245.pdf<br>
-【6】How Attention works in Deep Learning: understanding the attention
-mechanism in sequence models https://theaisummer.com/attention/<br>
-【7】A simple overview of RNN, LSTM and Attention Mechanism
-https://medium.com/swlh/a-simple-overview-of-rnn-lstm-and-attention-mechanism-9e844763d07b<br>
-【8】https://pytorch-forecasting.readthedocs.io/en/latest/_modules/pytorch_forecasting/models/temporal_fusion_transformer/sub_modules.html#ScaledDotProductAttention<br>
-【9】浅谈Transformer的初始化、参数化与标准化
-https://spaces.ac.cn/archives/8620<br>
-【10】https://theaisummer.com/self-attention/
-https://theaisummer.com/self-attention/<br>
-【11】https://zhuanlan.zhihu.com/p/626820422
-https://zhuanlan.zhihu.com/p/626820422<br>
-【12】Are Sixteen Heads Really Better than One?
-https://arxiv.org/pdf/1905.10650.pdf<br>
-【13】This post is all you need（上卷）——层层剥开Transformer
-https://zhuanlan.zhihu.com/p/420820453<br>
-【14】The Illustrated Transformer
-https://jalammar.github.io/illustrated-transformer/<br>
-【15】Multi-Query Attention is All You Need
-https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055</p>
+<p>【1】Direct Preference Optimization: Your Language Model is Secretly
+a Reward Model https://arxiv.org/abs/2305.18290v2</p>
 ]]></content>
       <categories>
         <category>CS</category>
@@ -4703,8 +4272,1165 @@ https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055</p>
         <tag>NLP</tag>
         <tag>LLM</tag>
         <tag>transformer</tag>
+        <tag>强化学习</tag>
+        <tag>微调</tag>
+        <tag>SFT</tag>
+        <tag>偏好对齐</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型推理加速-投机解码</title>
+    <url>/f5c015c.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>大语言模型虽然效果很好，但是推理时，朴素的自回归解码策略需要逐个串行解码，耗时较长，这给用户的耐心带来了很大挑战。如今各家大模型提供商基本都有对外提供大模型的体验平台，而模型的推理效率自然也成了一个重要的竞争点。</p>
+<p>speculative
+decoding，译作投机解码，就是推理加速的一个比较巧妙的方案。本篇将介绍投机解码的基础思路。</p>
+<h1 id="背景">背景</h1>
+<p>2022年11月，Google在《Fast Inference from Transformers via
+Speculative
+Decoding》里提出投机解码的策略；DeepMind稍晚一点，在2023年初的《Accelerating
+Large Language Model Decoding with Speculative
+Sampling》也提出了一样的解码策略。（以这两家的关系，很可能私底下就沟通过这个idea了）Google的论文相比DeepMind的，做了更多的实验和分析，更为详尽一些。</p>
+<p>在speculative
+decoding之前，研究人员已经在模型推理加速这个方向做了不少工作：<br>
+- 模型蒸馏：以Hinton的《Distilling the Knowledge in a Neural
+Network》为代表，以及后面衍生出的各种蒸馏方法（参考《Knowledge
+Distillation: A
+Survey》），可以把规模更大的、性能更强的模型的能力，部分迁移到规模较小的模型上，在效果上相比直接训练小模型有一定的提升。transformer上蒸馏相关的经典工作有《TinyBERT:
+Distilling BERT for Natural Language Understanding》和《DistilBERT, a
+distilled version of BERT: smaller, faster, cheaper and
+lighter》等。<br>
+- 模型量化：如《Quantized Neural Networks: Training Neural Networks with
+Low Precision Weights and Activations》、《LLM.int8(): 8-bit Matrix
+Multiplication for Transformers at Scale》、《Zeroquant: Efficient and
+affordable post-training quantization for large-scale
+transformers》等，把模型参数量化到int8、int4以及更低的精度，在减少空间需求的同时，最大化地保持模型的推理效果。<br>
+- 高效模型结构设计：如使用稀疏层的《Sparse is Enough in Scaling
+Transformers》，减少KV缓存需求的MQA《Fast Transformer Decoding: One
+Write-Head is All You Need》、GQA《《GQA: Training Generalized
+Multi-Query Transformer Models from Multi-Head
+Checkpoints》》以及最近DeepSeek-V2中的MLA等，还有通过进化算法进行高效架构搜索的工作《Primer:
+Searching for Efficient Transformers for Language Modeling》。</p>
+<p>以上这些做法对不同的输入一视同仁，采用一个全局来看有收益的方案来统一处理，达到推理加速的目的。</p>
+<p>相对地，也有一些其他的方案，认为不是每一步推理都适合一样处理：某些推理step需要大模型，而另一些step只需要高效的小模型，从而根据输入，动态地决定模型参与计算的参数，相关工作有：<br>
+- 《Dynamic Neural Networks: A Survey》<br>
+- 《Adaptive Attention Span in Transformers》<br>
+- 《Consistent Accelerated Inference via Confident Adaptive
+Transformers》<br>
+- 《Why should we add early exits to neural networks?》<br>
+- 《Controlling Computation versus Quality for Neural Sequence
+Models》<br>
+- 《The Right Tool for the Job: Matching Model and Instance
+Complexities》<br>
+- 《Depth-Adaptive Transformer》<br>
+- 等</p>
+<p>MoE也属于动态激活的方案之一。</p>
+<p>而《Training compute-optimal large language models》的scaling
+law则指出模型规模没有原先预想的影响那么大，可以通过增加训练数据等方法让小模型逼近大模型的效果。</p>
+<p>以上这些方案虽然可以在一定程度上提升推理效率，但是要么需要重新训练模型，要么对模型的效果有损害。</p>
+<p>也有一些方案在解码的方法上进行优化，比如《Blockwise Parallel Decoding
+for Deep Autoregressive Models》和《Lossless Acceleration for Seq2seq
+Generation with Aggressive Decoding》。</p>
+<p>speculative
+decoding也是一个在解码策略上进行优化的方法。投机解码可以在不用训练原模型的基础上，提升2x-3x的推理速度，并且保证结果和原模型完全一致，没有任何效果损失。</p>
+<h1 id="speculative-decoding算法">speculative decoding算法</h1>
+<p>回想一下，自回归语言模型在训练的时候，在每一个位置，会根据当前及前面所有的token，预测下一个token。由于强制学习的特性，所有token可以一起训练。在某种特别的情况下，模型对当前的输入拟合得特别好，就有可能出现每个token的预测，都完美命中下一个输入token的情况。举个例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">位置：一  二  三  四</span><br><span class="line">输入：我  爱  中  国</span><br><span class="line">输出：爱  中  国  EOS</span><br></pre></td></tr></table></figure>
+<p>而在推理的时候，这种依赖前面所有token的特性，使得自回归模型只能一个一个串行地解码：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">step1：输入“我”，输出“爱”；</span><br><span class="line">step2：输入“我爱”，输出“中”；</span><br><span class="line">step3：输入“我爱中”，输出“国”；</span><br><span class="line">step4：输入“我爱中国”，输出“EOS”；</span><br></pre></td></tr></table></figure>
+<p>现在，假设我们有一个神奇海螺，你只要输入“我”，就会输出“爱 中 国
+EOS”四个token作为草稿，我们就可以拿着这四个draft
+token一起放到原来的模型，跑一下各个位置的输出，进行验证，跟训练时的前向推理一样：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">位置：一  二  三  四</span><br><span class="line">输入：我  爱  中  国</span><br><span class="line">输出：爱  中  国  EOS</span><br></pre></td></tr></table></figure>
+<p>然后就会发现模型的输出和神奇海螺给出的草稿完全一致，那就相当于我们只进行了一次模型推理，就解码了四个token，并且和原模型的效果完全一致。并且一般情况下，模型对一个位置进行预测和对四个位置进行预测的耗时基本没有太大的差异，也就是说在这个例子下，模型解码速度提升到了将近4倍。</p>
+<p>当然，神奇海螺不会总是能够给出和模型一模一样的结果，除非它就是模型本身。因此，在上面这个例子中，输入“我”之后，神奇海螺有可能给出的是“爱
+中 华 EOS”这四个draft
+token。这种情况下，我们把这些token一起输入到模型进行验证</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">位置：一  二  三  四</span><br><span class="line">输入：我  爱  中  华</span><br><span class="line">输出：爱  中  国  EOS</span><br></pre></td></tr></table></figure>
+<p>会发现神奇海螺给出的“爱”和“中”命中了模型的结果，但是“华”没对上。不过这种情况下，跑一次模型推理也能解码出两个token，推理效率依然有提升。</p>
+<p>部分情况下，神奇海螺给出的结果也可能完全跑偏，比如给它输入“我”，它有可能输出“叫
+小
+明”，这就和原模型一个都没对上。但是只要统计上，神奇海螺给出的草稿平均命中token数
+&gt; 0，我们就有机会获得推理加速。</p>
+<p>使用神奇海螺的这个思路其实就是speculative
+decoding的主要思路，而你肯定也已经猜到了，神奇海螺其实就是一个规模比较小的模型，论文中把它称为approximation
+model或者draft model，而我们想要加速的原模型则叫target model。</p>
+<p>论文给出的一个例子如下</p>
+<img src="/f5c015c/fi_example.png" class title="例子">
+<p>绿色的就是approximation model给出并命中target
+model验证结果的token，红色的是错误的token，蓝色则是修正后的token。</p>
+<p>在这个例子中，target模型只推理了9次，就解码出了38个token，推理速度获得了较大提升。</p>
+<p>看完了例子，现在对投机解码算法给出正式的描述。</p>
+<p><span class="math inline">\(M_p\)</span> 是target model， <span class="math inline">\(M_q\)</span> 是approximation
+model，prefix是当前的输入。</p>
+<p>首先 <span class="math inline">\(M_q\)</span> 给出 <span class="math inline">\(\gamma\)</span> 个draft token，然后 <span class="math inline">\(M_p\)</span> 并行地对这 <span class="math inline">\(\gamma\)</span> 个draft
+token进行验证，根据验证结果，按顺序把通过验证的token加入到当前序列中；如果出现被
+<span class="math inline">\(M_p\)</span>
+拒绝的token，这些token则按规则重新抽样。</p>
+<p>Google论文给出的投机解码算法描述如下图。</p>
+<img src="/f5c015c/fi_sd_algo.png" class title="投机解码算法">
+<p>（DeepMind版本的算法描述在下面）</p>
+<p>这里注意，投机解码单次运行能解码的token数量，除了这 <span class="math inline">\(n\)</span> 个被接受的draft token，还有 <span class="math inline">\(M_p\)</span>
+对这些草稿进行验证时顺便推理出来的一个额外token，因此最终可以得到 <span class="math inline">\(n+1\)</span> 个token。因此如果approximation
+model每次给出 <span class="math inline">\(\gamma\)</span> 个draft
+token，理论上最多可以获得 <span class="math inline">\(\gamma+1\)</span>
+新解码token，而最少也能有1个（来自target模型）。</p>
+<p>投机解码的原理大致就是这样，思路还是很巧妙的，但是要实际应用还有几个问题需要解决，比如：<br>
+- 关于投机采样speculative sampling：target model怎么对approximation
+model给出的token进行验证？在一个draft
+token被拒绝之后，怎么重新采样？<br>
+- 怎么选择 <span class="math inline">\(\gamma\)</span> 才合理？<br>
+- 怎么选择approximation model，用什么指标表征approximation
+model的质量？</p>
+<p>另外，DeepMind论文的给出投机解码算法如下，可以对照Google的算法，方便理解。（DeepMind所用的符号有所不同，本篇采用Google论文的符号描述。）</p>
+<img src="/f5c015c/acce_alog.png" class title="DeepMind投机解码算法">
+<p>里面的 <span class="math inline">\((.)_+\)</span> 操作表示 <span class="math inline">\((f(x))_+=\frac{\max(0,f(x))}{\sum_x\max(0,f(x))}\)</span>
+。</p>
+<h1 id="speculative-sampling的正确性">speculative sampling的正确性</h1>
+<p>我们希望投机解码的最终结果，和target
+model自回归解码的结果一致，即完全无损，因此需要对投机采样做一些设计和分析。</p>
+<p>首先，当前在transformer的解码上已经有很多策略，包括但不限于argmax、top-k采样、使用温度等。而大部分操作都是在logits上进行操作，这相当于改变了模型的输出分布。而在最终分布上的采样操作，都是相同的。因此我们可以只在朴素的标准采样上进行分析，而结果可以推广到其他的解码策略上。</p>
+<p>假设 <span class="math inline">\(p(x)\)</span> 是target model <span class="math inline">\(M_p\)</span> 在当前输入下的分布， <span class="math inline">\(q(x)\)</span> 是approximation model <span class="math inline">\(M_q\)</span> 在当前输入下的分布。</p>
+<p>投机解码的做法是，先采样 <span class="math inline">\(x\sim
+q(x)\)</span>，如果 <span class="math inline">\(q(x)\leq
+p(x)\)</span>，就保留 <span class="math inline">\(x\)</span>，否则就以
+<span class="math inline">\(1-\frac{p(x)}{q(x)}\)</span> 的概率拒绝
+<span class="math inline">\(x\)</span>，并在分布 <span class="math inline">\(p&#39;(x)=norm(max(0,p(x)-q(x)))\)</span>
+对被拒绝的 <span class="math inline">\(x\)</span>
+重新采样，并结束当前的投机解码。</p>
+<p>其中 <span class="math inline">\(norm(max(0,p(x)-q(x)))=\frac{\max(0,p(x)-q(x))}{\sum_x\max(0,p(x)-q(x))}\)</span>
+。</p>
+<p>看起来并不复杂。一个问题是，为什么这样从 <span class="math inline">\(q(x)\)</span> 采样之后，我们得到的结果符合分布
+<span class="math inline">\(p(x)\)</span>？即按这样的概率进行拒绝之后，结果和target
+model自己解码一样？</p>
+<p>从公式上来说，approximation model的抽样有 <span class="math inline">\(\tilde{x}\sim q\)</span>。假设 <span class="math inline">\(X\)</span> 是最终结果，我们的目标就是证明 <span class="math inline">\(\mathbb{P}(X=x)=p(x)\)</span>。</p>
+<p>而要使得 <span class="math inline">\(X=x\)</span>，只有 <span class="math inline">\(\tilde{x}=x\)</span> 且 <span class="math inline">\(\tilde{x}\)</span> 被接受，或者在 <span class="math inline">\(\tilde{x}\)</span> 被拒绝之后重新采样到 <span class="math inline">\(\tilde{x}=x\)</span> 两种情况，即有</p>
+<p><span class="math display">\[\mathbb{P}(X=x)\\=\mathbb{P}(\tilde{x}=x)\mathbb{P}(\tilde{x}\textit{
+accepted}|\tilde{x}=x)\\+\mathbb{P}(\tilde{x}\textit{
+rejected})\mathbb{P}(X=x|\tilde{x}\textit{ rejected})\]</span></p>
+<p>对于第一项，有</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\mathbb{P}(\tilde{x}=x)\mathbb{P}(\tilde{x}\text{
+ассерґе}d|\tilde{x}=x)\\=&amp;q(x)\min\left(1,\frac{p(x)}{q(x)}\right)\\=&amp;\min\left(q(x),p(x)\right)
+\end{aligned}
+\]</span></p>
+<p>而第二项里</p>
+<p><span class="math display">\[\begin{gathered}
+\mathbb{P}(\tilde{x}\textit{ rejected})=1-\mathbb{P}(\tilde{x}\textit{
+accepted}) \\
+=1-\sum_{x^{\prime}}\mathbb{P}(X=x^{\prime},\tilde{x}\text{ ассерґе}d)
+\\
+=1-\sum_{x&#39;}\min(q(x&#39;),p(x&#39;)) \\
+=\sum_{x&#39;}\max(0,p(x&#39;)-q(x&#39;)) \\
+\end{gathered}\]</span></p>
+<p>上式第三行到第四行的解释：第三行相当于计算1减区域b的面积，而区域a+区域b的面积和为1，因此第三行相当于区域a的面积，即
+<span class="math inline">\(\sum_{x&#39;}\max(0,p(x&#39;)-q(x&#39;))\)</span>。</p>
+<img src="/f5c015c/formula.png" class title="图解">
+<p>从采样规则，有</p>
+<p><span class="math display">\[\mathbb{P}(X=x|\tilde{x}\text{
+rejected})=\frac{\max(0,p(x)-q(x))}{\sum_x\max(0,p(x)-q(x))}\]</span></p>
+<p>因此</p>
+<p><span class="math display">\[\mathbb{P}(\tilde{x}\text{
+rejected})\mathbb{P}(X=x|\tilde{x}\text{
+rejected})=\max(0,p(x)-q(x))\]</span></p>
+<p>最终有</p>
+<p><span class="math display">\[\mathbb{P}(X=x)\\=\min(q(x),p(x))+\max(0,p(x)-q(x))\\=p(x)\]</span></p>
+<p>因此按照前面设计的规则进行采样，就能保证结果和target
+model自己解码出来的一样。</p>
+<h1 id="approximation-model的评估">approximation model的评估</h1>
+<p>approximation model的一个采样 <span class="math inline">\(x\sim
+q(x)\)</span> 被target model接受的概率为 <span class="math inline">\(\beta\)</span>，我们把这个概率叫acceptance
+rate接受率。</p>
+<p>那么其期望值 <span class="math inline">\(E(\beta)\)</span>
+就是approximation model对target model拟合质量一个很好的评估指标。</p>
+<p><span class="math inline">\(E(\beta)\)</span>
+越大，每个token被接受的概率越大，那么每次投机解码能获得的输出token越多。</p>
+<p>我们令 <span class="math inline">\(\alpha=E(\beta)\)</span>，并且为简化起见，假设
+<span class="math inline">\(\beta\)</span>
+的分布是i.i.d.的，那么跑一次投机解码能够获得的token数量是一个capped
+geometric variable，其期望值如下式</p>
+<p><span class="math display">\[E(\#\textit{ generated
+tokens})=\frac{1-\alpha^{\gamma+1}}{1-\alpha}\]</span></p>
+<p>不同 <span class="math inline">\(\gamma\)</span> 下的图像如下</p>
+<img src="/f5c015c/fi_expected_token_num.png" class title="解码数量期望值">
+<p>而 <span class="math inline">\(\alpha\)</span> 是可以推算的。</p>
+<p>首先定义一个 <span class="math inline">\(M_p\)</span> 和 <span class="math inline">\(M_q\)</span> 之间的divergence <span class="math inline">\(D_{LK}\)</span></p>
+<p><span class="math display">\[\begin{aligned}D_{LK}(p,q)=\sum_x|p(x)-M(x)|=\sum_x|q(x)-M(x)|\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(M(x)=\frac{p(x)+q(x)}2\)</span>。</p>
+<p>而</p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;\sum_x|p(x)-M(x)|\\=&amp;\sum_x\frac{|p-q|}{2}\\=&amp;1-\sum_x\frac{p+q-|p-q|}2\\=&amp;1-\sum_x\min(p(x),q(x))
+\end{aligned}
+\]</span></p>
+<p>因此有</p>
+<p><span class="math display">\[D_{LK}(p,q)=1-\sum_x\min(p(x),q(x))\]</span></p>
+<p><span class="math inline">\(D_{LK}(p,q)\)</span>越小，则 <span class="math inline">\(M_p\)</span> 和 <span class="math inline">\(M_q\)</span> 越相近。如果 <span class="math inline">\(D_{LK}(p,q)=0\)</span>，说明 <span class="math inline">\(p=q\)</span>；如果 <span class="math inline">\(D_{LK}(p,q)=1\)</span>，说明 <span class="math inline">\(p\)</span> 和 <span class="math inline">\(q\)</span> 两个分布完全没有交叉的部分。</p>
+<p>根据 <span class="math inline">\(\beta\)</span> 的定义，有</p>
+<p><span class="math display">\[
+\begin{aligned}
+\beta=&amp;E_{x\sim q(x)}\begin{cases}1&amp;q(x)\leq
+p(x)\\\frac{p(x)}{q(x)}&amp;q(x)&gt;p(x)\end{cases}\\
+=&amp;E_{x\thicksim q(x)}\min(1,\frac{p(x)}{q(x)})\\
+=&amp;\sum_x\min(p(x),q(x))\\
+=&amp;1-D_{LK}(p,q)
+\end{aligned}
+\]</span></p>
+<p>最终得到</p>
+<p><span class="math display">\[\alpha=E(\beta)=1-E(D_{LK}(p,q))=E(\min(p,q))\]</span></p>
+<p>实验中，不同approximation model和target model之间测得的 <span class="math inline">\(\alpha\)</span> 值如下表所示</p>
+<img src="/f5c015c/fi_alpha.png" class title="各种模型的alpha">
+<h1 id="耗时优化的分析">耗时优化的分析</h1>
+<p>定义cost coefficient <span class="math inline">\(c\)</span>，表示
+<span class="math inline">\(M_q\)</span> 单次推理 和 <span class="math inline">\(M_p\)</span> 单次推理的比值。</p>
+<p>和仅与模型相关的 <span class="math inline">\(\alpha\)</span>
+不同，<span class="math inline">\(c\)</span>
+的具体值会受到硬件、推理框架等影响。在论文的实验中 <span class="math inline">\(c\)</span> 的值大部分小于0.05。</p>
+<p>假设 <span class="math inline">\(M_p\)</span> 每次推理所需的时间为
+<span class="math inline">\(T\)</span>，则一次投机解码所需的时间为 <span class="math inline">\(Tc\gamma+T\)</span>。</p>
+<p>根据前面的推算，投机解码每次能获得的token数为 <span class="math inline">\(E(\#\textit{ generated
+tokens})=\frac{1-\alpha^{\gamma+1}}{1-\alpha}\)</span>
+个，因此每个token所需的时间为 <span class="math inline">\(\frac{(c\gamma+1)(1-\alpha)}{1-\alpha^{\gamma+1}}T\)</span>。综上，使用投机解码在推理时间上的improvement
+factor为</p>
+<p><span class="math display">\[\frac{1-\alpha^{\gamma+1}}{(1-\alpha)(\gamma
+c+1)}\]</span></p>
+<p>只要 <span class="math inline">\(\alpha&gt;c\)</span>，就一定存在能提升解码效率的
+<span class="math inline">\(\gamma\)</span>，并且improvement
+factor至少为 <span class="math inline">\(\frac{1+\alpha}{1+c}\)</span>（<span class="math inline">\(\gamma=1\)</span>时）。</p>
+<h1 id="计算成本的分析">计算成本的分析</h1>
+<p><span class="math inline">\(M_p\)</span> 同时对 <span class="math inline">\(\gamma+1\)</span>
+个token进行验证。如果一个token被接受了，那么推理效率就获得了提升；如果token被拒绝了，那么相关的计算就没有实际收益，就会有计算的“浪费”。</p>
+<p>假设 <span class="math inline">\(\hat{c}\)</span> 是 <span class="math inline">\(M_q\)</span> 和 <span class="math inline">\(M_p\)</span> 计算一个token的arithmetic
+operations的比例，<span class="math inline">\(\hat{T}\)</span> 是 <span class="math inline">\(M_p\)</span> 解码一个token所需的arithmetic
+operations。</p>
+<p>那么一次投机解码的计算量就是 <span class="math inline">\(\hat{T}\hat{c}\gamma+\hat{T}(\gamma+1)\)</span>，这个计算量除以投机解码每次获得的token数
+<span class="math inline">\(\frac{1-\alpha^{\gamma+1}}{1-\alpha}\)</span>
+就得到平均每个token的计算量为 <span class="math inline">\(\hat{T}\frac{(1-\alpha)(\gamma\hat{c}+\gamma+1)}{1-\alpha^{\gamma+1}}\)</span>。</p>
+<p><span class="math inline">\(\alpha\)</span> 越大，<span class="math inline">\(\frac{(1-\alpha)(\gamma\hat{c}+\gamma+1)}{1-\alpha^{\gamma+1}}\)</span>
+这个比值越小，平均计算成本越低。</p>
+<p>另外，使用投机解码减少了KV cache和显存的读写。</p>
+<h1 id="gamma-的选择"><span class="math inline">\(\gamma\)</span>
+的选择</h1>
+<p>给定 <span class="math inline">\(\alpha\)</span> 和 <span class="math inline">\(c\)</span>，最佳的 <span class="math inline">\(\gamma\)</span> 应该最大化walltime improvement
+factor <span class="math inline">\(\frac{1-\alpha^{\gamma+1}}{(1-\alpha)(\gamma
+c+1)}\)</span>。</p>
+<p>下图给出不同 <span class="math inline">\(\alpha\)</span> 和 <span class="math inline">\(c\)</span> 下，最佳的 <span class="math inline">\(\gamma\)</span> 值</p>
+<img src="/f5c015c/fi_choose_gamma.png" class title="gamma的选择">
+<p>推理速度和总计算量之间有tradeoff，即增大 <span class="math inline">\(\gamma\)</span>
+会提升推理速度，同时也会带来更多的计算成本，如下所示</p>
+<img src="/f5c015c/fi_speed_and_op_table.png" class title="计算量和加速">
+<img src="/f5c015c/fi_speed_and_op.png" class title="计算量和加速">
+<img src="/f5c015c/fi_walltime.png" class title="walltime">
+<p>实际上，<span class="math inline">\(\beta\)</span>
+并不是固定的常数，因此实际上我们可以通过在投机解码的过程中预测 <span class="math inline">\(\beta\)</span> 值来选择 <span class="math inline">\(\gamma\)</span>，这是未来的一个改进方向。</p>
+<h1 id="approximation-model的选择">approximation model的选择</h1>
+<p>论文的实验中，一部分使用现成的模型作为approximation
+model。这种情况下，让approximation model的参数规模比target
+model小两个数量级是比较好的选择，能够平衡推理加速和计算量。</p>
+<p>有趣的是，即使使用很简单的模型，比如n-gram模型作为approximation
+model，也能获得不错的 <span class="math inline">\(\alpha\)</span>
+值。</p>
+<p>另外，在一些特殊的任务，比如摘要任务，由于生成结果往往会从输入的原文里摘取内容，因此使用一个会从输入里copy
+token的approximation model可能会得到较高的 <span class="math inline">\(\alpha\)</span> 值。</p>
+<p>approximation model的另一个选择是如《Blockwise parallel decoding for
+deep autoregressive models》使用的非自回归模型。</p>
+<h1 id="实验">实验</h1>
+<p>论文在翻译任务和摘要任务上测试了投机解码的效果。使用了T5的较小规模模型作为approximation
+model，来加速T5-XXL的推理，效果如下表，最高能达到3倍+的推理加速。</p>
+<img src="/f5c015c/fi_t5_result.png" class title="T5系列加速效果">
+<p>此外，论文对更多样的模型组合测试了 <span class="math inline">\(\alpha\)</span> 值，如下表所示</p>
+<img src="/f5c015c/fi_alpha.png" class title="各种模型的alpha">
+<p>可以观察到，比target model小几个数量级的approximation
+model倾向于产生介于0.5和0.9之间的 <span class="math inline">\(\alpha\)</span>
+值。还注意到，对于所有模型，用于采样的分布越尖（即T比较小，如argmax），
+<span class="math inline">\(\alpha\)</span> 值越高。</p>
+<h1 id="小结">小结</h1>
+<ul>
+<li>投机解码可以在完全无损的情况下，把推理速度提升2~3倍<br>
+</li>
+<li>即使使用最简单的n-gram模型，也能在投机解码的策略下获得推理速度提升<br>
+</li>
+<li>正常来说，使用比target model小两个数量级的approximation
+model就有较好的效果</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Fast Inference from Transformers via Speculative Decoding
+https://arxiv.org/abs/2211.17192<br>
+【2】Accelerating Large Language Model Decoding with Speculative
+Sampling https://arxiv.org/abs/2302.01318</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>推理加速</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(5)</title>
+    <url>/336f2f3e.html</url>
+    <content><![CDATA[<p><img src="/images/cover.png"></p>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+<hr>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
+<p>如有错漏，欢迎指正~</p>
+<hr>
+<h1 id="使用半精度训练时bf16和fp16格式有什么异同">1.使用半精度训练时，bf16和fp16格式有什么异同？</h1>
+<p>二者都是占用16bit空间。</p>
+<p>fp16由1个符号位、5个指数位和10个尾数位组成。fp16在表达小数时具有较高的精度，但表示的最大范围相对bf16比较小。相比bf16，在表达较大的数时更容易出现上溢的情况。</p>
+<p>bf16由1个符号位、8个指数位和7个尾数位组成。相比于fp16，bf16牺牲了一些尾数位以增加指数位，扩大了表达的范围，但是精度降低了，因此对于对精度需求比较高的模型，模型可能效果不如fp16。</p>
+<p>模型训练时使用bf16和fp16都可以降低内存使用和传输量，提高训练效率。</p>
+<img src="/336f2f3e/bfloat16.jpeg" class title="bf16">
+<h1 id="支持模型长上下文的方案ntk-aware-interpolation的思路是什么">2.支持模型长上下文的方案「NTK-aware
+interpolation」的思路是什么？</h1>
+<p>1.在NTK插值之前，线性插值通过在原模型训练的两个位置编码中间，插入新的位置编码，使得同样的取值范围可以容纳更多位置。</p>
+<p>2.而NTK插值则是一种非线性插值的方法。它通过仅改变RoPE的base，使得位置编码中不同频率的信号有不同的表现，具体来说就是“高频外推，低频内插”。高频信号使用外推，防止分辨率太低，而低频信号沿用插值的方式，实现方便。</p>
+<h1 id="llm长度外推方案ntk-by-parts的思路是什么">3.LLM长度外推方案NTK-by-parts的思路是什么？</h1>
+<p>NTK-by-parts的方法在NTK插值的基础上又多想了一层。它认为无论是线性插值还是NTK-aware插值，都认为RoPE的所有分量都对网络有同样的重要性。而NTK-by-parts的思路认为，应该区别对待不同分量，他们对网络的影响有所不同。对于波长远小于上下文长度的分量（如波长&lt;=1/32上下文），就不插值只外推；而对于波长大于等于上下文长度的分量，就只外推不插值；对于介于两者之间的分量，就使用外推和插值的加权和。</p>
+<p>使用一个斜坡函数来定义NTK-by-parts的分段插值方法，如下所示</p>
+<img src="/336f2f3e/ntk_by_parts.png" class title="NTK-by-parts">
+<h1 id="llm长度外推方案yarn是怎做的">4.LLM长度外推方案YaRN是怎做的？</h1>
+<p>PI/NTK/NTK-by-parts主要的做法都是使用插值，而随着插值进行，token之间的距离变得更近（因为现在每一个位置旋转角度变小了），平均最小距离在减小，这样注意力softmax的分布会变得更尖，也就是都集中在某个区间。</p>
+<p>换句话说，就是RoPE原本远距离衰减的特性变弱了，衰减得更不明显，就会导致模型更平均地关注到更多的token，这样就削弱了注意力机制，导致输出质量下降。</p>
+<p>可以通过在softmax之前，将中间注意力矩阵乘以温度
+t&gt;1来缓解这个问题。由于RoPE被编码为一个旋转矩阵，就可以简单地给旋转矩阵乘以一个系数根号t来实现，这样可以不必修改注意力的代码。</p>
+<p>YaRN结合NTK-by-parts和这个温度系数，对attention score进行调整。</p>
+<img src="/336f2f3e/yarn.png" class title="YaRN">
+<h1 id="对于使用group-query-attention的模型假设hidden-sizedq的注意力头数量为h每个头维度为d假设有ddhkv组数为n输入上下文长度为sbatch-sizeb模型层数为l计算推理时kv-cache所需的空间">5.对于使用Group-Query
+Attention的模型，假设hidden
+size=D，Q的注意力头数量为h，每个头维度为d（假设有D=d×h），kv组数为n，输入上下文长度为s，batch
+size=b，模型层数为L，计算推理时kv cache所需的空间。</h1>
+<p>kv cache缓存的是经过投影变换之后的K和V矩阵。</p>
+<p>对于GQA，每层有n组K和V，每组的特征维度和Q的每个头的特征维度相同，为D/h。则每层每组K和V数据量为sD/h，整个模型共有2LnsD/h个数据，因此整个batch需要缓存2bLnsD/h个数据。
+如果使用的是半精度浮点数，每个浮点需要两个字节，因此共需要4bLnsD/h字节的空间。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型推理窗口-从有限到无限大</title>
+    <url>/45ee1a6d.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>步入2024年Q2，大模型在RAG、文档对话、大模型Agent能力等方向的发展持续升温。在平时的日常生活和工作中，大模型工具提供的文档总结、文本润色、代码生成等能力已经是提高效率的必备帮手，甚至在一些复杂或者不熟悉的场景上，大模型也已经能提供一些比较专业的帮助。</p>
+<p>在这些方向上，大模型(超)长上下文的能力都是基础。目前不少模型已经在128k+的长度上展示出比较强的能力，这些模型有的收集了超长训练数据，有的优化位置编码，有的则暴力训练，以提升模型的长上下文能力。</p>
+<p>另外一些工作则另辟蹊径，直接让模型具备无限大窗口的能力。本篇将梳理几个理论上支持无限大上下文长度的工作。</p>
+<h1 id="streamingllm">StreamingLLM</h1>
+<p>论文：Efficient Streaming Language Models with Attention Sinks</p>
+<p>时间：2023年9月</p>
+<p>长度：测试4M，理论∞</p>
+<p>阶段：无需训练，直接应用在推理阶段</p>
+<p>这是一篇由MIT，CMU，NVIDIA，META联合发布的论文。论文提出了一个在流式输出场景下支持无限大上下文长度的方法StreamingLLM，并且不需要进行任何形式的训练或微调
+-- 在有限长度上训练，在无限长度上推理。论文用LLAMA2, MPT,
+Falcon和Pythia作为基线模型进行验证，在4M的上下文长度，StreamingLLM仍然能够保持较低的PPL。</p>
+<p>需要注意的是，StreamingLLM主要关注在超长上下文的情况下，让模型能够生成低PPL的内容，但是在内容的准确性上并没有保证。</p>
+<h2 id="背景">背景</h2>
+<p>大模型流式应用，比如现在大部分对话机器人，在部署推理的时候，在长上下文的情况下通常会面临两个问题：<br>
+-
+缓存不足：流式应用下，为了提升响应速度，KV缓存目前是不可缺少的。而随着对话交互的进行，KV缓存所需的空间也以线性速度在增长。鉴于目前模型的规模动辄百亿千亿的参数量，即使较强的GPU
+H100、A100拥有40G/80G的显存，推理时也捉襟见肘。在显存不足的情况下，我们就不得不抛弃部分旧的KV缓存值，这也导致了模型效果的下降。<br>
+-
+训练长度：主流模型大部分使用旋转位置编码RoPE或其变体，而RoPE的外推能力一般，因此当推理输入的上下文长度远超训练的长度时，模型效果也会迅速下降。</p>
+<p>现有一些工作针对其中的部分问题进行优化：<br>
+- 类似Longformer那样的window
+attention通过只保存最近的KV值来缓解缓存不足的问题，同时保持一定的窗口扩展能力。但是论文观察到，一旦上下文长度超过缓存大小，window
+attention的机制会把最初的部分token移出缓存，这时模型的效果依然会迅速下滑。<br>
+- sliding window with
+recomputation（https://github.com/mit-han-lab/streaming-llm/issues/51），可以节省KV所需的空间，但是recomputation计算量和长度是平方关系。这个方案也是论文基线方案里效果最接近可用的。<br>
+-
+针对位置编码的工作，比如线性插值、NTK插值、YaRN，已经被证明是有效的，但是优化的窗口依然是有限的，大概能在原来的训练长度的基础上，提升一倍或者几倍的推理窗口。论文还提到长窗口的一个实践工作，一个关注在NSFW内容(手动滑稽)的模型：https://kaiokendev.github.io/til#extending-context-to-8k<br>
+- 针对推理效率，也有一些工作：《Efficiently scaling transformer
+inference，SmoothQuant: Accurate and efficient post-training
+quantization for large language models》、《Dynamic context pruning for
+efficient and interpretable autoregressive transformers》、《Spatten:
+Efficient sparse attention architecture with cascade token and head
+pruning》、《H2o: Heavyhitter oracle for efficient generative inference
+of large language models》，但是在支持的最大长度依然有限制。<br>
+-
+无损的FlashAttention已经被广泛采用，无论是训练还是推理都很有帮助。<br>
+- 其他一些有损的扩展方案，比如Big Bird、Linformer等。</p>
+<p>StreamingLLM这篇论文发现在长上下文的情况下，存在attention
+sink的现象，这也是window
+attention在上下文超过缓存大小之后效果迅速变差的原因。通过利用attention
+sink，让模型在超长上下文的情况还可以保持较低的PPL。并且和基线里唯一效果比较好的sliding
+window with
+recomputation方案相比，StreamingLLM在速度上有22+倍的提升。</p>
+<p>StreamingLLM和其他方案在长上下文上的PPL对比如下图所示，StreamingLLM在各个模型上都能保持稳定较低的PPL。</p>
+<img src="/45ee1a6d/streamingllm_model_ppl.png" class title="PPL对比">
+<h2 id="attention-sink">attention sink</h2>
+<p>从window
+attention在上下文超过缓存大小之后的失效，论文发现自回归LLM存在的一个有趣现象：对于输入文本最靠前的少量几个token，无论它们在语义上与语言建模任务的相关性如何，大量的注意力分数都会分配给他们，如下图所示</p>
+<img src="/45ee1a6d/stremingllm_attention_sink.png" class title="attention sink">
+<p>模型的前两层还能保持attention
+score更多分配给当前token附近位置的特性，而在其他层，靠前的几个token都会接受到大量的注意力。</p>
+<p>论文里把这些token称为attention
+sink。尽管这些token在语义上很可能并没有什么重要性，但它们却聚集了大量的注意力分数。</p>
+<p>出现这个现象的原因就是softmax操作。softmax要求所有上下文token的注意力分数加起来等于1，因此，即使当前token跟前面的其他token都没有匹配的需要，模型仍然需要将多余的注意力值分配到前面的某些token，以使得总和为1。</p>
+<p>那么文本最开头的几个初始token就会承担“接收多余的、不需要的注意力”的任务。为什么是初始token来承担这个任务，最简单的原因就是，对于自回归语言建模，初始token对所有后续token都是可见的，这使得它们更容易被训练成attention
+sink。</p>
+<p>上面这个解释还只是猜想，于是论文做了一个实验来验证这个猜想：把初始的4个token都换成没有重要实际语义的换行符号，结果发现模型依然会把大量的注意力分配给这些token，这就说明attention
+sink这个现象和内容语义无关，而只和这些token所在的位置相关。</p>
+<p>这个现象在一些quant的工作里也有发现，比如《SmoothQuant: Accurate and
+efficient post-training quantization for large language
+models》和《Quantizable transformers: Removing outliers by helping
+attention heads do nothing》等。</p>
+<h2 id="推理到无限长">推理到无限长</h2>
+<p>基于以上的发现，论文提出了StreamingLLM。StreamingLLM利用了attention
+sink具有高注意力值的事实，认为保留它们可以保持注意力分数的分布接近正常。</p>
+<p>因此，StreamingLLM的方案就是，在window
+attention的基础上，增加一个策略，保留了attention sink
+token的KV值，这些token的KV值会和滑动窗口内的token一起构成完整的KV
+cache，用于进行新token的推理计算，StreamingLLM和其他方案的attention计算如下图所示。</p>
+<img src="/45ee1a6d/streamingllm_compare.png" class title="StreamingLLM对比">
+<p>这里有一个问题，要保留多少个初始token才足够。论文在几个不同的模型上做了实验，结果如下表所示。</p>
+<img src="/45ee1a6d/stremingllm_init_token_num.png" class title="attention sink number">
+<p>实验发现，使用4个初始token就可以基本把PPL降下来，而只使用一个或者两个初始token则仍有很大损失。</p>
+<p>最终方案是，在window attention的基础上，StreamingLLM把KV
+cache分成两部分：<br>
+- 包含4个初始token的attention sink<br>
+- 正常滚动的KV cache</p>
+<p>StreamingLLM的KV缓存如下所示</p>
+<img src="/45ee1a6d/stremingllm_kv_cache.png" class title="cache">
+<p>一个重要的点是，StreamingLLM在实际应用上，位置编码中的相对位置，不再直接使用原文中的distance，而是改成使用这些token在cache中的distance。对于像RoPE这样的位置编码，需要缓存引入旋转变换之前token的KV值，解码时再把这些token在缓存内的相对位置加上。这样做使得模型不用处理大于预训练窗口大小的位置编码，而保证了效果。（关于这一点，在下面一篇论文《LM-Infinite》有相关实验）</p>
+<p>当前的大模型基本都没有针对attention
+sink的现象而做针对性的设计，论文提出可以在训练的时候增加一个特殊的token作为attention
+sink token使用，方便模型把多余的注意力值放在这个特殊token上。</p>
+<p>如果不增加一个特殊的token，那另外一个方法就是使用softmax的变体，softmax-off-by-one，替换attention中的softmax。</p>
+<p>softmax-off-by-one的公式如下所示</p>
+<p><span class="math display">\[\text{SoftMax}_1(x)_i=\frac{e^{x_i}}{1+\sum_{j=1}^Ne^{x_j}}\]</span></p>
+<p>softmax-off-by-one在分母增加了一个常数1，这样就不要求所有attention
+score的和为1。这相当于有一个K和V全都是0的虚拟token，固定和所有其他token的注意力得分为1，这个虚拟token在一定程度上也起到了attention
+sink的作用。</p>
+<p>为了验证增加特殊token作为attention
+sink，以及使用softmax-off-by-one的方案效果，论文在相同设置下训练了3个160M参数的模型，效果如下</p>
+<img src="/45ee1a6d/stremingllm_exp.png" class title="实验">
+<p>从结果上看，即使使用softmax-off-by-one（zero
+sink），模型还是会依赖前几个token作为attention sink。</p>
+<p>最后，论文在LLAMA2, MPT,
+Falcon和Pythia模型验证StreamingLLM在4M长度上的效果。MPT使用的位置编码是ALIBI，其他模型则是RoPE。效果如下图</p>
+<img src="/45ee1a6d/stremingllm_perf_4m.png" class title="效果">
+<p>在4M的长度上，StreamingLLM仍然能保持PPL较为稳定。</p>
+<p>理论上StreamingLLM可以把窗口推到无限长，但是由于本质上还是window
+attention，因此超过cache大小的部分还是会被丢弃。因此StreamingLLM虽然能保持PPL较低，但是对于需要高精度阅读理解和推理的任务，StreamingLLM还是有局限。</p>
+<h1 id="lm-infinite">LM-Infinite</h1>
+<p>论文：LM-Infinite: Zero-Shot Extreme Length Generalization for Large
+Language Models</p>
+<p>时间：2023年8月</p>
+<p>长度：在2k或者4k长度上训练，在200M长度上推理保持较低PPL</p>
+<p>阶段：无需训练，直接应用在推理阶段</p>
+<p>LM-Infinite可以和现有的LLM结合使用，在Passkey
+Retrieval和Qasper任务上有比较好的效果，且和原始模型相比，在解码速度上有2.7倍提升，显存上节省7.5倍。</p>
+<h2 id="三个挑战">三个挑战</h2>
+<p>LM-Infinite认为，Transformer
+LLM无法有效地泛化到长上下文的情况，主要是因为会面临3个挑战。</p>
+<ul>
+<li>挑战1：challenges in handling unseen distances among tokens</li>
+</ul>
+<p>对于使用相对位置编码的模型，两个token的位置对注意力值的影响取决于两个token之间的距离。当推理的长度越来越长，就会出现在训练时没有见过的相对距离，此时attention
+logits就会倾向于爆炸增长到无穷大，以区分在训练时从未见过的距离。论文对此给出了数学证明。</p>
+<p>而从实践上来看，把LLAMA2所有注意力头在ArXiv数据集上8k以内的attention
+logits抽取出来，其均值和方差如下图所示。</p>
+<img src="/45ee1a6d/lm_infinite_attention_logits_explode.png" class title="logits爆炸">
+<p>LLAMA2的预训练窗口大小为4k，可以看到4k之后，attention
+logits的均值和方差开始有明显的上升。</p>
+<p>那么为了缓解这个问题，一个自然的想法是将token之间的相对距离值限制在模型预训练期间看到过的最大值，即设置一个距离上限。这样可以解决logits爆炸，但是会导致下面这个问题。</p>
+<ul>
+<li>挑战2：attending to unseen numbers of tokens</li>
+</ul>
+<p>对于较长的上下文，位置靠后的token需要在更大的上下文长度范围内，分配它的注意力权重。论文提出，如果注意力logits有界，那么随着上下文长度变长，注意力熵(attention
+entropy)将增长至无穷大。这里原文也给出了数学证明。</p>
+<p>直观来说，在注意力权重分配为平均分配的时候，注意力熵最大。而注意力熵增大，表示当前的token不能确定应该将主要注意力放在上文的哪些token，即无法集中注意力。</p>
+<p>同样地，我们把模型在8k内的注意力熵画出来，结果如下图所示，随着长度增大，注意力熵也逐渐增大。</p>
+<img src="/45ee1a6d/lm_infinite_attention_entropy.png" class title="注意力熵爆炸">
+<p>这表明我们应该限制attention context
+size，以确保注意力熵保持在预训练见过的范围内。</p>
+<p>如果简单地使用一个window
+attention，使得每个token只能关注到一定距离内的token，在一定程度上可以一定程度上handle挑战1和挑战2。这样的思路和XPos、Longformer类似。</p>
+<p>但是使用window attention，又会引入新的问题。</p>
+<ul>
+<li>挑战3：starting tokens occupy a distinct feature space</li>
+</ul>
+<p>即使没有显式的绝对位置编码，位置最靠前的几个初始token的注意力输出和其他位置相比，也会占据一个独特的表示空间。</p>
+<p>这一结论来自于《The impact of positional encoding on length
+generalization in
+transformers》中的定理1，该定理证明了即使没有使用位置编码，单向注意力使得单个注意力层中的token输出也可以隐式地编码绝对位置，而初始token的信号是最强的，且很容易和其他token区分开来。</p>
+<p>这个观察和StreamingLLM中指出的attention
+sink很相似，总之就是最靠前的几个初始token有很大的影响，因此使用window
+attention把初始token忽略会带来很大的效果损失。</p>
+<p>论文把LLAMA2中各层的hidden state
+output做了PCA，降到2维之后画出来，如下图所示</p>
+<img src="/45ee1a6d/lm_infinite_starting_tokens.png" class title="初始token">
+<p>蓝色的点表示初始token，红色的点表示靠后的token。上图显示了初始token的特征在特征空间中占据了和其他token很不同的区域。这就解释了为什么简单地将注意力窗口限制在最近的token上会效果不好：由于注意力本质上是加权平均，丢弃初始的几个token影响了注意力输出到达它们应占据的空间。</p>
+<p>因此，我们需要保留初始token。</p>
+<h2 id="解决方案">解决方案</h2>
+<p>基于上面的这些观察和发现，论文提出LM-Infinite，给LLM做zero-shot的长度泛化。LM-Infinite设计了两个主要机制，Λ-shaped
+attention mask和Distance ceiling。</p>
+<ul>
+<li>Λ-shaped attention mask</li>
+</ul>
+<p>Λ-shaped attention mask在概念上和Longformer、LongNet、Big
+Bird的思路类似。</p>
+<p>Λ-shaped attention mask在window
+attention的基础上，保持了初始token对后续所有token可见。具体来说，每个token能关注到两部分：（1）<span class="math inline">\(n_{\mathrm{starting}}\)</span>
+个初始token（2）<span class="math inline">\(L_{\mathrm{pretrain}}\)</span>
+个最近的token。其中<span class="math inline">\(n_{\mathrm{starting}}\)</span> 为超参，<span class="math inline">\(L_{\mathrm{pretrain}}\)</span>
+是预训练时的最大窗口大小。除了这两个部分的token之外，其他token都会被直接忽略。</p>
+<p>论文对 <span class="math inline">\(n_{\mathrm{starting}}\)</span>
+的数量进行了实验，发现 <span class="math inline">\(n_{\mathrm{starting}}\in[5,100]\)</span>
+时的效果比较好，如下图所示。</p>
+<img src="/45ee1a6d/lm_infinite_starting_tokens_num.png" class title="初始token数量实验">
+<p>注意这里不需要对模型进行任何训练和微调，只需要修改推理的方式即可。</p>
+<p>Λ-shaped attention mask可以解决挑战2和挑战3。</p>
+<ul>
+<li>Distance ceiling</li>
+</ul>
+<p>LM-Infinite把最大距离限制在 <span class="math inline">\(L_{\mathrm{pretrain}}\)</span>，这样做基本只影响初始token的位置编码。</p>
+<p>具体来说，对于相对位置编码，假设原来的attention logit是 <span class="math inline">\(w(\mathbf{q},\mathbf{k},d)\)</span>，其中 <span class="math inline">\(d\)</span> 是两个token之间的距离；那么Distance
+ceiling就是把attention logit的计算变成：</p>
+<p><span class="math display">\[\text{attention
+logits}=w(\mathbf{q},\mathbf{k},d&#39;)\]</span></p>
+<p><span class="math display">\[d&#39;=\min(d,L_\text{pretrain})\]</span></p>
+<p>Distance ceiling限制了最大距离，可以解决挑战1。</p>
+<ul>
+<li>Optionally attending to top-k tokens in the middle</li>
+</ul>
+<p>除了Λ-shaped attention mask和Distance
+ceiling以外，论文还设计了一个可选的机制，用于把“除了当前窗口内的最近token和初始token”以外的中间部分token也加入到attention计算中，这部分token本来是会被直接丢弃的。</p>
+<p>具体来说，会从原本被抛弃的中间token里，选择 <span class="math inline">\(k\)</span> 个attention
+logits最大的token加入到attention 计算中来。这 <span class="math inline">\(k\)</span> 个token的距离都会被统一设置为 <span class="math inline">\(d=\frac12L_\text{pre-train}\)</span>。</p>
+<p>对 <span class="math inline">\(k\)</span> 的取值，论文在Passkey
+Retrieval的validation set上做了实验，结果如下</p>
+<img src="/45ee1a6d/lm_infinite_middle_k.png" class title="k的数量">
+<p>最终取了 <span class="math inline">\(k=5\)</span>，并且只在模型&gt;5的层中加入。</p>
+<p>加入middle
+token主要用于优化需要精准获取中间信息的任务，对于没有这个需要的任务，加入过多的middle
+token不仅无益，甚至有害，原因如前面挑战2所分析的，会增大注意力熵。</p>
+<p>最终，LM-Infinite的整体方案如下图所示</p>
+<img src="/45ee1a6d/lm_infinite_design.png" class title="设计">
+<h2 id="实验">实验</h2>
+<p>论文在LLaMA-7B、LLaMA2-7B、MPT-7B和GPT-J-6B这几个模型验证LM-Infinite的效果。除了MPT-7B使用Alibi之外，其他模型都是用RoPE。</p>
+<ul>
+<li>Language Modeling</li>
+</ul>
+<p>首先是语言建模的评测，使用的数据集是ArXiv和OpenWebText2。</p>
+<p>选择的几个基线模型，以及这些模型使用LM-Infinite的推理策略之后，在0-12k长度上的PPL如下图所示</p>
+<img src="/45ee1a6d/lm_infinite_ppl_figure.png" class title="PPL">
+<p>LLAMA2在略长于10K的长度上就输出了NaN，因此其曲线较短。所有原始模型在约32K的时候就出现OOM。</p>
+<p>当测试长度超过训练长度时，基线模型的PPL会迅速爆炸。而使用LM-Infinite之后，所有模型都可以泛化到比训练长度长得多，而仍然保持较低PPL。</p>
+<p>为了验证LM-Infinite在更大长度上的效果，用LM-Infinite +
+Llama2，在由ArXiv数据重复抽样拼接构成的200M
+token长度上的评估PPL。结果如下图所示，在200M长度下，依然可以保持稳定较低的PPL。</p>
+<img src="/45ee1a6d/lm_infinite_ppl_200m.png" class title="PPL 200M">
+<ul>
+<li>Passkey Retrieval and Qapser</li>
+</ul>
+<p>Passkey
+Retrieval和Qapser就是需要对整个上下文有精确理解的任务，因此对于这两个任务，加入了top-5个middle
+token到attention计算中。</p>
+<p>结果如下表。原始模型在长度超出训练长度之后，几乎无法输出有效内容，因此Passkey
+Retrieval上全得0分。而LM-Infinite相比简单的长度裁剪方案，在两个任务上都有更好效果。</p>
+<img src="/45ee1a6d/lm_infinite_downstream.png" class title="下游任务">
+<ul>
+<li>Ablation study</li>
+</ul>
+<p>对于LM-Infinite的两个主要设计，Λ-shaped attention mask和Distance
+ceiling，论文做了消融实验，如下图所示。</p>
+<img src="/45ee1a6d/lm_infinite_ablation.png" class title="消融实验">
+<p>只使用Λ-shaped attention mask或者distance
+ceiling单一策略的情况下，PPL仍然会出现较明显的上升，说明这两个组件都是必须的。</p>
+<h1 id="transformer-xl">Transformer-XL</h1>
+<p>讲下一篇Infini-Transformer之前，先简单回顾下Transformer-XL的思路。</p>
+<p>Transformer-XL是2019年6月，由CMU和Google
+Brain发布的一个工作，目的是赋予在固定长度上训练的模型，在更大长度上的推理能力。</p>
+<p>一般来说，transformer的训练和推理如下图所示，训练的时候模型在固定的长度上训练，如果输入文本超过了模型的训练窗口大小，那就把输入切分成多个segment，模型在各个segment分别独立地进行训练；而推理的时候，如果文本超过了模型的推理窗口大小，模型可以使用滑动窗口的方式，逐步进行推理。</p>
+<img src="/45ee1a6d/xl_vanilla_sw.png" class title="vanilla transformer">
+<p>在窗口滑动的过程中，模型始终只能看到窗口内的内容，对于超出的部分则无法把信息纳入计算中，这显然对有长距离依赖的任务有损害。</p>
+<p>为了让模型看得更远，Transformer-XL把attention计算修改成下面的样子：把输入切分成多个segment，每个的长度为L，对于两个相邻的segment
+<span class="math inline">\([\mathbf{s}_{\tau}=x_{\tau,1},\cdots,x_{\tau,L}]\)</span>
+和 <span class="math inline">\(\mathbf{s}_{\tau+1}=[x_{\tau+1,1},\cdots,x_{\tau+1,L}]\)</span>，计算如下</p>
+<p><span class="math display">\[\begin{aligned}&amp;\widetilde{\mathbf{h}}_{\tau+1}^{n-1}=\left[\mathrm{SG}(\mathbf{h}_\tau^{n-1})\circ\mathbf{h}_{\tau+1}^{n-1}\right]\\&amp;\mathbf{q}_{\tau+1}^n,\mathbf{k}_{\tau+1}^n,\mathbf{v}_{\tau+1}^n=\mathbf{h}_{\tau+1}^{n-1}\mathbf{W}_q^\top,\widetilde{\mathbf{h}}_{\tau+1}^{n-1}\mathbf{W}_k^\top,\widetilde{\mathbf{h}}_{\tau+1}^{n-1}\mathbf{W}_v^\top\\&amp;\mathbf{h}_{\tau+1}^n=\text{Transformer-Layer}\left(\mathbf{q}_{\tau+1}^n,\mathbf{k}_{\tau+1}^n,\mathbf{v}_{\tau+1}^n\right)\end{aligned}\]</span></p>
+<p>其中SG是stop
+gradient的操作，这样在训练的时候能保持仍然只有固定窗口大小的参数进行梯度计算和更新，而不会扩大显存需求。<span class="math inline">\(\begin{bmatrix}\mathrm{SG}(\mathbf{h}_\tau^{n-1})\circ\mathbf{h}_{\tau+1}^{n-1}\end{bmatrix}\)</span>
+表示在序列长度维度进行拼接。h、q、k、v的上标 <span class="math inline">\(n\)</span> 和 <span class="math inline">\(n-1\)</span> 是模型的层序号。</p>
+<p>对于当前segment的每一层attention计算，Transformer-XL把上一个segment的信息加入到当前的K和V中再进行注意力计算，这样相当于每层相比上一层，都能往前多关注到一个segment长度的信息，模型的层数越多，模型最终能关注的长度越长，最后一个segment的最终输出依赖第一个segment的第一层输出，如下图所示。</p>
+<img src="/45ee1a6d/xl_attention.png" class title="Transformer-XL">
+<h1 id="infini-transformer">Infini-Transformer</h1>
+<p>论文：Leave No Context Behind:Efficient Infinite Context Transformers
+with Infini-attention</p>
+<p>时间：2024年4月</p>
+<p>长度：实验500k/1M，理论∞</p>
+<p>阶段：继续预训练/微调</p>
+<p>Google提出的一种叫Infini-attention的注意力计算方式，可以使用有限的显存计算无限长的上下文。</p>
+<h2 id="背景-1">背景</h2>
+<p>记忆能力是智能的基石，因为它使得针对特定上下文的高效计算成为可能。</p>
+<p>但是transformer的注意力计算在时间和空间上都跟输入长度是二次的关系，这就使得在长上下文的场景下很难高效、准确地处理信息。</p>
+<p>使用记忆模块可以在大大减少计算量和显存需求的前提下，依然保持长上下文完整信息对模型的可见性。理论上所有输入信息都可以保存在记忆模块中，因此模型具备处理“有长距离依赖，且需要对输入信息进行准确检索”的任务。从这点上看，和StreamingLLM相比，记忆模块的效果上限更高。</p>
+<p>针对高效的记忆，目前也有一些相关工作，比如《Metalearned neural
+memory》/《Enhancing the transformer with explicit relational encoding
+for math problem solving》所使用的compressive
+memory，可以用固定大小的记忆模块来编码context，但是现有的记忆模块在效果和设计的simplicity上仍然存在tradeoff，比较难平衡。</p>
+<h2 id="infini-attention">Infini-attention</h2>
+<p>基于此，Infini-Transformer主要的改进点就在记忆模块的设计上。Infini-attention的结构设计如下图所示，每个Transformer
+block内包括了常规的mask local attention，和储存长期记忆的long term
+linear attention。</p>
+<img src="/45ee1a6d/infini_attention_structure.png" class title="infini-attention结构">
+<p>Infini-attention机制复用了标准注意力计算中的所有QKV值，构建了固定大小的注意力模块，用于长期记忆。在处理后续序列时，根据当前的Q从记忆模块中检索相关内容。Infini-attention将长期记忆检索到的值与局部注意力上下文通过concat进行聚合，共同计算最终的输出。</p>
+<p>这种对Transformer注意力层的微小但关键的修改，使得现有的LLM能够通过继续预训练和微调自然地扩展到无限长的上下文。</p>
+<p>Infini-attention和Transformer-XL的对比如下图所示</p>
+<img src="/45ee1a6d/infini_attention_process.png" class title="infini-attention计算方式">
+<p>和Transformer-XL类似，Infini-Transformer也把输入分成多个segment来处理。不同的是，Transformer-XL每层只能比前一层多看到一个segment的信息，因此需要通过堆叠模型的层数来提升模型处理窗口的大小；而由于层数是有限的，最终窗口的大小还是有限的。</p>
+<p>Infini-Transformer则是每层都有对之前所有segment的长期记忆，因此不受模型层数的影响，可以扩展到无限大的窗口。</p>
+<p>compressive memory的具体设计，出于simplicity和computational
+efficiency的考虑，论文参考《Learning associative inference using fast
+weight memory》，把memory设计成一个associative matrix。</p>
+<p>对于记忆模块，最重要的就是记忆的更新和检索。</p>
+<ul>
+<li>记忆检索</li>
+</ul>
+<p>先看下记忆的检索。假设每个segment的长度为 <span class="math inline">\(N\)</span>，我们使用当前的 <span class="math inline">\(Q\in\mathbf{R}^{N\times d_{key}}\)</span> 从memory
+<span class="math inline">\(M_{s-1}\in\mathbf{R}^{d_{key}\times
+d_{value}}\)</span> 中检索，计算如下</p>
+<p><span class="math display">\[A_{\text{mеm}}=\frac{\sigma(Q)M_{s-1}}{\sigma(Q)z_{s-1}}\]</span></p>
+<p>其中<span class="math inline">\(\sigma\)</span>是激活函数，使用的是element-wise
+ELU + 1。</p>
+<p><span class="math inline">\(z_{s-1}\in\mathbf{R}^{d_{key}}\)</span>是normalization
+term。这里normalization term参考《Transformers are rnns: Fast
+autoregressive transformers with linear
+attention》的做法，使用所有K值的求和值。</p>
+<ul>
+<li>记忆更新</li>
+</ul>
+<p>完成检索之后，就要更新记忆。需要更新的有normalization
+term和memory两项，更新方式如下。</p>
+<p><span class="math display">\[M_s\leftarrow
+M_{s-1}+\sigma(K)^TV\]</span></p>
+<p><span class="math display">\[z_s\leftarrow
+z_{s-1}+\sum_{t=1}^N\sigma(K_t)\]</span></p>
+<p>memory的更新，参考《Metalearned neural memory》和《Learning
+associative inference using fast weight memory》所使用的delta
+rule，进一步优化成如下形式</p>
+<p><span class="math display">\[M_s\leftarrow
+M_{s-1}+\sigma(K)^T(V-\frac{\sigma(K)M_{s-1}}{\sigma(K)z_{s-1}})\]</span></p>
+<ul>
+<li>长期记忆和local attention结合</li>
+</ul>
+<p>回到当前segment的注意力计算中，需要把长期记忆检索项 <span class="math inline">\(A_{mem}\)</span> 和local attention state <span class="math inline">\(A_{dot}\)</span> 结合</p>
+<p><span class="math display">\[A=sigmoid(\beta)\odot
+A_{mem}+(1-sigmoid(\beta))\odot A_{dot}\]</span></p>
+<p>其中 <span class="math inline">\(\beta\)</span>
+是一个可学习的标量参数。</p>
+<p>在训练中， <span class="math inline">\(\beta\)</span>
+所学习到的值如下，0则表示这个头只关注当前segment，1则表示值关注长期记忆的内容，介于0和1之间的则是两种的混合，可以看到大部分的注意力头会使用二者的混合结果</p>
+<img src="/45ee1a6d/infini_attention_gating.png" class title="gating分布">
+<p>整体策略上，和其他包含segment-level
+memory的模型在方案设计上的比较如下</p>
+<img src="/45ee1a6d/infini_attention_compare.png" class title="方案比较">
+<h2 id="实验-1">实验</h2>
+<p>实验上，每个segment的长度 <span class="math inline">\(N\)</span>
+设为2048，模型的训练窗口大小为32768，即总共有16个segment。</p>
+<ul>
+<li>语言建模能力</li>
+</ul>
+<p>Infini-Transformer和Transformer-XL/Memorzing
+Transformer/RMT在PG-19和Arxiv数据集上的language modeling能力对比如下</p>
+<img src="/45ee1a6d/infini_attention_language_modeling.png" class title="语言建模能力对比">
+<p>Infini-Transformer的效果显著更好，而且所需的记忆空间只有Memorizing
+Transformers的不到1%。</p>
+<p>原文指出，把训练的数据长度提升到100k，Infini-Transformer的PPL还能进一步降低。</p>
+<ul>
+<li>下游任务</li>
+</ul>
+<p>用1B的模型进行轻量级的继续预训练，训练配置如下：<br>
+- batch size = 64 - step = 30k - 训练数据长度 &gt; 4k - segment length =
+2k</p>
+<p>之后在1M长度的passkey
+retrieval任务上评测，zero-shot和fine-tune模型在各个长度的效果如下表</p>
+<img src="/45ee1a6d/infini_attention_passkey.png" class title="passkey效果">
+<p>Infini-Transformer（linear + delta）在1M长度的passkey
+retrieval任务上做到完全正确。</p>
+<p>另外在8B模型上，用8k长度训练30k步，在500k的BookSum任务上评测，结果如下</p>
+<img src="/45ee1a6d/infini_attention_booksum.png" class title="booksum效果">
+<p>Infini-Transformer（linear + delta）相比其他模型有一定优势。</p>
+<h1 id="小结">小结</h1>
+<ol type="1">
+<li>Streaming和LM-Infinite思路有些相似，都观察到attention
+sink对模型效果的影响，并设计了相关的注意力计算机制保留初始token以稳定PPL，而LM-Infinite在这个基础上使用distance
+ceiling，使得模型在推理时不会使用超出训练所用的token相对距离。虽然这两个工作使得模型可以在M级别的长度仍然保持较低PPL，但是实际大量中间token被丢弃，导致对需要在上下文精准检索的任务效果有损害。<br>
+</li>
+<li>Infini-Transformer使用记忆模块，把输入进行分段，并把靠前的内容通过固定大小的记忆矩阵进行压缩。理论上记忆模块可以提供所有上文的信息，能够应用在更精细和困难的任务。记忆模块的检索和更新的设计是方案的核心，需要考虑复杂度和效果的平衡。</li>
+</ol>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Efficient Streaming Language Models with Attention Sinks
+https://arxiv.org/abs/2309.17453<br>
+【2】Transformer-XL: Attentive Language Models Beyond a Fixed-Length
+Context https://arxiv.org/abs/1901.02860<br>
+【3】Leave No Context Behind: Efficient Infinite Context Transformers
+with Infini-attention https://arxiv.org/abs/2404.07143<br>
+【4】LM-Infinite: Zero-Shot Extreme Length Generalization for Large
+Language Models https://arxiv.org/abs/2308.16137</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>长上下文</tag>
         <tag>attention</tag>
-        <tag>KV Cache</tag>
+        <tag>微调</tag>
+        <tag>无限大</tag>
+        <tag>预训练</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(6)</title>
+    <url>/7c04944d.html</url>
+    <content><![CDATA[<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+<hr>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
+<p>如有错漏，欢迎指正~</p>
+<hr>
+<h1 id="xavier初始化思路是什么是怎么做的">1.Xavier初始化思路是什么，是怎么做的？</h1>
+<p>2010年的《Understanding the difficulty of training deep feedforward
+neural
+networks》提出Xavier初始化，目的是为了保持模型中每一层的输出方差大致相等，这样做的原因主要有：</p>
+<p>（1）避免梯度消失或梯度爆炸：在深度神经网络中，如果层与层之间的输出方差相差很大，就会有很大的值出现，那么在反向传播过程中，梯度可能会变得非常小（梯度消失）或者非常大（梯度爆炸）导致梯度更新缓慢，或者训练过程不稳定。</p>
+<p>（2）保持信号的传播：通过保持每一层的输出方差大致相等，可以确保网络中的信号在前向传播和反向传播时不会因为方差的变化而减弱或增强，从而有助于网络更好地学习和传递信息。</p>
+<p>（3）提高训练的稳定性和效率：当每一层的输出方差保持一致时，训练过程会更加稳定，因为权重更新的magnitude更加可控。这样可以提高训练的效率。</p>
+<p>（4）避免过拟合或欠拟合：适当的方差控制有助于网络在训练过程中保持适当的泛化能力。过大的方差可能导致过拟合，而过小的方差可能导致欠拟合。</p>
+<p>Xavier初始化方法通过考虑前一层的节点数（fan-in）和后一层的节点数（fan-out）来设置初始权重的分布范围。有三种方案：</p>
+<p>（1）只考虑输入，设置参数的方差为1/fan-in</p>
+<p>（2）只考虑输出，设置参数的方差为1/fan-out</p>
+<p>（3）同时考虑输入和输出，设置参数的方差为2/（fan-in +
+fan-out）。实际使用中1/fan-in效果就较好。</p>
+<h1 id="rlhf中reward模型和critic模型的作用分别是什么">2.RLHF中，Reward模型和Critic模型的作用分别是什么？</h1>
+<p>Critic模型主要负责评估当前策略下的行为，并预测未来的回报。在PPO中，Critic模型的输出用于计算优势函数（advantage
+function），这是一个衡量实际回报与预期回报之间差异的指标。优势函数是策略梯度方法中的关键组成部分，它帮助actor模型了解哪些行为比预期要好，哪些行为比预期要差。因此，Critic模型的评分直接影响actor模型的优化过程，指导其调整行为以提高整体性能。</p>
+<p>Reward模型是基于人类反馈训练的，用于评估和打分模型生成的文本或行为的质量。在RLHF中，Reward模型的评分通常被用作奖励信号，直接反馈给Actor模型。这些奖励信号反映了人类对生成内容的偏好和评价标准，Actor模型会根据这些信号调整其行为，以生成更符合人类期望的输出。
+RLHF中，Actor模型的优化目标是最大化期望回报。这个期望回报可以由Critic模型的预测和Reward模型的评分共同决定。具体来说，Actor模型的优化目标（objective）通常包括（1）策略损失：这部分损失来自于策略模型尝试最大化奖励信号（由Reward模型提供）和/或优势函数（由Critic模型提供）。（2）价值损失：在Actor-Critic架构中，Actor模型也负责优化Critic模型，那么价值损失会尝试最小化Critic模型预测的价值与实际回报之间的差异。（3）其他正则化项：可能还包括一些正则化项。</p>
+<p>因此，Critic模型的评分用于计算优势函数，而Reward模型的评分直接作为奖励信号。这两个模型共同作用于Actor模型，帮助其学习如何生成更符合人类偏好和期望的行为。</p>
+<h1 id="kaiming初始化是怎么做的">3.Kaiming初始化是怎么做的？</h1>
+<p>Kaiming初始化在Xavier初始化的基础上做了调整。Xavier初始化的推导是基于线性函数的，但实际上今天所有模型都会大量使用非线性函数，比如ReLU，这样就导致了Xavier初始化的失效。
+Kaiming初始化针对使用ReLU的模型提出。因为ReLU会抛弃掉小于0的值，对于一个均值为0的输入数据，这就相当于砍掉了一半的值，这样输出的方差和均值就变了。因此把Xavier初始化中使用的方差sqrt(1/N)改为sqrt(2/N)，这样数据不会因为ReLU而变得越来越小。</p>
+<h1 id="使用bert中的cls作为输出进行分类和相似度计算可能会有什么问题">4.使用Bert中的[CLS]作为输出进行分类和相似度计算，可能会有什么问题？</h1>
+<p>self-attention中，每个token都天然倾向于关注自己和附近的token，而对更远的内容分配较少的注意力。在Bert中，[CLS]一般是第一个token，放在最前面。这就导致[CLS]更容易关注到靠近它的输入，也就是文本的靠前部分。如果文本较长，且关键内容出现在靠后的位置，就有可能出现[CLS]中关注不够的情况，而导致效果下降。可以通过强制注意力分配，或者使用所有位置的输出而不单是[CLS]token的方法来缓解这个问题。</p>
+<h1 id="pytorch中的register_buffer是什么有什么用">5.pytorch中的register_buffer是什么，有什么用？</h1>
+<p>register_buffer是nn.Module类中的一个方法，它用于注册一个不需要梯度的缓冲区。一般会把模型中需要持续使用或者跟踪，但是不需要通过梯度来更新的参数使用register_buffer注册。使用register_buffer注册的参数可以和其他训练的参数一样，保存在state_dict中，比如旋转位置编码的旋转矩阵，batchnorm中的全局均值和方差，一般都会用register_buffer注册。如果不使用register_buffer注册，普通的常量或者参数保存的时候不会被state_dict跟踪到。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>解锁大模型长上下文能力</title>
+    <url>/cc852861.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>步入2024年Q2，大模型在RAG、文档对话、大模型Agent能力等方向的发展持续升温。在平时的日常生活和工作中，大模型工具提供的文档总结、文本润色、代码生成等能力已经是提高效率的必备帮手，甚至在一些复杂或者不熟悉的场景上，大模型也已经能提供一些比较专业的帮助。</p>
+<p>在这些方向上，大模型(超)长上下文的能力都是基础。无论是使用详细的CoT/ToT，还是通过多篇检索文档提供专业知识，抑或是使用相关样例提升回复质量，都需要模型具备处理很长的输入输出信息的能力。这不仅要求模型在较长的位置编码下依然具有良好的语言建模能力，而且还需要模型能够进行长距离的、细致的阅、准确的阅读和理解。</p>
+<p>本篇将梳理几个通过轻量级训练解锁大模型长上下文能力的工作。</p>
+<h1 id="支持128k上下文的数据工程">支持128k上下文的数据工程</h1>
+<p>论文：Data Engineering for Scaling Language Models to 128K
+Context</p>
+<p>时间：2024年2月</p>
+<p>阶段：预训练</p>
+<p>长度：128k</p>
+<h2 id="评测指标">评测指标</h2>
+<p>模型的长上下文能力不仅体现在文本较长的时候，模型的PPL依然能保持在较低的水平，还体现在对于长上下文输入，模型依然能够进行准确的阅读理解和推理。</p>
+<p>以往一些工作仅使用validation
+dataset上的PPL作为评测指标，并不能很好地表征模型的真实长上下文能力。而目前被广泛使用的
+Needle in a
+Haystack，或者叫大海捞针任务，是对长上下文能力的一个比较好的评测。这篇论文主要就以大海捞针任务为标准，对不同的模型和方案进行对比。</p>
+<p>两个PPL几乎相同的模型，在大海捞针任务上的差距可以很大，如下图所示，颜色越绿代表正确率越高</p>
+<img src="/cc852861/eng_ppl.png" class title="PPL和大海捞针">
+<p>目前已有的一些扩展大模型上下文窗口的方法，比如LongLoRA和Mistral所采用的YaRN，虽然理论上来说，能够支持&gt;100k的上下文长度，但是实际上在大海捞针任务的表现却不太好。相关模型在大海捞针任务上的效果对比如下所示，只有GPT-4的效果比较好。</p>
+<img src="/cc852861/eng_needle_comp.png" class title="大海捞针任务对比">
+<h2 id="数据分布">数据分布</h2>
+<p>这篇论文认为，在&lt;=4k窗口长度完成预训练的模型，其实就已经基本具备在128k或者更大的上下文窗口进行推理的能力，只需要进行轻量级的继续预训练（e.g.
+&lt;5B token），就能够解锁这种能力。</p>
+<p>（而一些其他的工作在这方面则有着相反的观点，比如在32k窗口训练了400B
+token的《Effective long-context scaling of foundation
+models》，以及Xverse）</p>
+<p>要做继续预训练，最重要的一点就是要决定使用什么样的数据。</p>
+<p>这篇论文里的实验是基于LLAMA的，因此使用了和LLAMA预训练数据具有相近领域分布的SlimPajama数据集作为基础。</p>
+<p>对于长上下文的继续预训练数据，需要仔细考虑数据长度和领域分布的影响。通常来说，某些领域天然会有更高比例的长文本数据，比如书籍、论文和github，而一些其他领域的长数据就较少，比如新闻。如果直接从整体数据中挑选长数据而忽略领域分布，就可能造成训练数据在领域分布上的偏移。</p>
+<p>论文使用了几种不同的数据处理策略，用于后面的实验对比：<br>
+- Cut at
+4K：把所有的数据按4k长度进行分块，这样不会影响领域分布。这也是很多4k预训练模型所采样的方案，比如LLAMA。<br>
+- Cut at
+128K：截断长度提升到128k，可以保留长文本内部信息的依赖关系。LongLoRA就是这么做的。<br>
+- Per-source
+Upsampling：在保持各个领域的比例不变的前提下，对长文本进行上采样，提高长文本的比例。这是这篇论文所推荐的方法，实验效果最好。<br>
+- Global Upsampling：不管领域，直接对长文本进行上采样。<br>
+- Upsample Arxiv/ Book/
+Github：提高特定领域的数据比例，对长文本进行上采样。</p>
+<p>这些策略基本涵盖了大部分长文本相关工作在数据上的处理策略。</p>
+<p>不同数据处理策略下，SlimPajama数据内各领域的分布如下图所示</p>
+<img src="/cc852861/eng_data_dist.png" class title="数据分布">
+<p>Per-source
+Upsampling是效果最好的，也是这篇论文所推荐的数据工程策略。</p>
+<h2 id="实验配置">实验配置</h2>
+<p>实验上，用80k的窗口长度训练LLAMA2-7B模型，用64k的窗口训练LLAMA2-13B模型。</p>
+<p>虽然理论上，计算复杂度度和模型训练窗口长度是平方关系，但是实际实现上，由于有FlashAttention等方案，可以把Attention的计算通过设备间通讯，在多个设备间并行起来。而设备间的通讯（包括GPU和CPU，GPU和GPU之间）成本都是constant或者linear，因此实际上80k窗口的的训练耗时只是4k长度的训练的3倍，而不是理论上的400倍。</p>
+<p>当然，实际所需的计算量并没有减少，但是至少时间成本从平方变成了线性。剩下的，只要堆jia卡qian就可以提速。</p>
+<img src="/cc852861/add_money.jpg" class title="加钱就行">
+<p>Per-source Upsampling和其他工作的数据处理策略的对比如下</p>
+<img src="/cc852861/eng_data.png" class title="模型策略">
+<p>训练的配置和耗时如下所示</p>
+<img src="/cc852861/eng_config.png" class title="训练配置">
+<p>实验的其他配置：<br>
+- lr = 2e-5<br>
+- RoPE base从1,0000改为500,000<br>
+- batch size = 4M token</p>
+<h2 id="训练量">训练量</h2>
+<p>前面提到，论文认为只需要轻量级的继续预训练就可以解锁长上下文能力，那么到底需要训练多少token呢？</p>
+<p>论文分别取了训练了100M、300M、500M、1B、5B、10B
+token的中间checkpoint进行PPL和海底捞针任务评测，结果如下</p>
+<img src="/cc852861/eng_tokens.png" class title="训练量">
+<p>结论是，在训练了500M
+token的时候，模型基本解锁了长上下文的能力；在训练了5B
+token的时候，模型已经收敛，而且继续训练到10B
+token也没有进一步收益了。</p>
+<h2 id="数据策略对比">数据策略对比</h2>
+<p>使用前面提到的不同数据策略在LLAMA2-7B模型用5B
+token进行训练，并对比效果。</p>
+<p>LLAMA2的预训练长度为4k，因此对比的时候分成了0-4k和4k-128k两段，分别评测模型经过长文本训练后，在短文本上的效果是否有变差，以及在长文本上是否有提升。</p>
+<p>各个数据策略在不同领域的效果变化如下</p>
+<img src="/cc852861/eng_sample.png" class title="采样的影响">
+<p>可以得到几个结论：<br>
+- 在0-4k长度上，除了Per-source
+Upsampling以外，各种数据策略都会对模型效果有损害<br>
+-
+在一些领域上的提升，并不能很好地迁移到其他领域，比如Book和Github之间就有点跷跷板效应，其中一个效果好了，另一个可能就有损失<br>
+- 在4k-128k，Per-source
+Upsampling在各个领域的效果相对较为平衡（绿色的数量最多）</p>
+<p>此外，length upsampling很重要。Per-source
+Upsampling的策略在领域上可以和源数据保持一致，而提升长文本的比例。</p>
+<p>用同样80k的训练窗口在LLAMA2-7B进行实验，一个使用原数据进行拼接，另一个使用Per-source
+Upsampling，结果如下。在PPL基本相同的情况下，Per-source
+Upsampling在大海捞针的效果远超原数据。这说明提高长文本的比例，能极大优化模型远距离建模的能力。</p>
+<img src="/cc852861/eng_ppl.png" class title="PPL和大海捞针">
+<h2 id="结论">结论</h2>
+<p>通过实验，论文提出提升模型长上下文能力的数据工程实践的几个关键点：<br>
+-
+在长窗口上进行轻量级训练，可以提升模型实际的远距离建模能力，而不仅仅是保持PPL较低<br>
+- 领域之间有竞争关系，最好和原预训练模型所用的分布保持一致<br>
+- 长度上采样对最终效果有很大影响，要提高各领域内长文本的比例</p>
+<h1 id="paraphrasing">Paraphrasing</h1>
+<p>论文：Training With "Paraphrasing the Original Text" Improves
+Long-Context Performance</p>
+<p>时间：2023年12月</p>
+<p>阶段：微调</p>
+<p>长度：在50k长度依然能有较好的效果，如下所示。</p>
+<img src="/cc852861/paraphrasing_intro.png" class title="paraphrasing">
+<h2 id="检索能力">检索能力</h2>
+<p>对于长上下文的任务，有用的信息通常是稀疏的，一般只有少量的句子或者段落包含了可以用于回答问题的有用信息。可以隐式地将这样长上下文的任务拆分成两个子任务，即相关信息的检索，和根据相关信息回答问题两个任务。</p>
+<p>目前一些支持长上下文的方法，比如位置编码相关的线性插值、NTK插值、YaRN等，虽然使得模型在形式上支持了长上下文的任务，但是在任务的准确性上效果却不佳。</p>
+<p>使用这些优化方案的模型依然会遇到lost in the
+middle的问题，即模型天然更容易关注到输入文本的开头和结尾部分的信息，而更容易忽略中间部分的信息，注意力迷失在大量无关内容上，而无法集中到少数相关的位置上。而对于长上下文的任务，大量的信息是处于middle的位置的，如果忽略这些信息自然会使得任务效果不好。而效果不好的原因就是模型在长上下文的情况下，retrieval能力偏弱，不能找到有用的信息。</p>
+<h2 id="相关工作">相关工作</h2>
+<p>一些工作直接把模型在长窗口下进行训练，比如：<br>
+-
+Together的LLaMA-2-7B-32K（https://huggingface.co/datasets/togethercomputer/Long-Data-Collections）；Together开源了Multipassage-QA-from-Natural-Questions和BookSum微调数据集。<br>
+- LongAlpaca（《LongLoRA: Efficient Fine-tuning of Long-Context Large
+Language Models》）<br>
+- Ziya-Reader（《Never Lost in the Middle:Improving Large Language
+Models via Attention Strengthening Question Answering》）</p>
+<p>直接在长窗口训练有一定的效果，但是依然有几个问题：<br>
+- 模型推理窗口越来越大，所需的训练数据集长度也要不断更新。<br>
+- 随着长度增大，训练成本变高。<br>
+-
+构建长上下文数据集的成本比价高，高质量的数据并不容易获得。虽然有一些开源的数据集，但是在实际场景上可能还需要做领域适配，分布调整等工作。</p>
+<p>一个更简单一点的方法是优化prompt的设计，比如CoT。</p>
+<p>在长上下文的场景下，可以通过prompt让模型显式地先找到原文的相关信息再进行回答。比如Claude-2.1就通过在prompt增加“Here
+is the most relevant sentence in the
+context”让长文本问答的准确率从27%提升到98%（https://www.anthropic.com/news/claude-2-1-prompting）。</p>
+<p>也可以对输入内容进行重新的编排：<br>
+- LongLLMLingua（《LongLLMLingua: Accelerating and Enhancing LLMs in
+Long Context Scenarios via Prompt
+Compression》）对输入文本进行了压缩。<br>
+- Attention Sorting（《Attention Sorting Combats Recency Bias In Long
+Context Language
+Models》）在decode过程中根据各个文档被分配到的注意力值，对文档进行重新排序。</p>
+<h2 id="提高检索能力">提高检索能力</h2>
+<p>这篇论文提出了一个叫检索相关度（retrieval
+relevance）的指标，一个token（或者n-gram） <span class="math inline">\(x\)</span> 的检索相关度 <span class="math inline">\(R(x)\)</span> 定义如下。</p>
+<p><span class="math display">\[R(x)=\frac{n^\prime}n\log\frac
+N{N^\prime+1}\]</span></p>
+<p>这个指标和TF-IDF很像。其中，<span class="math inline">\(n^\prime\)</span> 表示 <span class="math inline">\(x\)</span> 在gold-chunk中的频率，而 <span class="math inline">\(n\)</span> 是gold-chunk中的总token数；<span class="math inline">\(N\)</span> 表示整个上下文中总chunk数，<span class="math inline">\(N^\prime\)</span> 是包含x的chunk的数量。</p>
+<p>基于token <span class="math inline">\(x\)</span> 的检索相关度 <span class="math inline">\(R(x)\)</span> ，定义训练样本 <span class="math inline">\(S\)</span> 的检索相关度如下</p>
+<p><span class="math display">\[\mathcal{R}(S)=\frac{1}{|S_a|}\sum_{x\in\mathcal{S}_a}R(x)\]</span></p>
+<p>其中 <span class="math inline">\(S_a\)</span> 表示 <span class="math inline">\(S\)</span> 的答案部分。</p>
+<p>通过 <span class="math inline">\(\mathcal{R}(S)\)</span>
+这个指标可以反映出一个训练样本对模型提高检索能力的贡献。<span class="math inline">\(\mathcal{R}(S)\)</span>
+越高，这个样本对提高模型检索能力的贡献越大。</p>
+<p>那么一个简单有效提升训练样本检索相关度的做法，就是把gold-chunk放到答案中，即paraphrasing
+the original text。</p>
+<p>一个paraphrasing和其他答案设计方案对比的例子如下</p>
+<img src="/cc852861/paraphrasing_example.png" class title="paraphrasing例子">
+<p>其中高亮部分的token是高检索相关度的token，明显paraphrasing拥有更高的比例。</p>
+<p>论文使用GPT-4来构建包含paraphrasing的问答对，流程实际如下</p>
+<img src="/cc852861/paraphrasing_dataset.png" class title="构建数据集">
+<p>这种方式收集了一批单文档问答和多文档问答的数据，再加上一些传统文本摘要数据（摘要不好用这种方式构建，因此直接使用）等，构成一个包含10,825条英文数据，8,454条中文数据，长度在8k和32k之间的数据集。数据集详细的领域分布如下所示</p>
+<img src="/cc852861/paraphrasing_dataset_dist.png" class title="数据集分布">
+<p>论文构建的数据集和Multi-passage-QA-from-NQ的检索相关性指标对比如下</p>
+<img src="/cc852861/paraphrasing_quality.png" class title="数据集检索相关性对比">
+<p>使用这个数据集微调的模型，和其他模型在LongBench上的效果对比如下</p>
+<img src="/cc852861/paraphrasing_perf.png" class title="效果对比">
+<p>另外，在这个数据集上微调之后，模型对于lost in the
+middle的问题也有一定的缓解，如下所示</p>
+<img src="/cc852861/paraphrasing_lost.png" class title="缓解lost in the middle">
+<h1 id="pose">PoSE</h1>
+<p>论文：PoSE: Efficient Context Window Extension of LLMs via Positional
+Skip-wise Training</p>
+<p>时间：2023年9月</p>
+<p>阶段：微调</p>
+<p>长度：128k</p>
+<h2 id="背景">背景</h2>
+<p>目前大部分流行的大模型使用旋转位置编码RoPE。在短文本上训练的模型，在长输入上效果不好的原因之一，就是长文本有很多模型没有见过没有训练过的位置编码。</p>
+<p>基于位置编码的长上下文优化，比如线性插值、NTK插值和YaRN等，依然需要进行目标长度的训练才能有比价好的效果。而随着目标长度越来越长（8k，32k，128k...），这样的训练成本也越来越高，逐渐变得不容易进行。</p>
+<p>这篇论文提出<strong>Po</strong>sitional
+<strong>S</strong>kip-wis<strong>E</strong>，PoSE，通过在短的训练窗口模拟长距离的位置编码，提升模型处理长上下文的能力。模型可以在2k的训练窗口进行训练，而在128k的长度进行推理。相比直接训练128k模型效率更高。</p>
+<p>也有一些工作的思路和这篇文章有相近之处，比如RandPos（《Randomized
+positional encodings boost length generalization of
+transformers》），但是RandPos主要用于预训练阶段，并且相邻token之间的位置是不连续的，而PoSE主要用于微调阶段，相邻token之间的位置是连续的。</p>
+<h2 id="位置模拟">位置模拟</h2>
+<p>PoSE提出两个设计原则：<br>
+-
+模拟所用的位置编码index要覆盖目标长度的范围。如果我们想在128k的窗口进行推理，那就要保证训练的时候，模型从1-128k的位置编码都见过。<br>
+-
+为了不损害原模型的能力，位置编码应该尽量保持原来预训练的结构，即尽量连续，和保持顺序关系。</p>
+<p>假设我们的训练窗口长度为 <span class="math inline">\(L_c\)</span>，首先我们随机把它切成 <span class="math inline">\(N\)</span> 个chunk， <span class="math inline">\(c_0,c_1,\ldots,c_{N-1}\)</span>，长度分别为 <span class="math inline">\(l_0,l_1,\ldots,l_{N-1}\)</span>。对于chunk <span class="math inline">\(i\)</span>，其中token的位置编码下标如下</p>
+<p><span class="math display">\[\mathrm{Pos}(c_i)=\{st_i,st_i+1,\ldots,st_i+l_i-1\},\quad
+st_i=\sum_{j=0}^{i-1}l_j\]</span></p>
+<p>然后我们给每个chunk，从uniform distribution <span class="math inline">\(\mathcal{U}(S)\)</span> 中随机采样一个skipping
+bias <span class="math inline">\(u_i\)</span>，把这个bias加到这个对应chunk的token的位置编码下标中，就有</p>
+<p><span class="math display">\[\mathrm{PoSE}(c_i)=\{u_i+st_i,u_i+st_i+1,\ldots,u_i+st_i+l_i-1\}\]</span></p>
+<p>这里要注意，处理后各个chunk的位置编码下标不能有overlap，所以要求
+<span class="math inline">\(u_i\geq u_{i-1}\)</span>。</p>
+<p>直观地说，引入skipping
+bias使模型能接触到更大范围的位置编码。为了全面覆盖目标上下文窗口，我们为每个训练sample单独采样每个chunk的长度和skipping
+bias。</p>
+<p>此外，位置编码index在每个chunk内的连续性，与原模型预训练期间所采用的结构非常相似。因此，在这些新的index上进行微调，不会损害模型原有的能力。</p>
+<p>现在，位置编码的下标决定好了，我们还需要决定每个chunk的token使用哪些。</p>
+<p>token的采样和位置编码下标的采样类似，具体来说，我们采样<span class="math inline">\(v_i\sim\mathcal{U}(\{v_{i-1},\ldots,L_x-L_c\})\)</span>，那么
+<span class="math inline">\(c_i\)</span> 的token如下</p>
+<p><span class="math display">\[c_i=\boldsymbol{x}[v_i+st_i:v_i+st_i+l_i]\]</span></p>
+<p>论文对一些采样变体，比如 <span class="math inline">\(v_i=u_i\)</span>，<span class="math inline">\(v_i=0\)</span>
+等进行了探索，发现基本没有什么影响，因此 <span class="math inline">\(v_i\)</span> 保持原来的采样方案即可。</p>
+<p>在实际训练中，<span class="math inline">\(N\)</span>
+设置为2，因为如果太大可能对原模型的能力造成损害。而 <span class="math inline">\(u_0\)</span> 和 <span class="math inline">\(v_0\)</span> 设为了0。</p>
+<p>PoSE方案如下图所示</p>
+<img src="/cc852861/pose_method.png" class title="PoSE">
+<p>实验上，使用了LLAMA-7B模型，在2k的窗口上进行了1,000步的训练，batch
+size为64。使用lr=2e-5，warmup step=10。</p>
+<p>PoSE和其他模型在PPL上的对比如下，基本能达到和Full-length训练相近的水平。</p>
+<img src="/cc852861/pose_ppl.png" class title="PPL">
+<p>而在passkey retrieval任务上，也有不错的效果，如下图所示</p>
+<img src="/cc852861/pose_passkey.png" class title="passkey">
+<p>相比其他方案，PoSE的一个优势是可以在没有任何成本增加的情况下，支持更长的推理长度。比如可以通过简单修改采样策略的参数，PoSE就可以支持到1M，甚至更大的窗口长度，这是其他方法难以做到的。</p>
+<h1 id="小结">小结</h1>
+<ol type="1">
+<li>有了FlashAttention等方案之后，在128k这个长度，我们也有能力在合理的成本下，进行继续预训练，使用5B左右的token解锁模型的长上下文能力。<br>
+</li>
+<li>预训练中，长文本对模型的远距离建模能力很重要，要提高长文本的比例才有更好的效果。此外，领域的分布也是一个需要关注的点。<br>
+</li>
+<li>在长窗口的微调上，精心设计输入输出形式能带来一些收益。</li>
+<li>对于更长的窗口，比如M级别这种几乎无法直接训练/微调的长度，PoSE这种模拟的方案能够在不增加成本的情况下，在效果上达到接近直接训练/微调的表现。</li>
+</ol>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Data Engineering for Scaling Language Models to 128K Context
+https://arxiv.org/abs/2402.10171<br>
+【2】Training With "Paraphrasing the Original Text" Improves
+Long-Context Performance https://arxiv.org/abs/2312.11193<br>
+【3】PoSE: Efficient Context Window Extension of LLMs via Positional
+Skip-wise Training https://arxiv.org/abs/2309.10400</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>长上下文</tag>
+        <tag>attention</tag>
+        <tag>微调</tag>
+        <tag>预训练</tag>
       </tags>
   </entry>
 </search>

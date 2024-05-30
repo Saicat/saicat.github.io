@@ -1,3 +1,6 @@
+https://saicat.github.io/473f2b43.html
+https://saicat.github.io/f5c015c.html
+https://saicat.github.io/7c04944d.html
 https://saicat.github.io/45ee1a6d.html
 https://saicat.github.io/44e38c1b.html
 https://saicat.github.io/b70b4a2d.html
@@ -29,9 +32,6 @@ https://saicat.github.io/tags/layernorm/
 https://saicat.github.io/tags/normalization/
 https://saicat.github.io/tags/batchnorm/
 https://saicat.github.io/tags/%E7%AE%97%E6%B3%95%E9%A2%98/
-https://saicat.github.io/tags/%E6%97%A0%E9%99%90%E5%A4%A7/
-https://saicat.github.io/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/
-https://saicat.github.io/tags/%E5%BE%AE%E8%B0%83/
 https://saicat.github.io/tags/attention/
 https://saicat.github.io/tags/sliding-window-attention/
 https://saicat.github.io/tags/sparse-attention/
@@ -45,8 +45,15 @@ https://saicat.github.io/tags/LaMDA/
 https://saicat.github.io/tags/GopherCite/
 https://saicat.github.io/tags/WebGPT/
 https://saicat.github.io/tags/InstructGPT/
-https://saicat.github.io/tags/MoE/
 https://saicat.github.io/tags/KV-Cache/
+https://saicat.github.io/tags/MoE/
+https://saicat.github.io/tags/%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0/
+https://saicat.github.io/tags/%E5%BE%AE%E8%B0%83/
+https://saicat.github.io/tags/SFT/
+https://saicat.github.io/tags/%E5%81%8F%E5%A5%BD%E5%AF%B9%E9%BD%90/
+https://saicat.github.io/tags/%E6%8E%A8%E7%90%86%E5%8A%A0%E9%80%9F/
+https://saicat.github.io/tags/%E6%97%A0%E9%99%90%E5%A4%A7/
+https://saicat.github.io/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/
 https://saicat.github.io/categories/CS/
 https://saicat.github.io/categories/CS/NLP/
 https://saicat.github.io/categories/CS/NLP/LLM/
