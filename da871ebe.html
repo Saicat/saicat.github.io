@@ -20,34 +20,42 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="【往期文章】 Yi技术报告-划重点看细节 transformer中normalization的二三事 稀疏注意力计算:sliding window attention 理解Attention:从起源到MHA,MQA和GQA LLM长上下文的问题 理解LLM位置编码:RoPE 大模型算法题(1) 大模型算法题(2)">
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  前面对DPO的思路做了整理：大模型偏好对齐-DPO。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="大模型算法题(4)">
-<meta property="og:url" content="https://saicat.github.io/1736008.html">
+<meta property="og:title" content="大模型偏好对齐-ODPO">
+<meta property="og:url" content="https://saicat.github.io/da871ebe.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="【往期文章】 Yi技术报告-划重点看细节 transformer中normalization的二三事 稀疏注意力计算:sliding window attention 理解Attention:从起源到MHA,MQA和GQA LLM长上下文的问题 理解LLM位置编码:RoPE 大模型算法题(1) 大模型算法题(2)">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  前面对DPO的思路做了整理：大模型偏好对齐-DPO。">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://saicat.github.io/images/cover.png">
-<meta property="og:image" content="https://saicat.github.io/1736008/transformer.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/odpo_intro.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/sentiment_control.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/toxicity_control.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/summarization.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/scaling_function.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/alpha.png">
 <meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
-<meta property="article:published_time" content="2024-04-20T08:56:45.000Z">
-<meta property="article:modified_time" content="2024-05-10T06:50:46.826Z">
+<meta property="article:published_time" content="2024-05-30T07:23:05.000Z">
+<meta property="article:modified_time" content="2024-05-31T12:26:56.345Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
-<meta property="article:tag" content="算法题">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="强化学习">
+<meta property="article:tag" content="微调">
+<meta property="article:tag" content="SFT">
+<meta property="article:tag" content="偏好对齐">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://saicat.github.io/images/cover.png">
+<meta name="twitter:image" content="https://saicat.github.io/da871ebe/odpo_intro.png">
 
 
-<link rel="canonical" href="https://saicat.github.io/1736008.html">
+<link rel="canonical" href="https://saicat.github.io/da871ebe.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/1736008.html","path":"1736008.html","title":"大模型算法题(4)"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/da871ebe.html","path":"da871ebe.html","title":"大模型偏好对齐-ODPO"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>大模型算法题(4) | Linsight</title>
+<title>大模型偏好对齐-ODPO | Linsight</title>
   
 
 
@@ -147,9 +155,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88transformer%E7%94%A8layernorm%E8%80%8C%E4%B8%8D%E6%98%AFbatchnorm"><span class="nav-number">1.</span> <span class="nav-text">1.为什么Transformer用layernorm而不是batchnorm</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#transformer%E4%B8%ADencdoer%E5%92%8Cdecoder%E6%98%AF%E6%80%8E%E4%B9%88%E8%BF%9B%E8%A1%8C%E4%BA%A4%E4%BA%92%E7%9A%84"><span class="nav-number">2.</span> <span class="nav-text">2.transformer中，encdoer和decoder是怎么进行交互的？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#pytorch%E4%B8%ADtensor%E7%9A%84view%E5%92%8Creshape%E4%B8%A4%E4%B8%AA%E6%96%B9%E6%B3%95%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB"><span class="nav-number">3.</span> <span class="nav-text">3.PyTorch中，Tensor的view()和reshape()两个方法有什么区别？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#rlhf%E4%B8%ADppo%E9%9C%80%E8%A6%81%E5%93%AA%E5%87%A0%E4%B8%AA%E6%A8%A1%E5%9E%8B%E5%88%86%E5%88%AB%E6%98%AF%E4%BB%80%E4%B9%88%E4%BD%9C%E7%94%A8"><span class="nav-number">4.</span> <span class="nav-text">4.RLHF中，PPO需要哪几个模型，分别是什么作用？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#gpt%E7%B1%BB%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83%E8%BF%87%E7%A8%8B%E4%B8%AD%E6%B6%88%E8%80%97%E6%98%BE%E5%AD%98%E7%9A%84%E4%B8%BB%E8%A6%81%E6%9C%89%E5%93%AA%E4%BA%9B%E9%83%A8%E5%88%86%E5%88%86%E5%88%AB%E6%98%AF%E5%A4%9A%E5%B0%91%E5%93%AA%E9%83%A8%E5%88%86%E5%8D%A0%E7%94%A8%E6%9C%80%E5%A4%9A%E5%81%87%E8%AE%BE%E6%A8%A1%E5%9E%8B%E6%9C%89l%E5%B1%82%E8%AF%8D%E8%A1%A8%E5%A4%A7%E5%B0%8F%E4%B8%BAvhidden-size%E4%B8%BAhbatch-size%E4%B8%BAb%E8%AE%AD%E7%BB%83%E7%AA%97%E5%8F%A3%E9%95%BF%E5%BA%A6%E4%B8%BAs%E4%BD%BF%E7%94%A8adam%E4%BC%98%E5%8C%96%E5%99%A8%E6%B7%B7%E5%90%88%E7%B2%BE%E5%BA%A6%E8%AE%AD%E7%BB%83%E9%9C%80%E8%A6%81%E5%AD%98%E4%B8%80%E9%98%B6%E5%92%8C%E4%BA%8C%E9%98%B6%E5%8A%A8%E9%87%8F%E6%B3%A8%E6%84%8F%E5%8A%9B%E5%A4%B4%E6%95%B0%E4%B8%BAn"><span class="nav-number">5.</span> <span class="nav-text">5.GPT类模型训练过程中，消耗显存的主要有哪些部分？分别是多少？哪部分占用最多？假设模型有L层，词表大小为V，hidden
-size为H，batch
-size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需要存一阶和二阶动量），注意力头数为N。</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#bradleyterry-model%E7%9A%84%E5%B1%80%E9%99%90"><span class="nav-number">2.</span> <span class="nav-text">Bradley–Terry model的局限</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#dpo-with-an-offset"><span class="nav-number">3.</span> <span class="nav-text">DPO with an Offset</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">4.</span> <span class="nav-text">实验</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#sentiment-control"><span class="nav-number">4.1.</span> <span class="nav-text">sentiment control</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#toxicity-control"><span class="nav-number">4.2.</span> <span class="nav-text">toxicity control</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#summarization"><span class="nav-number">4.3.</span> <span class="nav-text">summarization</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B6%88%E8%9E%8D%E5%AE%9E%E9%AA%8Cscaling-function"><span class="nav-number">4.4.</span> <span class="nav-text">消融实验：scaling function</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B6%88%E8%9E%8D%E5%AE%9E%E9%AA%8C%CE%B1"><span class="nav-number">4.5.</span> <span class="nav-text">消融实验：α</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -214,7 +220,7 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/1736008.html">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/da871ebe.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
@@ -227,12 +233,12 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="大模型算法题(4) | Linsight">
+      <meta itemprop="name" content="大模型偏好对齐-ODPO | Linsight">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          大模型算法题(4)
+          大模型偏好对齐-ODPO
         </h1>
 
         <div class="post-meta-container">
@@ -243,14 +249,14 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2024-04-20 16:56:45" itemprop="dateCreated datePublished" datetime="2024-04-20T16:56:45+08:00">2024-04-20</time>
+      <time title="创建时间：2024-05-30 15:23:05" itemprop="dateCreated datePublished" datetime="2024-05-30T15:23:05+08:00">2024-05-30</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2024-05-10 14:50:46" itemprop="dateModified" datetime="2024-05-10T14:50:46+08:00">2024-05-10</time>
+      <time title="修改时间：2024-05-31 20:26:56" itemprop="dateModified" datetime="2024-05-31T20:26:56+08:00">2024-05-31</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -277,14 +283,14 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>2.3k</span>
+      <span>5.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>4 分钟</span>
+      <span>10 分钟</span>
     </span>
 </div>
 
@@ -294,50 +300,122 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
     
     
     
-    <div class="post-body" itemprop="articleBody"><p><img src="/images/cover.png"></p>
-<p>【往期文章】</p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
 <hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错漏，欢迎指正</sub></p>
-<hr>
-<h1 id="为什么transformer用layernorm而不是batchnorm">1.为什么Transformer用layernorm而不是batchnorm</h1>
-<p>首先，NLP数据中由于每条样本可能不一样长，会使用padding，如果对padding部分进行normalization，对效果有负面影响。直观来说，batchnorm会对同一个特征以batch为组进行归一化，而对于文本数据，同一个位置的token很可能是没有关联的两个token，对这样一组数据进行归一化没有什么实际意义。《PowerNorm:
-Rethinking Batch Normalization in
-Transformers》论文的实验也表明，在NLP数据使用batchnorm，均值和方差相对layernorm会更加震荡，因此效果欠佳。</p>
-<h1 id="transformer中encdoer和decoder是怎么进行交互的">2.transformer中，encdoer和decoder是怎么进行交互的？</h1>
-<p>decoder部分的输入，在每层中，先进行一次self-attention；之后用encoder的输出作为attention计算中的K、V，decoder的输入作为Q，进行cross-attention。</p>
-<img src="/1736008/transformer.png" class title="transformer">
-<h1 id="pytorch中tensor的view和reshape两个方法有什么区别">3.PyTorch中，Tensor的view()和reshape()两个方法有什么区别？</h1>
-<p>1.功能上：view()与reshape()方法都可以用来改变tensor的形状，但是使用条件不同，view()能做的是reshape的子集。</p>
-<p>2.view()方法需要tensor满足连续性，操作后返回一个引用，返回值是视图，没有改变原储存空间的值，多个视图共享同一个物理储存空间的内容。</p>
-<p>3.reshape()方法不需要tensor一定满足连续性。如果tensor不满足连续性的要求，则会使用新的储存空间并返回。如果满足连续性需求，则功能和view()一致。</p>
-<p>4.连续性：比如一个二维张量，如果按行优先展开成一维的结果，和物理储存顺序是一致的，就是连续的。可以用is_contiguous()来判断一个张量是否连续，如果不连续，可以用contiguous()得到一份新空间中的连续副本。</p>
-<h1 id="rlhf中ppo需要哪几个模型分别是什么作用">4.RLHF中，PPO需要哪几个模型，分别是什么作用？</h1>
-<p>一般来说，PPO需要使用4个模型。</p>
-<p>1.Actor模型：由SFT初始化，就是进行强化学习的主模型，是我们想要最终获得的模型；它不断产生action并被Critic模型所评价，计算loss进行训练。</p>
-<p>2.Reference模型：一般也是从SFT模型初始化，RLHF中Reference模型并不更新参数，只是作为Actor模型的参考使用；通过约束Actor模型和Reference模型的KL
-penalty等，可以防止Actor模型被训得跑得太偏。</p>
-<p>3.Reward模型：提前训练好的，对SFT模型进行打分的模型，RLHF中参数是冻结的。</p>
-<p>4.Critic模型：一般由Reward模型进行初始化，参数可训练，用于预测Actor模型生成的token的收益。</p>
-<h1 id="gpt类模型训练过程中消耗显存的主要有哪些部分分别是多少哪部分占用最多假设模型有l层词表大小为vhidden-size为hbatch-size为b训练窗口长度为s使用adam优化器混合精度训练需要存一阶和二阶动量注意力头数为n">5.GPT类模型训练过程中，消耗显存的主要有哪些部分？分别是多少？哪部分占用最多？假设模型有L层，词表大小为V，hidden
-size为H，batch
-size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需要存一阶和二阶动量），注意力头数为N。</h1>
-<p>训练过程中，显存消耗主要有模型参数、梯度、optimizer状态值和中间激活值。</p>
-<p>1.模型参数Φ：词表部分VH，每层参数12H<sup>2+13H，总共有Φ=VH+L(12H</sup>2+13H)，如果是半精度就是2Φ</p>
-<p>2.梯度：每个参数对应有一个梯度，总量为Φ，如果是半精度就是2Φ</p>
-<p>3.optimizer状态值：每个参数有一个对应梯度，每个参数又对应优化器一个一阶动量和二阶动量。在混合精度训练中，使用半精度进行前向计算和梯度计算，同时优化器备份一份单精度的优化器状态、梯度和参数用于更新参数，因此共有(Φ+Φ)<em>2+(Φ+Φ+2Φ)</em>4=20Φ，除去参数和梯度，优化器占部分16Φ</p>
-<p>4.激活值：保存激活值是为了计算梯度，因此每个矩阵相乘、softmax、dropout都需要保存输入值的中间的激活值。总共是34BSH+5BNS^2，如果都是半精度，就乘以2。</p>
-<p>模型参数、梯度和优化器状态和输入长度无关，是固定值，而激活值随着长度增加，以平方速度增长。
-以GPT3（175B）为例，H=12288，L=96，N=96。模型参数量显存越为350G。以B=1计算，如果S=1024，激活值约为90G；如果S=8192，激活值约为3420G。</p>
+<p>前面对DPO的思路做了整理：<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a>。</p>
+<p>DPO把RLHF的两阶段训练，变成了一阶段训练，降低了训练成本。而ODPO（DPO
+with an
+offset）在DPO的基础上做了一点改进，在几个下游任务的实验中，获得了比DPO更好的效果。</p>
+<h1 id="背景">背景</h1>
+<p>直接使用指令微调，是让模型学会处理下游任务的一个快速有效的方法。</p>
+<p>但是指令微调的优化目标是maximize the response
+log-likelihood，这和“生成人类所偏好的高质量内容”的目标之间存在gap，不完全对齐。</p>
+<p>这个misalignment部分是因为maximum
+likelihood的目标无法区分数据里“大错”（比如幻觉）和“小错”（比如标点符号不恰当）。</p>
+<blockquote>
+<p>Training with the maximum likelihood objective makes the model assign
+nonzero probability mass to all responses in SFT dataset, even those of
+lower quality.</p>
+</blockquote>
+<p>因此有RLHF的方法来解决这个问题。RL通过人类偏好数据训练一个reward模型，并用reward模型来指导策略模型。</p>
+<p>而reward的modeling有两种，pointwise reward和pairwise preference。</p>
+<p>pointwise
+reward一般用于reward有比较确定定义且简单的场景，比如情感分类，我们可以定义positive的情感的reward为1，negative的reward为0。类似的还有toxicity等。这些类别一般也有很多现成的打分模型/classifier可以使用。</p>
+<p>pairwise
+preference一般用于比较复杂的任务，比如文本摘要和对话生成。这类任务难以直接基于单个答案来打分，而需要通过对比才能知道哪个更好。</p>
+<p>但RLHF成本比较高，因此DPO对训练过程进行了简化。</p>
+<h1 id="bradleyterry-model的局限">Bradley–Terry model的局限</h1>
+<p>DPO的损失如下</p>
+<p><span class="math display">\[\begin{aligned}
+\mathcal{L}^{\mathrm{DPO}}(\boldsymbol{\theta})&amp;
+=-\mathbb{E}_{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\sim\mathcal{D}_{\text{HF}}}\left[\log\sigma\Big(\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}_w\mid\boldsymbol{x})}{\pi_{\text{SFT}}(\boldsymbol{y}_w\mid\boldsymbol{x})}-\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}_l\mid\boldsymbol{x})}{\pi_{\text{SFT}}(\boldsymbol{y}_l\mid\boldsymbol{x})}\Big)\right]  \\
+&amp;=-\underset{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\thicksim\mathcal{D}_{\mathrm{HF}}}{\operatorname*{\mathbb{E}}}\left[\log\sigma\left(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w)-\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)\right)\right]
+\end{aligned}\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y})=\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}|\boldsymbol{x})}{\pi_{\mathrm{SFT}}(\boldsymbol{y}|\boldsymbol{x})}\]</span></p>
+<p>是estimated reward。</p>
+<p>这个DPO损失的形式背后用到了Bradley–Terry
+model对偏好进行建模。而Bradley–Terry
+model只给出了一个response比另一个response好的概率，而没有告诉我们好的程度。</p>
+<p>而实际上我们很多偏好对比数据都提供了具体的分数，而不仅仅是排序信息。有这些具体分数我们就可以知道两条response之间是差一点点，还是差很多。</p>
+<p>那么把这个差距的信息引入到偏好的建模里，应该能带来收益，这也是ODPO的思路，而两个response之间的差距就是offset。</p>
+<h1 id="dpo-with-an-offset">DPO with an Offset</h1>
+<p>给 <span class="math inline">\(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w),\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)\)</span>
+分别加上Gumbel noise，即得到</p>
+<p><span class="math display">\[\tilde{r}_w\sim\operatorname{Gumbel}(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w),1)\]</span></p>
+<p><span class="math display">\[\tilde{r}_l\sim\operatorname{Gumbel}(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l),1)\]</span></p>
+<p>论文中证明了</p>
+<p><span class="math display">\[p\big(\tilde{r}_w-\tilde{r}_l&gt;\Delta_r\big)=\sigma(\Delta_{\hat{r}_\theta}-\Delta_r)\]</span></p>
+<p>基于此，ODPO的损失函数表达成</p>
+<p><span class="math display">\[\mathcal{L}^{\mathrm{ODPO}}(\boldsymbol{\theta})=-\underset{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\sim\mathcal{D}_{\mathrm{HF}}}{\operatorname*{\mathbb{E}}}\left[\log\sigma{\left(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w)-\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)-\Delta_r\right)}\right]\]</span></p>
+<p>这相当于要求preferred response的estimated reward要比dispreferred
+response的estimated reward大，且要大offset值这么多。</p>
+<p>当offset=0的时候，ODPO的损失等价于DPO的损失。</p>
+<p>ODPO的这个做法和softmax margin loss/marginal
+loss有些相似，都是在原来loss的基础上，加上一个margin，加大对靠得比较近的数据对的penalization的力度。</p>
+<p>ODPO里，offset是两个response之间的actual reward的increasing scaling
+function。</p>
+<p><span class="math display">\[\Delta_r=\alpha\mathbf{f}\big(\mathrm{score}(\boldsymbol{x},\boldsymbol{y}_w)-\mathrm{score}(\boldsymbol{x},\boldsymbol{y}_l)\big)\]</span></p>
+<p>其中 <span class="math inline">\(\alpha\)</span> 是超参。</p>
+<img src="/da871ebe/odpo_intro.png" class title="intro">
+<h1 id="实验">实验</h1>
+<p>论文在几个下游任务上做了实验。</p>
+<h2 id="sentiment-control">sentiment control</h2>
+<p>首先是sentiment control的任务，即要求模型输出positive的response。</p>
+<p>先用GPT2-Large在IMDB
+dataset做了finetune，获得SFT模型。论文用一个现成的sentiment
+classifier作为reward的打分模型，给response分别打分，分数如下计算</p>
+<p><span class="math display">\[r_{negative}(\boldsymbol{x},\boldsymbol{y}) =
+1-p(\text{negative}\mid\cdot)\]</span></p>
+<p><span class="math display">\[r_{positive}(\boldsymbol{x},\boldsymbol{y}) =
+1+p(\text{positive}\mid\cdot)\]</span></p>
+<p>有了reward打分数据之后，还要构造偏好数据对。这里把同一个prompt下生成的所有reward分数不同的response进行排列组合，获得偏好数据对。</p>
+<p>对于DPO，有这些偏好数据对就够了。而ODPO还需要一个offset，按如下方式计算：</p>
+<p><span class="math display">\[\Delta_r=\log\left(r(\boldsymbol{y}_w)-r(\boldsymbol{y}_l)\right)\]</span></p>
+<p>实验里把 <span class="math inline">\(\alpha\)</span> 设为1。</p>
+<p>实验中使用两个不同的random
+seed，从SFT模型里进行采样，从而得到了2份不同的偏好数据。</p>
+<p>而 <span class="math inline">\(\beta\)</span> 使用了14个不同的取值
+<span class="math inline">\(\{0.1,0.2,\ldots,1\}\cup\{1,2,3,4,5\}\)</span>
+进行实验。</p>
+<p>论文在2份数据集下分别使用不同的数据量进行训练（5000，7500,10000），这样DPO和ODPO分别有2×3×14=84个实验。</p>
+<p>每个实验计算模型生成结果的sentiment打分，以及和SFT模型的KL
+divergence。结果如下图</p>
+<img src="/da871ebe/sentiment_control.png" class title="sentiment control">
+<p>我们希望模型在sentiment的打分上越高越好，同时不要和SFT模型有太大的差距，因此越靠近左上角的点越符合我们的要求。从结果上看，ODPO比DPO更好一些。</p>
+<h2 id="toxicity-control">toxicity control</h2>
+<p>toxicity control任务和sentiment
+control类似，要求模型的response的毒性尽量低。</p>
+<p>这次使用GPT-neo-2.7b模型，<span class="math inline">\(\beta\)</span>
+的取值范围为 <span class="math inline">\(\{0.05,0.1,0.2,0.3,0.4,0.5\}\)</span>，使用从REALTOXICITYPROMPTS数据集里抽样的10000个毒性评分大于0.3的prompt。</p>
+<p>结果如下</p>
+<img src="/da871ebe/toxicity_control.png" class title="toxicity control">
+<p>在数据量较少的情况下（8000 &amp; 9000），ODPO效果更明显好。</p>
+<h2 id="summarization">summarization</h2>
+<p>摘要任务使用REDDIT TL;DR数据集，使用的模型是GPTJ-6B。</p>
+<p>DPO和ODPO训练后的评分：抽了100条测试prompt，用不同的temperature生成结果，并用GPT-4进行评分对比。结果如下</p>
+<img src="/da871ebe/summarization.png" class title="summarization">
+<p>DPO和ODPO都比SFT好，并且在temperature比较低的设置下，DPO和ODPO都比human-written的结果好。</p>
+<h2 id="消融实验scaling-function">消融实验：scaling function</h2>
+<p>前面实验的offset都是用reward差值的log值，这里使用其他两种计算方式进行对比</p>
+<p><span class="math display">\[\Delta_r=\log r(\boldsymbol{y}_w)-\log
+r(\boldsymbol{y}_l)\]</span></p>
+<p><span class="math display">\[\begin{array}{rcl}\Delta_r=r(\boldsymbol{y}_w)-r(\boldsymbol{y}_l)\end{array}\]</span></p>
+<p>使用5000对sentiment control的数据，<span class="math inline">\(\beta
+\in \{0.1,0.2,\ldots,0.9\}\cup\{1,2,3,4,5\}\)</span>。</p>
+<p>对比结果如下</p>
+<img src="/da871ebe/scaling_function.png" class title="scaling function">
+<p>使用log scaling的ODPO在KL
+divergence更小的时候（0.4）可以达到0.8的reward，而没有使用log
+scaling的模型需要再更大的KL divergence下才能达到通用的reward。</p>
+<h2 id="消融实验α">消融实验：α</h2>
+<p>同样使用7500对sentiment control的数据，<span class="math inline">\(\beta=0.5\)</span>，改变<span class="math inline">\(\alpha\in\{0.0,0.1,0.2,0.3,0.5,0.8,1.\}\)</span>。</p>
+<img src="/da871ebe/alpha.png" class title="alpha">
+<p>发现更高的 <span class="math inline">\(\alpha\)</span>
+会使得模型更多偏离SFT模型，并带来更高的reward值。</p>
+<h1 id="小结">小结</h1>
+<p>ODPO在DPO的基础上加入了offset，在实现上并不复杂，而且能带来一些收益。</p>
+<p>略有瑕疵的是ODPO的实验覆盖面并不太全，也没有使用LLAMA等更强大的模型进行实验。</p>
 <hr>
 <p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
@@ -349,7 +427,10 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
 <p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
@@ -358,7 +439,14 @@ window attention</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a></p>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Direct Preference Optimization with an Offset
+https://arxiv.org/pdf/2402.10571</p>
 
     </div>
 
@@ -376,7 +464,7 @@ window attention</a><br>
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://saicat.github.io/1736008.html" title="大模型算法题(4)">https://saicat.github.io/1736008.html</a>
+      <a href="https://saicat.github.io/da871ebe.html" title="大模型偏好对齐-ODPO">https://saicat.github.io/da871ebe.html</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -387,21 +475,22 @@ window attention</a><br>
           <div class="post-tags">
               <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
               <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
-              <a href="/tags/%E7%AE%97%E6%B3%95%E9%A2%98/" rel="tag"><i class="fa fa-tag"></i> 算法题</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0/" rel="tag"><i class="fa fa-tag"></i> 强化学习</a>
+              <a href="/tags/%E5%BE%AE%E8%B0%83/" rel="tag"><i class="fa fa-tag"></i> 微调</a>
+              <a href="/tags/SFT/" rel="tag"><i class="fa fa-tag"></i> SFT</a>
+              <a href="/tags/%E5%81%8F%E5%A5%BD%E5%AF%B9%E9%BD%90/" rel="tag"><i class="fa fa-tag"></i> 偏好对齐</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/b70b4a2d.html" rel="prev" title="从代码实现看normalization-到底做了什么">
-                  <i class="fa fa-angle-left"></i> 从代码实现看normalization-到底做了什么
+                <a href="/473f2b43.html" rel="prev" title="大模型偏好对齐-DPO">
+                  <i class="fa fa-angle-left"></i> 大模型偏好对齐-DPO
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/336f2f3e.html" rel="next" title="大模型算法题(5)">
-                  大模型算法题(5) <i class="fa fa-angle-right"></i>
-                </a>
             </div>
           </div>
     </footer>
