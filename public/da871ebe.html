@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  前面对DPO的思路做了整理：大模型偏好对齐-DPO。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大模型偏好对齐-ODPO">
+<meta property="og:url" content="https://saicat.github.io/da871ebe.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  前面对DPO的思路做了整理：大模型偏好对齐-DPO。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/odpo_intro.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/sentiment_control.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/toxicity_control.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/summarization.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/scaling_function.png">
+<meta property="og:image" content="https://saicat.github.io/da871ebe/alpha.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-05-30T07:23:05.000Z">
+<meta property="article:modified_time" content="2024-05-31T12:26:56.345Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="强化学习">
+<meta property="article:tag" content="微调">
+<meta property="article:tag" content="SFT">
+<meta property="article:tag" content="偏好对齐">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/da871ebe/odpo_intro.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/da871ebe.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/da871ebe.html","path":"da871ebe.html","title":"大模型偏好对齐-ODPO"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>大模型偏好对齐-ODPO | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#bradleyterry-model%E7%9A%84%E5%B1%80%E9%99%90"><span class="nav-number">2.</span> <span class="nav-text">Bradley–Terry model的局限</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#dpo-with-an-offset"><span class="nav-number">3.</span> <span class="nav-text">DPO with an Offset</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">4.</span> <span class="nav-text">实验</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#sentiment-control"><span class="nav-number">4.1.</span> <span class="nav-text">sentiment control</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#toxicity-control"><span class="nav-number">4.2.</span> <span class="nav-text">toxicity control</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#summarization"><span class="nav-number">4.3.</span> <span class="nav-text">summarization</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B6%88%E8%9E%8D%E5%AE%9E%E9%AA%8Cscaling-function"><span class="nav-number">4.4.</span> <span class="nav-text">消融实验：scaling function</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B6%88%E8%9E%8D%E5%AE%9E%E9%AA%8C%CE%B1"><span class="nav-number">4.5.</span> <span class="nav-text">消融实验：α</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">21</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/da871ebe.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="大模型偏好对齐-ODPO | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          大模型偏好对齐-ODPO
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-05-30 15:23:05" itemprop="dateCreated datePublished" datetime="2024-05-30T15:23:05+08:00">2024-05-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-05-31 20:26:56" itemprop="dateModified" datetime="2024-05-31T20:26:56+08:00">2024-05-31</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>10 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>前面对DPO的思路做了整理：<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a>。</p>
+<p>DPO把RLHF的两阶段训练，变成了一阶段训练，降低了训练成本。而ODPO（DPO
+with an
+offset）在DPO的基础上做了一点改进，在几个下游任务的实验中，获得了比DPO更好的效果。</p>
+<h1 id="背景">背景</h1>
+<p>直接使用指令微调，是让模型学会处理下游任务的一个快速有效的方法。</p>
+<p>但是指令微调的优化目标是maximize the response
+log-likelihood，这和“生成人类所偏好的高质量内容”的目标之间存在gap，不完全对齐。</p>
+<p>这个misalignment部分是因为maximum
+likelihood的目标无法区分数据里“大错”（比如幻觉）和“小错”（比如标点符号不恰当）。</p>
+<blockquote>
+<p>Training with the maximum likelihood objective makes the model assign
+nonzero probability mass to all responses in SFT dataset, even those of
+lower quality.</p>
+</blockquote>
+<p>因此有RLHF的方法来解决这个问题。RL通过人类偏好数据训练一个reward模型，并用reward模型来指导策略模型。</p>
+<p>而reward的modeling有两种，pointwise reward和pairwise preference。</p>
+<p>pointwise
+reward一般用于reward有比较确定定义且简单的场景，比如情感分类，我们可以定义positive的情感的reward为1，negative的reward为0。类似的还有toxicity等。这些类别一般也有很多现成的打分模型/classifier可以使用。</p>
+<p>pairwise
+preference一般用于比较复杂的任务，比如文本摘要和对话生成。这类任务难以直接基于单个答案来打分，而需要通过对比才能知道哪个更好。</p>
+<p>但RLHF成本比较高，因此DPO对训练过程进行了简化。</p>
+<h1 id="bradleyterry-model的局限">Bradley–Terry model的局限</h1>
+<p>DPO的损失如下</p>
+<p><span class="math display">\[\begin{aligned}
+\mathcal{L}^{\mathrm{DPO}}(\boldsymbol{\theta})&amp;
+=-\mathbb{E}_{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\sim\mathcal{D}_{\text{HF}}}\left[\log\sigma\Big(\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}_w\mid\boldsymbol{x})}{\pi_{\text{SFT}}(\boldsymbol{y}_w\mid\boldsymbol{x})}-\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}_l\mid\boldsymbol{x})}{\pi_{\text{SFT}}(\boldsymbol{y}_l\mid\boldsymbol{x})}\Big)\right]  \\
+&amp;=-\underset{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\thicksim\mathcal{D}_{\mathrm{HF}}}{\operatorname*{\mathbb{E}}}\left[\log\sigma\left(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w)-\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)\right)\right]
+\end{aligned}\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y})=\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}|\boldsymbol{x})}{\pi_{\mathrm{SFT}}(\boldsymbol{y}|\boldsymbol{x})}\]</span></p>
+<p>是estimated reward。</p>
+<p>这个DPO损失的形式背后用到了Bradley–Terry
+model对偏好进行建模。而Bradley–Terry
+model只给出了一个response比另一个response好的概率，而没有告诉我们好的程度。</p>
+<p>而实际上我们很多偏好对比数据都提供了具体的分数，而不仅仅是排序信息。有这些具体分数我们就可以知道两条response之间是差一点点，还是差很多。</p>
+<p>那么把这个差距的信息引入到偏好的建模里，应该能带来收益，这也是ODPO的思路，而两个response之间的差距就是offset。</p>
+<h1 id="dpo-with-an-offset">DPO with an Offset</h1>
+<p>给 <span class="math inline">\(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w),\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)\)</span>
+分别加上Gumbel noise，即得到</p>
+<p><span class="math display">\[\tilde{r}_w\sim\operatorname{Gumbel}(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w),1)\]</span></p>
+<p><span class="math display">\[\tilde{r}_l\sim\operatorname{Gumbel}(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l),1)\]</span></p>
+<p>论文中证明了</p>
+<p><span class="math display">\[p\big(\tilde{r}_w-\tilde{r}_l&gt;\Delta_r\big)=\sigma(\Delta_{\hat{r}_\theta}-\Delta_r)\]</span></p>
+<p>基于此，ODPO的损失函数表达成</p>
+<p><span class="math display">\[\mathcal{L}^{\mathrm{ODPO}}(\boldsymbol{\theta})=-\underset{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\sim\mathcal{D}_{\mathrm{HF}}}{\operatorname*{\mathbb{E}}}\left[\log\sigma{\left(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w)-\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)-\Delta_r\right)}\right]\]</span></p>
+<p>这相当于要求preferred response的estimated reward要比dispreferred
+response的estimated reward大，且要大offset值这么多。</p>
+<p>当offset=0的时候，ODPO的损失等价于DPO的损失。</p>
+<p>ODPO的这个做法和softmax margin loss/marginal
+loss有些相似，都是在原来loss的基础上，加上一个margin，加大对靠得比较近的数据对的penalization的力度。</p>
+<p>ODPO里，offset是两个response之间的actual reward的increasing scaling
+function。</p>
+<p><span class="math display">\[\Delta_r=\alpha\mathbf{f}\big(\mathrm{score}(\boldsymbol{x},\boldsymbol{y}_w)-\mathrm{score}(\boldsymbol{x},\boldsymbol{y}_l)\big)\]</span></p>
+<p>其中 <span class="math inline">\(\alpha\)</span> 是超参。</p>
+<img src="/da871ebe/odpo_intro.png" class title="intro">
+<h1 id="实验">实验</h1>
+<p>论文在几个下游任务上做了实验。</p>
+<h2 id="sentiment-control">sentiment control</h2>
+<p>首先是sentiment control的任务，即要求模型输出positive的response。</p>
+<p>先用GPT2-Large在IMDB
+dataset做了finetune，获得SFT模型。论文用一个现成的sentiment
+classifier作为reward的打分模型，给response分别打分，分数如下计算</p>
+<p><span class="math display">\[r_{negative}(\boldsymbol{x},\boldsymbol{y}) =
+1-p(\text{negative}\mid\cdot)\]</span></p>
+<p><span class="math display">\[r_{positive}(\boldsymbol{x},\boldsymbol{y}) =
+1+p(\text{positive}\mid\cdot)\]</span></p>
+<p>有了reward打分数据之后，还要构造偏好数据对。这里把同一个prompt下生成的所有reward分数不同的response进行排列组合，获得偏好数据对。</p>
+<p>对于DPO，有这些偏好数据对就够了。而ODPO还需要一个offset，按如下方式计算：</p>
+<p><span class="math display">\[\Delta_r=\log\left(r(\boldsymbol{y}_w)-r(\boldsymbol{y}_l)\right)\]</span></p>
+<p>实验里把 <span class="math inline">\(\alpha\)</span> 设为1。</p>
+<p>实验中使用两个不同的random
+seed，从SFT模型里进行采样，从而得到了2份不同的偏好数据。</p>
+<p>而 <span class="math inline">\(\beta\)</span> 使用了14个不同的取值
+<span class="math inline">\(\{0.1,0.2,\ldots,1\}\cup\{1,2,3,4,5\}\)</span>
+进行实验。</p>
+<p>论文在2份数据集下分别使用不同的数据量进行训练（5000，7500,10000），这样DPO和ODPO分别有2×3×14=84个实验。</p>
+<p>每个实验计算模型生成结果的sentiment打分，以及和SFT模型的KL
+divergence。结果如下图</p>
+<img src="/da871ebe/sentiment_control.png" class title="sentiment control">
+<p>我们希望模型在sentiment的打分上越高越好，同时不要和SFT模型有太大的差距，因此越靠近左上角的点越符合我们的要求。从结果上看，ODPO比DPO更好一些。</p>
+<h2 id="toxicity-control">toxicity control</h2>
+<p>toxicity control任务和sentiment
+control类似，要求模型的response的毒性尽量低。</p>
+<p>这次使用GPT-neo-2.7b模型，<span class="math inline">\(\beta\)</span>
+的取值范围为 <span class="math inline">\(\{0.05,0.1,0.2,0.3,0.4,0.5\}\)</span>，使用从REALTOXICITYPROMPTS数据集里抽样的10000个毒性评分大于0.3的prompt。</p>
+<p>结果如下</p>
+<img src="/da871ebe/toxicity_control.png" class title="toxicity control">
+<p>在数据量较少的情况下（8000 &amp; 9000），ODPO效果更明显好。</p>
+<h2 id="summarization">summarization</h2>
+<p>摘要任务使用REDDIT TL;DR数据集，使用的模型是GPTJ-6B。</p>
+<p>DPO和ODPO训练后的评分：抽了100条测试prompt，用不同的temperature生成结果，并用GPT-4进行评分对比。结果如下</p>
+<img src="/da871ebe/summarization.png" class title="summarization">
+<p>DPO和ODPO都比SFT好，并且在temperature比较低的设置下，DPO和ODPO都比human-written的结果好。</p>
+<h2 id="消融实验scaling-function">消融实验：scaling function</h2>
+<p>前面实验的offset都是用reward差值的log值，这里使用其他两种计算方式进行对比</p>
+<p><span class="math display">\[\Delta_r=\log r(\boldsymbol{y}_w)-\log
+r(\boldsymbol{y}_l)\]</span></p>
+<p><span class="math display">\[\begin{array}{rcl}\Delta_r=r(\boldsymbol{y}_w)-r(\boldsymbol{y}_l)\end{array}\]</span></p>
+<p>使用5000对sentiment control的数据，<span class="math inline">\(\beta
+\in \{0.1,0.2,\ldots,0.9\}\cup\{1,2,3,4,5\}\)</span>。</p>
+<p>对比结果如下</p>
+<img src="/da871ebe/scaling_function.png" class title="scaling function">
+<p>使用log scaling的ODPO在KL
+divergence更小的时候（0.4）可以达到0.8的reward，而没有使用log
+scaling的模型需要再更大的KL divergence下才能达到通用的reward。</p>
+<h2 id="消融实验α">消融实验：α</h2>
+<p>同样使用7500对sentiment control的数据，<span class="math inline">\(\beta=0.5\)</span>，改变<span class="math inline">\(\alpha\in\{0.0,0.1,0.2,0.3,0.5,0.8,1.\}\)</span>。</p>
+<img src="/da871ebe/alpha.png" class title="alpha">
+<p>发现更高的 <span class="math inline">\(\alpha\)</span>
+会使得模型更多偏离SFT模型，并带来更高的reward值。</p>
+<h1 id="小结">小结</h1>
+<p>ODPO在DPO的基础上加入了offset，在实现上并不复杂，而且能带来一些收益。</p>
+<p>略有瑕疵的是ODPO的实验覆盖面并不太全，也没有使用LLAMA等更强大的模型进行实验。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Direct Preference Optimization with an Offset
+https://arxiv.org/pdf/2402.10571</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/da871ebe.html" title="大模型偏好对齐-ODPO">https://saicat.github.io/da871ebe.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0/" rel="tag"><i class="fa fa-tag"></i> 强化学习</a>
+              <a href="/tags/%E5%BE%AE%E8%B0%83/" rel="tag"><i class="fa fa-tag"></i> 微调</a>
+              <a href="/tags/SFT/" rel="tag"><i class="fa fa-tag"></i> SFT</a>
+              <a href="/tags/%E5%81%8F%E5%A5%BD%E5%AF%B9%E9%BD%90/" rel="tag"><i class="fa fa-tag"></i> 偏好对齐</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/473f2b43.html" rel="prev" title="大模型偏好对齐-DPO">
+                  <i class="fa fa-angle-left"></i> 大模型偏好对齐-DPO
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/280fa97a.html" rel="next" title="大模型偏好对齐-simPO">
+                  大模型偏好对齐-simPO <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">196k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">5:56</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
