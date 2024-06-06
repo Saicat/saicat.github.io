@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  之前我们对比较热门的十个MoE工作进行了整理：MoE模型的前世今生。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="昆仑万维-SkyworkMoE">
+<meta property="og:url" content="https://saicat.github.io/1d5bcd45.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  之前我们对比较热门的十个MoE工作进行了整理：MoE模型的前世今生。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/1d5bcd45/structure.png">
+<meta property="og:image" content="https://saicat.github.io/1d5bcd45/100B.png">
+<meta property="og:image" content="https://saicat.github.io/1d5bcd45/exp_1.png">
+<meta property="og:image" content="https://saicat.github.io/1d5bcd45/gate_dist.png">
+<meta property="og:image" content="https://saicat.github.io/1d5bcd45/normaization.png">
+<meta property="og:image" content="https://saicat.github.io/1d5bcd45/lr_exp.png">
+<meta property="og:image" content="https://saicat.github.io/1d5bcd45/lr_result.png">
+<meta property="og:image" content="https://saicat.github.io/1d5bcd45/diff_dense.png">
+<meta property="og:image" content="https://saicat.github.io/1d5bcd45/perf.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-06-04T12:51:02.000Z">
+<meta property="article:modified_time" content="2024-06-05T12:41:50.292Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="MoE">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/1d5bcd45/structure.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/1d5bcd45.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/1d5bcd45.html","path":"1d5bcd45.html","title":"昆仑万维-SkyworkMoE"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>昆仑万维-SkyworkMoE | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#skywork-moe%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">Skywork-MoE模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E8%B7%AF%E7%BA%BF%E9%80%89%E6%8B%A9"><span class="nav-number">2.</span> <span class="nav-text">训练路线选择</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%AE%BE%E8%AE%A1"><span class="nav-number">3.</span> <span class="nav-text">模型设计</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#gating-logit-normalization"><span class="nav-number">3.1.</span> <span class="nav-text">gating logit normalization</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#adaptive-auxiliary-loss-coefficients"><span class="nav-number">3.2.</span> <span class="nav-text">adaptive auxiliary loss
+coefficients</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E5%B0%9D%E8%AF%95"><span class="nav-number">4.</span> <span class="nav-text">其他尝试</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AD%A6%E4%B9%A0%E7%8E%87"><span class="nav-number">4.1.</span> <span class="nav-text">学习率</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E6%A0%B7%E5%8C%96%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">4.2.</span> <span class="nav-text">多样化初始化</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">5.</span> <span class="nav-text">效果</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">23</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/1d5bcd45.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="昆仑万维-SkyworkMoE | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          昆仑万维-SkyworkMoE
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-06-04 20:51:02" itemprop="dateCreated datePublished" datetime="2024-06-04T20:51:02+08:00">2024-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-06-05 20:41:50" itemprop="dateModified" datetime="2024-06-05T20:41:50+08:00">2024-06-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>11 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>之前我们对比较热门的十个MoE工作进行了整理：<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a>。</p>
+<p>最近昆仑万维开源了Skywork-MoE，一个总参数量为146B，激活参数量为22B的MoE模型。</p>
+<p>Skywork-MoE技术报告中针对几个实操会遇到的问题做了一些实验，还是挺有借鉴意义的。</p>
+<h1 id="skywork-moe模型">Skywork-MoE模型</h1>
+<p>分析之前，先看下Skywork-MoE的模型设计：<br>
+- Llama-like architecture<br>
+- RoPE<br>
+- RMSNorm<br>
+- SwiGLU activation function</p>
+<p>其他参数如下表</p>
+<img src="/1d5bcd45/structure.png" class title="模型结构">
+<p>Skywork-MoE共有146B参数，16个专家，激活参数量为22B。</p>
+<p>训练集群用到了192个NVIDIAHGX-A800节点，共1536个A800-80G显卡。</p>
+<p>训练框架是基于Megatron搭建的，data
+parallelism开了ZeRO-1优化，训练速度能达到690token/GPU/second，GPU利用率是38%。</p>
+<h1 id="训练路线选择">训练路线选择</h1>
+<p>在当前的情况下，要训练一个MoE模型有两条路线可以选择：<br>
+-
+upcycling：用一个dense模型做MoE模型的初始化，进行一定的继续预训练。这样的好处是MoE模型能在一个比较好的初始化点开始训练，直觉上这样的模型应该收敛得相对比较快，成本也比较低。存在的问题是dense模型的选择可能存在一些权衡取舍，且从dense进行初始化可能对最终效果存在负面影响。<br>
+- from
+scratch：直接随机初始化一个MoE模型，从零开始训练。这样成本相比upcycling就比较高，但是效果可能比upcycling更好。</p>
+<p>当然还有一种方法是，先从零训一个dense模型，再从这个dense模型训练一个MoE模型。但是后面的实验告诉我们，如果这个dense模型纯粹是为最终的MoE模型服务的话，那这种方法是费力不讨好的。</p>
+<p>要决定是upcycling还是from
+scratch，需要看现有的dense模型的水平，以及MoE模型的训练预算。首先如果预算根本支持不了MoE模型这个规模的训练，那我们当然只能选择upcycling。只有当预算充足，我们才有机会选择from
+scratch这条路。而如果没有可用的dense模型，那就只能选择from scratch。</p>
+<p>前面我们从直觉上认为from
+scratch效果会更好，下面就从实验上来验证这个想法。</p>
+<p>首先，在300B
+token的数据上训练一个0.3B的dense模型，并分别取100B和300B时的checkpoint作为后续实验的起始点。这两个checkpoint起个名字叫"checkpoint-100B"和"checkpoint-300B"。</p>
+<p>然后在相同结构下，把dense模型扩成有8个专家的MoE模型，并使用3种不同的初始化策略：from-scratch
+/ checkpoint-100B / checkpoint-300B。</p>
+<p>假设我们现在有两种MoE模型的训练预算，100B和300B（token）。</p>
+<p>对于100B训练预算，对比以下几个模型</p>
+<img src="/1d5bcd45/100B.png" class title="100B">
+<p>同样地，对于300B预算的情况，训练了init_scratch-decay_300b和init_100b-decay_300b。另外还训练了一个init_300b-3xLR，相比init_300b-const提升了3倍的学习率，用于验证学习率的影响。</p>
+<p>各个模型的训练结果如下图所示</p>
+<img src="/1d5bcd45/exp_1.png" class title="实验">
+<p>左图：在100B的训练预算下，from
+scratch已经可以和从dense初始化的MoE模型loss持平，甚至比init_300b-const好。报告认为init_300b-const效果不好有一部分原因是学习率太小了。</p>
+<p>中图：在300B的训练预算下，from
+scratch模型已经超越所有其他模型。另外学习率最小的模型表现最差。</p>
+<p>右图：把中图几个模型的expert similarity画出来，发现expert
+similarity越低的模型，表现越好，并且对于upcycling的模型，expert
+similarity在训练过程中越来越低，对应着模型效果越来越好。而from
+scratch的模型的expert
+similarity基本上一直保持为0，这也说明从dense模型初始化会使得专家多样性比较弱，从而使得模型收敛到suboptimal的点。</p>
+<p>据此，报告给出路线选择的经验法则。假设 <span class="math inline">\(C_{\mathrm{dense}}\)</span>
+是dense模型的训练成本，<span class="math inline">\(C_{\mathrm{MoE}}\)</span>
+是MoE模型的训练预算，那么：<br>
+- 如果 <span class="math inline">\(C_{\mathrm{MoE}}\ll
+C_{\mathrm{dense}}\)</span>，选择upcycling，upcycling能更好利用上dense模型已投入的成本。<br>
+- 如果 <span class="math inline">\(C_{\mathrm{MoE}}\geq2C_{\mathrm{dense}}\)</span>，选择from
+scratch，能获得更好的效果。</p>
+<p>另外，学习率的影响很大，这个要仔细设置。</p>
+<h1 id="模型设计">模型设计</h1>
+<p>模型设计上，Skywork-MoE提出了两个主要的改进：gating logit
+normalization和adaptive auxiliary loss coefficients。</p>
+<h2 id="gating-logit-normalization">gating logit normalization</h2>
+<p>研究人员在训练过程中发现有一个现象，那就是有时gating
+layer会输出熵很高的分布，也就是分配给各个专家的概率接近平均分布。这样的结果就是MoE层的输出基本上相当于是各个专家的平均值，而不是一个weighted
+average。</p>
+<p>而出现这种现象说明gating
+layer没有很好地区分各个专家，无法把相应的输入分配给最合适的专家。</p>
+<p>针对这个问题，Skywork-MoE给出的方法就是在gating
+layer的softmax之前引入一个normalization step，如下式</p>
+<p><span class="math display">\[\begin{aligned}&amp;z=Wx+b\\&amp;\tilde{z}=\lambda\cdot\frac{z-\mu}{\sigma}\\&amp;g=\operatorname{softmax}(\tilde{z})\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\lambda\)</span> 是一个超参。</p>
+<p>这样归一化之后我们就得到一个均值为0，而方差受 <span class="math inline">\(\lambda\)</span> 控制的向量。大的 <span class="math inline">\(\lambda\)</span>
+值会使得softmax之后的分布更显著，更不均匀。这就相当于给softmax加上一个放大器，把原本不显著的差异进行放大。</p>
+<p>为了验证这个设计的有效性，Skywork-MoE在2.5B参数16个专家的MoE模型上，分别使用和不使用gating
+logit normalization进行了训练。</p>
+<p>两个模型的gating分布差异如下图所示，normalization确实可以增大各个专家分配到的概率的差异。</p>
+<img src="/1d5bcd45/gate_dist.png" class title="gating distribution">
+<p>使用了normalization的模型在training loss和token drop
+rate上都有更好的表现，如下图所示。</p>
+<img src="/1d5bcd45/normaization.png" class title="gating logit normalization">
+<p>而统计gating
+layer输出的分布中的Max1/Max2和Max2/Max3比值也同样说明了各个expert被更有效地区分开了。</p>
+<p>在千亿Skywork-MoE模型的训练中，使用了 <span class="math inline">\(\lambda=1\)</span>。</p>
+<h2 id="adaptive-auxiliary-loss-coefficients">adaptive auxiliary loss
+coefficients</h2>
+<p>一般来说，MoE模型在训练中都会加入一个auxiliary
+loss，帮助平衡专家的选择分布，提升训练效率，也增强专家的多样性。对于有M个MoE层的模型，最终loss如下式所示。</p>
+<p><span class="math display">\[\mathcal{L}_{\mathrm{total}}=\mathcal{L}_{\mathrm{ce}}+\sum_{l=1}^M\alpha\mathcal{L}_{\mathrm{aux}}^{(l)}\]</span></p>
+<p>每个MoE层都有对应的auxiliary loss。</p>
+<p>Skywork-MoE认为每层的auxiliary loss的系数 <span class="math inline">\(\alpha\)</span>
+不一定要相同，并且随着训练进行，在gating的平衡已经比较好的时候，可以放宽auxiliary
+loss的限制强度，避免影响模型的最终效果。</p>
+<p>基于这两个想法，Skywork-MoE提出adaptive auxiliary loss
+coefficients。</p>
+<p>每个MoE层的auxiliary
+loss有自己的系数，而这个系数和当前这个MoE层的token drop
+rate联系了起来。大的token drop
+rate表示gating的分配不平衡，因此要加强auxiliary
+loss的约束，反之则可以减小约束。</p>
+<p>对于第l个MoE层，在第i个step的时候，auxiliary loss的系数计算如下</p>
+<p><span class="math display">\[\begin{array}{rcl}\hat\alpha_{i+1}^{(l)}&amp;=&amp;f(d_i^{(l)})\\\alpha_{i+1}^{(l)}&amp;=&amp;\beta\alpha_i^{(l)}+(1-\beta)\hat\alpha_{i+1}^{(l)}\end{array}\]</span></p>
+<p>其中d表示token drop rate，f是一个单调递增函数。<span class="math inline">\(\alpha\)</span> 会随着训练，通过moving
+average更新。<span class="math inline">\(\beta\)</span> 是moving
+average的权重，是一个超参。</p>
+<p>实际实现中，f设计成：</p>
+<p><span class="math display">\[f(d)=\left\{\begin{array}{ll}\xi
+d&amp;\text{if
+}d\leq\alpha_{\text{max}}/\xi\\\alpha_{\text{max}}&amp;\text{if
+}d&gt;\alpha_{\text{max}}/\xi\end{array}\right.\]</span></p>
+<p><span class="math inline">\(\xi\)</span> 表示auxiliary loss
+coefficient对token drop rate的敏感程度。</p>
+<p>最终训练中，各个超参的设置为：<br>
+- <span class="math inline">\(\xi=1/5\)</span><br>
+- <span class="math inline">\(\alpha_{\max}=0.01\)</span><br>
+- <span class="math inline">\(\beta=0.99\)</span></p>
+<h1 id="其他尝试">其他尝试</h1>
+<p>报告中还给出了训练中一些其他尝试，虽然没有直接效果，但是也有参考意义。</p>
+<h2 id="学习率">学习率</h2>
+<p>MoE模型由于路由策略的存在，每个专家平均接受到的输入token数比global
+batch size要小。</p>
+<p>假设共有n个专家，激活专家数为k，那么平均每个专家接受到的输入只有模型输入的k/n。</p>
+<p>而有效batch
+size的减小意味着更容易引入noise，对此一般的应对方案就是减小learning
+rate，可以进行linear scaling（<span class="math inline">\(k/n\)</span>），或者square root scaling（<span class="math inline">\(\sqrt{k/n}\)</span>）。</p>
+<p>那么减小learning
+rate是否能提升效果呢？Skywork-MoE用一个1.8B参数，共32个专家，激活专家数为2的模型，按square
+root scaling，进行了以下3个实验</p>
+<img src="/1d5bcd45/lr_exp.png" class title="lr实验">
+<p>所有模型在训了300B数据之后，lr会降到peak
+lr的10%，然后会再继续训10B，在这个过程里lr逐渐降为0。</p>
+<p>训练的loss如下图</p>
+<img src="/1d5bcd45/lr_result.png" class title="lr实验">
+<p>虽然在300B的训练量下，减小lr有一点收益，但是随着最后10B的训练，三个模型都收敛到同样的loss。这说明前面的loss差异并不是不可弥补的，更可能只是因为在300B时三个模型的lr
+decay到不同的绝对值而已。</p>
+<p>这也说明根据专家数量减少MoE模型的训练学习率并没有太大必要。</p>
+<h2 id="多样化初始化">多样化初始化</h2>
+<p>前面提到，用一个dense模型进行初始化，会导致各个专家相似度过高，从而损害MoE模型的效果。那么我们自然想到用多样化的几个dense模型进行MoE的初始化，效果是不是会更好。</p>
+<p>Skywork-MoE对此进行了实验。把原始dense模型分别用不同的100B数据进行训练，从而获得多个dense模型，并用这些多样化的dense模型初始化MoE模型。</p>
+<p>具体来说，基于原始dense模型 <span class="math inline">\(M_{\mathrm{base}}\)</span>，用了中文、英文、代码三个不同的100B数据集进行训练，获得
+<span class="math inline">\(M_{\mathrm{cn}},M_{\mathrm{en}},M_{\mathrm{code}}\)</span>
+三个dense模型。之后把 <span class="math inline">\(M_{\mathrm{cn}}\)</span> 复制3份，<span class="math inline">\(M_{\mathrm{en}}\)</span> 复制3份，<span class="math inline">\(M_{\mathrm{code}}\)</span> 复制1份，<span class="math inline">\(M_{\mathrm{base}}\)</span>
+复制1份，共同初始化一个有8个专家的MoE模型。</p>
+<p>多样化和无多样化的初始化方法，训练loss对比如下</p>
+<img src="/1d5bcd45/diff_dense.png" class title="初始化实验">
+<p>可以看到多样化的初始化方法确实有一点收益，不过随着训练进行，差异在逐渐减小。</p>
+<p>经过90B数据的训练之后，二者的loss只有不到0.01的差距。相较于dense模型的多次继续预训练成本，这个收益并不明显，因此Skywork-MoE最终没有采用多样化的初始化方法。</p>
+<h1 id="效果">效果</h1>
+<p>146B参数的Skywork-MoE是从Skywork-13B初始化而来的。</p>
+<p>训练数据使用了SkyPile中的一部分数据，再加上一批合成数据。</p>
+<p>中文、英文、代码数据的比例为7:2:1。</p>
+<p>Skywork-MoE在和一些主流模型，在一些benchmark上的对比如下</p>
+<img src="/1d5bcd45/perf.png" class title="效果">
+<p>基本上达到了同归模型比较好的效果。</p>
+<h1 id="小结">小结</h1>
+<p>Skywork-MoE开源了一个效果不错的MoE模型，同时对于初始化策略的探索也颇有借鉴意义。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Skywork-MoE: A Deep Dive into Training Techniques for
+Mixture-of-Experts Language Models
+https://github.com/SkyworkAI/Skywork-MoE/blob/main/skywork-moe-tech-report.pdf</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/1d5bcd45.html" title="昆仑万维-SkyworkMoE">https://saicat.github.io/1d5bcd45.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/MoE/" rel="tag"><i class="fa fa-tag"></i> MoE</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/4fe7b810.html" rel="prev" title="大模型偏好对齐-IPO">
+                  <i class="fa fa-angle-left"></i> 大模型偏好对齐-IPO
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">205k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:13</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
