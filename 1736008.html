@@ -22,16 +22,15 @@
 
     <meta name="description" content="【往期文章】 Yi技术报告-划重点看细节 transformer中normalization的二三事 稀疏注意力计算:sliding window attention 理解Attention:从起源到MHA,MQA和GQA LLM长上下文的问题 理解LLM位置编码:RoPE 大模型算法题(1) 大模型算法题(2)">
 <meta property="og:type" content="article">
-<meta property="og:title" content="大模型算法题(4)">
+<meta property="og:title" content="大模型算法题(3)">
 <meta property="og:url" content="https://saicat.github.io/1736008.html">
 <meta property="og:site_name" content="Linsight">
 <meta property="og:description" content="【往期文章】 Yi技术报告-划重点看细节 transformer中normalization的二三事 稀疏注意力计算:sliding window attention 理解Attention:从起源到MHA,MQA和GQA LLM长上下文的问题 理解LLM位置编码:RoPE 大模型算法题(1) 大模型算法题(2)">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://saicat.github.io/images/cover.png">
-<meta property="og:image" content="https://saicat.github.io/1736008/transformer.png">
 <meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
-<meta property="article:published_time" content="2024-04-20T08:56:45.000Z">
-<meta property="article:modified_time" content="2024-05-10T06:50:46.826Z">
+<meta property="article:published_time" content="2024-04-05T06:08:31.000Z">
+<meta property="article:modified_time" content="2024-05-10T06:51:01.150Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
@@ -44,10 +43,10 @@
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/1736008.html","path":"1736008.html","title":"大模型算法题(4)"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/1736008.html","path":"1736008.html","title":"大模型算法题(3)"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>大模型算法题(4) | Linsight</title>
+<title>大模型算法题(3) | Linsight</title>
   
 
 
@@ -147,9 +146,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88transformer%E7%94%A8layernorm%E8%80%8C%E4%B8%8D%E6%98%AFbatchnorm"><span class="nav-number">1.</span> <span class="nav-text">1.为什么Transformer用layernorm而不是batchnorm</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#transformer%E4%B8%ADencdoer%E5%92%8Cdecoder%E6%98%AF%E6%80%8E%E4%B9%88%E8%BF%9B%E8%A1%8C%E4%BA%A4%E4%BA%92%E7%9A%84"><span class="nav-number">2.</span> <span class="nav-text">2.transformer中，encdoer和decoder是怎么进行交互的？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#pytorch%E4%B8%ADtensor%E7%9A%84view%E5%92%8Creshape%E4%B8%A4%E4%B8%AA%E6%96%B9%E6%B3%95%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB"><span class="nav-number">3.</span> <span class="nav-text">3.PyTorch中，Tensor的view()和reshape()两个方法有什么区别？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#rlhf%E4%B8%ADppo%E9%9C%80%E8%A6%81%E5%93%AA%E5%87%A0%E4%B8%AA%E6%A8%A1%E5%9E%8B%E5%88%86%E5%88%AB%E6%98%AF%E4%BB%80%E4%B9%88%E4%BD%9C%E7%94%A8"><span class="nav-number">4.</span> <span class="nav-text">4.RLHF中，PPO需要哪几个模型，分别是什么作用？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#gpt%E7%B1%BB%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83%E8%BF%87%E7%A8%8B%E4%B8%AD%E6%B6%88%E8%80%97%E6%98%BE%E5%AD%98%E7%9A%84%E4%B8%BB%E8%A6%81%E6%9C%89%E5%93%AA%E4%BA%9B%E9%83%A8%E5%88%86%E5%88%86%E5%88%AB%E6%98%AF%E5%A4%9A%E5%B0%91%E5%93%AA%E9%83%A8%E5%88%86%E5%8D%A0%E7%94%A8%E6%9C%80%E5%A4%9A%E5%81%87%E8%AE%BE%E6%A8%A1%E5%9E%8B%E6%9C%89l%E5%B1%82%E8%AF%8D%E8%A1%A8%E5%A4%A7%E5%B0%8F%E4%B8%BAvhidden-size%E4%B8%BAhbatch-size%E4%B8%BAb%E8%AE%AD%E7%BB%83%E7%AA%97%E5%8F%A3%E9%95%BF%E5%BA%A6%E4%B8%BAs%E4%BD%BF%E7%94%A8adam%E4%BC%98%E5%8C%96%E5%99%A8%E6%B7%B7%E5%90%88%E7%B2%BE%E5%BA%A6%E8%AE%AD%E7%BB%83%E9%9C%80%E8%A6%81%E5%AD%98%E4%B8%80%E9%98%B6%E5%92%8C%E4%BA%8C%E9%98%B6%E5%8A%A8%E9%87%8F%E6%B3%A8%E6%84%8F%E5%8A%9B%E5%A4%B4%E6%95%B0%E4%B8%BAn"><span class="nav-number">5.</span> <span class="nav-text">5.GPT类模型训练过程中，消耗显存的主要有哪些部分？分别是多少？哪部分占用最多？假设模型有L层，词表大小为V，hidden
-size为H，batch
-size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需要存一阶和二阶动量），注意力头数为N。</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%97%8B%E8%BD%AC%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81rope%E6%9C%89%E4%BB%80%E4%B9%88%E4%BC%98%E7%BC%BA%E7%82%B9"><span class="nav-number">1.</span> <span class="nav-text">1.旋转位置编码RoPE有什么优缺点？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#batchnorm%E4%B8%AD%E7%9A%84momentum%E6%80%8E%E4%B9%88%E5%BD%B1%E5%93%8D%E8%AE%AD%E7%BB%83%E6%95%88%E6%9E%9C"><span class="nav-number">2.</span> <span class="nav-text">2.batchnorm中的momentum怎么影响训练效果</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B%E7%9B%B8%E6%AF%94%E5%8D%95%E5%A4%B4%E6%9C%89%E4%BB%80%E4%B9%88%E5%A5%BD%E5%A4%84"><span class="nav-number">3.</span> <span class="nav-text">3.多头注意力相比单头有什么好处？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#kv-cache%E4%B8%BA%E4%BB%80%E4%B9%88%E8%83%BD%E5%8A%A0%E9%80%9F%E6%8E%A8%E7%90%86"><span class="nav-number">4.</span> <span class="nav-text">4.kv cache为什么能加速推理？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#relu%E6%9C%89%E4%BB%80%E4%B9%88%E4%BC%98%E7%BC%BA%E7%82%B9"><span class="nav-number">5.</span> <span class="nav-text">5.ReLU有什么优缺点？</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -164,7 +161,7 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">25</span>
+          <span class="site-state-item-count">26</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -175,7 +172,7 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-count">34</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -227,12 +224,12 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="大模型算法题(4) | Linsight">
+      <meta itemprop="name" content="大模型算法题(3) | Linsight">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          大模型算法题(4)
+          大模型算法题(3)
         </h1>
 
         <div class="post-meta-container">
@@ -243,14 +240,14 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2024-04-20 16:56:45" itemprop="dateCreated datePublished" datetime="2024-04-20T16:56:45+08:00">2024-04-20</time>
+      <time title="创建时间：2024-04-05 14:08:31" itemprop="dateCreated datePublished" datetime="2024-04-05T14:08:31+08:00">2024-04-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2024-05-10 14:50:46" itemprop="dateModified" datetime="2024-05-10T14:50:46+08:00">2024-05-10</time>
+      <time title="修改时间：2024-05-10 14:51:01" itemprop="dateModified" datetime="2024-05-10T14:51:01+08:00">2024-05-10</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -277,14 +274,14 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>2.3k</span>
+      <span>1.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>4 分钟</span>
+      <span>3 分钟</span>
     </span>
 </div>
 
@@ -309,35 +306,29 @@ window attention</a><br>
 <p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
 <p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错漏，欢迎指正</sub></p>
 <hr>
-<h1 id="为什么transformer用layernorm而不是batchnorm">1.为什么Transformer用layernorm而不是batchnorm</h1>
-<p>首先，NLP数据中由于每条样本可能不一样长，会使用padding，如果对padding部分进行normalization，对效果有负面影响。直观来说，batchnorm会对同一个特征以batch为组进行归一化，而对于文本数据，同一个位置的token很可能是没有关联的两个token，对这样一组数据进行归一化没有什么实际意义。《PowerNorm:
-Rethinking Batch Normalization in
-Transformers》论文的实验也表明，在NLP数据使用batchnorm，均值和方差相对layernorm会更加震荡，因此效果欠佳。</p>
-<h1 id="transformer中encdoer和decoder是怎么进行交互的">2.transformer中，encdoer和decoder是怎么进行交互的？</h1>
-<p>decoder部分的输入，在每层中，先进行一次self-attention；之后用encoder的输出作为attention计算中的K、V，decoder的输入作为Q，进行cross-attention。</p>
-<img src="/1736008/transformer.png" class title="transformer">
-<h1 id="pytorch中tensor的view和reshape两个方法有什么区别">3.PyTorch中，Tensor的view()和reshape()两个方法有什么区别？</h1>
-<p>1.功能上：view()与reshape()方法都可以用来改变tensor的形状，但是使用条件不同，view()能做的是reshape的子集。</p>
-<p>2.view()方法需要tensor满足连续性，操作后返回一个引用，返回值是视图，没有改变原储存空间的值，多个视图共享同一个物理储存空间的内容。</p>
-<p>3.reshape()方法不需要tensor一定满足连续性。如果tensor不满足连续性的要求，则会使用新的储存空间并返回。如果满足连续性需求，则功能和view()一致。</p>
-<p>4.连续性：比如一个二维张量，如果按行优先展开成一维的结果，和物理储存顺序是一致的，就是连续的。可以用is_contiguous()来判断一个张量是否连续，如果不连续，可以用contiguous()得到一份新空间中的连续副本。</p>
-<h1 id="rlhf中ppo需要哪几个模型分别是什么作用">4.RLHF中，PPO需要哪几个模型，分别是什么作用？</h1>
-<p>一般来说，PPO需要使用4个模型。</p>
-<p>1.Actor模型：由SFT初始化，就是进行强化学习的主模型，是我们想要最终获得的模型；它不断产生action并被Critic模型所评价，计算loss进行训练。</p>
-<p>2.Reference模型：一般也是从SFT模型初始化，RLHF中Reference模型并不更新参数，只是作为Actor模型的参考使用；通过约束Actor模型和Reference模型的KL
-penalty等，可以防止Actor模型被训得跑得太偏。</p>
-<p>3.Reward模型：提前训练好的，对SFT模型进行打分的模型，RLHF中参数是冻结的。</p>
-<p>4.Critic模型：一般由Reward模型进行初始化，参数可训练，用于预测Actor模型生成的token的收益。</p>
-<h1 id="gpt类模型训练过程中消耗显存的主要有哪些部分分别是多少哪部分占用最多假设模型有l层词表大小为vhidden-size为hbatch-size为b训练窗口长度为s使用adam优化器混合精度训练需要存一阶和二阶动量注意力头数为n">5.GPT类模型训练过程中，消耗显存的主要有哪些部分？分别是多少？哪部分占用最多？假设模型有L层，词表大小为V，hidden
-size为H，batch
-size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需要存一阶和二阶动量），注意力头数为N。</h1>
-<p>训练过程中，显存消耗主要有模型参数、梯度、optimizer状态值和中间激活值。</p>
-<p>1.模型参数Φ：词表部分VH，每层参数12H<sup>2+13H，总共有Φ=VH+L(12H</sup>2+13H)，如果是半精度就是2Φ</p>
-<p>2.梯度：每个参数对应有一个梯度，总量为Φ，如果是半精度就是2Φ</p>
-<p>3.optimizer状态值：每个参数有一个对应梯度，每个参数又对应优化器一个一阶动量和二阶动量。在混合精度训练中，使用半精度进行前向计算和梯度计算，同时优化器备份一份单精度的优化器状态、梯度和参数用于更新参数，因此共有(Φ+Φ)<em>2+(Φ+Φ+2Φ)</em>4=20Φ，除去参数和梯度，优化器占部分16Φ</p>
-<p>4.激活值：保存激活值是为了计算梯度，因此每个矩阵相乘、softmax、dropout都需要保存输入值的中间的激活值。总共是34BSH+5BNS^2，如果都是半精度，就乘以2。</p>
-<p>模型参数、梯度和优化器状态和输入长度无关，是固定值，而激活值随着长度增加，以平方速度增长。
-以GPT3（175B）为例，H=12288，L=96，N=96。模型参数量显存越为350G。以B=1计算，如果S=1024，激活值约为90G；如果S=8192，激活值约为3420G。</p>
+<h1 id="旋转位置编码rope有什么优缺点">1.旋转位置编码RoPE有什么优缺点？</h1>
+<p>优点：RoPE以绝对位置编码的方式实现了相对位置编码，使得能够在不破坏注意力形式的情况下，以“加性编码”的方式让模型学习相对位置。①相比其他相对位置编码来说，实现简单，计算量少。②可以应用于线性注意力。③RoPE具有远程衰减的特性，使得每个位置天然能够更关注到附近的信息。</p>
+<p>缺点：RoPE相比训练式的绝对位置编码具有一定的外推能力，如可以在2k数据长度训练的模型进行略长于2k的推理。但是相比于Alibi等位置编码，其直接外推能力并不算特别好，需要通过线性插值、NTK插值、YaRN等方式来优化外推能力。</p>
+<h1 id="batchnorm中的momentum怎么影响训练效果">2.batchnorm中的momentum怎么影响训练效果</h1>
+<p>batchnorm在训练时计算每个batch内的均值和方差用于normalization，同时统计一个全局均值和方差用于推理。全局均值和方差计算公式为：</p>
+<p>moving_mean = momentum × moving_mean + (1.0 − momentum) × mean</p>
+<p>moving_var = momentum × moving_var + (1.0 − momentum) × var</p>
+<p>小的momentum值对应快的更新速度，能够更快地向真实分布靠近，但是同时也会导致更大的波动；如果更新过慢，则可能导致训练结束时还没有统计到真实的分布，是欠拟合的状态。如果batch
+size比较小，每个mini batch和全局差异较大，就不应该用太大的momentum。</p>
+<h1 id="多头注意力相比单头有什么好处">3.多头注意力相比单头有什么好处？</h1>
+<p>多头注意力使用多个维度较低的子空间分别进行学习。</p>
+<p>一般来说，相比单头的情况，多个头能够分别关注到不同的特征，增强了表达能力。多个头中，会有部分头能够学习到更高级的特征，并减少注意力权重对角线值过大的情况。</p>
+<p>比如部分头关注语法信息，部分头关注知识内容，部分头关注近距离文本，部分头关注远距离文本，这样减少信息缺失，提升模型容量。</p>
+<p>另外虽然多头注意力的整体计算量比单头要大一点，但是并行度也高一些。</p>
+<h1 id="kv-cache为什么能加速推理">4.kv cache为什么能加速推理？</h1>
+<p>对于GPT类模型，使用的是单向注意力，每个位置只能看到自己和前面的内容。</p>
+<p>在进行自回归解码的时候，新生成的token会加入序列，一起作为下一次解码的输入。</p>
+<p>由于单向注意力的存在，新加入的token并不会影响前面序列的计算，因此可以把已经计算过的每层的kv值保存起来，这样就节省了和本次生成无关的计算量。</p>
+<p>通过把kv值存储在速度远快于显存的L2缓存中，可以大大减少kv值的保存和读取，这样就极大加快了模型推理的速度。</p>
+<h1 id="relu有什么优缺点">5.ReLU有什么优缺点？</h1>
+<p>优点：（1）计算快，前向只需要进行max(0,
+x)计算，后向则是直接透传；（2）有激活值的时候，梯度恒定为1，不会爆炸/消失；</p>
+<p>缺点：（1）均值不为0，分布产生偏移（2）输入值小于0时，梯度再也无法回传过来，导致神经元坏死。</p>
 <hr>
 <p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
@@ -357,8 +348,7 @@ size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需�
 window attention</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a></p>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
 
     </div>
 
@@ -376,7 +366,7 @@ window attention</a><br>
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://saicat.github.io/1736008.html" title="大模型算法题(4)">https://saicat.github.io/1736008.html</a>
+      <a href="https://saicat.github.io/1736008.html" title="大模型算法题(3)">https://saicat.github.io/1736008.html</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -394,13 +384,13 @@ window attention</a><br>
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/b70b4a2d.html" rel="prev" title="从代码实现看normalization-到底做了什么">
-                  <i class="fa fa-angle-left"></i> 从代码实现看normalization-到底做了什么
+                <a href="/44e38c1b.html" rel="prev" title="MoE模型的前世今生">
+                  <i class="fa fa-angle-left"></i> MoE模型的前世今生
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/336f2f3e.html" rel="next" title="大模型算法题(5)">
-                  大模型算法题(5) <i class="fa fa-angle-right"></i>
+                <a href="/b70b4a2d.html" rel="next" title="从代码实现看normalization-到底做了什么">
+                  从代码实现看normalization-到底做了什么 <i class="fa fa-angle-right"></i>
                 </a>
             </div>
           </div>
@@ -433,13 +423,13 @@ window attention</a><br>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">214k</span>
+    <span title="站点总字数">220k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">6:29</span>
+    <span title="站点阅读时长">6:39</span>
   </span>
 </div>
 <div class="busuanzi-count">
