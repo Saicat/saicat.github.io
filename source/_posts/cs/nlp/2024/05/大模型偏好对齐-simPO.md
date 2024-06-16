@@ -224,4 +224,4 @@ simPO对损失函数做了一些改变，对齐了训练和推理的目标，使
 
 # Reference  
 
-【1】KTO: Model Alignment as Prospect Theoretic Optimization https://arxiv.org/abs/2402.01306    
+【1】SimPO: Simple Preference Optimization with a Reference-Free Reward https://arxiv.org/abs/2405.14734  
