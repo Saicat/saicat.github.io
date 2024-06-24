@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  MiniCPM是面壁智能和清华开源的模型，MiniCPM开源系列包括非embedding参数为1.2B和2.4B两个规模的模型，以及对应的MiniCPM-DPO，MiniCPM-MoE和MiniCPM-128K模型。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MiniCPM">
+<meta property="og:url" content="https://saicat.github.io/376db710.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  MiniCPM是面壁智能和清华开源的模型，MiniCPM开源系列包括非embedding参数为1.2B和2.4B两个规模的模型，以及对应的MiniCPM-DPO，MiniCPM-MoE和MiniCPM-128K模型。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/376db710/exp_model.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/param_search_2.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/param_search.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/batch_size.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/batch_size_2.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/learning_rate.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/cos_lr.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/cos_loss.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/wsd_exp1.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/wsd_exp2.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/scaling_law.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/2_stage.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/tokenizer.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/layers.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/data.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/train_loss.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/eval.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/128k_result.png">
+<meta property="og:image" content="https://saicat.github.io/376db710/moe_result.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-06-18T13:51:22.000Z">
+<meta property="article:modified_time" content="2024-06-24T04:09:56.529Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="技术报告">
+<meta property="article:tag" content="学习率">
+<meta property="article:tag" content="预训练">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/376db710/exp_model.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/376db710.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/376db710.html","path":"376db710.html","title":"MiniCPM"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>MiniCPM | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A3%8E%E6%B4%9E%E5%AE%9E%E9%AA%8C"><span class="nav-number">2.</span> <span class="nav-text">风洞实验</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%B6%85%E5%8F%82"><span class="nav-number">2.1.</span> <span class="nav-text">模型超参</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#optimal-batch-size"><span class="nav-number">2.2.</span> <span class="nav-text">Optimal Batch Size</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#optimal-learning-rate"><span class="nav-number">2.3.</span> <span class="nav-text">Optimal Learning Rate</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#wsd"><span class="nav-number">3.</span> <span class="nav-text">WSD</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#cosine-learning-rate-scheduler%E7%9A%84%E5%88%86%E6%9E%90"><span class="nav-number">3.1.</span> <span class="nav-text">cosine learning rate
+scheduler的分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#warmup-stable-decay"><span class="nav-number">3.2.</span> <span class="nav-text">Warmup-Stable-Decay</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#measuring-the-scaling-law-with-wsd-lrs"><span class="nav-number">3.3.</span> <span class="nav-text">Measuring the Scaling
+Law with WSD LRS</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#two-stage-pre-training-strategy"><span class="nav-number">4.</span> <span class="nav-text">Two Stage Pre-training
+Strategy</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#minicpm"><span class="nav-number">5.</span> <span class="nav-text">MiniCPM</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">5.1.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">5.2.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#minicpm-dpo"><span class="nav-number">5.3.</span> <span class="nav-text">MiniCPM-DPO</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#minicpm-128k"><span class="nav-number">5.4.</span> <span class="nav-text">MiniCPM-128k</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#minicpm-moe"><span class="nav-number">5.5.</span> <span class="nav-text">MiniCPM-MoE</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">37</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/376db710.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="MiniCPM | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MiniCPM
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-06-18 21:51:22" itemprop="dateCreated datePublished" datetime="2024-06-18T21:51:22+08:00">2024-06-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-06-24 12:09:56" itemprop="dateModified" datetime="2024-06-24T12:09:56+08:00">2024-06-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>14 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>MiniCPM是面壁智能和清华开源的模型，MiniCPM开源系列包括非embedding参数为1.2B和2.4B两个规模的模型，以及对应的MiniCPM-DPO，MiniCPM-MoE和MiniCPM-128K模型。</p>
+<p>简单梳理一下MiniCPM提到的一些内容。</p>
+<h1 id="背景">背景</h1>
+<p>大模型的训练成本很高，而且很多机制还没搞清楚，训出来的大规模模型在很多设备上也跑不起来，因此现在有不少机构对小一点的模型，即SLM，进行更全面的探索，比如Phi系列、TinyLlama、MobileLLM和Gemma等。</p>
+<p>MiniCPM也是对SLM的一次探索，从中得到的经验也可以推广到更大的模型上。</p>
+<h1 id="风洞实验">风洞实验</h1>
+<p>为了找到好的模型参数和训练参数，MiniCPM做了很多“风洞实验”（Model Wind
+Tunnel Experiments）。</p>
+<p>这些风洞实验主要包括三个部分：（1）搜索模型结构的超参（2）探索batch
+size的scaling（3）寻找最佳的learning rate。</p>
+<p>后续风洞实验所用的模型具体参数如下</p>
+<img src="/376db710/exp_model.png" class title="模型结构">
+<h2 id="模型超参">模型超参</h2>
+<p>预训练资源消耗很大，即使是SLM也不可能把所有参数的排列组合都搜索一遍。</p>
+<p>这里参考Tensor Program的做法（《Tensor programs v: Tuning large
+neural networks via zero-shot hyperparameter transfer》和《Tensor
+programs vi: Feature learning in infinite-depth neural
+networks》），分别对模型的宽度和深度进行了搜索。</p>
+<p>搜索所用的操作如下表所示，这里没有应用attention
+softmax的scaling技术。</p>
+<img src="/376db710/param_search_2.png" class title="超参搜索">
+<p>关于超参搜索的一些细节：<br>
+- 用Maximal Update Parametrization的方法进行了调参。<br>
+-
+在一系列预定义的参数空间上进行贝叶斯搜索，所用模型参数为在N=0.009B。发现使用规模为10N和20N大小的数据集进行超参数优化时，超参的有效性表现出了一致性。因此调参的过程就使用D=10N=0.09B个token来进行实验了。<br>
+- 应用了QK-Norm（《Querykey normalization for
+transformers》）和independent weight decay（《Decoupled weight decay
+regularization》）之后，发现模型对learning
+rate的敏感性显著降低。不过在找到最佳learning
+rate之后，后面的训练就不用再调整参数了，因此后面的实验就没有继续使用QK-Norm和independent
+weight decay。</p>
+<p>最终从下图展示的参数搜索，确定了最佳的hyper-parameters为：<br>
+- scale depth = 1.4<br>
+- scale emb = 12<br>
+- init std = 0.1<br>
+- lr = 0.01</p>
+<img src="/376db710/param_search.png" class title="超参搜索">
+<h2 id="optimal-batch-size">Optimal Batch Size</h2>
+<p>batch size决定了模型收敛速度与计算资源消耗之间的平衡。</p>
+<p>如果batch
+size太大，会导致很大的数据和计算成本（才能跑到足够的update次数，让模型收敛）。如果batch
+size太小，将会有大量的update step，并且相比大一些的batch
+size，loss的减小很有限，训练效率太低。</p>
+<p>这里参考OpenAI的《Scaling laws for neural language
+models》的方法来寻找最佳的batch size，并做了一些改动。</p>
+<p>《Scaling laws for neural language models》研究的是loss
+function和token数之间的关系。他们假设了更多的step=更多的训练时间。在这个假设下，OpenAI定义了一个critical
+batch
+size，在不消耗过多的step或者token的情况下，能达到一定的loss水平。</p>
+<p>这在无限GPU资源下是合理的。由于GPU资源是无限的，增加batch
+size不会增加单个step的耗时，但会减少总step数，因而提高了效率。但是实际上我们并没有无限GPU资源，因此将batch
+size增大相当于增加的每个step的时间，所以实际上通过增加batch
+size来减小step数，对总训练时间的影响并不大。</p>
+<p>因此MiniCPM放弃了“not consuming too many
+steps”的目标，转而追求“minimizing the token quantity to achieve the
+lowest loss”。</p>
+<p>关于optimal batch
+size与loss之间关系的估计，类似于“先有鸡还是先有蛋”的悖论，因为暂时没法完全搞清楚这二者之间的决定关系。目前的做法是，对于给定的模型大小，通常会有一个初步估计的achievable
+loss，这是由先前的初步实验得出的经验估计。</p>
+<p>而optimal batch size和optimal learning
+rate很可能并不是独立的。为了克服这种相关性，MiniCPM首先对learning
+rate进行了初步研究，然后选择一个最优learning rate来进行batch
+size实验，并使用batch size缩放再次进行learning
+rate调整。这有点像Coordinate Descent optimization method。</p>
+<p>细节上，MiniCPM分别对0.009B、0.03B和0.17B的模型进行了实验。每个模型大小都在6种不同的batch
+size上进行训练，使用了global learning rate=0.01和cosine learning rate
+scheduler。在C4数据集上，optimal batch size与loss的趋势如下图红线</p>
+<img src="/376db710/batch_size.png" class title="超参搜索">
+<p>这三条红线在log空间中很好连成一条直线，如下图。</p>
+<img src="/376db710/batch_size_2.png" class title="超参搜索">
+<p>这里就得到了在C4数据集上的训练loss和optimal batch size的关系。</p>
+<p><span class="math display">\[bs=\frac{1.21\times10^9}{L^{6.24}}\]</span></p>
+<h2 id="optimal-learning-rate">Optimal Learning Rate</h2>
+<p>由于使用了Tensor Program，optimal learning
+rate在模型缩放的过程中应该不会有明显变化。为了验证这一点，MiniCPM在0.04B、0.1B、0.3B和0.5B的模型上进行了六组learning
+rate的实验。</p>
+<p>在下图中，可以发现尽管模型大小增加了十倍，但optimal learning
+rate并没有明显的偏移，基本上一致保持在0.01左右。</p>
+<img src="/376db710/learning_rate.png" class title="超参搜索">
+<p>MiniCPM进一步在2.1B规模的模型上进行了一个简单的验证，最终确认了0.01的learning
+rate确实实现了最低loss。</p>
+<h1 id="wsd">WSD</h1>
+<h2 id="cosine-learning-rate-scheduler的分析">cosine learning rate
+scheduler的分析</h2>
+<p>cosine scheduler的周期很重要，一般是设置降到最小learning
+rate的时间T和预训练的总step数S持平。为了验证这个设置的效果，用0.036B的模型的做了实验，按以下公式分别实现cosine和cosine
+loop两种scheduler。</p>
+<img src="/376db710/cos_lr.png" class title="LR">
+<p>loss的变化如下图</p>
+<img src="/376db710/cos_loss.png" class title="LR">
+<p>可以看到确实总是T=S时效果最好。分析原因可能是：<br>
+- 与T&lt;S的scheduler相比，T=S的scheduler有更长的高learning
+rate持续时间。而这种高learning rate可能有助于模型找到更好的global
+optimum。<br>
+- 与T&gt;S的scheduler相比，T=S的scheduler有更彻底的learning rate
+decay。这种衰减可能涉及到training dynamics，使模型能够找到更好的 local
+optimum。</p>
+<h2 id="warmup-stable-decay">Warmup-Stable-Decay</h2>
+<p>基于上面的分析，MiniCPM把训练过程显式分成high learning rate
+stage和learning decay stage，这个scheduler就叫Warmup-Stable-Decay
+scheduler，公式如下</p>
+<p><span class="math display">\[\left.WSD(T;s)=\begin{cases}&amp;\frac{s}{W}\eta,\quad
+s&lt;W\\&amp;\eta,\quad W&lt;s&lt;T\\&amp;f(s-T)\eta,\quad
+T&lt;s&lt;S\end{cases}\right.\]</span></p>
+<p>其中W是warmup的step数，T是stable training step数，<span class="math inline">\(\eta\)</span> 是maximum learning rate，<span class="math inline">\(f\left(s-T\right)\)</span> 是关于s的 decreasing
+function，取值在0到1之间。</p>
+<p>一般来说W只要足够，对训练的效果影响就不大，因此所有后面就忽略W了。</p>
+<p>继续做一些实验来探索WSD。</p>
+<p>（1）Loss Decreases Dramatically in Decay Stage</p>
+<p>首先在0.036B的模型上应用了WSD，并设置了不同的T和S（影响decay阶段的长度）。发现在decay阶段，随着learning
+rate的下降，loss出现了显著的快速下降，并迅速降低到等于或低于T=S时的Cosine
+LRS的loss，具体loss变化如下图</p>
+<img src="/376db710/wsd_exp1.png" class title="WSD">
+<p>由于stable
+training阶段learning是保持不变的，所以这里可以重用decay前的模型checkpoint，继续进行的高learning
+rate的训练。在原设置上增加了更多的stable training
+step之后，还可以再进行learning rate退火，并且能够实现与Cosine
+LRS在同样step下相同的loss。这进一步验证了“训练阶段可以明确地分为stable阶段和decay阶段”的假设。</p>
+<p>（2）10% Steps are Enough</p>
+<p>如上图所示，在40N、60N和80N训练数据的实验中，使用总token数的10%的进行learning
+rate
+decay就足以获得最好的结果，如果小于10%则效果会比较差。因此，在后续的训练实验中，都使用大约10%的step进行learning
+rate decay，以确保完全收敛。</p>
+<p>（3）Effective Data Scaling with WSD LRS</p>
+<p>使用WSD可以把模型训练到极致收敛的状态。为了展示WSD训练固定大小模型到收敛的潜力，MiniCPM对0.036B的模型进行持续训练，然后与使用40N数据的0.17B模型进行比较，loss如下图。</p>
+<img src="/376db710/wsd_exp2.png" class title="WSD">
+<p>0.036B模型在使用更多的数据后，超过Chinchilla
+Optimal，并且仍有收敛趋势，按这个趋势继续训练就能match
+0.17B模型的loss水平。</p>
+<h2 id="measuring-the-scaling-law-with-wsd-lrs">Measuring the Scaling
+Law with WSD LRS</h2>
+<p>利用WSD，可以把探索model size和data
+size的scaling关系的成本变成线性，因为stable
+stage阶段learning保持不变，可以把decay接在不同的step后面来获取不同数据量下的效果。</p>
+<p>通过训练从0.04B到2B共6种大小的SLM来测量scaling
+law。每种大小的模型都有从10N到60N数据共6个数据量开始decay的结果。</p>
+<p>这36个模型的训练结果在5个数据集上进行比较。为了可以比较不同tokenizer的模型的损失，按《GPT-4
+technical
+report》里的做法，使用byte数的平均而非token数的平均来进行比较。然后用scipy
+curvefit function，按下面这个公式拟合model size N and data size
+D的关系。</p>
+<p><span class="math display">\[L(N,D)=C_NN^{-\alpha}+C_DD^{-\beta}+L_0\]</span></p>
+<p>实验结果和拟合结果如下图</p>
+<img src="/376db710/scaling_law.png" class title="scaling law">
+<p>然后参照《Scaling language models: Methods, analysis &amp; insights
+from training gopher》、《Training compute-optimal large language
+models》、《Scaling laws for neural language
+models》的做法，推算出token数量应该是模型参数量的192倍，这比《Training
+compute-optimal large language models》中给出的20倍要大得多。</p>
+<p>MiniCPM还把LLAMA2的数据拿出来进行了验证。按LLAMA2报告中给出的数据计算出的token数应是模型参数量的70~100倍，这个值同样比20要大很多。</p>
+<p>因此结论是，按照基于WSD的实验结果，语言模型比我们之前想象的可以吸收更多语料数据。</p>
+<h1 id="two-stage-pre-training-strategy">Two Stage Pre-training
+Strategy</h1>
+<p>前面观察到WSD的衰减阶段loss有显著的减少，因此MiniCPM认为在learning
+rate的退火阶段整合高质量SFT数据，混合进预训练数据中可以SFT效果：<br>
+- 一方面，在退火阶段使用SFT数据能获得预SFT更相关的loss下降<br>
+- 另一方面，和在整个预训练阶段都使用SFT数据相比，只在learning rate
+decay阶段使用更不容易过拟合</p>
+<p>为了验证这个猜想，设计以下训练配置：<br>
+- A-1: 2.4B模型，decay阶段仅用无标签数据，之后进行4B的SFT训练<br>
+- A-2:
+2.4B模型，decay阶段使用无标签数据+SFT数据，之后进行4B的SFT训练<br>
+- B-1: 1.2B模型，decay阶段仅用无标签数据，之后进行6B的SFT训练<br>
+- B-2: 1.2B模型，decay阶段仅用无标签数据，之后进行12B的SFT训练<br>
+- B-3:
+1.2B模型，decay阶段使用无标签数据+SFT数据，之后进行6B的SFT训练</p>
+<p>各个模型预训练+SFT之后的效果如下</p>
+<img src="/376db710/2_stage.png" class title="2阶段训练">
+<p>可以看到在预训练learning rate退火阶段加入SFT数据的模型效果更好。</p>
+<h1 id="minicpm">MiniCPM</h1>
+<h2 id="模型">模型</h2>
+<p>MiniCPM有2.4B和1.2B两个规模。其中2.4B模型的词表大小为122,753，1.2B模型词表大小为73,440，都是通过BPE进行构建。在测试数据集上评测，MiniCPM的tokenizer的效率是比较高的，具体数值如下</p>
+<img src="/376db710/tokenizer.png" class title="tokenizer">
+<p>MiniCPM模型的输入输出共享了矩阵，因为小模型共享输入输出矩阵可以节省很多参数。</p>
+<p>在层数和hidden
+state的设计上，MiniCPM使用了相比Phi-2等SLM更深更瘦的模型结构，这和《Mobilellm:
+Optimizing sub-billion parameter language models for on-device use
+cases》的想法一致。具体的结构参数如下</p>
+<img src="/376db710/layers.png" class title="更深更瘦的结构">
+<p>1.2B模型上使用了GQA，可以进一步节省参数量。</p>
+<h2 id="训练">训练</h2>
+<p>在WSD的stable阶段，使用1T预训练数据，batch size=3.93M，max
+lr=0.01。</p>
+<p>在decay阶段，decay的策略为 <span class="math inline">\(f(s-T)=0.5^{(s-S)/T}\)</span>，其中T=5000 steps
+(20B tokens)。</p>
+<p>SFT阶段共使用了6B数据，learning rate和预训练阶段结束时的learning
+rate对齐，同样使用了WSD。</p>
+<p>预训练数据的分布如下</p>
+<img src="/376db710/data.png" class title="训练数据">
+<p>1.2B和2.4B模型的预训练loss如下图</p>
+<img src="/376db710/train_loss.png" class title="training loss">
+<p>左图loss的第一次突变是因为增大了batch size，效果相当于减小了learning
+rate。</p>
+<p>最终SFT模型在下游任务的评测结果如下</p>
+<img src="/376db710/eval.png" class title="evaluation">
+<h2 id="minicpm-dpo">MiniCPM-DPO</h2>
+<p>在SFT的基础上，MiniCPM用UltraFeedback数据集进行DPO训练。</p>
+<p>DPO训练使用了Cosine LRS, max learning
+rate=1e-5，一共训练了一个epoch。</p>
+<p>DPO使得模型在MT-bench上的得分从6.89提升到7.25，但是在原来通用benchmark的效果有所下降。</p>
+<h2 id="minicpm-128k">MiniCPM-128k</h2>
+<p>长文本训练把MiniCPM支持的窗口大小从4k拓展到128k。在这一阶段的训练禁用了输入输出矩阵共享，这会使得模型的实际参数略有上升。训练的初始模型用的是预训练中stable阶段的最后一个checkpoint。</p>
+<p>MiniCPM将书籍、维基百科文章和论文分类为“长数据”，其他为“短数据”。那么在这一阶段的训练包含了44%的长数据和
+56%的短数据。</p>
+<p>训练时不直接训练到128k，而是使用curriculum
+learning：先训练32k，再训练128k。4k-32k范围内应用ABF，32K到128K的范围内使用NTK-Aware
+RoPE scaling。</p>
+<p>如Yi的技术报告和《Zebra: Extending context window with layerwise
+grouped local-global
+attention》所指出的那样，使用合成的长QA数据，有助于提高模型在上下文感知任务中的性能，MiniCPM也使用了合成的长QA数据。</p>
+<p>MiniCPM-128k在∞Bench（《∞bench: Extending long context evaluation
+beyond 100k tokens》）上评测结果如下</p>
+<img src="/376db710/128k_result.png" class title="128k evaluation">
+<h2 id="minicpm-moe">MiniCPM-MoE</h2>
+<p>MiniCPM-MoE使用Sparse Upcycling（《Sparse upcycling: Training
+mixture-of-experts from dense
+checkpoints》）进行初始化，使用了stable阶段的checkpoint。router用均值为0、方差为0.01的正态分布进行初始化。</p>
+<p>MiniCPM-MoE共有13.6B参数，激活2个专家，共激活4B参数。</p>
+<p>训练时使用switch transformer的负载均衡函数，权重系数为0.01。</p>
+<p>learning rate使用了WSD，在4M的batch
+size下共进行了130k步预训练，而在SFT阶段batch size减小了到2M。</p>
+<p>MiniCPM-MoE的效果评测如下</p>
+<img src="/376db710/moe_result.png" class title="moe evaluation">
+<h1 id="小结">小结</h1>
+<p>MiniCPM站在很多前人结果的肩膀上，把目前各种比较先进的做法融合到了1B/2B模型上，获得了不错的效果。其中用到的参数搜索、对scaling
+law的刷新都挺有参考价值。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】MiniCPM: Unveiling the Potential of Small Language Models with
+Scalable Training Strategies https://arxiv.org/abs/2404.06395</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/376db710.html" title="MiniCPM">https://saicat.github.io/376db710.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E6%8A%80%E6%9C%AF%E6%8A%A5%E5%91%8A/" rel="tag"><i class="fa fa-tag"></i> 技术报告</a>
+              <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%8E%87/" rel="tag"><i class="fa fa-tag"></i> 学习率</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/7381cae3.html" rel="prev" title="LLM的重复生成和ICL">
+                  <i class="fa fa-angle-left"></i> LLM的重复生成和ICL
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">232k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">7:02</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
