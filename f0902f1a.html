@@ -20,40 +20,38 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  LLM的重复生成问题，俗称复读机问题。">
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  有朋友问到了关于RoPE远距离衰减的问题，这里给出几个示例，提供一个直观理解的视角。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="LLM的重复生成和ICL">
-<meta property="og:url" content="https://saicat.github.io/7381cae3.html">
+<meta property="og:title" content="RoPE的远距离衰减">
+<meta property="og:url" content="https://saicat.github.io/f0902f1a.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  LLM的重复生成问题，俗称复读机问题。">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  有朋友问到了关于RoPE远距离衰减的问题，这里给出几个示例，提供一个直观理解的视角。">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://saicat.github.io/7381cae3/ditto_1.png">
-<meta property="og:image" content="https://saicat.github.io/7381cae3/ditto_2.png">
-<meta property="og:image" content="https://saicat.github.io/7381cae3/3.png">
-<meta property="og:image" content="https://saicat.github.io/7381cae3/4.png">
-<meta property="og:image" content="https://saicat.github.io/7381cae3/5.png">
-<meta property="og:image" content="https://saicat.github.io/7381cae3/6.png">
-<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
-<meta property="article:published_time" content="2024-06-17T11:22:22.000Z">
-<meta property="article:modified_time" content="2024-06-18T13:36:13.750Z">
+<meta property="og:image" content="https://saicat.github.io/f0902f1a/1.png">
+<meta property="og:image" content="https://saicat.github.io/f0902f1a/2.png">
+<meta property="og:image" content="https://saicat.github.io/f0902f1a/3.png">
+<meta property="og:image" content="https://saicat.github.io/f0902f1a/4.png">
+<meta property="og:image" content="https://saicat.github.io/f0902f1a/5.png">
+<meta property="article:published_time" content="2024-06-25T11:12:38.000Z">
+<meta property="article:modified_time" content="2024-06-25T12:21:41.398Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
 <meta property="article:tag" content="transformer">
-<meta property="article:tag" content="复读机">
-<meta property="article:tag" content="重复生成">
+<meta property="article:tag" content="positional encoding">
+<meta property="article:tag" content="RoPE">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://saicat.github.io/7381cae3/ditto_1.png">
+<meta name="twitter:image" content="https://saicat.github.io/f0902f1a/1.png">
 
 
-<link rel="canonical" href="https://saicat.github.io/7381cae3.html">
+<link rel="canonical" href="https://saicat.github.io/f0902f1a.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/7381cae3.html","path":"7381cae3.html","title":"LLM的重复生成和ICL"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/f0902f1a.html","path":"f0902f1a.html","title":"RoPE的远距离衰减"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>LLM的重复生成和ICL | Linsight</title>
+<title>RoPE的远距离衰减 | Linsight</title>
   
 
 
@@ -153,7 +151,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#induction-heads"><span class="nav-number">2.</span> <span class="nav-text">induction heads</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%87%8D%E5%A4%8D%E7%94%9F%E6%88%90%E4%B8%8Eicl"><span class="nav-number">3.</span> <span class="nav-text">重复生成与ICL</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BC%93%E8%A7%A3%E5%A4%8D%E8%AF%BB%E6%9C%BA%E9%97%AE%E9%A2%98"><span class="nav-number">4.</span> <span class="nav-text">缓解复读机问题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%AC%E5%BC%8F"><span class="nav-number">1.</span> <span class="nav-text">公式</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%BF%9C%E8%B7%9D%E7%A6%BB%E8%A1%B0%E5%87%8F"><span class="nav-number">2.</span> <span class="nav-text">远距离衰减</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -218,7 +216,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/7381cae3.html">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/f0902f1a.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
@@ -231,12 +229,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="LLM的重复生成和ICL | Linsight">
+      <meta itemprop="name" content="RoPE的远距离衰减 | Linsight">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          LLM的重复生成和ICL
+          RoPE的远距离衰减
         </h1>
 
         <div class="post-meta-container">
@@ -246,15 +244,9 @@
         <i class="far fa-calendar"></i>
       </span>
       <span class="post-meta-item-text">发表于</span>
+      
 
-      <time title="创建时间：2024-06-17 19:22:22" itemprop="dateCreated datePublished" datetime="2024-06-17T19:22:22+08:00">2024-06-17</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2024-06-18 21:36:13" itemprop="dateModified" datetime="2024-06-18T21:36:13+08:00">2024-06-18</time>
+      <time title="创建时间：2024-06-25 19:12:38 / 修改时间：20:21:41" itemprop="dateCreated datePublished" datetime="2024-06-25T19:12:38+08:00">2024-06-25</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -281,7 +273,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>4.7k</span>
+      <span>4.1k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -300,120 +292,123 @@
     
     <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
 <hr>
-<p>LLM的重复生成问题，俗称复读机问题。</p>
-<p>对于这个问题的研究很多都和in-context learning相关。</p>
-<h1 id="背景">背景</h1>
-<p>在目前这个时间点，其实已经很少会遇到字符级别的重复生成问题。</p>
-<p>自ChatGPT发布以来，模型规模的增大，训练数据数量和质量的提升，都让LLM的能力不断提升，复读机问题这种基础问题看起来确实不多见了。</p>
-<p>不过在某些场景，比如手机的端侧智能助手，所用的模型相对较小，有时还是能遇到一些句子级别、段落级别的重复生成问题。</p>
-<p>此外，在多轮对话下，随着对话轮次的增多，出现“重复生成/近似重复生成”的概率也会增加。在特定的对话中，用户新增了一些细致的要求或者进行关于细节的追问，这时模型有可能倾向于给出和前面回答几乎相同的答案。</p>
-<p>当然这些情况都可以归因于模型训得不够好。但重复生成的问题显然和知识储备、回复质量这些问题有所不同，也有一些工作进行相关分析。</p>
-<p>模型这种重复生成的特性部分可以为我们所用，但有时也会带来问题。</p>
-<h1 id="induction-heads">induction heads</h1>
-<p>Anthropic在22年的文章《In-context Learning and Induction
-Heads》中对基于transformer的语言模型进行了ICL相关的分析。他们发现在这些生成模型里，存在着induction
-heads的机制。</p>
-<p>induction
-heads是模型中的一条circuit。简单来说，其功能是回顾当前token前面的内容，找到前面出现当前token的地方，并按照前面出现过的模式来补全当前token后面的内容。</p>
-<p>举个例子，比如现在的序列是</p>
-<center>
-... [token A] [token B] [token C] ... [toekn A]
-</center>
-<p>在生成下一个token的时候，induction heads就会从最后一个 [toekn A]
-往前找，发现前面出现过相同的 [toekn
-A]，那么模型后面就会倾向于按照前面的出现过的 [token A] [token B] [token
-C] 这样的pattern来补全后面的内容，生成</p>
-<center>
-... [token A] [token B] [token C] ... [toekn A] [toekn B] [toekn C]
-</center>
-<p>induction
-heads这样的复制能力也会扩展到“相似”token上。如果当前token在前面没有出现过，那么induction
-heads就会去前面找和当前token相似的token所在的pattern，以此pattern作为后面生成的参考。比如现在的序列是</p>
-<center>
-... [token A] [token B] [token C] ... [toekn A‘]
-</center>
-<p>其中 [toekn A‘] 和 [toekn A] 具有相近的特征，那么induction
-heads就会倾向于把序列补全为</p>
-<center>
-... [token A] [token B] [token C] ... [toekn A‘] [toekn B‘] [toekn C‘]
-</center>
-<p>其中 [toekn B‘]、[toekn C‘]分别和[token B]、[token
-C]有相近的特征。</p>
-<p>induction heads由2个attention
-head组成。Anthropic在2层的transformer模型上精确地探测到了这样的行为，而且更多层更复杂的transformer模型上，也通过一些手段观察到类似功能的存在。</p>
-<p>induction
-heads这样的“复制”行为被认为是ICL能力的主要来源。前面的例子中，从[token
-A] [token B] [toekn A‘] 生成 [toekn B‘]，这就已经是一个ICL的行为。</p>
-<p>同时induction
-heads这样的“复制”行为某种程度上其实也是一种重复生成行为。这样的“复制”行为很可能和LLM的训练方式有关：预训练next
-token
-prediction鼓励模型预测概率最大的token，而在上文出现过相似token/pattern会提升模型复制token的信心，从而加强了重复生成的行为。</p>
-<h1 id="重复生成与icl">重复生成与ICL</h1>
-<p>论文：《Learning to Break the Loop: Analyzing and Mitigating
-Repetitions for Neural Text Generation》，2022年</p>
-<p>这篇文论对生成模型的（句子级）重复生成问题做了一些实验和分析，找到一些和重复生成现象相关的发现，并提出DITTO（pseuDo-repetITion
-penalizaTiOn）缓解重复生成的问题。（这缩写的方式让人想起 NEural
-contextualiZed representation for cHinese lAnguage understanding）</p>
-<p>这样的研究基于一个前提：使用maximization-based decoding算法（如greedy
-decoding）。一些带有随机性的算法本身是具有缓解重复生成问题的能力的。</p>
-<p>发现一：模型倾向于提升前面出现过的句子的生成概率</p>
-<p>并且只要重复一次，这个概率就会飙升很多（下图）。这个发现和induction
-heads中的类似。</p>
-<p>发现二：重复生成具有self-reinforcement的特点</p>
-<p>重复的次数越多，越容易重复，越难以打破这个循环，如下图，横轴表示重复次数，纵轴红色表示某个token的概率，蓝色表示最大的概率。</p>
-<img src="/7381cae3/ditto_1.png" class title="重复生成">
-<p>发现三：Sentences with higher initial probabilities usually have a
-stronger self-reinforcement effect</p>
-<p>句子本身概率越大（模型认为越通顺），重复的自我加强效应越强。把重复的句子换成随机token，在不同重复次数下解码token的概率变化如下图，增强的趋势比上图（通顺句子）要弱很多</p>
-<img src="/7381cae3/ditto_2.png" class title="重复生成">
-<p>而DITTO的做法简单来说是构造了一些重复句子的训练样本，并在训练时显示加入对重复token的惩罚。</p>
-<p>另一个工作《UNDERSTANDING IN-CONTEXT LEARNING FROM
-REPETITIONS》，对self-reinforcement进行了进一步的测试，发现：<br>
-- self-reinforcement是LLM的共同属性，多个模型都具有这样的特点<br>
-- self-reinforcement强度随着重复token的距离减小而增强，如下图所示</p>
-<img src="/7381cae3/3.png" class title="重复生成">
-<ul>
-<li>即使重复的token个数只有1个，这种self-reinforcement也会出现；而随着重复片段的增长，self-reinforcement强度也在提升，如下图所示</li>
-</ul>
-<img src="/7381cae3/4.png" class title="重复生成">
-<p>而通过计算token重复的次数和token的概率，发现正是预训练next token
-prediction的任务赋予了模型self-reinforcement的特点。</p>
-<img src="/7381cae3/5.png" class title="重复生成">
-<p>模型这种自我加强的作用对我们来说，既有好处又有坏处，可以说令人又爱又恨。</p>
-<p>好处一：constraining output space</p>
-<p>在ICL中，给定多个demonstration，通过利用self-reinforcement的特点，可以让模型的输出不要跑偏。比如多项选择题的ICL，可以让模型输出ABCD，而不是其他无法解析的内容。</p>
-<p>为了验证这个假设，对用ICL数据做了实验，如下图。橙色线是对demonstration的问题内容和答案内容进行mask处理，蓝色线是在橙色的基础上进一步把ABCD替换成别的符号，红色线是在橙色线的基础上把“Answer：”替换成相同意思的内容。</p>
-<img src="/7381cae3/6.png" class title="重复生成">
-<p>可以看到，如果仅仅对问题和答案内容进行mask，并不影响模型输出ABCD的概率，但是如果把ABCD/“Answer：”这种在demonstration中多次重复的内容替换成意思相近的符号，就会使得模型在答案空间的分布概率降低。</p>
-<p>好处二：learning to follow patterns</p>
-<p>和好处一类似，CoT的成功正是这个好处的一个例子。</p>
-<p>坏处一：spurious connections</p>
-<p>对于ICL来说，self-reinforcement的坏处也很明显。不合理的prompt，比如不平均的答案分布，都会影响模型的能力，甚至可能成为用户注入攻击的入口。</p>
-<h1 id="缓解复读机问题">缓解复读机问题</h1>
-<p>模型重复生成的self-reinforcement可以在ICL中发挥作用，但是也会让模型在生成回复的时候不断重复相同内容，停不下来。</p>
-<p>一个可能的原因是训练数据中存在较多重复内容，这在从网页爬取的预训练数据中还是有一定比例的，因此对数据的清洗需要加入筛选这种重复内容的逻辑。</p>
-<p>但是即使把训练数据中的重复数据比例降到很低，依然不能完全杜绝复读机问题，因此有很多方法是在解码的时候进行处理（decoding-base），缓解复读机问题：<br>
-- stochastic
-sampling：通过引入随机性，让模型不要总是选择概率最大的token输出，比如top-k、top-p采样。<br>
-- 重复惩罚：对已经出现过的token进行惩罚，减少生成结果的重复token。<br>
-- contrastive
-decoding：对比采样，降低生成表征相近的token。（实操对效果有比较大的影响）<br>
-- beam search（比较慢）<br>
-- locally typical sampling<br>
-- no repeat ngram：和重复惩罚类似，保证没有重复的ngram出现</p>
-<p>此外也有training-based的方法： -
-在训练的时候对已经出现过的token进行惩罚<br>
--
-通过强化学习对模型的重复生成进行惩罚（但强化学习成本和难度都比较高）</p>
+<p>有朋友问到了关于RoPE远距离衰减的问题，这里给出几个示例，提供一个直观理解的视角。</p>
+<p>之前对RoPE的梳理参考 <a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a>。</p>
+<h1 id="公式">公式</h1>
+<p>回顾一下RoPE的实现。RoPE通过在q和k上分别乘一个旋转矩阵，实现了相对距离编码的功能。</p>
+<p>对于position为m的q或者k，旋转矩阵如下</p>
+<p><span class="math display">\[
+\boldsymbol{R}_{\Theta,m}^d=\begin{pmatrix}\cos m\theta_0&amp;-\sin
+m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\\sin m\theta_0&amp;\cos
+m\theta_0&amp;0&amp;0&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\cos
+m\theta_1&amp;-\sin m\theta_1&amp;\cdots&amp;0&amp;0\\0&amp;0&amp;\sin
+m\theta_1&amp;\cos
+m\theta_1&amp;\cdots&amp;0&amp;0\\\vdots&amp;\vdots&amp;\vdots&amp;\vdots&amp;\ddots&amp;\vdots&amp;\vdots\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\cos
+m\theta_{d/2-1}&amp;-\sin
+m\theta_{d/2-1}\\0&amp;0&amp;0&amp;0&amp;\cdots&amp;\sin
+m\theta_{d/2-1}&amp;\cos n\theta_{d/2-1}\end{pmatrix}
+\]</span></p>
+<p>实际实现时，高效率的实现如下</p>
+<p><span class="math display">\[
+\boldsymbol{R}_{
+m}\boldsymbol{q}=\begin{pmatrix}q_0\\q_1\\q_2\\q_3\\q_4\\\vdots\\q_{d-2}\\q_{d-1}\end{pmatrix}\otimes\begin{pmatrix}\cos
+m\theta_0\\\cos m\theta_0\\\cos m\theta_1\\\cos m\theta_1\\\cos
+m\theta_1\\\vdots\\\cos m\theta_{d/2-1}\\\cos
+m\theta_{d/2-1}\end{pmatrix}
++\begin{pmatrix}-q_1\\q_0\\-q_3\\\vdots\\-q_{d-1}\\q_{d-2}\end{pmatrix}\otimes\begin{pmatrix}\sin
+m\theta_0\\\sin m\theta_0\\\sin m\theta_1\\\sin m\theta_1\\\sin
+m\theta_1\\\vdots\\\sin m\theta_{d/2-1}\\\sin
+m\theta_{d/2-1}\end{pmatrix}
+\]</span></p>
+<p>也可以让第二项保持输入向量的元素位置，变成</p>
+<p><span class="math display">\[
+\boldsymbol{R}_{
+m}\boldsymbol{q}=\begin{pmatrix}q_0\\q_1\\q_2\\q_3\\q_4\\\vdots\\q_{d-2}\\q_{d-1}\end{pmatrix}\otimes\begin{pmatrix}\cos
+m\theta_0\\\cos m\theta_0\\\cos m\theta_1\\\cos m\theta_1\\\cos
+m\theta_1\\\vdots\\\cos m\theta_{d/2-1}\\\cos
+m\theta_{d/2-1}\end{pmatrix}
++\begin{pmatrix}q_0\\q_1\\q_2\\q_3\\q_4\\\vdots\\q_{d-2}\\q_{d-1}\end{pmatrix}\otimes\begin{pmatrix}\sin
+m\theta_0\\-\sin m\theta_0\\\sin m\theta_1\\-\sin m\theta_1\\\sin
+m\theta_1\\\vdots\\\sin m\theta_{d/2-1}\\-\sin
+m\theta_{d/2-1}\end{pmatrix}
+\]</span></p>
+<p>huggingface的实现中预先把各个位置的cos额sin向量都计算好了，可以重复利用，这样看后面这样实现的效率会更高一点。</p>
+<h1 id="远距离衰减">远距离衰减</h1>
+<p>远距离衰减指的是随着q和k的相对距离的增大，加入位置编码之后的内积应该随着距离增大而减小，这样相当于离得远的token分配到的attention会比较小，而离得近的token会得到更多的注意力。</p>
+<p>这样的特性确实直觉上比较符合人类的注意力机制。</p>
+<p>把各个参数（base、window size、head
+size）下的内积值画出来看看是怎么衰减的。实现参考下面的代码。这里偷懒没有实现得很高效，勉强能用就行。</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> apply_rope(input_vec, position, base<span class="op">=</span><span class="dv">10000</span>):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 获取维度</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    d <span class="op">=</span> input_vec.shape[<span class="dv">0</span>]</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 获取theta</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> np.arange(<span class="dv">1</span>, d <span class="op">//</span> <span class="dv">2</span> <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    theta <span class="op">=</span> base <span class="op">**</span> (<span class="op">-</span><span class="dv">2</span> <span class="op">*</span> (i <span class="op">-</span> <span class="dv">1</span>) <span class="op">/</span> d)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    theta <span class="op">=</span> np.repeat(theta, <span class="dv">2</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 计算旋转后的向量</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    reranged_vec <span class="op">=</span> np.empty_like(input_vec)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    reranged_vec[<span class="dv">0</span>::<span class="dv">2</span>] <span class="op">=</span> <span class="op">-</span>input_vec[<span class="dv">1</span>::<span class="dv">2</span>]</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    reranged_vec[<span class="dv">1</span>::<span class="dv">2</span>] <span class="op">=</span> input_vec[:<span class="op">-</span><span class="dv">1</span>:<span class="dv">2</span>]</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    output_vec <span class="op">=</span> input_vec <span class="op">*</span> np.cos(position <span class="op">*</span> theta) <span class="op">+</span> reranged_vec <span class="op">*</span> np.sin(position <span class="op">*</span> theta)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> output_vec</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> plot(x, y, name<span class="op">=</span><span class="st">&#39;&#39;</span>):</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    plt.plot(x, y, label<span class="op">=</span>name)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    plt.legend()</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 显示图表</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    plt.show()</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>base <span class="op">=</span> <span class="dv">10000</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>window_size <span class="op">=</span> <span class="dv">4096</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> <span class="dv">512</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> np.ones(d)</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>k <span class="op">=</span> np.ones(d)</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>rotated_q <span class="op">=</span> apply_rope(input_vec<span class="op">=</span>q, position<span class="op">=</span><span class="dv">0</span>, base<span class="op">=</span>base)</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>inner_products <span class="op">=</span> []</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(window_size):</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    rotated_k <span class="op">=</span> apply_rope(input_vec<span class="op">=</span>k, position<span class="op">=</span>i, base<span class="op">=</span>base)</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>    product <span class="op">=</span> np.dot(rotated_q, rotated_k)</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>    inner_products.append(product)</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>plot(x<span class="op">=</span><span class="bu">range</span>(window_size), y<span class="op">=</span>inner_products, name<span class="op">=</span><span class="ss">f&#39;base=</span><span class="sc">&#123;</span>base<span class="sc">&#125;</span><span class="ss">,window size=</span><span class="sc">&#123;</span>window_size<span class="sc">&#125;</span><span class="ss">,d=</span><span class="sc">&#123;</span>d<span class="sc">&#125;</span><span class="ss">&#39;</span>)</span></code></pre></div>
+<p>（1）q = k = 1</p>
+<p>假设q和k都是1向量，如果q在位置0，画出k在0~4096位置下和q在位置编码后的内积如下。</p>
+<img src="/f0902f1a/1.png" class title="衰减">
+<p>这里使用了base=10000，d=512。</p>
+<p>可以看到整体趋势是震荡下降的</p>
+<p>不过如果把窗口从4096增大到65536，图像会变成这样</p>
+<img src="/f0902f1a/2.png" class title="衰减">
+<p>可以看到图像不再是单纯的衰减，在距离超过大约15000的时候，出现了上升。</p>
+<p>实际上这个包含多个周期函数的内积也具有一定的周期性，并不是在整个域上保持衰减的特性。只要相对距离够大，超过这个周期的1/4，内积就会再次上升。</p>
+<p>而这个内积的周期受base调控，base越大，周期越长，因此现在的长窗口模型起步就是base=5M或者10M。</p>
+<p>我们把base改成5M，图像如下</p>
+<img src="/f0902f1a/3.png" class title="衰减">
+<p>又呈现了震荡衰减的趋势。</p>
+<p>前面画的是q在位置0，k在0~4096/65536的情况，那么把q放在中间看看内积结果怎么样。</p>
+<img src="/f0902f1a/4.png" class title="衰减">
+<p>可以看到在q两边的内积是对称的，同样的远距离衰减属性。</p>
+<p>（2）q、k随机</p>
+<p>前面是把q和k固定为1向量，现在试着把q和k初始化为随机向量，图像如下</p>
+<img src="/f0902f1a/5.png" class title="衰减">
+<p>相比1向量出现了更多的震荡，但是大体上还是能保持一定的远距离衰减特性。</p>
 <h1 id="小结">小结</h1>
-<p>自回归模型的重复生成不仅和数据有关，跟训练方法、模型结构、解码策略都有关。</p>
-<p>这种特性既好处也有坏处，在ICL可以成为我们控制模型效果的抓手，但也有可能带来生成内容的崩溃问题。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
+<ul>
+<li>RoPE的远距离衰减是震荡的，并且整个内积本身也具有一定的周期性，只有把base设得足够大，才能让内积结果在模型窗口大小内保持远距离衰减的特性。<br>
+</li>
+<li>在q和k的相对距离小的时候，内积差距较大，也就是衰减较快；到了远距离之后，衰减变慢，也就是从内积角度来看，分辨率会变小。</li>
+</ul>
 <hr>
 <p>【往期文章】</p>
 <p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
@@ -425,11 +420,13 @@ decoding：对比采样，降低生成表征相近的token。（实操对效果�
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
@@ -444,15 +441,10 @@ window attention</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
 <hr>
 <h1 id="reference">Reference</h1>
-<p>【1】如何解释大模型的重复生成现象？
-https://www.zhihu.com/question/616130636<br>
-【2】Learning to Break the Loop: Analyzing and Mitigating Repetitions
-for Neural Text Generation https://arxiv.org/abs/2206.02369<br>
-【3】Understanding In-Context Learning from Repetitions
-https://arxiv.org/abs/2310.00297<br>
-【4】In-context Learning and Induction Heads
-https://arxiv.org/abs/2209.11895<br>
-【5】https://zhuanlan.zhihu.com/p/671697479</p>
+<p>【1】Transformer升级之路：2、博采众长的旋转式位置编码，https://spaces.ac.cn/archives/8265<br>
+【2】RoFormer: Enhanced Transformer with Rotary Position Embedding
+https://arxiv.org/abs/2104.09864<br>
+【3】理解LLM位置编码:RoPE http://www.linsight.cn/c4da56c0.html</p>
 
     </div>
 
@@ -470,7 +462,7 @@ https://arxiv.org/abs/2209.11895<br>
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://saicat.github.io/7381cae3.html" title="LLM的重复生成和ICL">https://saicat.github.io/7381cae3.html</a>
+      <a href="https://saicat.github.io/f0902f1a.html" title="RoPE的远距离衰减">https://saicat.github.io/f0902f1a.html</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -482,22 +474,19 @@ https://arxiv.org/abs/2209.11895<br>
               <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
               <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
               <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
-              <a href="/tags/%E5%A4%8D%E8%AF%BB%E6%9C%BA/" rel="tag"><i class="fa fa-tag"></i> 复读机</a>
-              <a href="/tags/%E9%87%8D%E5%A4%8D%E7%94%9F%E6%88%90/" rel="tag"><i class="fa fa-tag"></i> 重复生成</a>
+              <a href="/tags/positional-encoding/" rel="tag"><i class="fa fa-tag"></i> positional encoding</a>
+              <a href="/tags/RoPE/" rel="tag"><i class="fa fa-tag"></i> RoPE</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/f5fb75e4.html" rel="prev" title="从loss视角理解大模型涌现能力">
-                  <i class="fa fa-angle-left"></i> 从loss视角理解大模型涌现能力
+                <a href="/376db710.html" rel="prev" title="MiniCPM">
+                  <i class="fa fa-angle-left"></i> MiniCPM
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/376db710.html" rel="next" title="MiniCPM">
-                  MiniCPM <i class="fa fa-angle-right"></i>
-                </a>
             </div>
           </div>
     </footer>
