@@ -1110,6 +1110,86 @@ window attention</a><br>
       </tags>
   </entry>
   <entry>
+    <title>大模型算法题(4)</title>
+    <url>/1736008.html</url>
+    <content><![CDATA[<p><img src="/images/cover.png"></p>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+<hr>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错漏，欢迎指正</sub></p>
+<hr>
+<h1 id="为什么transformer用layernorm而不是batchnorm">1.为什么Transformer用layernorm而不是batchnorm</h1>
+<p>首先，NLP数据中由于每条样本可能不一样长，会使用padding，如果对padding部分进行normalization，对效果有负面影响。直观来说，batchnorm会对同一个特征以batch为组进行归一化，而对于文本数据，同一个位置的token很可能是没有关联的两个token，对这样一组数据进行归一化没有什么实际意义。《PowerNorm:
+Rethinking Batch Normalization in
+Transformers》论文的实验也表明，在NLP数据使用batchnorm，均值和方差相对layernorm会更加震荡，因此效果欠佳。</p>
+<h1 id="transformer中encdoer和decoder是怎么进行交互的">2.transformer中，encdoer和decoder是怎么进行交互的？</h1>
+<p>decoder部分的输入，在每层中，先进行一次self-attention；之后用encoder的输出作为attention计算中的K、V，decoder的输入作为Q，进行cross-attention。</p>
+<img src="/1736008/transformer.png" class title="transformer">
+<h1 id="pytorch中tensor的view和reshape两个方法有什么区别">3.PyTorch中，Tensor的view()和reshape()两个方法有什么区别？</h1>
+<p>1.功能上：view()与reshape()方法都可以用来改变tensor的形状，但是使用条件不同，view()能做的是reshape的子集。</p>
+<p>2.view()方法需要tensor满足连续性，操作后返回一个引用，返回值是视图，没有改变原储存空间的值，多个视图共享同一个物理储存空间的内容。</p>
+<p>3.reshape()方法不需要tensor一定满足连续性。如果tensor不满足连续性的要求，则会使用新的储存空间并返回。如果满足连续性需求，则功能和view()一致。</p>
+<p>4.连续性：比如一个二维张量，如果按行优先展开成一维的结果，和物理储存顺序是一致的，就是连续的。可以用is_contiguous()来判断一个张量是否连续，如果不连续，可以用contiguous()得到一份新空间中的连续副本。</p>
+<h1 id="rlhf中ppo需要哪几个模型分别是什么作用">4.RLHF中，PPO需要哪几个模型，分别是什么作用？</h1>
+<p>一般来说，PPO需要使用4个模型。</p>
+<p>1.Actor模型：由SFT初始化，就是进行强化学习的主模型，是我们想要最终获得的模型；它不断产生action并被Critic模型所评价，计算loss进行训练。</p>
+<p>2.Reference模型：一般也是从SFT模型初始化，RLHF中Reference模型并不更新参数，只是作为Actor模型的参考使用；通过约束Actor模型和Reference模型的KL
+penalty等，可以防止Actor模型被训得跑得太偏。</p>
+<p>3.Reward模型：提前训练好的，对SFT模型进行打分的模型，RLHF中参数是冻结的。</p>
+<p>4.Critic模型：一般由Reward模型进行初始化，参数可训练，用于预测Actor模型生成的token的收益。</p>
+<h1 id="gpt类模型训练过程中消耗显存的主要有哪些部分分别是多少哪部分占用最多假设模型有l层词表大小为vhidden-size为hbatch-size为b训练窗口长度为s使用adam优化器混合精度训练需要存一阶和二阶动量注意力头数为n">5.GPT类模型训练过程中，消耗显存的主要有哪些部分？分别是多少？哪部分占用最多？假设模型有L层，词表大小为V，hidden
+size为H，batch
+size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需要存一阶和二阶动量），注意力头数为N。</h1>
+<p>训练过程中，显存消耗主要有模型参数、梯度、optimizer状态值和中间激活值。</p>
+<p>1.模型参数Φ：词表部分VH，每层参数12H<sup>2+13H，总共有Φ=VH+L(12H</sup>2+13H)，如果是半精度就是2Φ</p>
+<p>2.梯度：每个参数对应有一个梯度，总量为Φ，如果是半精度就是2Φ</p>
+<p>3.optimizer状态值：每个参数有一个对应梯度，每个参数又对应优化器一个一阶动量和二阶动量。在混合精度训练中，使用半精度进行前向计算和梯度计算，同时优化器备份一份单精度的优化器状态、梯度和参数用于更新参数，因此共有(Φ+Φ)<em>2+(Φ+Φ+2Φ)</em>4=20Φ，除去参数和梯度，优化器占部分16Φ</p>
+<p>4.激活值：保存激活值是为了计算梯度，因此每个矩阵相乘、softmax、dropout都需要保存输入值的中间的激活值。总共是34BSH+5BNS^2，如果都是半精度，就乘以2。</p>
+<p>模型参数、梯度和优化器状态和输入长度无关，是固定值，而激活值随着长度增加，以平方速度增长。
+以GPT3（175B）为例，H=12288，L=96，N=96。模型参数量显存越为350G。以B=1计算，如果S=1024，激活值约为90G；如果S=8192，激活值约为3420G。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>MiniCPM</title>
     <url>/376db710.html</url>
     <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
@@ -1395,86 +1475,6 @@ Scalable Training Strategies https://arxiv.org/abs/2404.06395</p>
       </tags>
   </entry>
   <entry>
-    <title>大模型算法题(4)</title>
-    <url>/1736008.html</url>
-    <content><![CDATA[<p><img src="/images/cover.png"></p>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
-<hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错漏，欢迎指正</sub></p>
-<hr>
-<h1 id="为什么transformer用layernorm而不是batchnorm">1.为什么Transformer用layernorm而不是batchnorm</h1>
-<p>首先，NLP数据中由于每条样本可能不一样长，会使用padding，如果对padding部分进行normalization，对效果有负面影响。直观来说，batchnorm会对同一个特征以batch为组进行归一化，而对于文本数据，同一个位置的token很可能是没有关联的两个token，对这样一组数据进行归一化没有什么实际意义。《PowerNorm:
-Rethinking Batch Normalization in
-Transformers》论文的实验也表明，在NLP数据使用batchnorm，均值和方差相对layernorm会更加震荡，因此效果欠佳。</p>
-<h1 id="transformer中encdoer和decoder是怎么进行交互的">2.transformer中，encdoer和decoder是怎么进行交互的？</h1>
-<p>decoder部分的输入，在每层中，先进行一次self-attention；之后用encoder的输出作为attention计算中的K、V，decoder的输入作为Q，进行cross-attention。</p>
-<img src="/1736008/transformer.png" class title="transformer">
-<h1 id="pytorch中tensor的view和reshape两个方法有什么区别">3.PyTorch中，Tensor的view()和reshape()两个方法有什么区别？</h1>
-<p>1.功能上：view()与reshape()方法都可以用来改变tensor的形状，但是使用条件不同，view()能做的是reshape的子集。</p>
-<p>2.view()方法需要tensor满足连续性，操作后返回一个引用，返回值是视图，没有改变原储存空间的值，多个视图共享同一个物理储存空间的内容。</p>
-<p>3.reshape()方法不需要tensor一定满足连续性。如果tensor不满足连续性的要求，则会使用新的储存空间并返回。如果满足连续性需求，则功能和view()一致。</p>
-<p>4.连续性：比如一个二维张量，如果按行优先展开成一维的结果，和物理储存顺序是一致的，就是连续的。可以用is_contiguous()来判断一个张量是否连续，如果不连续，可以用contiguous()得到一份新空间中的连续副本。</p>
-<h1 id="rlhf中ppo需要哪几个模型分别是什么作用">4.RLHF中，PPO需要哪几个模型，分别是什么作用？</h1>
-<p>一般来说，PPO需要使用4个模型。</p>
-<p>1.Actor模型：由SFT初始化，就是进行强化学习的主模型，是我们想要最终获得的模型；它不断产生action并被Critic模型所评价，计算loss进行训练。</p>
-<p>2.Reference模型：一般也是从SFT模型初始化，RLHF中Reference模型并不更新参数，只是作为Actor模型的参考使用；通过约束Actor模型和Reference模型的KL
-penalty等，可以防止Actor模型被训得跑得太偏。</p>
-<p>3.Reward模型：提前训练好的，对SFT模型进行打分的模型，RLHF中参数是冻结的。</p>
-<p>4.Critic模型：一般由Reward模型进行初始化，参数可训练，用于预测Actor模型生成的token的收益。</p>
-<h1 id="gpt类模型训练过程中消耗显存的主要有哪些部分分别是多少哪部分占用最多假设模型有l层词表大小为vhidden-size为hbatch-size为b训练窗口长度为s使用adam优化器混合精度训练需要存一阶和二阶动量注意力头数为n">5.GPT类模型训练过程中，消耗显存的主要有哪些部分？分别是多少？哪部分占用最多？假设模型有L层，词表大小为V，hidden
-size为H，batch
-size为B，训练窗口长度为S，使用Adam优化器混合精度训练（需要存一阶和二阶动量），注意力头数为N。</h1>
-<p>训练过程中，显存消耗主要有模型参数、梯度、optimizer状态值和中间激活值。</p>
-<p>1.模型参数Φ：词表部分VH，每层参数12H<sup>2+13H，总共有Φ=VH+L(12H</sup>2+13H)，如果是半精度就是2Φ</p>
-<p>2.梯度：每个参数对应有一个梯度，总量为Φ，如果是半精度就是2Φ</p>
-<p>3.optimizer状态值：每个参数有一个对应梯度，每个参数又对应优化器一个一阶动量和二阶动量。在混合精度训练中，使用半精度进行前向计算和梯度计算，同时优化器备份一份单精度的优化器状态、梯度和参数用于更新参数，因此共有(Φ+Φ)<em>2+(Φ+Φ+2Φ)</em>4=20Φ，除去参数和梯度，优化器占部分16Φ</p>
-<p>4.激活值：保存激活值是为了计算梯度，因此每个矩阵相乘、softmax、dropout都需要保存输入值的中间的激活值。总共是34BSH+5BNS^2，如果都是半精度，就乘以2。</p>
-<p>模型参数、梯度和优化器状态和输入长度无关，是固定值，而激活值随着长度增加，以平方速度增长。
-以GPT3（175B）为例，H=12288，L=96，N=96。模型参数量显存越为350G。以B=1计算，如果S=1024，激活值约为90G；如果S=8192，激活值约为3420G。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>RoPE的远距离衰减</title>
     <url>/f0902f1a.html</url>
     <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
@@ -1597,6 +1597,12 @@ size）下的内积值画出来看看是怎么衰减的。实现参考下面的�
 <li>在q和k的相对距离小的时候，内积差距较大，也就是衰减较快；到了远距离之后，衰减变慢，也就是从内积角度来看，分辨率会变小。</li>
 </ul>
 <hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
 <p>【往期文章】</p>
 <p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
 <a href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
@@ -1644,6 +1650,178 @@ https://arxiv.org/abs/2104.09864<br>
         <tag>transformer</tag>
         <tag>positional encoding</tag>
         <tag>RoPE</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LLM的重复生成和ICL</title>
+    <url>/7381cae3.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>LLM的重复生成问题，俗称复读机问题。</p>
+<p>对于这个问题的研究很多都和in-context learning相关。</p>
+<h1 id="背景">背景</h1>
+<p>在目前这个时间点，其实已经很少会遇到字符级别的重复生成问题。</p>
+<p>自ChatGPT发布以来，模型规模的增大，训练数据数量和质量的提升，都让LLM的能力不断提升，复读机问题这种基础问题看起来确实不多见了。</p>
+<p>不过在某些场景，比如手机的端侧智能助手，所用的模型相对较小，有时还是能遇到一些句子级别、段落级别的重复生成问题。</p>
+<p>此外，在多轮对话下，随着对话轮次的增多，出现“重复生成/近似重复生成”的概率也会增加。在特定的对话中，用户新增了一些细致的要求或者进行关于细节的追问，这时模型有可能倾向于给出和前面回答几乎相同的答案。</p>
+<p>当然这些情况都可以归因于模型训得不够好。但重复生成的问题显然和知识储备、回复质量这些问题有所不同，也有一些工作进行相关分析。</p>
+<p>模型这种重复生成的特性部分可以为我们所用，但有时也会带来问题。</p>
+<h1 id="induction-heads">induction heads</h1>
+<p>Anthropic在22年的文章《In-context Learning and Induction
+Heads》中对基于transformer的语言模型进行了ICL相关的分析。他们发现在这些生成模型里，存在着induction
+heads的机制。</p>
+<p>induction
+heads是模型中的一条circuit。简单来说，其功能是回顾当前token前面的内容，找到前面出现当前token的地方，并按照前面出现过的模式来补全当前token后面的内容。</p>
+<p>举个例子，比如现在的序列是</p>
+<center>
+... [token A] [token B] [token C] ... [toekn A]
+</center>
+<p>在生成下一个token的时候，induction heads就会从最后一个 [toekn A]
+往前找，发现前面出现过相同的 [toekn
+A]，那么模型后面就会倾向于按照前面的出现过的 [token A] [token B] [token
+C] 这样的pattern来补全后面的内容，生成</p>
+<center>
+... [token A] [token B] [token C] ... [toekn A] [toekn B] [toekn C]
+</center>
+<p>induction
+heads这样的复制能力也会扩展到“相似”token上。如果当前token在前面没有出现过，那么induction
+heads就会去前面找和当前token相似的token所在的pattern，以此pattern作为后面生成的参考。比如现在的序列是</p>
+<center>
+... [token A] [token B] [token C] ... [toekn A‘]
+</center>
+<p>其中 [toekn A‘] 和 [toekn A] 具有相近的特征，那么induction
+heads就会倾向于把序列补全为</p>
+<center>
+... [token A] [token B] [token C] ... [toekn A‘] [toekn B‘] [toekn C‘]
+</center>
+<p>其中 [toekn B‘]、[toekn C‘]分别和[token B]、[token
+C]有相近的特征。</p>
+<p>induction heads由2个attention
+head组成。Anthropic在2层的transformer模型上精确地探测到了这样的行为，而且更多层更复杂的transformer模型上，也通过一些手段观察到类似功能的存在。</p>
+<p>induction
+heads这样的“复制”行为被认为是ICL能力的主要来源。前面的例子中，从[token
+A] [token B] [toekn A‘] 生成 [toekn B‘]，这就已经是一个ICL的行为。</p>
+<p>同时induction
+heads这样的“复制”行为某种程度上其实也是一种重复生成行为。这样的“复制”行为很可能和LLM的训练方式有关：预训练next
+token
+prediction鼓励模型预测概率最大的token，而在上文出现过相似token/pattern会提升模型复制token的信心，从而加强了重复生成的行为。</p>
+<h1 id="重复生成与icl">重复生成与ICL</h1>
+<p>论文：《Learning to Break the Loop: Analyzing and Mitigating
+Repetitions for Neural Text Generation》，2022年</p>
+<p>这篇文论对生成模型的（句子级）重复生成问题做了一些实验和分析，找到一些和重复生成现象相关的发现，并提出DITTO（pseuDo-repetITion
+penalizaTiOn）缓解重复生成的问题。（这缩写的方式让人想起 NEural
+contextualiZed representation for cHinese lAnguage understanding）</p>
+<p>这样的研究基于一个前提：使用maximization-based decoding算法（如greedy
+decoding）。一些带有随机性的算法本身是具有缓解重复生成问题的能力的。</p>
+<p>发现一：模型倾向于提升前面出现过的句子的生成概率</p>
+<p>并且只要重复一次，这个概率就会飙升很多（下图）。这个发现和induction
+heads中的类似。</p>
+<p>发现二：重复生成具有self-reinforcement的特点</p>
+<p>重复的次数越多，越容易重复，越难以打破这个循环，如下图，横轴表示重复次数，纵轴红色表示某个token的概率，蓝色表示最大的概率。</p>
+<img src="/7381cae3/ditto_1.png" class title="重复生成">
+<p>发现三：Sentences with higher initial probabilities usually have a
+stronger self-reinforcement effect</p>
+<p>句子本身概率越大（模型认为越通顺），重复的自我加强效应越强。把重复的句子换成随机token，在不同重复次数下解码token的概率变化如下图，增强的趋势比上图（通顺句子）要弱很多</p>
+<img src="/7381cae3/ditto_2.png" class title="重复生成">
+<p>而DITTO的做法简单来说是构造了一些重复句子的训练样本，并在训练时显示加入对重复token的惩罚。</p>
+<p>另一个工作《UNDERSTANDING IN-CONTEXT LEARNING FROM
+REPETITIONS》，对self-reinforcement进行了进一步的测试，发现：<br>
+- self-reinforcement是LLM的共同属性，多个模型都具有这样的特点<br>
+- self-reinforcement强度随着重复token的距离减小而增强，如下图所示</p>
+<img src="/7381cae3/3.png" class title="重复生成">
+<ul>
+<li>即使重复的token个数只有1个，这种self-reinforcement也会出现；而随着重复片段的增长，self-reinforcement强度也在提升，如下图所示</li>
+</ul>
+<img src="/7381cae3/4.png" class title="重复生成">
+<p>而通过计算token重复的次数和token的概率，发现正是预训练next token
+prediction的任务赋予了模型self-reinforcement的特点。</p>
+<img src="/7381cae3/5.png" class title="重复生成">
+<p>模型这种自我加强的作用对我们来说，既有好处又有坏处，可以说令人又爱又恨。</p>
+<p>好处一：constraining output space</p>
+<p>在ICL中，给定多个demonstration，通过利用self-reinforcement的特点，可以让模型的输出不要跑偏。比如多项选择题的ICL，可以让模型输出ABCD，而不是其他无法解析的内容。</p>
+<p>为了验证这个假设，对用ICL数据做了实验，如下图。橙色线是对demonstration的问题内容和答案内容进行mask处理，蓝色线是在橙色的基础上进一步把ABCD替换成别的符号，红色线是在橙色线的基础上把“Answer：”替换成相同意思的内容。</p>
+<img src="/7381cae3/6.png" class title="重复生成">
+<p>可以看到，如果仅仅对问题和答案内容进行mask，并不影响模型输出ABCD的概率，但是如果把ABCD/“Answer：”这种在demonstration中多次重复的内容替换成意思相近的符号，就会使得模型在答案空间的分布概率降低。</p>
+<p>好处二：learning to follow patterns</p>
+<p>和好处一类似，CoT的成功正是这个好处的一个例子。</p>
+<p>坏处一：spurious connections</p>
+<p>对于ICL来说，self-reinforcement的坏处也很明显。不合理的prompt，比如不平均的答案分布，都会影响模型的能力，甚至可能成为用户注入攻击的入口。</p>
+<h1 id="缓解复读机问题">缓解复读机问题</h1>
+<p>模型重复生成的self-reinforcement可以在ICL中发挥作用，但是也会让模型在生成回复的时候不断重复相同内容，停不下来。</p>
+<p>一个可能的原因是训练数据中存在较多重复内容，这在从网页爬取的预训练数据中还是有一定比例的，因此对数据的清洗需要加入筛选这种重复内容的逻辑。</p>
+<p>但是即使把训练数据中的重复数据比例降到很低，依然不能完全杜绝复读机问题，因此有很多方法是在解码的时候进行处理（decoding-base），缓解复读机问题：<br>
+- stochastic
+sampling：通过引入随机性，让模型不要总是选择概率最大的token输出，比如top-k、top-p采样。<br>
+- 重复惩罚：对已经出现过的token进行惩罚，减少生成结果的重复token。<br>
+- contrastive
+decoding：对比采样，降低生成表征相近的token。（实操对效果有比较大的影响）<br>
+- beam search（比较慢）<br>
+- locally typical sampling<br>
+- no repeat ngram：和重复惩罚类似，保证没有重复的ngram出现</p>
+<p>此外也有training-based的方法： -
+在训练的时候对已经出现过的token进行惩罚<br>
+-
+通过强化学习对模型的重复生成进行惩罚（但强化学习成本和难度都比较高）</p>
+<h1 id="小结">小结</h1>
+<p>自回归模型的重复生成不仅和数据有关，跟训练方法、模型结构、解码策略都有关。</p>
+<p>这种特性既好处也有坏处，在ICL可以成为我们控制模型效果的抓手，但也有可能带来生成内容的崩溃问题。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
+<a href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】如何解释大模型的重复生成现象？
+https://www.zhihu.com/question/616130636<br>
+【2】Learning to Break the Loop: Analyzing and Mitigating Repetitions
+for Neural Text Generation https://arxiv.org/abs/2206.02369<br>
+【3】Understanding In-Context Learning from Repetitions
+https://arxiv.org/abs/2310.00297<br>
+【4】In-context Learning and Induction Heads
+https://arxiv.org/abs/2209.11895<br>
+【5】https://zhuanlan.zhihu.com/p/671697479</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>复读机</tag>
+        <tag>重复生成</tag>
       </tags>
   </entry>
   <entry>
@@ -1838,178 +2016,6 @@ Loss Perspective https://arxiv.org/abs/2403.15796</p>
       </tags>
   </entry>
   <entry>
-    <title>LLM的重复生成和ICL</title>
-    <url>/7381cae3.html</url>
-    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<hr>
-<p>LLM的重复生成问题，俗称复读机问题。</p>
-<p>对于这个问题的研究很多都和in-context learning相关。</p>
-<h1 id="背景">背景</h1>
-<p>在目前这个时间点，其实已经很少会遇到字符级别的重复生成问题。</p>
-<p>自ChatGPT发布以来，模型规模的增大，训练数据数量和质量的提升，都让LLM的能力不断提升，复读机问题这种基础问题看起来确实不多见了。</p>
-<p>不过在某些场景，比如手机的端侧智能助手，所用的模型相对较小，有时还是能遇到一些句子级别、段落级别的重复生成问题。</p>
-<p>此外，在多轮对话下，随着对话轮次的增多，出现“重复生成/近似重复生成”的概率也会增加。在特定的对话中，用户新增了一些细致的要求或者进行关于细节的追问，这时模型有可能倾向于给出和前面回答几乎相同的答案。</p>
-<p>当然这些情况都可以归因于模型训得不够好。但重复生成的问题显然和知识储备、回复质量这些问题有所不同，也有一些工作进行相关分析。</p>
-<p>模型这种重复生成的特性部分可以为我们所用，但有时也会带来问题。</p>
-<h1 id="induction-heads">induction heads</h1>
-<p>Anthropic在22年的文章《In-context Learning and Induction
-Heads》中对基于transformer的语言模型进行了ICL相关的分析。他们发现在这些生成模型里，存在着induction
-heads的机制。</p>
-<p>induction
-heads是模型中的一条circuit。简单来说，其功能是回顾当前token前面的内容，找到前面出现当前token的地方，并按照前面出现过的模式来补全当前token后面的内容。</p>
-<p>举个例子，比如现在的序列是</p>
-<center>
-... [token A] [token B] [token C] ... [toekn A]
-</center>
-<p>在生成下一个token的时候，induction heads就会从最后一个 [toekn A]
-往前找，发现前面出现过相同的 [toekn
-A]，那么模型后面就会倾向于按照前面的出现过的 [token A] [token B] [token
-C] 这样的pattern来补全后面的内容，生成</p>
-<center>
-... [token A] [token B] [token C] ... [toekn A] [toekn B] [toekn C]
-</center>
-<p>induction
-heads这样的复制能力也会扩展到“相似”token上。如果当前token在前面没有出现过，那么induction
-heads就会去前面找和当前token相似的token所在的pattern，以此pattern作为后面生成的参考。比如现在的序列是</p>
-<center>
-... [token A] [token B] [token C] ... [toekn A‘]
-</center>
-<p>其中 [toekn A‘] 和 [toekn A] 具有相近的特征，那么induction
-heads就会倾向于把序列补全为</p>
-<center>
-... [token A] [token B] [token C] ... [toekn A‘] [toekn B‘] [toekn C‘]
-</center>
-<p>其中 [toekn B‘]、[toekn C‘]分别和[token B]、[token
-C]有相近的特征。</p>
-<p>induction heads由2个attention
-head组成。Anthropic在2层的transformer模型上精确地探测到了这样的行为，而且更多层更复杂的transformer模型上，也通过一些手段观察到类似功能的存在。</p>
-<p>induction
-heads这样的“复制”行为被认为是ICL能力的主要来源。前面的例子中，从[token
-A] [token B] [toekn A‘] 生成 [toekn B‘]，这就已经是一个ICL的行为。</p>
-<p>同时induction
-heads这样的“复制”行为某种程度上其实也是一种重复生成行为。这样的“复制”行为很可能和LLM的训练方式有关：预训练next
-token
-prediction鼓励模型预测概率最大的token，而在上文出现过相似token/pattern会提升模型复制token的信心，从而加强了重复生成的行为。</p>
-<h1 id="重复生成与icl">重复生成与ICL</h1>
-<p>论文：《Learning to Break the Loop: Analyzing and Mitigating
-Repetitions for Neural Text Generation》，2022年</p>
-<p>这篇文论对生成模型的（句子级）重复生成问题做了一些实验和分析，找到一些和重复生成现象相关的发现，并提出DITTO（pseuDo-repetITion
-penalizaTiOn）缓解重复生成的问题。（这缩写的方式让人想起 NEural
-contextualiZed representation for cHinese lAnguage understanding）</p>
-<p>这样的研究基于一个前提：使用maximization-based decoding算法（如greedy
-decoding）。一些带有随机性的算法本身是具有缓解重复生成问题的能力的。</p>
-<p>发现一：模型倾向于提升前面出现过的句子的生成概率</p>
-<p>并且只要重复一次，这个概率就会飙升很多（下图）。这个发现和induction
-heads中的类似。</p>
-<p>发现二：重复生成具有self-reinforcement的特点</p>
-<p>重复的次数越多，越容易重复，越难以打破这个循环，如下图，横轴表示重复次数，纵轴红色表示某个token的概率，蓝色表示最大的概率。</p>
-<img src="/7381cae3/ditto_1.png" class title="重复生成">
-<p>发现三：Sentences with higher initial probabilities usually have a
-stronger self-reinforcement effect</p>
-<p>句子本身概率越大（模型认为越通顺），重复的自我加强效应越强。把重复的句子换成随机token，在不同重复次数下解码token的概率变化如下图，增强的趋势比上图（通顺句子）要弱很多</p>
-<img src="/7381cae3/ditto_2.png" class title="重复生成">
-<p>而DITTO的做法简单来说是构造了一些重复句子的训练样本，并在训练时显示加入对重复token的惩罚。</p>
-<p>另一个工作《UNDERSTANDING IN-CONTEXT LEARNING FROM
-REPETITIONS》，对self-reinforcement进行了进一步的测试，发现：<br>
-- self-reinforcement是LLM的共同属性，多个模型都具有这样的特点<br>
-- self-reinforcement强度随着重复token的距离减小而增强，如下图所示</p>
-<img src="/7381cae3/3.png" class title="重复生成">
-<ul>
-<li>即使重复的token个数只有1个，这种self-reinforcement也会出现；而随着重复片段的增长，self-reinforcement强度也在提升，如下图所示</li>
-</ul>
-<img src="/7381cae3/4.png" class title="重复生成">
-<p>而通过计算token重复的次数和token的概率，发现正是预训练next token
-prediction的任务赋予了模型self-reinforcement的特点。</p>
-<img src="/7381cae3/5.png" class title="重复生成">
-<p>模型这种自我加强的作用对我们来说，既有好处又有坏处，可以说令人又爱又恨。</p>
-<p>好处一：constraining output space</p>
-<p>在ICL中，给定多个demonstration，通过利用self-reinforcement的特点，可以让模型的输出不要跑偏。比如多项选择题的ICL，可以让模型输出ABCD，而不是其他无法解析的内容。</p>
-<p>为了验证这个假设，对用ICL数据做了实验，如下图。橙色线是对demonstration的问题内容和答案内容进行mask处理，蓝色线是在橙色的基础上进一步把ABCD替换成别的符号，红色线是在橙色线的基础上把“Answer：”替换成相同意思的内容。</p>
-<img src="/7381cae3/6.png" class title="重复生成">
-<p>可以看到，如果仅仅对问题和答案内容进行mask，并不影响模型输出ABCD的概率，但是如果把ABCD/“Answer：”这种在demonstration中多次重复的内容替换成意思相近的符号，就会使得模型在答案空间的分布概率降低。</p>
-<p>好处二：learning to follow patterns</p>
-<p>和好处一类似，CoT的成功正是这个好处的一个例子。</p>
-<p>坏处一：spurious connections</p>
-<p>对于ICL来说，self-reinforcement的坏处也很明显。不合理的prompt，比如不平均的答案分布，都会影响模型的能力，甚至可能成为用户注入攻击的入口。</p>
-<h1 id="缓解复读机问题">缓解复读机问题</h1>
-<p>模型重复生成的self-reinforcement可以在ICL中发挥作用，但是也会让模型在生成回复的时候不断重复相同内容，停不下来。</p>
-<p>一个可能的原因是训练数据中存在较多重复内容，这在从网页爬取的预训练数据中还是有一定比例的，因此对数据的清洗需要加入筛选这种重复内容的逻辑。</p>
-<p>但是即使把训练数据中的重复数据比例降到很低，依然不能完全杜绝复读机问题，因此有很多方法是在解码的时候进行处理（decoding-base），缓解复读机问题：<br>
-- stochastic
-sampling：通过引入随机性，让模型不要总是选择概率最大的token输出，比如top-k、top-p采样。<br>
-- 重复惩罚：对已经出现过的token进行惩罚，减少生成结果的重复token。<br>
-- contrastive
-decoding：对比采样，降低生成表征相近的token。（实操对效果有比较大的影响）<br>
-- beam search（比较慢）<br>
-- locally typical sampling<br>
-- no repeat ngram：和重复惩罚类似，保证没有重复的ngram出现</p>
-<p>此外也有training-based的方法： -
-在训练的时候对已经出现过的token进行惩罚<br>
--
-通过强化学习对模型的重复生成进行惩罚（但强化学习成本和难度都比较高）</p>
-<h1 id="小结">小结</h1>
-<p>自回归模型的重复生成不仅和数据有关，跟训练方法、模型结构、解码策略都有关。</p>
-<p>这种特性既好处也有坏处，在ICL可以成为我们控制模型效果的抓手，但也有可能带来生成内容的崩溃问题。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
-<a href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
-<a href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
-<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
-<a href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
-<a href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
-<a href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
-<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
-<a href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
-<hr>
-<h1 id="reference">Reference</h1>
-<p>【1】如何解释大模型的重复生成现象？
-https://www.zhihu.com/question/616130636<br>
-【2】Learning to Break the Loop: Analyzing and Mitigating Repetitions
-for Neural Text Generation https://arxiv.org/abs/2206.02369<br>
-【3】Understanding In-Context Learning from Repetitions
-https://arxiv.org/abs/2310.00297<br>
-【4】In-context Learning and Induction Heads
-https://arxiv.org/abs/2209.11895<br>
-【5】https://zhuanlan.zhihu.com/p/671697479</p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>复读机</tag>
-        <tag>重复生成</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>大模型偏好对齐-IPO</title>
     <url>/4fe7b810.html</url>
     <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
@@ -2126,6 +2132,284 @@ Preferences https://arxiv.org/abs/2310.12036</p>
         <tag>微调</tag>
         <tag>SFT</tag>
         <tag>偏好对齐</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(7)</title>
+    <url>/dd614e12.html</url>
+    <content><![CDATA[<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+<hr>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
+<p>如有错漏，欢迎指正~</p>
+<hr>
+<h1 id="moe模型训练中如果不对专家的路由进行适当干预可能会遇到什么问题有什么解决方法">1.MoE模型训练中，如果不对专家的路由进行适当干预，可能会遇到什么问题，有什么解决方法？</h1>
+<p>MoE使用多个并行的expert，每次推理只选择其中的一小部分expert使用。</p>
+<p>如果让模型完全自行学习，有可能出现routing
+collapse的问题，也就是模型倾向于总是选择那几个常用的专家。</p>
+<p>而这些常用的专家由于使用得更多，训练得更好，又会提升被路由到的概率，导致大部分模型参数几乎没有被用上。</p>
+<p>一般可以通过增加一个负载平衡的loss来缓解。负载平衡loss有不同的设计和计算方式，但是大致的思路都是迫使模型均匀地使用不同的专家，如果出现某些专家被选中的概率过高，就会进行惩罚。</p>
+<h1 id="bert的预训练方式是mlm通过mask-token对部分输入进行掩盖要求模型预测为什么要使用mask-token而不直接修改attention-mask矩阵">2.Bert的预训练方式是MLM，通过[Mask]
+token对部分输入进行掩盖，要求模型预测。为什么要使用[Mask]
+token而不直接修改attention mask矩阵？</h1>
+<p>直接修改attention
+mask矩阵也可以让模型看不到对应位置的输入，但是相比使用[Mask]
+token缺少了位置编码的信息。</p>
+<p>另外使用[Mask]
+token掩盖要预测的值这种做法在实现上相对方便，只需要对输入数据进行处理即可，而不需要修改modeling的内容，更加通用。</p>
+<h1 id="为什么大模型训练的时候需要warmup">3.为什么大模型训练的时候需要warmup？</h1>
+<p>在训练前期，刚随机初始化的模型参数离收敛值很远，此时的loss会比较大，梯度也会很大。如果直接使用固定的较大learning
+rate，模型容易过拟合到早期step见过的这些数据。</p>
+<p>依照ResNet的实验结果，如果一开始模型就跑偏了，那后面再怎么训练，收敛效果都会比较差，说明早期太大的学习率导致模型过早收敛到不太好的局部最优了。</p>
+<p>另外，模型刚开始训练的时候，大学习率带来的大更新值，会导致模型参数的震荡会很大，使得模型学到的参数很不稳定，这也不利于训练。</p>
+<p>使用少数step让模型进行热身，可以很大程度规避这些问题。</p>
+<h1 id="roberta在bert的基础上做了什么优化">4.Roberta在Bert的基础上做了什么优化？</h1>
+<ol type="1">
+<li><p>Bert在MLM训练中，提早把要mask的token处理好，在训练时训了多个epoch。这样在不同的epoch中，同一条sample总是使用相同的mask进行训练。Roberta使用了dynamic
+mask，即每条数据在训练前才随机决定进行mask的位置，这样不同的epoch之间同一条样本也有不同的mask结果，提升了数据多样性。</p></li>
+<li><p>Bert使用了MLM和NSP两个任务，而Roberta通过实验发现NSP的作用不大，因此直接取消了NSP任务。</p></li>
+<li><p>Roberta增大了batch
+size，提高训练效率，以获取更好的训练结果。</p></li>
+<li><p>Roberta增大了训练数据和训练step数，实验表明模型继续训练还能进一步收敛。</p></li>
+<li><p>Bert使用WordPiece分词，而Roberta使用BBPE，增大了词表。</p></li>
+<li><p>再后来，Google发布了WWM全词mask，改进了mask方式。Roberta-WWM也成了最广泛使用的版本。</p></li>
+</ol>
+<h1 id="lora的参数是怎么初始化的">5.LoRA的参数是怎么初始化的？</h1>
+<p>LoRA包含一个降维矩阵A，和一个升维矩阵B。矩阵A用随机高斯分布初始化，而矩阵B用初始化为0。这样可以使得训练开始的时候，LoRA的参数不产生效果，模型能够保持增加LoRA前的输出。但是A、B矩阵不能同时为0，这样会有对称性问题，降低了模型的表达能力。</p>
+<img src="/dd614e12/lora.png" class title="lora">
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>成本10w刀的JetMoE</title>
+    <url>/f3acf042.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>JetMoE是由MIT、Princeton等几个学术机构发布的MoE模型，其总参数量为8B，激活参数量为2B。</p>
+<p>训练JetMoE的总花费约为10w美元，而JetMoE在各个benchmark上都有不错的效果，这样看训练这个模型算是比较经济实惠的了。</p>
+<p>MoE的基础内容可以看之前梳理的 <a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a>。</p>
+<h1 id="模型设计">模型设计</h1>
+<h2 id="结构">结构</h2>
+<p>在模型结构上，和目前一些主流的模型如Deepseek MoE、Mixtral
+8x7B、Qwen-MoE等有点不同，JetMoE不仅在FFN层应用Sparsely-gated
+Mixtureof-Experts（SMOE）的设计，而且参考了《Moduleformer: Learning
+modular large language models from uncurated
+data》的做法，把attention层也设计成了混合专家的结构，如下图所示。</p>
+<img src="/f3acf042/structure.png" class title="结构">
+<p>attention层的混合专家结构也叫MoA（ Mixture of Attention heads
+(MoA)，是由《Mixture of Attention Heads: Selecting Attention Heads Per
+Token》提出的。</p>
+<p>MoA和FFN层的MoE一样，每个attention层包含多个attention
+expert。而每个attention expert e包括4个形状为 <span class="math inline">\(\mathbf{R}^{D_{emb}\times D_{att}}\)</span>
+的矩阵： <span class="math inline">\(\mathbf{W}_q^e,\mathbf{W}_k,\mathbf{W}_v,\mathbf{W}_o^e\)</span>。其中
+<span class="math inline">\(D_{att}=H\times
+D_{head}\)</span>，H是每个attention expert的attention
+head数量。每个attention expert内部和常规的注意力层是一样的。</p>
+<p>每层attention expert中的 <span class="math inline">\(\mathbf{W}_k\)</span> 和 <span class="math inline">\(\mathbf{W}_v\)</span>
+这两个矩阵的参数在同个attention层的多个expert之间共享，这样可以减少一些参数量和计算量，提升计算效率。而每个attention
+expert保留各自的 <span class="math inline">\(\mathbf{W}_q^e\)</span> 和
+<span class="math inline">\(\mathbf{W}_o^e\)</span>。</p>
+<p>对于一个输入的vector x，首先用2个共享的矩阵获得k和v</p>
+<p><span class="math display">\[\begin{aligned}\mathbf{k}&amp;=\mathbf{W}_{k}\mathbf{x}\\\mathbf{v}&amp;=\mathbf{W}_{v}\mathbf{x}\end{aligned}\]</span></p>
+<p>而在gating function选择了expert之后，再在attention
+expert内部进行标准的attention计算：</p>
+<p><span class="math display">\[\begin{aligned}&amp;\mathbf{q}_{e}=\mathbf{W}_{q}^{e}\mathbf{x}\\&amp;\mathbf{a}_{e}=\mathrm{МНА}\left(\mathbf{q}_{e},\mathbf{k},\mathbf{v}\right)\\&amp;\mathbf{o}_{e}=\mathbf{W}_{o}^{e}\mathbf{a}\end{aligned}\]</span></p>
+<p>JetMoE的FFN层的设计和gating的设计就是常规的top-k gating
+MoE，就不再赘述。</p>
+<p>JetMoE的具体模型参数如下</p>
+<img src="/f3acf042/model_param.png" class title="模型参数">
+<p>每层有8个expert，每个token激活2个expert。</p>
+<h2 id="负载均衡">负载均衡</h2>
+<p>在负载均衡上，参考Switch Transformer，加入了frequency-based auxiliary
+loss：</p>
+<p><span class="math display">\[loss_b=N\sum_{i=1}^Nf_iP_i\]</span></p>
+<p>其中N是expert数量，<span class="math inline">\(f_i\)</span>
+是分配给expert i的token占比，<span class="math inline">\(P_i\)</span>
+是router分配给expert i的概率占比。</p>
+<p>此外还加入了ST-MoE中的z-loss来提升训练稳定性：</p>
+<p><span class="math display">\[loss_z=\frac1B\sum_{i=1}^B\left(\log\sum_{j=1}^N\exp(x_j^i)\right)^2\]</span></p>
+<p>x是router给出的logits，B是token数。</p>
+<p>通过两个超参把这两个负载平衡的loss加入到训练loss中</p>
+<p><span class="math display">\[loss=loss_{lm}+\alpha loss_b+\beta
+loss_z\]</span></p>
+<p>训练中 <span class="math inline">\(\alpha=0.01\)</span>，<span class="math inline">\(\beta=0.001\)</span>。</p>
+<h1 id="训练数据">训练数据</h1>
+<p>JetMoE预训练数据使用了真实数据和合成数据两种。</p>
+<p>真实数据：<br>
+- RefinedWeb：从总共5T的token里抽取了600B来训练<br>
+- StarCoder：包含86种代码语言<br>
+- Dolma：包含3T token的英文数据集<br>
+- The Pile：825GB的英文数据集<br>
+-
+其他：还使用了Proof-Pile-2、OpenWebMath、StackMathQA、OpenAssistant、xP3x、CommitPackFT这些规模比较小、质量比较高的数据集。</p>
+<p>合成数据：<br>
+- OpenHermes 2.5<br>
+- UltraTextbooks<br>
+- UltraChat 200k<br>
+- 其他：还使用了TemplateGSM、Magicoder-Evol-110K、Evol-Code
+Alpaca、Code-290k-ShareGPT这些规模比较小、质量比较高的数据集。</p>
+<h1 id="训练">训练</h1>
+<p>JetMoE基于Megatron框架进行训练，仅使用pipeline parallelism而不expert
+parallelism。训练过程用了96个H100，消耗约30,000个GPU
+hour，训练了大概1.25T token的数据。</p>
+<p>一些训练设置：<br>
+- 使用AdamW优化器<br>
+- maximum learning rate = 5e-4<br>
+- batch size = 4M<br>
+- sequence length = 4096<br>
+- learning rate schedule = WSD，warmup = 10B token，decay = 250B
+token</p>
+<p>参考MiniCPM的做法，把训练分为两个阶段： - phase1：warmup and stable
+learning rate；使用的数据集包括RefinedWeb, Starcoder, The Pile, peS2o
+from Dolma, and OpenWebMath<br>
+- phase2:decay learning rate；使用了更多的高质量数据。</p>
+<p>phase1和phase2的具体数据混合情况如下</p>
+<img src="/f3acf042/data1.png" class title="数据">
+<img src="/f3acf042/data2.png" class title="数据">
+<h1 id="alignment">Alignment</h1>
+<p>JetMoE用Distilled Supervised
+Fine-Tuning（dSFT）的方法对模型进行微调。dSFT就是用prompt获取更强模型的应答结果，用来训练别的模型。</p>
+<p>JetMoE使用Zephyr-7b-beta的chat
+template获取GPT-4和Claude的答案用来训练JetMoE，所用的数据有：<br>
+- UltraChat 200k<br>
+- Airoboros-3.2<br>
+- Code-Feedback<br>
+- Orca-math-word-problems-200k<br>
+- SystemChat<br>
+- Capybara</p>
+<p>训练配置：<br>
+- lr = 2e-5<br>
+- batch size = 128<br>
+- epoch = 3</p>
+<p>此外，在SFT的基础上，还用了Distilled Direct Preference Optimization
+(dDPO)进一步优化模型。</p>
+<p>所用的数据集是UltraFeedback，包含了preference数据对。</p>
+<p>训练配置：<br>
+- lr = 5e-7<br>
+- batch size = 128<br>
+- epoch = 1</p>
+<h1 id="效果">效果</h1>
+<p>在各个benchmark的效果如下</p>
+<img src="/f3acf042/evaluation.png" class title="评测">
+<img src="/f3acf042/mtbench.png" class title="评测">
+<h1 id="小结">小结</h1>
+<p>JetMoE算是一次比较低成本的MoE训练实践，其中大部分的训练设置都是沿用了之前多个工作总结下来的经验。这些经验基本上可以保证训练不出什么大问题了，是相对比较成熟的了。</p>
+<p>常规的内容之外，attention expert可能是一个可以探索的方向。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
+<a href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】JetMoE: Reaching Llama2 Performance with 0.1M Dollars
+https://arxiv.org/abs/2404.07413</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>MoE</tag>
       </tags>
   </entry>
   <entry>
@@ -2344,318 +2628,6 @@ Multiple Decoding Heads https://arxiv.org/abs/2401.10774</p>
         <tag>LLM</tag>
         <tag>transformer</tag>
         <tag>推理加速</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大模型算法题(7)</title>
-    <url>/dd614e12.html</url>
-    <content><![CDATA[<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
-<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
-<a href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
-<a href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
-<a href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
-<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
-<hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
-<p>如有错漏，欢迎指正~</p>
-<hr>
-<h1 id="moe模型训练中如果不对专家的路由进行适当干预可能会遇到什么问题有什么解决方法">1.MoE模型训练中，如果不对专家的路由进行适当干预，可能会遇到什么问题，有什么解决方法？</h1>
-<p>MoE使用多个并行的expert，每次推理只选择其中的一小部分expert使用。</p>
-<p>如果让模型完全自行学习，有可能出现routing
-collapse的问题，也就是模型倾向于总是选择那几个常用的专家。</p>
-<p>而这些常用的专家由于使用得更多，训练得更好，又会提升被路由到的概率，导致大部分模型参数几乎没有被用上。</p>
-<p>一般可以通过增加一个负载平衡的loss来缓解。负载平衡loss有不同的设计和计算方式，但是大致的思路都是迫使模型均匀地使用不同的专家，如果出现某些专家被选中的概率过高，就会进行惩罚。</p>
-<h1 id="bert的预训练方式是mlm通过mask-token对部分输入进行掩盖要求模型预测为什么要使用mask-token而不直接修改attention-mask矩阵">2.Bert的预训练方式是MLM，通过[Mask]
-token对部分输入进行掩盖，要求模型预测。为什么要使用[Mask]
-token而不直接修改attention mask矩阵？</h1>
-<p>直接修改attention
-mask矩阵也可以让模型看不到对应位置的输入，但是相比使用[Mask]
-token缺少了位置编码的信息。</p>
-<p>另外使用[Mask]
-token掩盖要预测的值这种做法在实现上相对方便，只需要对输入数据进行处理即可，而不需要修改modeling的内容，更加通用。</p>
-<h1 id="为什么大模型训练的时候需要warmup">3.为什么大模型训练的时候需要warmup？</h1>
-<p>在训练前期，刚随机初始化的模型参数离收敛值很远，此时的loss会比较大，梯度也会很大。如果直接使用固定的较大learning
-rate，模型容易过拟合到早期step见过的这些数据。</p>
-<p>依照ResNet的实验结果，如果一开始模型就跑偏了，那后面再怎么训练，收敛效果都会比较差，说明早期太大的学习率导致模型过早收敛到不太好的局部最优了。</p>
-<p>另外，模型刚开始训练的时候，大学习率带来的大更新值，会导致模型参数的震荡会很大，使得模型学到的参数很不稳定，这也不利于训练。</p>
-<p>使用少数step让模型进行热身，可以很大程度规避这些问题。</p>
-<h1 id="roberta在bert的基础上做了什么优化">4.Roberta在Bert的基础上做了什么优化？</h1>
-<ol type="1">
-<li><p>Bert在MLM训练中，提早把要mask的token处理好，在训练时训了多个epoch。这样在不同的epoch中，同一条sample总是使用相同的mask进行训练。Roberta使用了dynamic
-mask，即每条数据在训练前才随机决定进行mask的位置，这样不同的epoch之间同一条样本也有不同的mask结果，提升了数据多样性。</p></li>
-<li><p>Bert使用了MLM和NSP两个任务，而Roberta通过实验发现NSP的作用不大，因此直接取消了NSP任务。</p></li>
-<li><p>Roberta增大了batch
-size，提高训练效率，以获取更好的训练结果。</p></li>
-<li><p>Roberta增大了训练数据和训练step数，实验表明模型继续训练还能进一步收敛。</p></li>
-<li><p>Bert使用WordPiece分词，而Roberta使用BBPE，增大了词表。</p></li>
-<li><p>再后来，Google发布了WWM全词mask，改进了mask方式。Roberta-WWM也成了最广泛使用的版本。</p></li>
-</ol>
-<h1 id="lora的参数是怎么初始化的">5.LoRA的参数是怎么初始化的？</h1>
-<p>LoRA包含一个降维矩阵A，和一个升维矩阵B。矩阵A用随机高斯分布初始化，而矩阵B用初始化为0。这样可以使得训练开始的时候，LoRA的参数不产生效果，模型能够保持增加LoRA前的输出。但是A、B矩阵不能同时为0，这样会有对称性问题，降低了模型的表达能力。</p>
-<img src="/dd614e12/lora.png" class title="lora">
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
-<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
-<a href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
-<a href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
-<a href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
-<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>昆仑万维-SkyworkMoE</title>
-    <url>/1d5bcd45.html</url>
-    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<hr>
-<p>之前我们对比较热门的十个MoE工作进行了整理：<a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a>。</p>
-<p>最近昆仑万维开源了Skywork-MoE，一个总参数量为146B，激活参数量为22B的MoE模型。</p>
-<p>Skywork-MoE技术报告中针对几个实操会遇到的问题做了一些实验，还是挺有借鉴意义的。</p>
-<h1 id="skywork-moe模型">Skywork-MoE模型</h1>
-<p>分析之前，先看下Skywork-MoE的模型设计：<br>
-- Llama-like architecture<br>
-- RoPE<br>
-- RMSNorm<br>
-- SwiGLU activation function</p>
-<p>其他参数如下表</p>
-<img src="/1d5bcd45/structure.png" class title="模型结构">
-<p>Skywork-MoE共有146B参数，16个专家，激活参数量为22B。</p>
-<p>训练集群用到了192个NVIDIAHGX-A800节点，共1536个A800-80G显卡。</p>
-<p>训练框架是基于Megatron搭建的，data
-parallelism开了ZeRO-1优化，训练速度能达到690token/GPU/second，GPU利用率是38%。</p>
-<h1 id="训练路线选择">训练路线选择</h1>
-<p>在当前的情况下，要训练一个MoE模型有两条路线可以选择：<br>
--
-upcycling：用一个dense模型做MoE模型的初始化，进行一定的继续预训练。这样的好处是MoE模型能在一个比较好的初始化点开始训练，直觉上这样的模型应该收敛得相对比较快，成本也比较低。存在的问题是dense模型的选择可能存在一些权衡取舍，且从dense进行初始化可能对最终效果存在负面影响。<br>
-- from
-scratch：直接随机初始化一个MoE模型，从零开始训练。这样成本相比upcycling就比较高，但是效果可能比upcycling更好。</p>
-<p>当然还有一种方法是，先从零训一个dense模型，再从这个dense模型训练一个MoE模型。但是后面的实验告诉我们，如果这个dense模型纯粹是为最终的MoE模型服务的话，那这种方法是费力不讨好的。</p>
-<p>要决定是upcycling还是from
-scratch，需要看现有的dense模型的水平，以及MoE模型的训练预算。首先如果预算根本支持不了MoE模型这个规模的训练，那我们当然只能选择upcycling。只有当预算充足，我们才有机会选择from
-scratch这条路。而如果没有可用的dense模型，那就只能选择from scratch。</p>
-<p>前面我们从直觉上认为from
-scratch效果会更好，下面就从实验上来验证这个想法。</p>
-<p>首先，在300B
-token的数据上训练一个0.3B的dense模型，并分别取100B和300B时的checkpoint作为后续实验的起始点。这两个checkpoint起个名字叫"checkpoint-100B"和"checkpoint-300B"。</p>
-<p>然后在相同结构下，把dense模型扩成有8个专家的MoE模型，并使用3种不同的初始化策略：from-scratch
-/ checkpoint-100B / checkpoint-300B。</p>
-<p>假设我们现在有两种MoE模型的训练预算，100B和300B（token）。</p>
-<p>对于100B训练预算，对比以下几个模型</p>
-<img src="/1d5bcd45/100B.png" class title="100B">
-<p>同样地，对于300B预算的情况，训练了init_scratch-decay_300b和init_100b-decay_300b。另外还训练了一个init_300b-3xLR，相比init_300b-const提升了3倍的学习率，用于验证学习率的影响。</p>
-<p>各个模型的训练结果如下图所示</p>
-<img src="/1d5bcd45/exp_1.png" class title="实验">
-<p>左图：在100B的训练预算下，from
-scratch已经可以和从dense初始化的MoE模型loss持平，甚至比init_300b-const好。报告认为init_300b-const效果不好有一部分原因是学习率太小了。</p>
-<p>中图：在300B的训练预算下，from
-scratch模型已经超越所有其他模型。另外学习率最小的模型表现最差。</p>
-<p>右图：把中图几个模型的expert similarity画出来，发现expert
-similarity越低的模型，表现越好，并且对于upcycling的模型，expert
-similarity在训练过程中越来越低，对应着模型效果越来越好。而from
-scratch的模型的expert
-similarity基本上一直保持为0，这也说明从dense模型初始化会使得专家多样性比较弱，从而使得模型收敛到suboptimal的点。</p>
-<p>据此，报告给出路线选择的经验法则。假设 <span class="math inline">\(C_{\mathrm{dense}}\)</span>
-是dense模型的训练成本，<span class="math inline">\(C_{\mathrm{MoE}}\)</span>
-是MoE模型的训练预算，那么：<br>
-- 如果 <span class="math inline">\(C_{\mathrm{MoE}}\ll
-C_{\mathrm{dense}}\)</span>，选择upcycling，upcycling能更好利用上dense模型已投入的成本。<br>
-- 如果 <span class="math inline">\(C_{\mathrm{MoE}}\geq2C_{\mathrm{dense}}\)</span>，选择from
-scratch，能获得更好的效果。</p>
-<p>另外，学习率的影响很大，这个要仔细设置。</p>
-<h1 id="模型设计">模型设计</h1>
-<p>模型设计上，Skywork-MoE提出了两个主要的改进：gating logit
-normalization和adaptive auxiliary loss coefficients。</p>
-<h2 id="gating-logit-normalization">gating logit normalization</h2>
-<p>研究人员在训练过程中发现有一个现象，那就是有时gating
-layer会输出熵很高的分布，也就是分配给各个专家的概率接近平均分布。这样的结果就是MoE层的输出基本上相当于是各个专家的平均值，而不是一个weighted
-average。</p>
-<p>而出现这种现象说明gating
-layer没有很好地区分各个专家，无法把相应的输入分配给最合适的专家。</p>
-<p>针对这个问题，Skywork-MoE给出的方法就是在gating
-layer的softmax之前引入一个normalization step，如下式</p>
-<p><span class="math display">\[\begin{aligned}&amp;z=Wx+b\\&amp;\tilde{z}=\lambda\cdot\frac{z-\mu}{\sigma}\\&amp;g=\operatorname{softmax}(\tilde{z})\end{aligned}\]</span></p>
-<p>其中 <span class="math inline">\(\lambda\)</span> 是一个超参。</p>
-<p>这样归一化之后我们就得到一个均值为0，而方差受 <span class="math inline">\(\lambda\)</span> 控制的向量。大的 <span class="math inline">\(\lambda\)</span>
-值会使得softmax之后的分布更显著，更不均匀。这就相当于给softmax加上一个放大器，把原本不显著的差异进行放大。</p>
-<p>为了验证这个设计的有效性，Skywork-MoE在2.5B参数16个专家的MoE模型上，分别使用和不使用gating
-logit normalization进行了训练。</p>
-<p>两个模型的gating分布差异如下图所示，normalization确实可以增大各个专家分配到的概率的差异。</p>
-<img src="/1d5bcd45/gate_dist.png" class title="gating distribution">
-<p>使用了normalization的模型在training loss和token drop
-rate上都有更好的表现，如下图所示。</p>
-<img src="/1d5bcd45/normaization.png" class title="gating logit normalization">
-<p>而统计gating
-layer输出的分布中的Max1/Max2和Max2/Max3比值也同样说明了各个expert被更有效地区分开了。</p>
-<p>在千亿Skywork-MoE模型的训练中，使用了 <span class="math inline">\(\lambda=1\)</span>。</p>
-<h2 id="adaptive-auxiliary-loss-coefficients">adaptive auxiliary loss
-coefficients</h2>
-<p>一般来说，MoE模型在训练中都会加入一个auxiliary
-loss，帮助平衡专家的选择分布，提升训练效率，也增强专家的多样性。对于有M个MoE层的模型，最终loss如下式所示。</p>
-<p><span class="math display">\[\mathcal{L}_{\mathrm{total}}=\mathcal{L}_{\mathrm{ce}}+\sum_{l=1}^M\alpha\mathcal{L}_{\mathrm{aux}}^{(l)}\]</span></p>
-<p>每个MoE层都有对应的auxiliary loss。</p>
-<p>Skywork-MoE认为每层的auxiliary loss的系数 <span class="math inline">\(\alpha\)</span>
-不一定要相同，并且随着训练进行，在gating的平衡已经比较好的时候，可以放宽auxiliary
-loss的限制强度，避免影响模型的最终效果。</p>
-<p>基于这两个想法，Skywork-MoE提出adaptive auxiliary loss
-coefficients。</p>
-<p>每个MoE层的auxiliary
-loss有自己的系数，而这个系数和当前这个MoE层的token drop
-rate联系了起来。大的token drop
-rate表示gating的分配不平衡，因此要加强auxiliary
-loss的约束，反之则可以减小约束。</p>
-<p>对于第l个MoE层，在第i个step的时候，auxiliary loss的系数计算如下</p>
-<p><span class="math display">\[\begin{array}{rcl}\hat\alpha_{i+1}^{(l)}&amp;=&amp;f(d_i^{(l)})\\\alpha_{i+1}^{(l)}&amp;=&amp;\beta\alpha_i^{(l)}+(1-\beta)\hat\alpha_{i+1}^{(l)}\end{array}\]</span></p>
-<p>其中d表示token drop rate，f是一个单调递增函数。<span class="math inline">\(\alpha\)</span> 会随着训练，通过moving
-average更新。<span class="math inline">\(\beta\)</span> 是moving
-average的权重，是一个超参。</p>
-<p>实际实现中，f设计成：</p>
-<p><span class="math display">\[f(d)=\left\{\begin{array}{ll}\xi
-d&amp;\text{if
-}d\leq\alpha_{\text{max}}/\xi\\\alpha_{\text{max}}&amp;\text{if
-}d&gt;\alpha_{\text{max}}/\xi\end{array}\right.\]</span></p>
-<p><span class="math inline">\(\xi\)</span> 表示auxiliary loss
-coefficient对token drop rate的敏感程度。</p>
-<p>最终训练中，各个超参的设置为：<br>
-- <span class="math inline">\(\xi=1/5\)</span><br>
-- <span class="math inline">\(\alpha_{\max}=0.01\)</span><br>
-- <span class="math inline">\(\beta=0.99\)</span></p>
-<h1 id="其他尝试">其他尝试</h1>
-<p>报告中还给出了训练中一些其他尝试，虽然没有直接效果，但是也有参考意义。</p>
-<h2 id="学习率">学习率</h2>
-<p>MoE模型由于路由策略的存在，每个专家平均接受到的输入token数比global
-batch size要小。</p>
-<p>假设共有n个专家，激活专家数为k，那么平均每个专家接受到的输入只有模型输入的k/n。</p>
-<p>而有效batch
-size的减小意味着更容易引入noise，对此一般的应对方案就是减小learning
-rate，可以进行linear scaling（<span class="math inline">\(k/n\)</span>），或者square root scaling（<span class="math inline">\(\sqrt{k/n}\)</span>）。</p>
-<p>那么减小learning
-rate是否能提升效果呢？Skywork-MoE用一个1.8B参数，共32个专家，激活专家数为2的模型，按square
-root scaling，进行了以下3个实验</p>
-<img src="/1d5bcd45/lr_exp.png" class title="lr实验">
-<p>所有模型在训了300B数据之后，lr会降到peak
-lr的10%，然后会再继续训10B，在这个过程里lr逐渐降为0。</p>
-<p>训练的loss如下图</p>
-<img src="/1d5bcd45/lr_result.png" class title="lr实验">
-<p>虽然在300B的训练量下，减小lr有一点收益，但是随着最后10B的训练，三个模型都收敛到同样的loss。这说明前面的loss差异并不是不可弥补的，更可能只是因为在300B时三个模型的lr
-decay到不同的绝对值而已。</p>
-<p>这也说明根据专家数量减少MoE模型的训练学习率并没有太大必要。</p>
-<h2 id="多样化初始化">多样化初始化</h2>
-<p>前面提到，用一个dense模型进行初始化，会导致各个专家相似度过高，从而损害MoE模型的效果。那么我们自然想到用多样化的几个dense模型进行MoE的初始化，效果是不是会更好。</p>
-<p>Skywork-MoE对此进行了实验。把原始dense模型分别用不同的100B数据进行训练，从而获得多个dense模型，并用这些多样化的dense模型初始化MoE模型。</p>
-<p>具体来说，基于原始dense模型 <span class="math inline">\(M_{\mathrm{base}}\)</span>，用了中文、英文、代码三个不同的100B数据集进行训练，获得
-<span class="math inline">\(M_{\mathrm{cn}},M_{\mathrm{en}},M_{\mathrm{code}}\)</span>
-三个dense模型。之后把 <span class="math inline">\(M_{\mathrm{cn}}\)</span> 复制3份，<span class="math inline">\(M_{\mathrm{en}}\)</span> 复制3份，<span class="math inline">\(M_{\mathrm{code}}\)</span> 复制1份，<span class="math inline">\(M_{\mathrm{base}}\)</span>
-复制1份，共同初始化一个有8个专家的MoE模型。</p>
-<p>多样化和无多样化的初始化方法，训练loss对比如下</p>
-<img src="/1d5bcd45/diff_dense.png" class title="初始化实验">
-<p>可以看到多样化的初始化方法确实有一点收益，不过随着训练进行，差异在逐渐减小。</p>
-<p>经过90B数据的训练之后，二者的loss只有不到0.01的差距。相较于dense模型的多次继续预训练成本，这个收益并不明显，因此Skywork-MoE最终没有采用多样化的初始化方法。</p>
-<h1 id="效果">效果</h1>
-<p>146B参数的Skywork-MoE是从Skywork-13B初始化而来的。</p>
-<p>训练数据使用了SkyPile中的一部分数据，再加上一批合成数据。</p>
-<p>中文、英文、代码数据的比例为7:2:1。</p>
-<p>Skywork-MoE在和一些主流模型，在一些benchmark上的对比如下</p>
-<img src="/1d5bcd45/perf.png" class title="效果">
-<p>基本上达到了同归模型比较好的效果。</p>
-<h1 id="小结">小结</h1>
-<p>Skywork-MoE开源了一个效果不错的MoE模型，同时对于初始化策略的探索也颇有借鉴意义。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
-<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
-<a href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
-<a href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
-<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
-<hr>
-<h1 id="reference">Reference</h1>
-<p>【1】Skywork-MoE: A Deep Dive into Training Techniques for
-Mixture-of-Experts Language Models
-https://github.com/SkyworkAI/Skywork-MoE/blob/main/skywork-moe-tech-report.pdf</p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>MoE</tag>
       </tags>
   </entry>
   <entry>
@@ -2961,6 +2933,375 @@ window attention</a><br>
 <h1 id="reference">Reference</h1>
 <p>【1】Direct Preference Optimization: Your Language Model is Secretly
 a Reward Model https://arxiv.org/abs/2305.18290v2</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>强化学习</tag>
+        <tag>微调</tag>
+        <tag>SFT</tag>
+        <tag>偏好对齐</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>昆仑万维-SkyworkMoE</title>
+    <url>/1d5bcd45.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>之前我们对比较热门的十个MoE工作进行了整理：<a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a>。</p>
+<p>最近昆仑万维开源了Skywork-MoE，一个总参数量为146B，激活参数量为22B的MoE模型。</p>
+<p>Skywork-MoE技术报告中针对几个实操会遇到的问题做了一些实验，还是挺有借鉴意义的。</p>
+<h1 id="skywork-moe模型">Skywork-MoE模型</h1>
+<p>分析之前，先看下Skywork-MoE的模型设计：<br>
+- Llama-like architecture<br>
+- RoPE<br>
+- RMSNorm<br>
+- SwiGLU activation function</p>
+<p>其他参数如下表</p>
+<img src="/1d5bcd45/structure.png" class title="模型结构">
+<p>Skywork-MoE共有146B参数，16个专家，激活参数量为22B。</p>
+<p>训练集群用到了192个NVIDIAHGX-A800节点，共1536个A800-80G显卡。</p>
+<p>训练框架是基于Megatron搭建的，data
+parallelism开了ZeRO-1优化，训练速度能达到690token/GPU/second，GPU利用率是38%。</p>
+<h1 id="训练路线选择">训练路线选择</h1>
+<p>在当前的情况下，要训练一个MoE模型有两条路线可以选择：<br>
+-
+upcycling：用一个dense模型做MoE模型的初始化，进行一定的继续预训练。这样的好处是MoE模型能在一个比较好的初始化点开始训练，直觉上这样的模型应该收敛得相对比较快，成本也比较低。存在的问题是dense模型的选择可能存在一些权衡取舍，且从dense进行初始化可能对最终效果存在负面影响。<br>
+- from
+scratch：直接随机初始化一个MoE模型，从零开始训练。这样成本相比upcycling就比较高，但是效果可能比upcycling更好。</p>
+<p>当然还有一种方法是，先从零训一个dense模型，再从这个dense模型训练一个MoE模型。但是后面的实验告诉我们，如果这个dense模型纯粹是为最终的MoE模型服务的话，那这种方法是费力不讨好的。</p>
+<p>要决定是upcycling还是from
+scratch，需要看现有的dense模型的水平，以及MoE模型的训练预算。首先如果预算根本支持不了MoE模型这个规模的训练，那我们当然只能选择upcycling。只有当预算充足，我们才有机会选择from
+scratch这条路。而如果没有可用的dense模型，那就只能选择from scratch。</p>
+<p>前面我们从直觉上认为from
+scratch效果会更好，下面就从实验上来验证这个想法。</p>
+<p>首先，在300B
+token的数据上训练一个0.3B的dense模型，并分别取100B和300B时的checkpoint作为后续实验的起始点。这两个checkpoint起个名字叫"checkpoint-100B"和"checkpoint-300B"。</p>
+<p>然后在相同结构下，把dense模型扩成有8个专家的MoE模型，并使用3种不同的初始化策略：from-scratch
+/ checkpoint-100B / checkpoint-300B。</p>
+<p>假设我们现在有两种MoE模型的训练预算，100B和300B（token）。</p>
+<p>对于100B训练预算，对比以下几个模型</p>
+<img src="/1d5bcd45/100B.png" class title="100B">
+<p>同样地，对于300B预算的情况，训练了init_scratch-decay_300b和init_100b-decay_300b。另外还训练了一个init_300b-3xLR，相比init_300b-const提升了3倍的学习率，用于验证学习率的影响。</p>
+<p>各个模型的训练结果如下图所示</p>
+<img src="/1d5bcd45/exp_1.png" class title="实验">
+<p>左图：在100B的训练预算下，from
+scratch已经可以和从dense初始化的MoE模型loss持平，甚至比init_300b-const好。报告认为init_300b-const效果不好有一部分原因是学习率太小了。</p>
+<p>中图：在300B的训练预算下，from
+scratch模型已经超越所有其他模型。另外学习率最小的模型表现最差。</p>
+<p>右图：把中图几个模型的expert similarity画出来，发现expert
+similarity越低的模型，表现越好，并且对于upcycling的模型，expert
+similarity在训练过程中越来越低，对应着模型效果越来越好。而from
+scratch的模型的expert
+similarity基本上一直保持为0，这也说明从dense模型初始化会使得专家多样性比较弱，从而使得模型收敛到suboptimal的点。</p>
+<p>据此，报告给出路线选择的经验法则。假设 <span class="math inline">\(C_{\mathrm{dense}}\)</span>
+是dense模型的训练成本，<span class="math inline">\(C_{\mathrm{MoE}}\)</span>
+是MoE模型的训练预算，那么：<br>
+- 如果 <span class="math inline">\(C_{\mathrm{MoE}}\ll
+C_{\mathrm{dense}}\)</span>，选择upcycling，upcycling能更好利用上dense模型已投入的成本。<br>
+- 如果 <span class="math inline">\(C_{\mathrm{MoE}}\geq2C_{\mathrm{dense}}\)</span>，选择from
+scratch，能获得更好的效果。</p>
+<p>另外，学习率的影响很大，这个要仔细设置。</p>
+<h1 id="模型设计">模型设计</h1>
+<p>模型设计上，Skywork-MoE提出了两个主要的改进：gating logit
+normalization和adaptive auxiliary loss coefficients。</p>
+<h2 id="gating-logit-normalization">gating logit normalization</h2>
+<p>研究人员在训练过程中发现有一个现象，那就是有时gating
+layer会输出熵很高的分布，也就是分配给各个专家的概率接近平均分布。这样的结果就是MoE层的输出基本上相当于是各个专家的平均值，而不是一个weighted
+average。</p>
+<p>而出现这种现象说明gating
+layer没有很好地区分各个专家，无法把相应的输入分配给最合适的专家。</p>
+<p>针对这个问题，Skywork-MoE给出的方法就是在gating
+layer的softmax之前引入一个normalization step，如下式</p>
+<p><span class="math display">\[\begin{aligned}&amp;z=Wx+b\\&amp;\tilde{z}=\lambda\cdot\frac{z-\mu}{\sigma}\\&amp;g=\operatorname{softmax}(\tilde{z})\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\lambda\)</span> 是一个超参。</p>
+<p>这样归一化之后我们就得到一个均值为0，而方差受 <span class="math inline">\(\lambda\)</span> 控制的向量。大的 <span class="math inline">\(\lambda\)</span>
+值会使得softmax之后的分布更显著，更不均匀。这就相当于给softmax加上一个放大器，把原本不显著的差异进行放大。</p>
+<p>为了验证这个设计的有效性，Skywork-MoE在2.5B参数16个专家的MoE模型上，分别使用和不使用gating
+logit normalization进行了训练。</p>
+<p>两个模型的gating分布差异如下图所示，normalization确实可以增大各个专家分配到的概率的差异。</p>
+<img src="/1d5bcd45/gate_dist.png" class title="gating distribution">
+<p>使用了normalization的模型在training loss和token drop
+rate上都有更好的表现，如下图所示。</p>
+<img src="/1d5bcd45/normaization.png" class title="gating logit normalization">
+<p>而统计gating
+layer输出的分布中的Max1/Max2和Max2/Max3比值也同样说明了各个expert被更有效地区分开了。</p>
+<p>在千亿Skywork-MoE模型的训练中，使用了 <span class="math inline">\(\lambda=1\)</span>。</p>
+<h2 id="adaptive-auxiliary-loss-coefficients">adaptive auxiliary loss
+coefficients</h2>
+<p>一般来说，MoE模型在训练中都会加入一个auxiliary
+loss，帮助平衡专家的选择分布，提升训练效率，也增强专家的多样性。对于有M个MoE层的模型，最终loss如下式所示。</p>
+<p><span class="math display">\[\mathcal{L}_{\mathrm{total}}=\mathcal{L}_{\mathrm{ce}}+\sum_{l=1}^M\alpha\mathcal{L}_{\mathrm{aux}}^{(l)}\]</span></p>
+<p>每个MoE层都有对应的auxiliary loss。</p>
+<p>Skywork-MoE认为每层的auxiliary loss的系数 <span class="math inline">\(\alpha\)</span>
+不一定要相同，并且随着训练进行，在gating的平衡已经比较好的时候，可以放宽auxiliary
+loss的限制强度，避免影响模型的最终效果。</p>
+<p>基于这两个想法，Skywork-MoE提出adaptive auxiliary loss
+coefficients。</p>
+<p>每个MoE层的auxiliary
+loss有自己的系数，而这个系数和当前这个MoE层的token drop
+rate联系了起来。大的token drop
+rate表示gating的分配不平衡，因此要加强auxiliary
+loss的约束，反之则可以减小约束。</p>
+<p>对于第l个MoE层，在第i个step的时候，auxiliary loss的系数计算如下</p>
+<p><span class="math display">\[\begin{array}{rcl}\hat\alpha_{i+1}^{(l)}&amp;=&amp;f(d_i^{(l)})\\\alpha_{i+1}^{(l)}&amp;=&amp;\beta\alpha_i^{(l)}+(1-\beta)\hat\alpha_{i+1}^{(l)}\end{array}\]</span></p>
+<p>其中d表示token drop rate，f是一个单调递增函数。<span class="math inline">\(\alpha\)</span> 会随着训练，通过moving
+average更新。<span class="math inline">\(\beta\)</span> 是moving
+average的权重，是一个超参。</p>
+<p>实际实现中，f设计成：</p>
+<p><span class="math display">\[f(d)=\left\{\begin{array}{ll}\xi
+d&amp;\text{if
+}d\leq\alpha_{\text{max}}/\xi\\\alpha_{\text{max}}&amp;\text{if
+}d&gt;\alpha_{\text{max}}/\xi\end{array}\right.\]</span></p>
+<p><span class="math inline">\(\xi\)</span> 表示auxiliary loss
+coefficient对token drop rate的敏感程度。</p>
+<p>最终训练中，各个超参的设置为：<br>
+- <span class="math inline">\(\xi=1/5\)</span><br>
+- <span class="math inline">\(\alpha_{\max}=0.01\)</span><br>
+- <span class="math inline">\(\beta=0.99\)</span></p>
+<h1 id="其他尝试">其他尝试</h1>
+<p>报告中还给出了训练中一些其他尝试，虽然没有直接效果，但是也有参考意义。</p>
+<h2 id="学习率">学习率</h2>
+<p>MoE模型由于路由策略的存在，每个专家平均接受到的输入token数比global
+batch size要小。</p>
+<p>假设共有n个专家，激活专家数为k，那么平均每个专家接受到的输入只有模型输入的k/n。</p>
+<p>而有效batch
+size的减小意味着更容易引入noise，对此一般的应对方案就是减小learning
+rate，可以进行linear scaling（<span class="math inline">\(k/n\)</span>），或者square root scaling（<span class="math inline">\(\sqrt{k/n}\)</span>）。</p>
+<p>那么减小learning
+rate是否能提升效果呢？Skywork-MoE用一个1.8B参数，共32个专家，激活专家数为2的模型，按square
+root scaling，进行了以下3个实验</p>
+<img src="/1d5bcd45/lr_exp.png" class title="lr实验">
+<p>所有模型在训了300B数据之后，lr会降到peak
+lr的10%，然后会再继续训10B，在这个过程里lr逐渐降为0。</p>
+<p>训练的loss如下图</p>
+<img src="/1d5bcd45/lr_result.png" class title="lr实验">
+<p>虽然在300B的训练量下，减小lr有一点收益，但是随着最后10B的训练，三个模型都收敛到同样的loss。这说明前面的loss差异并不是不可弥补的，更可能只是因为在300B时三个模型的lr
+decay到不同的绝对值而已。</p>
+<p>这也说明根据专家数量减少MoE模型的训练学习率并没有太大必要。</p>
+<h2 id="多样化初始化">多样化初始化</h2>
+<p>前面提到，用一个dense模型进行初始化，会导致各个专家相似度过高，从而损害MoE模型的效果。那么我们自然想到用多样化的几个dense模型进行MoE的初始化，效果是不是会更好。</p>
+<p>Skywork-MoE对此进行了实验。把原始dense模型分别用不同的100B数据进行训练，从而获得多个dense模型，并用这些多样化的dense模型初始化MoE模型。</p>
+<p>具体来说，基于原始dense模型 <span class="math inline">\(M_{\mathrm{base}}\)</span>，用了中文、英文、代码三个不同的100B数据集进行训练，获得
+<span class="math inline">\(M_{\mathrm{cn}},M_{\mathrm{en}},M_{\mathrm{code}}\)</span>
+三个dense模型。之后把 <span class="math inline">\(M_{\mathrm{cn}}\)</span> 复制3份，<span class="math inline">\(M_{\mathrm{en}}\)</span> 复制3份，<span class="math inline">\(M_{\mathrm{code}}\)</span> 复制1份，<span class="math inline">\(M_{\mathrm{base}}\)</span>
+复制1份，共同初始化一个有8个专家的MoE模型。</p>
+<p>多样化和无多样化的初始化方法，训练loss对比如下</p>
+<img src="/1d5bcd45/diff_dense.png" class title="初始化实验">
+<p>可以看到多样化的初始化方法确实有一点收益，不过随着训练进行，差异在逐渐减小。</p>
+<p>经过90B数据的训练之后，二者的loss只有不到0.01的差距。相较于dense模型的多次继续预训练成本，这个收益并不明显，因此Skywork-MoE最终没有采用多样化的初始化方法。</p>
+<h1 id="效果">效果</h1>
+<p>146B参数的Skywork-MoE是从Skywork-13B初始化而来的。</p>
+<p>训练数据使用了SkyPile中的一部分数据，再加上一批合成数据。</p>
+<p>中文、英文、代码数据的比例为7:2:1。</p>
+<p>Skywork-MoE在和一些主流模型，在一些benchmark上的对比如下</p>
+<img src="/1d5bcd45/perf.png" class title="效果">
+<p>基本上达到了同归模型比较好的效果。</p>
+<h1 id="小结">小结</h1>
+<p>Skywork-MoE开源了一个效果不错的MoE模型，同时对于初始化策略的探索也颇有借鉴意义。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Skywork-MoE: A Deep Dive into Training Techniques for
+Mixture-of-Experts Language Models
+https://github.com/SkyworkAI/Skywork-MoE/blob/main/skywork-moe-tech-report.pdf</p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>MoE</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型偏好对齐-ODPO</title>
+    <url>/da871ebe.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>前面对DPO的思路做了整理：<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a>。</p>
+<p>DPO把RLHF的两阶段训练，变成了一阶段训练，降低了训练成本。而ODPO（DPO
+with an
+offset）在DPO的基础上做了一点改进，在几个下游任务的实验中，获得了比DPO更好的效果。</p>
+<h1 id="背景">背景</h1>
+<p>直接使用指令微调，是让模型学会处理下游任务的一个快速有效的方法。</p>
+<p>但是指令微调的优化目标是maximize the response
+log-likelihood，这和“生成人类所偏好的高质量内容”的目标之间存在gap，不完全对齐。</p>
+<p>这个misalignment部分是因为maximum
+likelihood的目标无法区分数据里“大错”（比如幻觉）和“小错”（比如标点符号不恰当）。</p>
+<blockquote>
+<p>Training with the maximum likelihood objective makes the model assign
+nonzero probability mass to all responses in SFT dataset, even those of
+lower quality.</p>
+</blockquote>
+<p>因此有RLHF的方法来解决这个问题。RL通过人类偏好数据训练一个reward模型，并用reward模型来指导策略模型。</p>
+<p>而reward的modeling有两种，pointwise reward和pairwise preference。</p>
+<p>pointwise
+reward一般用于reward有比较确定定义且简单的场景，比如情感分类，我们可以定义positive的情感的reward为1，negative的reward为0。类似的还有toxicity等。这些类别一般也有很多现成的打分模型/classifier可以使用。</p>
+<p>pairwise
+preference一般用于比较复杂的任务，比如文本摘要和对话生成。这类任务难以直接基于单个答案来打分，而需要通过对比才能知道哪个更好。</p>
+<p>但RLHF成本比较高，因此DPO对训练过程进行了简化。</p>
+<h1 id="bradleyterry-model的局限">Bradley–Terry model的局限</h1>
+<p>DPO的损失如下</p>
+<p><span class="math display">\[\begin{aligned}
+\mathcal{L}^{\mathrm{DPO}}(\boldsymbol{\theta})&amp;
+=-\mathbb{E}_{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\sim\mathcal{D}_{\text{HF}}}\left[\log\sigma\Big(\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}_w\mid\boldsymbol{x})}{\pi_{\text{SFT}}(\boldsymbol{y}_w\mid\boldsymbol{x})}-\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}_l\mid\boldsymbol{x})}{\pi_{\text{SFT}}(\boldsymbol{y}_l\mid\boldsymbol{x})}\Big)\right]  \\
+&amp;=-\underset{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\thicksim\mathcal{D}_{\mathrm{HF}}}{\operatorname*{\mathbb{E}}}\left[\log\sigma\left(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w)-\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)\right)\right]
+\end{aligned}\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y})=\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}|\boldsymbol{x})}{\pi_{\mathrm{SFT}}(\boldsymbol{y}|\boldsymbol{x})}\]</span></p>
+<p>是estimated reward。</p>
+<p>这个DPO损失的形式背后用到了Bradley–Terry
+model对偏好进行建模。而Bradley–Terry
+model只给出了一个response比另一个response好的概率，而没有告诉我们好的程度。</p>
+<p>而实际上我们很多偏好对比数据都提供了具体的分数，而不仅仅是排序信息。有这些具体分数我们就可以知道两条response之间是差一点点，还是差很多。</p>
+<p>那么把这个差距的信息引入到偏好的建模里，应该能带来收益，这也是ODPO的思路，而两个response之间的差距就是offset。</p>
+<h1 id="dpo-with-an-offset">DPO with an Offset</h1>
+<p>给 <span class="math inline">\(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w),\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)\)</span>
+分别加上Gumbel noise，即得到</p>
+<p><span class="math display">\[\tilde{r}_w\sim\operatorname{Gumbel}(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w),1)\]</span></p>
+<p><span class="math display">\[\tilde{r}_l\sim\operatorname{Gumbel}(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l),1)\]</span></p>
+<p>论文中证明了</p>
+<p><span class="math display">\[p\big(\tilde{r}_w-\tilde{r}_l&gt;\Delta_r\big)=\sigma(\Delta_{\hat{r}_\theta}-\Delta_r)\]</span></p>
+<p>基于此，ODPO的损失函数表达成</p>
+<p><span class="math display">\[\mathcal{L}^{\mathrm{ODPO}}(\boldsymbol{\theta})=-\underset{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\sim\mathcal{D}_{\mathrm{HF}}}{\operatorname*{\mathbb{E}}}\left[\log\sigma{\left(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w)-\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)-\Delta_r\right)}\right]\]</span></p>
+<p>这相当于要求preferred response的estimated reward要比dispreferred
+response的estimated reward大，且要大offset值这么多。</p>
+<p>当offset=0的时候，ODPO的损失等价于DPO的损失。</p>
+<p>ODPO的这个做法和softmax margin loss/marginal
+loss有些相似，都是在原来loss的基础上，加上一个margin，加大对靠得比较近的数据对的penalization的力度。</p>
+<p>ODPO里，offset是两个response之间的actual reward的increasing scaling
+function。</p>
+<p><span class="math display">\[\Delta_r=\alpha\mathbf{f}\big(\mathrm{score}(\boldsymbol{x},\boldsymbol{y}_w)-\mathrm{score}(\boldsymbol{x},\boldsymbol{y}_l)\big)\]</span></p>
+<p>其中 <span class="math inline">\(\alpha\)</span> 是超参。</p>
+<img src="/da871ebe/odpo_intro.png" class title="intro">
+<h1 id="实验">实验</h1>
+<p>论文在几个下游任务上做了实验。</p>
+<h2 id="sentiment-control">sentiment control</h2>
+<p>首先是sentiment control的任务，即要求模型输出positive的response。</p>
+<p>先用GPT2-Large在IMDB
+dataset做了finetune，获得SFT模型。论文用一个现成的sentiment
+classifier作为reward的打分模型，给response分别打分，分数如下计算</p>
+<p><span class="math display">\[r_{negative}(\boldsymbol{x},\boldsymbol{y}) =
+1-p(\text{negative}\mid\cdot)\]</span></p>
+<p><span class="math display">\[r_{positive}(\boldsymbol{x},\boldsymbol{y}) =
+1+p(\text{positive}\mid\cdot)\]</span></p>
+<p>有了reward打分数据之后，还要构造偏好数据对。这里把同一个prompt下生成的所有reward分数不同的response进行排列组合，获得偏好数据对。</p>
+<p>对于DPO，有这些偏好数据对就够了。而ODPO还需要一个offset，按如下方式计算：</p>
+<p><span class="math display">\[\Delta_r=\log\left(r(\boldsymbol{y}_w)-r(\boldsymbol{y}_l)\right)\]</span></p>
+<p>实验里把 <span class="math inline">\(\alpha\)</span> 设为1。</p>
+<p>实验中使用两个不同的random
+seed，从SFT模型里进行采样，从而得到了2份不同的偏好数据。</p>
+<p>而 <span class="math inline">\(\beta\)</span> 使用了14个不同的取值
+<span class="math inline">\(\{0.1,0.2,\ldots,1\}\cup\{1,2,3,4,5\}\)</span>
+进行实验。</p>
+<p>论文在2份数据集下分别使用不同的数据量进行训练（5000，7500,10000），这样DPO和ODPO分别有2×3×14=84个实验。</p>
+<p>每个实验计算模型生成结果的sentiment打分，以及和SFT模型的KL
+divergence。结果如下图</p>
+<img src="/da871ebe/sentiment_control.png" class title="sentiment control">
+<p>我们希望模型在sentiment的打分上越高越好，同时不要和SFT模型有太大的差距，因此越靠近左上角的点越符合我们的要求。从结果上看，ODPO比DPO更好一些。</p>
+<h2 id="toxicity-control">toxicity control</h2>
+<p>toxicity control任务和sentiment
+control类似，要求模型的response的毒性尽量低。</p>
+<p>这次使用GPT-neo-2.7b模型，<span class="math inline">\(\beta\)</span>
+的取值范围为 <span class="math inline">\(\{0.05,0.1,0.2,0.3,0.4,0.5\}\)</span>，使用从REALTOXICITYPROMPTS数据集里抽样的10000个毒性评分大于0.3的prompt。</p>
+<p>结果如下</p>
+<img src="/da871ebe/toxicity_control.png" class title="toxicity control">
+<p>在数据量较少的情况下（8000 &amp; 9000），ODPO效果更明显好。</p>
+<h2 id="summarization">summarization</h2>
+<p>摘要任务使用REDDIT TL;DR数据集，使用的模型是GPTJ-6B。</p>
+<p>DPO和ODPO训练后的评分：抽了100条测试prompt，用不同的temperature生成结果，并用GPT-4进行评分对比。结果如下</p>
+<img src="/da871ebe/summarization.png" class title="summarization">
+<p>DPO和ODPO都比SFT好，并且在temperature比较低的设置下，DPO和ODPO都比human-written的结果好。</p>
+<h2 id="消融实验scaling-function">消融实验：scaling function</h2>
+<p>前面实验的offset都是用reward差值的log值，这里使用其他两种计算方式进行对比</p>
+<p><span class="math display">\[\Delta_r=\log r(\boldsymbol{y}_w)-\log
+r(\boldsymbol{y}_l)\]</span></p>
+<p><span class="math display">\[\begin{array}{rcl}\Delta_r=r(\boldsymbol{y}_w)-r(\boldsymbol{y}_l)\end{array}\]</span></p>
+<p>使用5000对sentiment control的数据，<span class="math inline">\(\beta
+\in \{0.1,0.2,\ldots,0.9\}\cup\{1,2,3,4,5\}\)</span>。</p>
+<p>对比结果如下</p>
+<img src="/da871ebe/scaling_function.png" class title="scaling function">
+<p>使用log scaling的ODPO在KL
+divergence更小的时候（0.4）可以达到0.8的reward，而没有使用log
+scaling的模型需要再更大的KL divergence下才能达到通用的reward。</p>
+<h2 id="消融实验α">消融实验：α</h2>
+<p>同样使用7500对sentiment control的数据，<span class="math inline">\(\beta=0.5\)</span>，改变<span class="math inline">\(\alpha\in\{0.0,0.1,0.2,0.3,0.5,0.8,1.\}\)</span>。</p>
+<img src="/da871ebe/alpha.png" class title="alpha">
+<p>发现更高的 <span class="math inline">\(\alpha\)</span>
+会使得模型更多偏离SFT模型，并带来更高的reward值。</p>
+<h1 id="小结">小结</h1>
+<p>ODPO在DPO的基础上加入了offset，在实现上并不复杂，而且能带来一些收益。</p>
+<p>略有瑕疵的是ODPO的实验覆盖面并不太全，也没有使用LLAMA等更强大的模型进行实验。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】Direct Preference Optimization with an Offset
+https://arxiv.org/pdf/2402.10571</p>
 ]]></content>
       <categories>
         <category>CS</category>
@@ -3897,175 +4238,6 @@ Language Models https://arxiv.org/abs/2308.16137</p>
       </tags>
   </entry>
   <entry>
-    <title>大模型算法题(5)</title>
-    <url>/336f2f3e.html</url>
-    <content><![CDATA[<p><img src="/images/cover.png"></p>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
-<hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
-<p>如有错漏，欢迎指正~</p>
-<hr>
-<h1 id="使用半精度训练时bf16和fp16格式有什么异同">1.使用半精度训练时，bf16和fp16格式有什么异同？</h1>
-<p>二者都是占用16bit空间。</p>
-<p>fp16由1个符号位、5个指数位和10个尾数位组成。fp16在表达小数时具有较高的精度，但表示的最大范围相对bf16比较小。相比bf16，在表达较大的数时更容易出现上溢的情况。</p>
-<p>bf16由1个符号位、8个指数位和7个尾数位组成。相比于fp16，bf16牺牲了一些尾数位以增加指数位，扩大了表达的范围，但是精度降低了，因此对于对精度需求比较高的模型，模型可能效果不如fp16。</p>
-<p>模型训练时使用bf16和fp16都可以降低内存使用和传输量，提高训练效率。</p>
-<img src="/336f2f3e/bfloat16.jpeg" class title="bf16">
-<h1 id="支持模型长上下文的方案ntk-aware-interpolation的思路是什么">2.支持模型长上下文的方案「NTK-aware
-interpolation」的思路是什么？</h1>
-<p>1.在NTK插值之前，线性插值通过在原模型训练的两个位置编码中间，插入新的位置编码，使得同样的取值范围可以容纳更多位置。</p>
-<p>2.而NTK插值则是一种非线性插值的方法。它通过仅改变RoPE的base，使得位置编码中不同频率的信号有不同的表现，具体来说就是“高频外推，低频内插”。高频信号使用外推，防止分辨率太低，而低频信号沿用插值的方式，实现方便。</p>
-<h1 id="llm长度外推方案ntk-by-parts的思路是什么">3.LLM长度外推方案NTK-by-parts的思路是什么？</h1>
-<p>NTK-by-parts的方法在NTK插值的基础上又多想了一层。它认为无论是线性插值还是NTK-aware插值，都认为RoPE的所有分量都对网络有同样的重要性。而NTK-by-parts的思路认为，应该区别对待不同分量，他们对网络的影响有所不同。对于波长远小于上下文长度的分量（如波长&lt;=1/32上下文），就不插值只外推；而对于波长大于等于上下文长度的分量，就只外推不插值；对于介于两者之间的分量，就使用外推和插值的加权和。</p>
-<p>使用一个斜坡函数来定义NTK-by-parts的分段插值方法，如下所示</p>
-<img src="/336f2f3e/ntk_by_parts.png" class title="NTK-by-parts">
-<h1 id="llm长度外推方案yarn是怎做的">4.LLM长度外推方案YaRN是怎做的？</h1>
-<p>PI/NTK/NTK-by-parts主要的做法都是使用插值，而随着插值进行，token之间的距离变得更近（因为现在每一个位置旋转角度变小了），平均最小距离在减小，这样注意力softmax的分布会变得更尖，也就是都集中在某个区间。</p>
-<p>换句话说，就是RoPE原本远距离衰减的特性变弱了，衰减得更不明显，就会导致模型更平均地关注到更多的token，这样就削弱了注意力机制，导致输出质量下降。</p>
-<p>可以通过在softmax之前，将中间注意力矩阵乘以温度
-t&gt;1来缓解这个问题。由于RoPE被编码为一个旋转矩阵，就可以简单地给旋转矩阵乘以一个系数根号t来实现，这样可以不必修改注意力的代码。</p>
-<p>YaRN结合NTK-by-parts和这个温度系数，对attention score进行调整。</p>
-<img src="/336f2f3e/yarn.png" class title="YaRN">
-<h1 id="对于使用group-query-attention的模型假设hidden-sizedq的注意力头数量为h每个头维度为d假设有ddhkv组数为n输入上下文长度为sbatch-sizeb模型层数为l计算推理时kv-cache所需的空间">5.对于使用Group-Query
-Attention的模型，假设hidden
-size=D，Q的注意力头数量为h，每个头维度为d（假设有D=d×h），kv组数为n，输入上下文长度为s，batch
-size=b，模型层数为L，计算推理时kv cache所需的空间。</h1>
-<p>kv cache缓存的是经过投影变换之后的K和V矩阵。</p>
-<p>对于GQA，每层有n组K和V，每组的特征维度和Q的每个头的特征维度相同，为D/h。则每层每组K和V数据量为sD/h，整个模型共有2LnsD/h个数据，因此整个batch需要缓存2bLnsD/h个数据。
-如果使用的是半精度浮点数，每个浮点需要两个字节，因此共需要4bLnsD/h字节的空间。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大模型算法题(6)</title>
-    <url>/7c04944d.html</url>
-    <content><![CDATA[<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
-<hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
-<p>如有错漏，欢迎指正~</p>
-<hr>
-<h1 id="xavier初始化思路是什么是怎么做的">1.Xavier初始化思路是什么，是怎么做的？</h1>
-<p>2010年的《Understanding the difficulty of training deep feedforward
-neural
-networks》提出Xavier初始化，目的是为了保持模型中每一层的输出方差大致相等，这样做的原因主要有：</p>
-<p>（1）避免梯度消失或梯度爆炸：在深度神经网络中，如果层与层之间的输出方差相差很大，就会有很大的值出现，那么在反向传播过程中，梯度可能会变得非常小（梯度消失）或者非常大（梯度爆炸）导致梯度更新缓慢，或者训练过程不稳定。</p>
-<p>（2）保持信号的传播：通过保持每一层的输出方差大致相等，可以确保网络中的信号在前向传播和反向传播时不会因为方差的变化而减弱或增强，从而有助于网络更好地学习和传递信息。</p>
-<p>（3）提高训练的稳定性和效率：当每一层的输出方差保持一致时，训练过程会更加稳定，因为权重更新的magnitude更加可控。这样可以提高训练的效率。</p>
-<p>（4）避免过拟合或欠拟合：适当的方差控制有助于网络在训练过程中保持适当的泛化能力。过大的方差可能导致过拟合，而过小的方差可能导致欠拟合。</p>
-<p>Xavier初始化方法通过考虑前一层的节点数（fan-in）和后一层的节点数（fan-out）来设置初始权重的分布范围。有三种方案：</p>
-<p>（1）只考虑输入，设置参数的方差为1/fan-in</p>
-<p>（2）只考虑输出，设置参数的方差为1/fan-out</p>
-<p>（3）同时考虑输入和输出，设置参数的方差为2/（fan-in +
-fan-out）。实际使用中1/fan-in效果就较好。</p>
-<h1 id="rlhf中reward模型和critic模型的作用分别是什么">2.RLHF中，Reward模型和Critic模型的作用分别是什么？</h1>
-<p>Critic模型主要负责评估当前策略下的行为，并预测未来的回报。在PPO中，Critic模型的输出用于计算优势函数（advantage
-function），这是一个衡量实际回报与预期回报之间差异的指标。优势函数是策略梯度方法中的关键组成部分，它帮助actor模型了解哪些行为比预期要好，哪些行为比预期要差。因此，Critic模型的评分直接影响actor模型的优化过程，指导其调整行为以提高整体性能。</p>
-<p>Reward模型是基于人类反馈训练的，用于评估和打分模型生成的文本或行为的质量。在RLHF中，Reward模型的评分通常被用作奖励信号，直接反馈给Actor模型。这些奖励信号反映了人类对生成内容的偏好和评价标准，Actor模型会根据这些信号调整其行为，以生成更符合人类期望的输出。
-RLHF中，Actor模型的优化目标是最大化期望回报。这个期望回报可以由Critic模型的预测和Reward模型的评分共同决定。具体来说，Actor模型的优化目标（objective）通常包括（1）策略损失：这部分损失来自于策略模型尝试最大化奖励信号（由Reward模型提供）和/或优势函数（由Critic模型提供）。（2）价值损失：在Actor-Critic架构中，Actor模型也负责优化Critic模型，那么价值损失会尝试最小化Critic模型预测的价值与实际回报之间的差异。（3）其他正则化项：可能还包括一些正则化项。</p>
-<p>因此，Critic模型的评分用于计算优势函数，而Reward模型的评分直接作为奖励信号。这两个模型共同作用于Actor模型，帮助其学习如何生成更符合人类偏好和期望的行为。</p>
-<h1 id="kaiming初始化是怎么做的">3.Kaiming初始化是怎么做的？</h1>
-<p>Kaiming初始化在Xavier初始化的基础上做了调整。Xavier初始化的推导是基于线性函数的，但实际上今天所有模型都会大量使用非线性函数，比如ReLU，这样就导致了Xavier初始化的失效。
-Kaiming初始化针对使用ReLU的模型提出。因为ReLU会抛弃掉小于0的值，对于一个均值为0的输入数据，这就相当于砍掉了一半的值，这样输出的方差和均值就变了。因此把Xavier初始化中使用的方差sqrt(1/N)改为sqrt(2/N)，这样数据不会因为ReLU而变得越来越小。</p>
-<h1 id="使用bert中的cls作为输出进行分类和相似度计算可能会有什么问题">4.使用Bert中的[CLS]作为输出进行分类和相似度计算，可能会有什么问题？</h1>
-<p>self-attention中，每个token都天然倾向于关注自己和附近的token，而对更远的内容分配较少的注意力。在Bert中，[CLS]一般是第一个token，放在最前面。这就导致[CLS]更容易关注到靠近它的输入，也就是文本的靠前部分。如果文本较长，且关键内容出现在靠后的位置，就有可能出现[CLS]中关注不够的情况，而导致效果下降。可以通过强制注意力分配，或者使用所有位置的输出而不单是[CLS]token的方法来缓解这个问题。</p>
-<h1 id="pytorch中的register_buffer是什么有什么用">5.pytorch中的register_buffer是什么，有什么用？</h1>
-<p>register_buffer是nn.Module类中的一个方法，它用于注册一个不需要梯度的缓冲区。一般会把模型中需要持续使用或者跟踪，但是不需要通过梯度来更新的参数使用register_buffer注册。使用register_buffer注册的参数可以和其他训练的参数一样，保存在state_dict中，比如旋转位置编码的旋转矩阵，batchnorm中的全局均值和方差，一般都会用register_buffer注册。如果不使用register_buffer注册，普通的常量或者参数保存的时候不会被state_dict跟踪到。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>【往期文章】</p>
-<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
-<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>解锁大模型长上下文能力</title>
     <url>/cc852861.html</url>
     <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
@@ -4330,124 +4502,56 @@ Skip-wise Training https://arxiv.org/abs/2309.10400</p>
       </tags>
   </entry>
   <entry>
-    <title>大模型偏好对齐-ODPO</title>
-    <url>/da871ebe.html</url>
-    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+    <title>大模型算法题(6)</title>
+    <url>/7c04944d.html</url>
+    <content><![CDATA[<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
 <hr>
-<p>前面对DPO的思路做了整理：<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a>。</p>
-<p>DPO把RLHF的两阶段训练，变成了一阶段训练，降低了训练成本。而ODPO（DPO
-with an
-offset）在DPO的基础上做了一点改进，在几个下游任务的实验中，获得了比DPO更好的效果。</p>
-<h1 id="背景">背景</h1>
-<p>直接使用指令微调，是让模型学会处理下游任务的一个快速有效的方法。</p>
-<p>但是指令微调的优化目标是maximize the response
-log-likelihood，这和“生成人类所偏好的高质量内容”的目标之间存在gap，不完全对齐。</p>
-<p>这个misalignment部分是因为maximum
-likelihood的目标无法区分数据里“大错”（比如幻觉）和“小错”（比如标点符号不恰当）。</p>
-<blockquote>
-<p>Training with the maximum likelihood objective makes the model assign
-nonzero probability mass to all responses in SFT dataset, even those of
-lower quality.</p>
-</blockquote>
-<p>因此有RLHF的方法来解决这个问题。RL通过人类偏好数据训练一个reward模型，并用reward模型来指导策略模型。</p>
-<p>而reward的modeling有两种，pointwise reward和pairwise preference。</p>
-<p>pointwise
-reward一般用于reward有比较确定定义且简单的场景，比如情感分类，我们可以定义positive的情感的reward为1，negative的reward为0。类似的还有toxicity等。这些类别一般也有很多现成的打分模型/classifier可以使用。</p>
-<p>pairwise
-preference一般用于比较复杂的任务，比如文本摘要和对话生成。这类任务难以直接基于单个答案来打分，而需要通过对比才能知道哪个更好。</p>
-<p>但RLHF成本比较高，因此DPO对训练过程进行了简化。</p>
-<h1 id="bradleyterry-model的局限">Bradley–Terry model的局限</h1>
-<p>DPO的损失如下</p>
-<p><span class="math display">\[\begin{aligned}
-\mathcal{L}^{\mathrm{DPO}}(\boldsymbol{\theta})&amp;
-=-\mathbb{E}_{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\sim\mathcal{D}_{\text{HF}}}\left[\log\sigma\Big(\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}_w\mid\boldsymbol{x})}{\pi_{\text{SFT}}(\boldsymbol{y}_w\mid\boldsymbol{x})}-\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}_l\mid\boldsymbol{x})}{\pi_{\text{SFT}}(\boldsymbol{y}_l\mid\boldsymbol{x})}\Big)\right]  \\
-&amp;=-\underset{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\thicksim\mathcal{D}_{\mathrm{HF}}}{\operatorname*{\mathbb{E}}}\left[\log\sigma\left(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w)-\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)\right)\right]
-\end{aligned}\]</span></p>
-<p>其中</p>
-<p><span class="math display">\[\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y})=\beta\log\frac{\pi_{\boldsymbol{\theta}}(\boldsymbol{y}|\boldsymbol{x})}{\pi_{\mathrm{SFT}}(\boldsymbol{y}|\boldsymbol{x})}\]</span></p>
-<p>是estimated reward。</p>
-<p>这个DPO损失的形式背后用到了Bradley–Terry
-model对偏好进行建模。而Bradley–Terry
-model只给出了一个response比另一个response好的概率，而没有告诉我们好的程度。</p>
-<p>而实际上我们很多偏好对比数据都提供了具体的分数，而不仅仅是排序信息。有这些具体分数我们就可以知道两条response之间是差一点点，还是差很多。</p>
-<p>那么把这个差距的信息引入到偏好的建模里，应该能带来收益，这也是ODPO的思路，而两个response之间的差距就是offset。</p>
-<h1 id="dpo-with-an-offset">DPO with an Offset</h1>
-<p>给 <span class="math inline">\(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w),\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)\)</span>
-分别加上Gumbel noise，即得到</p>
-<p><span class="math display">\[\tilde{r}_w\sim\operatorname{Gumbel}(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w),1)\]</span></p>
-<p><span class="math display">\[\tilde{r}_l\sim\operatorname{Gumbel}(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l),1)\]</span></p>
-<p>论文中证明了</p>
-<p><span class="math display">\[p\big(\tilde{r}_w-\tilde{r}_l&gt;\Delta_r\big)=\sigma(\Delta_{\hat{r}_\theta}-\Delta_r)\]</span></p>
-<p>基于此，ODPO的损失函数表达成</p>
-<p><span class="math display">\[\mathcal{L}^{\mathrm{ODPO}}(\boldsymbol{\theta})=-\underset{(\boldsymbol{x},\boldsymbol{y}_w,\boldsymbol{y}_l)\sim\mathcal{D}_{\mathrm{HF}}}{\operatorname*{\mathbb{E}}}\left[\log\sigma{\left(\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_w)-\hat{r}_{\boldsymbol{\theta}}(\boldsymbol{x},\boldsymbol{y}_l)-\Delta_r\right)}\right]\]</span></p>
-<p>这相当于要求preferred response的estimated reward要比dispreferred
-response的estimated reward大，且要大offset值这么多。</p>
-<p>当offset=0的时候，ODPO的损失等价于DPO的损失。</p>
-<p>ODPO的这个做法和softmax margin loss/marginal
-loss有些相似，都是在原来loss的基础上，加上一个margin，加大对靠得比较近的数据对的penalization的力度。</p>
-<p>ODPO里，offset是两个response之间的actual reward的increasing scaling
-function。</p>
-<p><span class="math display">\[\Delta_r=\alpha\mathbf{f}\big(\mathrm{score}(\boldsymbol{x},\boldsymbol{y}_w)-\mathrm{score}(\boldsymbol{x},\boldsymbol{y}_l)\big)\]</span></p>
-<p>其中 <span class="math inline">\(\alpha\)</span> 是超参。</p>
-<img src="/da871ebe/odpo_intro.png" class title="intro">
-<h1 id="实验">实验</h1>
-<p>论文在几个下游任务上做了实验。</p>
-<h2 id="sentiment-control">sentiment control</h2>
-<p>首先是sentiment control的任务，即要求模型输出positive的response。</p>
-<p>先用GPT2-Large在IMDB
-dataset做了finetune，获得SFT模型。论文用一个现成的sentiment
-classifier作为reward的打分模型，给response分别打分，分数如下计算</p>
-<p><span class="math display">\[r_{negative}(\boldsymbol{x},\boldsymbol{y}) =
-1-p(\text{negative}\mid\cdot)\]</span></p>
-<p><span class="math display">\[r_{positive}(\boldsymbol{x},\boldsymbol{y}) =
-1+p(\text{positive}\mid\cdot)\]</span></p>
-<p>有了reward打分数据之后，还要构造偏好数据对。这里把同一个prompt下生成的所有reward分数不同的response进行排列组合，获得偏好数据对。</p>
-<p>对于DPO，有这些偏好数据对就够了。而ODPO还需要一个offset，按如下方式计算：</p>
-<p><span class="math display">\[\Delta_r=\log\left(r(\boldsymbol{y}_w)-r(\boldsymbol{y}_l)\right)\]</span></p>
-<p>实验里把 <span class="math inline">\(\alpha\)</span> 设为1。</p>
-<p>实验中使用两个不同的random
-seed，从SFT模型里进行采样，从而得到了2份不同的偏好数据。</p>
-<p>而 <span class="math inline">\(\beta\)</span> 使用了14个不同的取值
-<span class="math inline">\(\{0.1,0.2,\ldots,1\}\cup\{1,2,3,4,5\}\)</span>
-进行实验。</p>
-<p>论文在2份数据集下分别使用不同的数据量进行训练（5000，7500,10000），这样DPO和ODPO分别有2×3×14=84个实验。</p>
-<p>每个实验计算模型生成结果的sentiment打分，以及和SFT模型的KL
-divergence。结果如下图</p>
-<img src="/da871ebe/sentiment_control.png" class title="sentiment control">
-<p>我们希望模型在sentiment的打分上越高越好，同时不要和SFT模型有太大的差距，因此越靠近左上角的点越符合我们的要求。从结果上看，ODPO比DPO更好一些。</p>
-<h2 id="toxicity-control">toxicity control</h2>
-<p>toxicity control任务和sentiment
-control类似，要求模型的response的毒性尽量低。</p>
-<p>这次使用GPT-neo-2.7b模型，<span class="math inline">\(\beta\)</span>
-的取值范围为 <span class="math inline">\(\{0.05,0.1,0.2,0.3,0.4,0.5\}\)</span>，使用从REALTOXICITYPROMPTS数据集里抽样的10000个毒性评分大于0.3的prompt。</p>
-<p>结果如下</p>
-<img src="/da871ebe/toxicity_control.png" class title="toxicity control">
-<p>在数据量较少的情况下（8000 &amp; 9000），ODPO效果更明显好。</p>
-<h2 id="summarization">summarization</h2>
-<p>摘要任务使用REDDIT TL;DR数据集，使用的模型是GPTJ-6B。</p>
-<p>DPO和ODPO训练后的评分：抽了100条测试prompt，用不同的temperature生成结果，并用GPT-4进行评分对比。结果如下</p>
-<img src="/da871ebe/summarization.png" class title="summarization">
-<p>DPO和ODPO都比SFT好，并且在temperature比较低的设置下，DPO和ODPO都比human-written的结果好。</p>
-<h2 id="消融实验scaling-function">消融实验：scaling function</h2>
-<p>前面实验的offset都是用reward差值的log值，这里使用其他两种计算方式进行对比</p>
-<p><span class="math display">\[\Delta_r=\log r(\boldsymbol{y}_w)-\log
-r(\boldsymbol{y}_l)\]</span></p>
-<p><span class="math display">\[\begin{array}{rcl}\Delta_r=r(\boldsymbol{y}_w)-r(\boldsymbol{y}_l)\end{array}\]</span></p>
-<p>使用5000对sentiment control的数据，<span class="math inline">\(\beta
-\in \{0.1,0.2,\ldots,0.9\}\cup\{1,2,3,4,5\}\)</span>。</p>
-<p>对比结果如下</p>
-<img src="/da871ebe/scaling_function.png" class title="scaling function">
-<p>使用log scaling的ODPO在KL
-divergence更小的时候（0.4）可以达到0.8的reward，而没有使用log
-scaling的模型需要再更大的KL divergence下才能达到通用的reward。</p>
-<h2 id="消融实验α">消融实验：α</h2>
-<p>同样使用7500对sentiment control的数据，<span class="math inline">\(\beta=0.5\)</span>，改变<span class="math inline">\(\alpha\in\{0.0,0.1,0.2,0.3,0.5,0.8,1.\}\)</span>。</p>
-<img src="/da871ebe/alpha.png" class title="alpha">
-<p>发现更高的 <span class="math inline">\(\alpha\)</span>
-会使得模型更多偏离SFT模型，并带来更高的reward值。</p>
-<h1 id="小结">小结</h1>
-<p>ODPO在DPO的基础上加入了offset，在实现上并不复杂，而且能带来一些收益。</p>
-<p>略有瑕疵的是ODPO的实验覆盖面并不太全，也没有使用LLAMA等更强大的模型进行实验。</p>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
+<p>如有错漏，欢迎指正~</p>
+<hr>
+<h1 id="xavier初始化思路是什么是怎么做的">1.Xavier初始化思路是什么，是怎么做的？</h1>
+<p>2010年的《Understanding the difficulty of training deep feedforward
+neural
+networks》提出Xavier初始化，目的是为了保持模型中每一层的输出方差大致相等，这样做的原因主要有：</p>
+<p>（1）避免梯度消失或梯度爆炸：在深度神经网络中，如果层与层之间的输出方差相差很大，就会有很大的值出现，那么在反向传播过程中，梯度可能会变得非常小（梯度消失）或者非常大（梯度爆炸）导致梯度更新缓慢，或者训练过程不稳定。</p>
+<p>（2）保持信号的传播：通过保持每一层的输出方差大致相等，可以确保网络中的信号在前向传播和反向传播时不会因为方差的变化而减弱或增强，从而有助于网络更好地学习和传递信息。</p>
+<p>（3）提高训练的稳定性和效率：当每一层的输出方差保持一致时，训练过程会更加稳定，因为权重更新的magnitude更加可控。这样可以提高训练的效率。</p>
+<p>（4）避免过拟合或欠拟合：适当的方差控制有助于网络在训练过程中保持适当的泛化能力。过大的方差可能导致过拟合，而过小的方差可能导致欠拟合。</p>
+<p>Xavier初始化方法通过考虑前一层的节点数（fan-in）和后一层的节点数（fan-out）来设置初始权重的分布范围。有三种方案：</p>
+<p>（1）只考虑输入，设置参数的方差为1/fan-in</p>
+<p>（2）只考虑输出，设置参数的方差为1/fan-out</p>
+<p>（3）同时考虑输入和输出，设置参数的方差为2/（fan-in +
+fan-out）。实际使用中1/fan-in效果就较好。</p>
+<h1 id="rlhf中reward模型和critic模型的作用分别是什么">2.RLHF中，Reward模型和Critic模型的作用分别是什么？</h1>
+<p>Critic模型主要负责评估当前策略下的行为，并预测未来的回报。在PPO中，Critic模型的输出用于计算优势函数（advantage
+function），这是一个衡量实际回报与预期回报之间差异的指标。优势函数是策略梯度方法中的关键组成部分，它帮助actor模型了解哪些行为比预期要好，哪些行为比预期要差。因此，Critic模型的评分直接影响actor模型的优化过程，指导其调整行为以提高整体性能。</p>
+<p>Reward模型是基于人类反馈训练的，用于评估和打分模型生成的文本或行为的质量。在RLHF中，Reward模型的评分通常被用作奖励信号，直接反馈给Actor模型。这些奖励信号反映了人类对生成内容的偏好和评价标准，Actor模型会根据这些信号调整其行为，以生成更符合人类期望的输出。
+RLHF中，Actor模型的优化目标是最大化期望回报。这个期望回报可以由Critic模型的预测和Reward模型的评分共同决定。具体来说，Actor模型的优化目标（objective）通常包括（1）策略损失：这部分损失来自于策略模型尝试最大化奖励信号（由Reward模型提供）和/或优势函数（由Critic模型提供）。（2）价值损失：在Actor-Critic架构中，Actor模型也负责优化Critic模型，那么价值损失会尝试最小化Critic模型预测的价值与实际回报之间的差异。（3）其他正则化项：可能还包括一些正则化项。</p>
+<p>因此，Critic模型的评分用于计算优势函数，而Reward模型的评分直接作为奖励信号。这两个模型共同作用于Actor模型，帮助其学习如何生成更符合人类偏好和期望的行为。</p>
+<h1 id="kaiming初始化是怎么做的">3.Kaiming初始化是怎么做的？</h1>
+<p>Kaiming初始化在Xavier初始化的基础上做了调整。Xavier初始化的推导是基于线性函数的，但实际上今天所有模型都会大量使用非线性函数，比如ReLU，这样就导致了Xavier初始化的失效。
+Kaiming初始化针对使用ReLU的模型提出。因为ReLU会抛弃掉小于0的值，对于一个均值为0的输入数据，这就相当于砍掉了一半的值，这样输出的方差和均值就变了。因此把Xavier初始化中使用的方差sqrt(1/N)改为sqrt(2/N)，这样数据不会因为ReLU而变得越来越小。</p>
+<h1 id="使用bert中的cls作为输出进行分类和相似度计算可能会有什么问题">4.使用Bert中的[CLS]作为输出进行分类和相似度计算，可能会有什么问题？</h1>
+<p>self-attention中，每个token都天然倾向于关注自己和附近的token，而对更远的内容分配较少的注意力。在Bert中，[CLS]一般是第一个token，放在最前面。这就导致[CLS]更容易关注到靠近它的输入，也就是文本的靠前部分。如果文本较长，且关键内容出现在靠后的位置，就有可能出现[CLS]中关注不够的情况，而导致效果下降。可以通过强制注意力分配，或者使用所有位置的输出而不单是[CLS]token的方法来缓解这个问题。</p>
+<h1 id="pytorch中的register_buffer是什么有什么用">5.pytorch中的register_buffer是什么，有什么用？</h1>
+<p>register_buffer是nn.Module类中的一个方法，它用于注册一个不需要梯度的缓冲区。一般会把模型中需要持续使用或者跟踪，但是不需要通过梯度来更新的参数使用register_buffer注册。使用register_buffer注册的参数可以和其他训练的参数一样，保存在state_dict中，比如旋转位置编码的旋转矩阵，batchnorm中的全局均值和方差，一般都会用register_buffer注册。如果不使用register_buffer注册，普通的常量或者参数保存的时候不会被state_dict跟踪到。</p>
 <hr>
 <p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
@@ -4461,8 +4565,6 @@ scaling的模型需要再更大的KL divergence下才能达到通用的reward。
 <a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
 <a href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
 <a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
-<a href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
 <a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
 <a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
 <a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
@@ -4473,850 +4575,7 @@ window attention</a><br>
 <a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
 <a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
 <a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
-<a href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a></p>
-<hr>
-<h1 id="reference">Reference</h1>
-<p>【1】Direct Preference Optimization with an Offset
-https://arxiv.org/pdf/2402.10571</p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>强化学习</tag>
-        <tag>微调</tag>
-        <tag>SFT</tag>
-        <tag>偏好对齐</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Yi技术报告-划重点看细节</title>
-    <url>/41b6a819.html</url>
-    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<hr>
-<p>01.AI（零一万物），是李开复带队孵化的AI公司。2023年11月初，01.AI发布并开源了Yi-6B、Yi-34B
-base模型，同一周内，又开源了Yi-6B-200K和Yi-34B-200K
-base模型。Yi号称是从零预训练的双语模型。接下来的几个月，01.AI陆续推出了chat模型、多模态能力，Yi-9B、长上下文的记忆和检索能力等优化。</p>
-<p>从2023年11发布起，个人就有测试和使用Yi的模型。在SuperCLUE/CMMLU等一些榜单数据的实测上，发现Yi的效果确实不错。实际工作使用里，Yi的效果基本也都能排在同时期中文（开源）大模型里的第一梯队。</p>
-<p>2024年3月，Yi终于发布了技术报告，在此来梳理一下报告中的重点内容和值得关注的细节信息。</p>
-<h1 id="tldr">TL;DR</h1>
-<p>先给出核心内容的总结：</p>
-<ul>
-<li>Yi-34B模型int4量化之后，相比float16损失&lt;1%，可以跑在RTX4090上（24G显存）</li>
-<li>模型结构不需要太多变化，LLAMA2标准结构已经足够训出很好的效果</li>
-<li>3.1T的预训练数据远比scaling
-law建议的1T大，但是效果更好，并且模型还没饱和，继续增大数据量还能提升</li>
-<li>微调数据质量很重要，由算法人员直接标注，只要&lt;10k的数据量就足够了</li>
-<li>4k长度的基础预训练模型已经具备长文本能力，只需用长文本数据继续预训练，更新百步就有很好效果</li>
-<li>总之，数据要精心设计，数据质量要高，数据量要大</li>
-</ul>
-<h1 id="模型">模型</h1>
-<h2 id="规模选择">规模选择</h2>
-<p>Yi目前有6B、9B、34B三个规模，其中34B是主力模型。</p>
-<p>选择34B，而不是更大规模的原因，是这个规模能在24G显存的消费级显卡（如RTX4090）上运行。</p>
-<p>使用int4量化之后的34B模型可以运行在24G显存的GPU上。</p>
-<p>参考<a href="https://arxiv.org/abs/2301.12017">《Understanding INT4
-Quantization for Language Models: Latency Speedup, Composability, and
-Failure
-Cases》</a>的量化方法，Yi-34B的int8量化模型相比bf16模型，几乎可以做到效果无损（差距&lt;1%），而int4量化模型在大部分任务的损失也完全可以接受，具体效果如下表。</p>
-<img src="/41b6a819/eval.png" class title="Yi效果">
-<p>训练数据总共是3.1T token，这比DeepMind的scaling
-law所建议的1TB要大不少。目前能接触到的这个规模的模型，数据量基本都&lt;2T。</p>
-<p>（即提出Chinchilla模型的<a href="https://arxiv.org/abs/2203.15556">《Training Compute-Optimal Large
-Language Models》</a>的scaling law）</p>
-<p>也就是从scaling law的角度来说，Yi是overtrain的。</p>
-<p><big><strong>但是Yi实践结果证明，较小模型+更大规模的高质量数据，是可以获得进一步效果提升的，这也就让我们获得了高性价比的推理模型--34B推理成本+大训练投入，就能得到接近普通70B规模的推理效果。</strong></big></p>
-<h2 id="模型结构">模型结构</h2>
-<p>结构上，基于标准LLAMA2模型，做了一些变化</p>
-<ul>
-<li>注意力机制：LLAMA2只在70B用了GQA，Yi全系列都用了GQA，具体参数如下表<br>
-</li>
-<li>位置编码：RoPE，参考RoPE ABF（《Effective long-context scaling of
-foundation models》），base扩大到10M，用于支持长上下文。<br>
-</li>
-<li>激活函数：使用SwiGLU，参考《GLU Variants Improve Transformer》</li>
-</ul>
-<p>并且把activation
-size从4h降为8/3h，这里的说法是补偿了GQA带来的参数下降</p>
-<blockquote>
-<p>We use SwiGLU as Yi’s post-attention layer, reducing its activation
-size from 4h to 8/3h (h denotes hidden size) to be consistent with the
-normal post-attention layer. This adjustment also compensates for the
-reduction in parameter resulted from GQA, making the overall parameter
-count comparible of existing 7B and 34B models.</p>
-</blockquote>
-<img src="/41b6a819/model.png" class title="Yi模型结构">
-<p>关于模型结构，一个结论就是<big><strong>“虽然做了很多模型结构上的实验，但是最终发现，标准的结构就足以训出足够好的模型”</strong></big></p>
-<h2 id="tokenizer">tokenizer</h2>
-<ul>
-<li>用BPE，词表大小为64000，这个大小平衡了计算效率和表达能力；<br>
-</li>
-<li>其中数字全是单个的digit，让模型能更好地理解数字数据；<br>
-</li>
-<li>对于OOV的词，会降级用unicode编码 ；</li>
-<li>保留全角标点符号，不转为半角；</li>
-</ul>
-<p>另外，优先考虑英语的LLM在tokenizer会使用虚拟前缀（文本开头的空格）来泛化句子不同位置相同的单词。Yi不这么做，因为即使是在英语语境中，这种假设并不总是成立，比如对于以引号开头的句子，而且在中文语境中，这么做没有明显效果。</p>
-<h1 id="数据">数据</h1>
-<p>数据，是LLM最核心的部分，没有之一。Yi最核心的工作就是提升数据数量和质量。</p>
-<img src="/41b6a819/cover.png" class title="数据">
-<h2 id="预训练数据">预训练数据</h2>
-<p>预训练数据整体处理流程如下</p>
-<img src="/41b6a819/pretrain_data_pipeline.png" class title="预训练数据处理流程">
-<ol type="1">
-<li>语料获取 &amp; 语言分类</li>
-</ol>
-<p>从网络爬虫开始，爬取中英文这两种语言的网站，对网站内容进行解析。</p>
-<p>并参考CCNeT（《CCNet: Extracting High Quality Monolingual Datasets
-from Web Crawl Data》）的做法，进行语言识别。</p>
-<ol start="2" type="1">
-<li>规则过滤器 Heuristic Rule Filters</li>
-</ol>
-<p>目的是快速过滤掉明显的低质量数据。基于这些规则来过滤掉：</p>
-<ul>
-<li>URL、域名、单词黑名单和乱码文本；<br>
-</li>
-<li>文档长度、特殊符号的比例，以及短行、连续行或不完整行的比例；<br>
-</li>
-<li>重复的单词模式、n-gram或段落，参考《Scaling Language Models:
-Methods, Analysis &amp; Insights from Training
-Gopher》的做法，阈值则是来参考《CulturaX: A Cleaned, Enormous, and
-Multilingual Dataset for Large Language Models in 167 Languages》；</li>
-<li>数据脱敏：识别并匿名化个人信息（Personal Identifiable
-Information，PII），如电子邮件地址和电话号码。</li>
-</ul>
-<ol start="3" type="1">
-<li>可训练过滤器 Learned Filters</li>
-</ol>
-<p>对于不好用规则处理的，就用模型来学习模式，并进行清洗。共有4个scorer：</p>
-<ul>
-<li>Perplexity Scorer：参照《CCNet: Extracting High Quality Monolingual
-Datasets from Web Crawl
-Data》，用kenlm库，把高于平均perplexity的内容丢弃；</li>
-<li>Quality
-Scorer：识别如维基百科这样的高质量内容，丢弃低质量内容；</li>
-<li>Document Coherence
-Scorer：用于发现句子、段落零散不连贯的文本，要么分割，要么直接丢弃；</li>
-<li>Safety Scorer：识别并删除暴力、色情、涉政内容</li>
-</ul>
-<ol start="4" type="1">
-<li>基于聚类的过滤 Cluster-based Filters</li>
-</ol>
-<p>用聚类的方法，把所有文档进行分类。一方面用于给数据混合策略做参考，一方面如果整个类别的质量太差，就直接抛弃类别内的所有数据。</p>
-<ol start="5" type="1">
-<li>去重</li>
-</ol>
-<p>参考《The RefinedWeb Dataset for Falcon LLM: Outperforming Curated
-Corpora with Web Data, and Web Data
-Only》，做文档级的minhash去重，以及子文档级的完全匹配去重。</p>
-<p>最终获得的数据分布如下</p>
-<img src="/41b6a819/pretrain_data_dist.png" class title="预训练数据分布">
-<p>虽然数据规模一定要够，但是也不能因此就放弃数据质量，否则只能是garbage
-in，garbage out</p>
-<blockquote>
-<p>we prefer 3T tokens over sophasticated engineering over 10T tokens
-without extensive filtering</p>
-</blockquote>
-<p>这句话大概表示清洗前的数据有10T，这也是一个信息，符合质量的数据可能只有3成</p>
-<h2 id="微调数据">微调数据</h2>
-<p>对于微调数据，一句话：Quality is All You Need。</p>
-<p>一共只有&lt;10k条SFT数据，每条数据都通过人工多次打磨，这比大数量但质量一般的数据的效果好。</p>
-<p>这思路和《Gemini: A family of highly capable multimodal
-models.》、《Llama 2: Open Foundation and Fine-Tuned Chat
-Models》、《Lima: Less is more for alignment》一致，而和FLAN（《Scaling
-instruction-finetuned language models》）以及UltraChat（《Enhancing chat
-language models by scaling high-quality instructional
-conversations》）这样更关注数据量的做法不同。</p>
-<p>具体做法上有：</p>
-<ul>
-<li>对于<big><strong>prompt distribution
-selection</strong></big>：参考《Wizardlm: Empowering large language
-models to follow complex
-instructions》，开发复合指令，并通过指令进化，逐步增加指令的复杂度。这种做法显著减少了SFT数据量。<br>
-</li>
-<li>对于<big><strong>CoT data formatting</strong></big>：参考《Take a
-step back: Evoking reasoning via abstraction in large language
-models》，采用了“Step-Back”的模式。即通过抽象化处理，让模型学习在深入探讨原始、具体的问题之前，制定更高层次的解决方案。<br>
-</li>
-<li>对于<big><strong>response formatting</strong></big>：使用从《Lima:
-Less is more for
-alignment》扩展的默认样式。总体而言，response的结构为introduction-body-conclusion的格式，“where
-the body is usually a list of bullet point”。<br>
-</li>
-<li>在缓解<big><strong>幻觉</strong></big>问题上，思路是确保response中的知识不由模型内部产生，对应的做法是把会导致模型进行记忆的response删掉。（但是这个具体标准是什么，有没有了解的朋友说下看法？）<br>
-</li>
-<li>在缓解<big><strong>生成重复</strong></big>的问题上，则是直接把response中包含重复的部分都重写了。（核心还是洗数据，一条条打磨）<br>
-</li>
-<li>数据<big><strong>多样性</strong></big>很重要，因此参考《#instag:
-Instruction tagging for analyzing supervised fine-tuning of large
-language
-models》建立了一个打标系统，并设计一个注重多样性的采样算法，平衡了各个领域数据的分布。<br>
-</li>
-<li>为了找到最佳的数据<big><strong>配比</strong></big>，参考《How
-abilities in large language models are affected by supervised
-fine-tuning data composition》，使用近似网络搜索（approximate grid
-search），对每个领域以{1, 1/2, 1/4, 1/8, 1/16, 1/32,
-1/64}的比例进行实验和人工测评，找到最佳的组合方式。<br>
-</li>
-<li>除了内容，<big><strong>数据格式</strong></big>对效果也有很大影响。参OPENAI的ChatML格式（<a href="https://github.com/openai/openai-python/blob/e389823ba013a24b4c32ce38fa0bd87e6bccae94/chatml.md">https://github.com/openai/openai-python/blob/e389823ba013a24b4c32ce38fa0bd87e6bccae94/chatml.md</a>），这种结构化的格式使模型能够区分各种信息类型，如system
-prompt、user input和bot response。</li>
-</ul>
-<p>SFT数据质量能极大影响模型的效果，随着数据量的增加，高质量数据能带来更多提升，如下图</p>
-<img src="/41b6a819/sft.png" class title="SFT">
-<h1 id="训练">训练</h1>
-<h2 id="infra">infra</h2>
-<p>从数据处理到模型训练都需要大集群大算力的支持。Yi构建了支持全栈数据处理、预训练、微调和服务的基础设施。包括：</p>
-<ol type="1">
-<li>自动管理和监控计算资源的能力；</li>
-<li>通过优化并行策略、内核效率和长上下文支持提高训练速度；</li>
-<li>统一微调框架，支持异构分布式训练后端，例如在DPO中同时使用Megatron和DeepSpeed进行多个模型的训练；</li>
-<li>通过各种LLM服务加速技术（如量化、continuous batching 和 paged
-attention）降低部署成本。</li>
-</ol>
-<p>总之这部分工作还是很多的，比如由于经常有硬件坏，坏的硬件会被自动从资源池移除；任务失败时，会自动跟踪重启。给算法人员考法UI等。</p>
-<h2 id="预训练">预训练</h2>
-<p>训了4k基础模型。（暂时没有给出更多细节）</p>
-<h2 id="微调">微调</h2>
-<p>超参如下</p>
-<ul>
-<li>AdamW：beta=[0.9,0.999]，epsilon = 1e-8<br>
-</li>
-<li>seq_len = 4096<br>
-</li>
-<li>batch size = 64<br>
-</li>
-<li>constant lr = 1e-5，weight decay = 0.1<br>
-</li>
-<li>gradient clip = 1.0<br>
-</li>
-<li>max step = 300</li>
-<li>参考《Neftune: Noisy embeddings improve instruction
-finetuning》，对于6B模型 noise scale = 5，对于34B模型 noise scale =
-45</li>
-</ul>
-<h1 id="模型评测">模型评测</h1>
-<h2 id="基模型评测">基模型评测</h2>
-<ol type="1">
-<li>基础能力评测</li>
-</ol>
-<p>对其他开源模型，保持和公开的设置相同做法获取结果。Yi使用贪婪解码，没有进行任何后处理，结果如下表</p>
-<img src="/41b6a819/base_model_eval.png" class title="Base模型效果">
-<p>在数学和代码能力上，和GPT3.5、GPT4还存在一些差距，而这些能力是可以通过继续预训练和微调来持续提升的。Yi最初的设计并没有针对这些能力，因此没有在预训练数据中包含特别多相关数据，后续会有计划增加这部分能力的提升。</p>
-<p>而和其他开源模型相比，在代码和数学以外的任务，Yi基本上做到了跟大一倍模型的效果相近，甚至更好的水平。</p>
-<ol start="2" type="1">
-<li>观察</li>
-</ol>
-<ul>
-<li>模型规模带来的增益：尽管Yi-34B和Yi-6B使用了相同的预训练语料，但Yi-34B的性能相比Yi-6B有了质的提升。更大的模型尺寸在代码和数学基准测试上带来了明显的增益。<br>
-</li>
-<li>数据质量：高质量预训练数据的小型模型，如Yi-34B或Qwen-14B，通常表现优于尺寸更大但（可能）数据质量较低的模型，例如Falcon-180B。</li>
-<li>GPT-4与开源LLM之间的差距：开源LLM在多种基准测试上的性能仍然落后于GPT-4和GPT-3.5。然而，具有代表性的双语LLM，例如Qwen-14B和Yi-34B，可以在包括C-Eval、CMMLU和Gaokao在内的中文知识相关基准测试上匹配甚至超过GPT-4的性能。然而，在BBH、代码（HumanEval）和数学（MATH）等推理相关基准测试上，仍然存在巨大的差距。</li>
-</ul>
-<ol start="3" type="1">
-<li>In-Context Learning能力的测试</li>
-</ol>
-<p>Yi进一步研究了in-context
-learning的能力，即根据少数展示的输入-输出示例，推断underlying
-function的能力。</p>
-<p>考虑的任务是推断加权和的线性系数。具体来说，定义 y = w1x1 + w2x2 +
-... + wnxn。</p>
-<p>少量示例展示是 x1, x2, ..., xn, y，要求模型预测给定一组新输入 x 的
-y。</p>
-<p>这就要求模型隐式地推断出 w1, w2, ..., wn。</p>
-<p>评测上，使用（a）模型预测的 y 与真实值 y∗ 之间的绝对差，即 |y − y∗|
-作为连续度量，以及使用（b）精确匹配 y == y∗ 作为不连续度量。</p>
-<p>模型在算术上的效果正常，因此可以认为这样的测试不受算术能力的影响，而能直接看模型是否具备根据给定的实例进行underlying
-function推理的能力。</p>
-<p>实验发现，当问题比较简单时（系数是[1,-1]），Yi-34B和LLAMA-70B效果比较好（看下图）。</p>
-<p>当问题更复杂点（系数是[1，1，1，1，1]），只有LLAMA-70B和Mistral
-8*7B这样的大模型表现出了涌现的能力。</p>
-<img src="/41b6a819/ict.png" class title="ICT">
-<h2 id="chat模型评测">Chat模型评测</h2>
-<ol type="1">
-<li>自动评测</li>
-</ol>
-<p>评测的任务和base模型相同，分别采用zero-shot和few-shot，效果依然不错，具体结果如下</p>
-<img src="/41b6a819/eval.png" class title="Yi效果">
-<p>报告强调，如Goodhart’s
-principle所说，当一个指标变成目标，就不再是一个好指标。因此这里的测试只是为了确认微调没有使得模型的知识能力下降，而不会专门去针对任务做优化。</p>
-<p>结果上，Yi-34B-Chat数学能力不错，而Yi-6B-Chat并没有展现出强大的数学能力。推测较小的模型可能需要更多的数据在SFT阶段激活其相应的能力。</p>
-<ol start="2" type="1">
-<li>人工评测</li>
-</ol>
-<img src="/41b6a819/third_party.png" class title="三方评测">
-<h1 id="能力扩展">能力扩展</h1>
-<p>base模型的基础上，做了3个能力扩展：长上下文、多模态、深度扩展。</p>
-<h2 id="长上下文能力">长上下文能力</h2>
-<p>报告中认为，4k的base模型已经具备了长文本（200k）的能力。只要用少量数据，进行继续预训练来释放这个能力，再用轻量级的SFT来调整格式，就能获得足够好的长文本能力。</p>
-<p>长文本的继续预训练中，依然使用完整的attention，而不是线性attention或者sparse
-attention。</p>
-<p>继续预训练的数据，混合了（1）原始预训练数据（2）length-upsampled
-long-context
-data长文本数据，长文本数据主要来自书籍（3）多文档问答的人造数据。</p>
-<p>多文档问答数据的应答中，在最终答案之前会对和答案相关的段落进行复述（recitation），以此来提升模型长文本关联的能力。</p>
-<p>这部分的数据工作主要参考《Data engineering for scaling language
-models to 128k context》和《Paraphrasing the original text makes high
-accuracy long-context qa》。</p>
-<p>最终用了5B token的长文本数据，batch
-size=4M（token），只更新了100个step（这里没明白100步是怎么来，不应该是5B/4M=1250？有没有明白的朋友指点一下）。</p>
-<blockquote>
-<p>We continue pretrain the model on 5B tokens with 4M batch size, which
-translate to 100 optimization steps. Aligning with the concurrent work
-from Fu et al. [22], we observe that such light-weight continue
-pretraining is already able to enable a strong performance on
-Needle-in-a-Haystack test, as we will show in Figure 6.</p>
-</blockquote>
-<p>这个做法与《Data engineering for scaling language models to 128k
-context》一致，这样轻量级的微调已经足够在“大海捞针”任务做得很好。</p>
-<p>而微调的数据，也混合了短的SFT数据，以及长的文本问答数据。</p>
-<p>这些文本问答数据都是人工用模型造出来的。</p>
-<p>具体的做法是，随机抽一些文档，然后从中随机选择一个或者多个段落，让一个训练好的模型根据这些段落造出问题和答案。</p>
-<p>一个重要的细节是复述和改写：在给出答案之前，我们要求模型复述或改写原文段落。这种数据格式鼓励模型的检索行为，从而抑制其虚构行为：面对一个问题，模型更倾向于使用输入中的信息来构建答案，而不是使用其内部知识，后者可能与问题相关但不准确。</p>
-<p>使用以上所述的轻量级训练，已经可以在“大海捞针”任务做得很好，几乎能够做到全绿。</p>
-<img src="/41b6a819/long_context_result.png" class title="大海捞针效果">
-<h2 id="多模态">多模态</h2>
-<p>ViT部分由CLIP ViT-H/14
-model初始化，后面的transformer由Yi-Chat初始化</p>
-<img src="/41b6a819/multimodal.png" class title="多模态">
-<p>3步训练：</p>
-<p>（1）使用224^2的图像来训练ViT和projection模块的参数。这一训练利用了包含1亿个图像-文本对的数据集，这些数据来自LAION-400M。主要目标是增强ViT在架构中的知识获取能力，并实现ViT与LLM之间更好的对齐。</p>
-<p>（2）将ViT的图像分辨率提升到448^2，目的是进一步推动模型识别复杂视觉细节的能力。在这个阶段使用的数据集包括从LAION-400M中提取的2000万个图像-文本对。此外，还融入了来自不同来源的大约480万个图像-文本对，例如CLLaVA、LLaVAR、Flickr、VQAv2、RefCOCO、Visual7w等。</p>
-<p>（3）整个模型的参数一起训练。主要目标是提高模型在多模态聊天交互方面的熟练度，从而赋予它能够无缝融合和解释视觉与语言输入的能力。为此，训练数据集涵盖了多种来源，总共大约有100万张图像-文本对，包括GQA、VizWiz
-VQA、TextCaps、OCR-VQA、Visual
-Genome、ShareGPT4V等等。为了确保数据平衡，对任何单一来源的最大数据量设定了上限，将其限制在不超过50,000对。</p>
-<p>使用128张A100，6B训了3天，34B训10天。</p>
-<h2 id="depth-upscaling-深度扩展">Depth Upscaling 深度扩展</h2>
-<p>目标是把32层的6B扩展到48层的9B模型。</p>
-<p>参考《Scaling large language models with simple yet effective depth
-up-scaling》，通过复制中间的12-28层共16层，把层数扩展为48层。</p>
-<p>实验表明，要确定复制哪些层，可以通过测量输入和每层输出的cosine
-similarity来衡量。</p>
-<p>这种方法使得模型能在不额外训练的情况下，和原模型性能最接近，损失最少。</p>
-<img src="/41b6a819/9B.png" class title="9B模型">
-<p>这说明复制的这些层并不会很大地改变原模型的激活值。</p>
-<p>除了层数增加，Depth Upscaling还要做继续预训练，才能提升效果。</p>
-<p>继续预训练使用约800B token，训练过程分为两个阶段。</p>
-<p>其中约70%的数据是最近收集并精心挑选的。在最后阶段增强了代码的比例以提高代码性能。</p>
-<p>训练保持constant lr = 3e-5，并在模型损失达到平台期时，从4M
-token开始逐渐增加batch size大小。</p>
-<p>这种增加batch
-size的方法，以及保持所有其他参数与Yi-6B基础模型配置一致，继续预训练很重要。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>往期文章</p>
-<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
-<p><a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>长上下文</tag>
-        <tag>技术报告</tag>
-        <tag>多模态</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>transformer中normalization的二三事</title>
-    <url>/6a40bfa5.html</url>
-    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>Normalization在模型中，相对于attention这种经常被魔改的结构，受到的关注度似乎没那么高，但它对模型能否顺利训练，却有很关键的作用。</p>
-<p>在此简单梳理下normalization相关的背景和内容，也分析一下在transformer发展上的相关内容。</p>
-<p>这部分内容感觉目前还有些存在争议的地方，如果有不同意见欢迎讨论。</p>
-<h1 id="why-normalization">why normalization</h1>
-<p>normalization，也叫「归一化」、「正则化」、「规范化」、「标准化」等，可以说已经是神经网络不可以或缺的一环。</p>
-<p>使用的话，现在基本只需几行代码就能实现。但要用得好，还是需要了解一下它作用的机制。</p>
-<h2 id="从输入数据看normalization">从输入数据看normalization</h2>
-<p>假设我们有一个二元损失函数 <span class="math inline">\(Loss(x_1,x_2)=x_1^2+x_2^2+b\)</span>
-，那在三维空间画出来的损失平面大概是这样</p>
-<img src="/6a40bfa5/lossfunc_surface.jpeg" class title="loss function surface">
-<p>在这样一个平面上，使用梯度下降法，梯度方向是垂直于当前位置等高线的切线方向的。</p>
-<p>如果这个损失函数的等高线是一系列完美的同心圆，那么无论我们起点在哪里，梯度下降的时候都会以垂直切线方向，沿着圆心一路奔去。</p>
-<p>这种情况下优化很快，控制好学习率不要跳过minimum就可以（也可以用自适应优化器来控制速度）。</p>
-<p>但是实际上我们的损失平面很难那么完美。损失函数的等高线更可能是个椭圆（或者更复杂的形状）。</p>
-<img src="/6a40bfa5/ellipse_1.png" class title="ellipse">
-<p>这样我们梯度下降是方向就要经常修正，训练效率就会受影响。</p>
-<p>如果这个椭圆很扁或者我们的训练参数不太好，可能会出现反复震荡收敛缓慢的情况。</p>
-<img src="/6a40bfa5/ellipse_2.png" class title="ellipse">
-<p>损失在这个狭窄的山谷中反复横跳。</p>
-<p>那损失函数等高线什么时候会是椭圆形？</p>
-<p>假设我们现在有两个输入变量，以米为单位的身高 <span class="math inline">\(x_{1}\)</span>，和以元为单位的月工资收入 <span class="math inline">\(x_{2}\)</span>。（这里对量纲的使用也会改变数值，如米-&gt;厘米）</p>
-<p>如果我们用这两个自变量训练模型，我们会发现，身高取值范围基本是在0.x米~2.x米，而工资的取值范围是0到几百几千几万或者几十万以及更多。</p>
-<p>而模型的一个主要操作就是对输入特征进行线性组合。</p>
-<p>这时模型的输出值会更大地受到 <span class="math inline">\(x_{2}\)</span>
-的影响，因为它的变化更大，取值范围也更大。</p>
-<p>这时损失函数在不同变量维度的变化速度相差很多，损失函数就会出现椭圆形等高线的情况。</p>
-<p>既然由于量纲和取值范围的问题，会导致训练困难，那最直接方法就是规定一个标准范围，所有输入变量，不管原来是什么范围，现在都归一化到标准范围里来。</p>
-<p>这就是最朴素的输入normalization的思想。</p>
-<p>输入的normalization有很多种做法<br>
-<span class="math display">\[x^{\prime}=\frac{x-\min(\mathrm{x})}{\max(\mathrm{x})-\min(\mathrm{x})}\]</span></p>
-<p><span class="math display">\[x^{\prime}=\frac{x-\mu}{\max(\mathrm{x})-\min(\mathrm{x})}\]</span></p>
-<p><span class="math display">\[x^{\prime}=\frac{x-\mu}\sigma\]</span></p>
-<p>其中 <span class="math inline">\(\mu\)</span> 为均值，<span class="math inline">\(\sigma\)</span> 为方差。</p>
-<p>第三种，均值方差归一化，也叫Z-score
-normalization，应该是我们用得比较多的。</p>
-<p>这样我们通过对输入进行一些操作，把「椭圆」拉成了「圆」，解决输入参数范围带来的一些训练问题。</p>
-<p>除了针对均值、方差、最大值、最小值的归一化，对输入还有一些其他的处理，如PCA等，就暂不展开。</p>
-<h2 id="缓解ics...吗">缓解ICS...吗？</h2>
-<p>机器学习里有一个叫i.i.d.（independent and identical
-distribution，独立同分布）的假设：独立，每次抽样之间是没有关系的，不会相互影响；同分布，即每次抽样，样本都服从同样的一个分布。</p>
-<p>为什么需要i.i.d.？</p>
-<p>由于机器学习依赖于使用现有数据来训练模型，进而对未来的数据做出预测和模拟，因此这一过程本质上是在历史数据的基础上，通过模型来推测未来的数据走向。</p>
-<p>这就要求我们使用的历史数据必须具备整体的代表性。以便从现有数据（经验）中提炼出规律，对未知数据进行决策。</p>
-<p>如果用于训练的数据缺乏总体代表性，即仅代表特殊情况，那么得出的规律可能不准确或错误，因为这些规律是基于个别案例推测出来的，就不具备泛化性。</p>
-<p>当然并不是所有机器学习都需要i.i.d.，但是有i.i.d.的话，可以简化很多事情，让模型学习起来更容易快速。</p>
-<p>对于输入，通过合理的抽样和处理（前面提到的PCA就可以用来解耦特征间的关联，达到“独立”的效果），我们可以得到输入的i.i.d.的条件，但这只是针对输入。</p>
-<p>在多层的神经网络中，上一层的输出会作为下一层的输入。</p>
-<p>而在训练过程中，由于上层的模型参数在不断学习变化，则上层输出的分布也在不断变化，靠后的层实际上要学习不断的变化的分布，这就很不i.i.d.，那靠后面的层的学习速度和效果就会收到影响，调参也变得困难，模型也难以加深。</p>
-<p>这个问题就是ICS，internal covariate shift。</p>
-<p>那有没有办法保证上一层的分布不要变化呢？</p>
-<p>一个「可能」的方案就是normalization。我们通过把上一层的输出映射到一个固定的分布上，来稳定给下一层的输入，这样就降低了学习难度。</p>
-<p>但也有一些工作表明normalization（batchnorm）的作用机制和ICS的关系并不大，这个观点下面在batchnorm部分说。</p>
-<p>当然ICS的问题也可以通过改变初始化策略、调控训练超参如学习率等方法来优化，但是这样做的效率并不是很高。</p>
-<h2 id="远离激活函数饱和区">远离激活函数饱和区</h2>
-<p>神经网络中还有一个重要组件，非线性激活函数，比如常用的sigmoid。</p>
-<img src="/6a40bfa5/sigmoid.png" class title="sigmoid">
-<p>当输入 &gt; 6 或者 &lt; -6
-的时候，sigmoid函数的梯度已经变得非常小，也就是进入了饱和区。</p>
-<p>这种情况下训练就变得困难。</p>
-<p>ICS就会加剧梯度消失的情况。在没有normalization的情况下，分布不断变化，后面层的参数变化激烈，导致输出值更容易进入到左右两端，更容易进入到激活函数的饱和区。</p>
-<p>而normalization能把部分输出值拉回到梯度正常的范围内，一定程度缓解了梯度消失的问题，使训练可以正常进行下去。</p>
-<h1 id="batchnorm">batchnorm</h1>
-<p>神经网络中使用的normalization有很多种，这里不一一展开，只梳理一下最重要的batchnorm和layernorm两类。</p>
-<h2 id="batchnorm算法">batchnorm算法</h2>
-<p>假设输入数据的形状是 <span class="math inline">\([B,C]\)</span>
-，其中 <span class="math inline">\(B\)</span> 是batch size，<span class="math inline">\(C\)</span> 是特征向量维度。</p>
-<p>这 <span class="math inline">\(C\)</span>
-个输入特征每个都有不同的含义，如我们前面的例子，第一个元素可能是身高，第二个元素可能是月收入，因此做normalization的时候这
-<span class="math inline">\(C\)</span> 个特征分别来做。</p>
-<p>具体来说，对于第 <span class="math inline">\(i\)</span>
-个特征维度，首先计算整个batch内的均值</p>
-<p><span class="math display">\[
-\mu_{i}=\frac{1}{B}\sum_{j=1}^{B}x_{i,j}
-\]</span></p>
-<p>再计算这个维度上的方差</p>
-<p><span class="math display">\[
-\sigma_{i}^{2}=\frac{1}{B}\sum_{j=1}^{B}(x_{i,j}-\mu_{i})^2
-\]</span></p>
-<p>得到均值和方差之后，对batch内维度上的所有值进行Z-score
-normalization</p>
-<p><span class="math display">\[
-x_{i,j}&#39;=\frac{x_{i,j}-\mu_{i}}{\sqrt{\sigma_{i}^{2}+\epsilon}}
-\]</span></p>
-<p>其中 <span class="math inline">\(\epsilon\)</span>
-是为了防止分母为0。这个在实际代码中挺重要的，忘记加可能会出问题。</p>
-<p>经过这样的变换之后，在 <span class="math inline">\(C\)</span>
-个特征维度上就是均值为0，方差为1的分布了。</p>
-<p>但是到这还没结束。</p>
-<p>每个维度的数值全部归一化之后，对于激活函数来说，更集中在中间的部分，而这部分的非线性特征并不强（比如上面的sigmoid），这样非线性激活层近似了一个线性变换，这样就降低了模型的学习能力。</p>
-<p>且无论输入是什么，最终输出都会被强行拉到这样一个“平均”的值，也极大抑制了模型的表达能力。</p>
-<p>所以为了保证模型的能力，也保证非线性能力的获得，对每个特征，又增加两个可学习的参数，
-缩放参数 <span class="math inline">\(\gamma\)</span> 和位移参数 <span class="math inline">\(\beta\)</span> 。</p>
-<p><span class="math display">\[
-y_{i,j} = \gamma_{i} x_{i,j}&#39; + \beta_{i}
-\]</span></p>
-<p>这样每个特征值就有机会从“线性区”移动到“非线性区”，把被归一化削弱的非线性能力找了回来。</p>
-<p>并且通过这样一个归一化再重新缩放移动的操作，解耦了上层输出分布和下层输入，本来下层参数要去适应上层分布变化，现在只需要通过每个batchnorm层中的
-<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span>
-直接学习就行了，训练变得简单了。</p>
-<p><a href="https://zhuanlan.zhihu.com/p/340856414">《Batch
-Normalization: Accelerating Deep Network》</a>给出的算法如下</p>
-<img src="/6a40bfa5/bn_algo.png" class title="batch norm">
-<h2 id="cnn中的batchnorm">CNN中的batchnorm</h2>
-<p>batchnorm最主要的应用还是在CNN模型中。</p>
-<p>假设CNN中feature map的size是 <span class="math inline">\([B,C,H,W]\)</span> ，其中 <span class="math inline">\(B\)</span> 是batch size，<span class="math inline">\(C\)</span> 是channel数（也是卷积核数量），<span class="math inline">\(H\)</span> 和 <span class="math inline">\(W\)</span> 分别是特征图的高和宽。</p>
-<p>如果按照前面batchnorm的算法，那应该有 <span class="math inline">\(C\times H\times W\)</span> 组特征，每组特征有
-<span class="math inline">\(B\)</span> 个，对每组内的 <span class="math inline">\(B\)</span> 进行归一化，再进行放缩和平移。</p>
-<p>但是实际上，CNN中卷积是一个滑动窗口，对于同一个channel下的 <span class="math inline">\(H\times W\)</span>
-个特征值其实都来自于同一个卷积核的计算，这 <span class="math inline">\(H\times W\)</span>
-也属于一个“batch”，它们要放在一起进行归一化。</p>
-<p>也就是对于卷积核来说，真正的batch数是 <span class="math inline">\(B\times H\times W\)</span> ，而只有 <span class="math inline">\(C\)</span> 组特征值，因此也只有 <span class="math inline">\(C\)</span> 个 <span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 。</p>
-<p>batchnorm原文中，batchnorm放在了relu后面，作者认为这样使得进入激活函数的分布会更加稳定，顺便对于fc层，由于batchnorm和fc都有bias项，还可以省略掉其中一个而不影响效果。</p>
-<p>btw，一般来说，batchnorm初始化的时候，把 <span class="math inline">\(\gamma\)</span> 设为1（不缩放），把 <span class="math inline">\(\beta\)</span>
-设为0（不平移），在训练中让模型从相当于没有batchnorm开始慢慢学习这两个参数。</p>
-<h2 id="训练和推理">训练和推理</h2>
-<p>现在我们知道在训练时，batchnorm对一个mini-batch计算均值和方差来进行归一化，再进行缩放和移动。</p>
-<p><span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span>
-属于模型学出来的参数，只要训练结束这两个向量就固定了，在推理的时候直接使用即可。</p>
-<p>但是推理时，均值和方差怎么计算呢。推理的时候可能是一个sample，也可能是任意个sample作为一个batch，和训练的时候一样计算肯定不合适。</p>
-<p>我们需要在训练的时候就为推理做准备：训练的时候，模型会遍历整个训练集，因此理论上可以统计出整个训练集的均值和方差，然后把这个大量样本统计出来的均值和方差当做真实分布的均值和方差，在推理的时候使用。（回想i.i.d.）</p>
-<p>当时又有一个问题，训练集可能会很大，有百万甚至千万的数据，在训练的数据记录下所有层所有特征来计算均值和方差显然效率不高，因此用一个近似的方法：</p>
-<p>moving_mean = momentum × moving_mean + (1.0 − momentum) × mean</p>
-<p>moving_var = momentum × moving_var + (1.0 − momentum) × var</p>
-<p>通过把多个batch的均值和方差进行移动平均的方式来逼近整个训练集的均值和方差。</p>
-<p>momentum为动量参数，在 TF/Keras 中，该值为0.99，在 Pytorch
-中，这个值为0.9。</p>
-<p>小的momentum值对应快的更新速度，能够更快地向真实分布靠近，但是同时也会导致更大的波动。</p>
-<p>大的momentum值对应慢的更新速度，如果更新过慢，则可能导致训练结束时还没有统计到真实的分布，是欠拟合的状态。</p>
-<p>如果batch size比较小，每个mini
-batch和全局差异较大，就不应该用太大的momentum。</p>
-<p>理论上，训练步数越长是会越靠近真实分布的，实际上，因为每个batch并不能代表整个训练集的分布，所以最后的值是在真实分布附近波动。</p>
-<p>这里还引入另外一个问题，如果batch size太小，每个mini
-batch统计的均值和方差和全局的值偏差相对会比较大，对模型收敛的稳定性有影响，因此一般来说，使用batchnorm的话，batch
-size不能太小，如下图</p>
-<img src="/6a40bfa5/bs_bn.png" class title="batch size的影响">
-<p>小结一下，batchnorm的优点是解耦了上层输出和下层输入的分布，既缓解了进入激活函数饱和区带来的梯度消失的情况，又保留了模型的表达能力。每一层的输入尺度相对固定，提供了更好的尺度不变形，使模型训练更稳定。</p>
-<p>同时每个batch分别进行归一化，相当于引入了一些随机噪音，使得模型不容易过拟合到某些微小的特征上，相当于进行了一定的正则化，将损失平面变得相对平滑。</p>
-<p>但是同时也引入了新的超参（如momentum），另外也依赖batch
-size的大小，过小的batch size可能会带来问题。</p>
-<h2 id="batchnorm起作用的真正原因">batchnorm起作用的真正原因？</h2>
-<p>虽然batchnorm原文认为batchnorm在一定程度上是缓解了ICS，但是2018年的《How
-Does Batch Normalization Help Optimization?》提出了不同观点。</p>
-<p>为了探究batchnorm的效果，是否是因为优化了ICS（或者说和优化了ICS有多大关系），做了一个这样的实验：在batchnorm后面又通过加入随机噪音来引入“covariate
-shift”，并和没有加噪音，以及没有加batchnorm的模型效果进行对比，如下图</p>
-<img src="/6a40bfa5/bn_ics.png" class title="ICS">
-<p>结果发现，即使人工加强了ICS的情况，但是只要用了batchnorm，效果依然比不用好；而人工引入ICS的模型，在效果上并没有多大影响。</p>
-<p>这就说明缓解ICS并不是batchnorm有效的真正原因。</p>
-<p>那batchnorm到底有没有缓解到ICS呢？</p>
-<p>要测量ICS的变化，就要先定义ICS。</p>
-<p>对于网络中的每一层，ICS被定义为在前一层参数更新后，当前层输入分布的变化。这种变化可以通过比较更新前后的梯度来量化。</p>
-<img src="/6a40bfa5/ics_define.png" class title="ICS 定义">
-<p>具体来说，对于每一层i，作者们计算了以下两个梯度之间的L2范数差异：</p>
-<p><span class="math inline">\(G_{t,i}\)</span>
-，在时间t，使用当前所有层的参数（包括前一层的参数）计算的梯度。</p>
-<p><span class="math inline">\(G_{t,i}&#39;\)</span>
-，在时间t，使用更新后的前一层参数计算的梯度，而其他层的参数保持不变。</p>
-<p>这个差异直观上表明了「上一层参数变化，下一层需要在多大程度上来变化，以适应新的分布」。</p>
-<p>理想来说，ICS越小，上一层参数更新对当前层的分布影响越小，梯度变化程度应该越小。</p>
-<img src="/6a40bfa5/ics_measure.png" class title="ICS measure">
-<p>但是从结果上来看，使用了batchnorm并不能有效减少这个变化，甚至还有所增加。</p>
-<p>这也说明batchnorm实际上并不能真正缓解ICS的情况。</p>
-<p>那batchnorm起效果的真正原因是什么？</p>
-<p>作者认为主要是batchnorm使得损失函数更加平滑，直观上来说就是减少了很多坑坑洼洼的位置，使得训练更不容易陷入到局部最小值中去。</p>
-<h1 id="layernorm">layernorm</h1>
-<p>看完batchnorm，再来看layernorm。</p>
-<h2 id="理解layernorm">理解layernorm</h2>
-<p>layernorm，不要被名字骗了，这里的layer指的不是模型的层，而是数值的layer。</p>
-<p>对于二维的输入，batchnorm实在batch维度上做归一化，而layernorm是在特征维度做归一化</p>
-<img src="/6a40bfa5/bn_and_ln.png" class title="bn和ln">
-<p>对于非NLP数据而言，相比batchnorm，layernorm归一化的维度似乎解释性没那么强。batchnorm对同一个特征，比如身高计算均值是有意义的，而layernorm在不同的特征，比如身高、工资、温度做归一化，好像并没有可靠的物理意义。</p>
-<p>layernorm最主要的应用就是NLP的模型，包括RNN和transfomrer模型。</p>
-<p>在transformer中，一般输入的形状是 <span class="math inline">\([B,S,H]\)</span> ，<span class="math inline">\(S\)</span>
-是序列长度，每个样本的长度可能不同，因此在这个维度需要使用padding（一般是zero-padding）来把batch内的数据处理成一样长。</p>
-<p>比如这样一批文本输入</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我  爱  中  国</span><br><span class="line">你  好</span><br><span class="line">谢  谢  你</span><br></pre></td></tr></table></figure>
-<p>为了使模型能够统一处理，会pad成</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我  爱  中  国</span><br><span class="line">你  好  [P] [P]</span><br><span class="line">谢  谢  你  [P]</span><br></pre></td></tr></table></figure>
-<p>一般来说，我们认为由于有padding的存在，做batchnorm并不合适。</p>
-<p>比如上面的例子，对“中”，“[P]”，“你”做归一化，由于 [P]
-的存在，实际的batch size只有2，并且和 [P]
-做normalization也对训练没什么帮助。</p>
-<p>而且对于文本数据，batch内同一个位置上的字是不同的，对完全没有关系的字进行归一化也并没有什么意义。</p>
-<p>也就是说，哪怕没有 [P]
-的存在，比如对第一个token“我”，“你”，“谢”做归一化，直觉上也不太有物理意义。</p>
-<p>因此使用layernorm，在 <span class="math inline">\(H\)</span>
-维度上进行normalization，同时有 <span class="math inline">\(H\)</span>
-个<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 需要学习。</p>
-<p>相当于计算每一句输入内，每个token所有特征之间的均值和方差来进行归一化。</p>
-<h2 id="为什么transformer用layernorm">为什么transformer用layernorm</h2>
-<p>和batchnorm不同的是，由于layernorm不需要再batch维度上计算均值和方差，所以不存在训练和推理的时候不一样的地方，不用保存一个全局的均值和方差供推理的时候使用。</p>
-<p>而由于layernorm和batch无关，也就不会受到batch size大小的影响。</p>
-<p>除了以上的原因，也有一些工作深入探究了在nlp任务上layernorm和batchnorm的区别。</p>
-<p>如《PowerNorm: Rethinking Batch Normalization in
-Transformers》就研究了transformer中BN为啥表现不太好。</p>
-<p>研究了训练中的四个统计量：batch的均值和方差，以及他们的梯度的均值和方差。对于batch的均值和方差，计算了他们和running
-statistics（就是用移动平均法累积的均值和方差，见前面的文章）的欧氏距离。发现NLP任务上（IWSLT14）batch的均值和方差一直震荡，偏离全局的running
-statistics，而CV任务也相对稳定。</p>
-<p>对于他们梯度的均值和方差，研究了其magnitude（绝对值），在CV任务上震荡更小，且训练完成后，也没有离群点。</p>
-<p>总结来说，transformer中BN表现不太好的原因可能在于CV和NLP数据特性的不同，对于NLP数据，前向和反向传播中，batch统计量及其梯度都不太稳定。</p>
-<p>更重要的是，实际效果就是layernorm在NLP的效果比batchnorm好，效果好，这是最重要的原因。</p>
-<h2 id="rmsnorm">RMSnorm</h2>
-<p>19年《Root Mean Square Layer
-Normalization》提出了normalization变体RMSnorm，主要针对layernorm来改进。</p>
-<p>简单地说，RMSnorm就是在标准layernorm的基础上，省略了平移，只进行缩放。</p>
-<img src="/6a40bfa5/rmsnorm.png" class title="RMSnorm">
-<p>作者认为标准layernorm计算效率并不高</p>
-<img src="/6a40bfa5/rmsnorm_eff.png" class title="RMSnorm效率">
-<p>作者用一个GRU模型做实验，对比是否添加layernorm的结果，发现在相同时间和相同步骤下，有layernorm的模型，都没有无layernorm的模型收敛得快。</p>
-<p>并且layernorm的平移对梯度方差的减小没有贡献，因此作者直接舍弃了中心化和平移两步，只对数据进行方差归一化和缩放。</p>
-<p>更近一步，作者提出pRMSnorm，只对数据中前p%的数值进行处理，这样就能进一步加速训练，而效果也基本不太受影响。</p>
-<img src="/6a40bfa5/prmsnorm.png" class title="prmsnorm">
-<p>RMSnorm现在被很多主流的大模型所采样了。</p>
-<h1 id="post-norm-pre-norm">post-norm &amp; pre-norm</h1>
-<h2 id="二者对比">二者对比</h2>
-<p>layernorm在模型里放哪也有讲究。</p>
-<p>原始的transformer模型使用的post-norm，而《On Layer Normalization in
-the Transformer Architecture》则认为pre-norm更好。</p>
-<p>post-norm和pre-norm分别是下面这样</p>
-<img src="/6a40bfa5/postnorm_prenorm.png" class title="postnorm and prenorm">
-<p>post-norm是在残差和主干相加之后进行归一化，而pre-norm则是在主干先归一化再和残差相加。</p>
-<p>post-norm和pre-norm对比，目前大家比较接受的结论是，pre-norm更容易训练，因此可以叠加更多的层，但是在层数不是特别多的情况下，post-norm最终的收敛效果会比pre-norm要好。</p>
-<p>模型中，第 <span class="math inline">\(l\)</span> 层的输出是第 <span class="math inline">\(l+1\)</span> 层的输入，对于post-norm有</p>
-<p><span class="math display">\[
-x_{l+1}=\mathrm{Norm}(x_l+\mathrm{F}_t(x_l))
-\]</span></p>
-<p>而对于pre-norm则是</p>
-<p><span class="math display">\[
-x_{l+1}=x_l+\mathrm{F}_l(\mathrm{Norm}(x_l))
-\]</span></p>
-<p>参考苏剑林在《为什么Pre Norm的效果不如Post Norm？》中的分析，认为
-<span class="math inline">\(\mathrm{F}_l(\mathrm{Norm}(x_l))\)</span>
-的方差，由于有norm的存在，是不随层数变化的。</p>
-<p>当 <span class="math inline">\(l\)</span> 比较大时，<span class="math inline">\(x_{l}、x_{l+1}\)</span> 的差距较小，因此 <span class="math inline">\(\mathrm{F}_l(\mathrm{Norm}(x_l))\)</span> 和 <span class="math inline">\(\mathrm{F}_{l+1}(\mathrm{Norm}(x_{l+1}))\)</span>
-的差距也很小，这时有</p>
-<p><span class="math display">\[\begin{aligned}
-&amp;\mathrm{F}_l(\operatorname{Norm}(x_l))+\operatorname{F}_{l+1}(\operatorname{Norm}(x_{l+1}))
-\\
-&amp;{\approx}\mathrm{F}_l(\mathrm{Norm}(x_l))+\mathrm{F}_{l+1}\left(\mathrm{Norm}(x_l)\right)
-\\
-&amp;=(\mathrm{F}_l\oplus\mathrm{F}_{l+1})(\mathrm{Norm}(\pmb{x_l}))
-\end{aligned}\]</span></p>
-<p>相当于 <span class="math inline">\(l\)</span> 层和 <span class="math inline">\(l+1\)</span> 层的效果接近于一个更宽的 <span class="math inline">\(l\)</span> 层的效果。</p>
-<p>也就是使用pre-norm的时候，模型的深度有水分，表面看起来有 <span class="math inline">\(l\)</span>
-层，实际在效果上，等效于post-norm的浅层模型。</p>
-<p>从模型结构上看，恒等分支永远有一部分不用经过normalization，这部分能够直接把梯度回传到最前面，这也是pre-norm能够训练“层数更多”的模型的原因--缓解了梯度消失。</p>
-<p>正常来说，模型深度对最终效果的影响，是大于模型宽度的。</p>
-<p>而post-norm，在残差分支之后做归一化，对参数正则化的效果更好（loss平面更平滑），且它每norm一次就削弱一次恒等分支的权重，所以post-norm相对pre-norm，是更突出残差分支的，因此它的层数更加“足秤”，训练好之后效果更优。</p>
-<h2 id="和warmup的关系">和warmup的关系</h2>
-<p>《On Layer Normalization in the Transformer
-Architecture》（认为pre-norm更好）还分析指出，使用post-norm的transformer，在初始化时候，靠近输出层的部分梯度期望很大，所以模型在开始训练的时候很依赖warmup的策略，通过缓慢提升学习率来稳定训练过程。</p>
-<p>使用warmup引入了新的超参，调参更为麻烦点。</p>
-<p>而实验表明，使用pre-norm的transformer在不需要warmup的情况下，也能收敛到post-norm+warmup的相同水平，而post-norm不加warmup效果就差点了。</p>
-<img src="/6a40bfa5/warmup_effect.png" class title="warmup影响">
-<h2 id="deepnorm">Deepnorm</h2>
-<p>2022年，《DeepNet: Scaling Transformers to 1,000
-Layers》对transformer训练不稳定的原因进行了深入分析，发现模型更新过大是导致不稳定的主要原因。</p>
-<p>为了解决这个问题，他们提出了Deepnorm，可以限制模型更新的大小。</p>
-<img src="/6a40bfa5/deepnorm.png" class title="deepnorm">
-<p>其中 <span class="math inline">\(\alpha&gt;1\)</span>
-是根据模型参数定的常数。这里相比post-norm提升了恒等分支的权重，使训练更容易进行。</p>
-<p>另外，还用了一个 <span class="math inline">\(\beta\)</span> 参数，把
-<span class="math inline">\(G_{l}\)</span>
-中的模型参数进行了缩小，以此来稳定模型的训练。</p>
-<p>实验结果上，deepnorm结合了pre-norm的容易训练，和post-norm的收敛效果好的特点，能够把百层、浅层的模型训到比较好的效果。</p>
-<img src="/6a40bfa5/deepnorm_result.png" class title="deepnorm result">
-<p>参数过程相比post-norm稳定了很多。</p>
-<h2 id="realformer--residual-attention">Realformer--residual
-attention</h2>
-<p>post-norm和pre-norm实际上改变的是模型残差分支和恒等分支怎么排布的问题，而《RealFormer:
-Transformer Likes Residual Attention》则提出了另外一种做法</p>
-<img src="/6a40bfa5/realformer.png" class title="realformer">
-<p>RealFormer的核心是在其标准Transformer编码器的每一层中引入了残差连接。这些残差连接将前一层的原始注意力分数（即在应用Softmax之前的分数）与当前层计算出的注意力分数相结合。这样做的结果是，当前层的注意力分数在计算时会考虑到前一层的信息。</p>
-<p>每个多头注意力模块都会接收来自前一层的残差注意力分数作为额外输入。这意味着每个注意力头不仅考虑了当前层内的输入序列，而且还直接利用了前一层的注意力信息。</p>
-<img src="/6a40bfa5/realformer_attention.png" class title="realformer attention">
-<p>其中 <span class="math inline">\(Prev&#39;\)</span>
-是来自上一层softmax之前的权重矩阵（多头注意力的话，则是对应的头的值），而
-<span class="math inline">\(\frac{Q^{\prime}K^{\prime
-T}}{\sqrt{d_k}}+Prev&#39;\)</span> 则是传给下一层的attention的。</p>
-<h1 id="小结">小结</h1>
-<p>本篇粗略梳理了一下关于normalization，batchnorm，以及layernorm在transformer的一些使用情况。</p>
-<p>目前主流的大模型使用的是rmsnorm + prenorm，也有使用其他变体的。</p>
-<p>关于normalization，依然留有一些探索空间。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>往期文章</p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
-<hr>
-<h1 id="reference">Reference</h1>
-<p>【1】https://www.zhihu.com/question/487766088<br>
-【2】Towards Stabilizing Batch Statistics in Backward Propagation of
-Batch Normalization https://arxiv.org/abs/2001.06838<br>
-【3】Transformer中的归一化(一)：什么是归一化&amp;为什么要归一化
-https://zhuanlan.zhihu.com/p/476102712<br>
-【4】Batch Normalization: Accelerating Deep Network Training by Reducing
-Internal Covariate Shift https://arxiv.org/abs/1502.03167<br>
-【5】How Does Batch Normalization Help Optimization?
-https://arxiv.org/abs/1805.11604<br>
-【6】Batch Normalization: Accelerating Deep Network
-https://zhuanlan.zhihu.com/p/340856414<br>
-【7】Layer Normalization https://arxiv.org/abs/1607.06450<br>
-【8】详解深度学习中的Normalization，BN/LN/WN
-https://zhuanlan.zhihu.com/p/33173246<br>
-【9】Transformer中的归一化(四)：BatchNormalization的原理、作用和实现
-https://zhuanlan.zhihu.com/p/481277619<br>
-【10】Layer Normalization https://arxiv.org/abs/1607.06450<br>
-【11】PowerNorm: Rethinking Batch Normalization in Transformers
-https://arxiv.org/abs/2003.07845<br>
-【12】Root Mean Square Layer Normalization
-https://arxiv.org/abs/1910.07467<br>
-【13】On Layer Normalization in the Transformer Architecture
-https://arxiv.org/abs/2002.04745<br>
-【14】为什么Pre Norm的效果不如Post Norm？
-https://spaces.ac.cn/archives/9009<br>
-【15】Understanding the Difficulty of Training Transformers
-https://arxiv.org/abs/2004.08249<br>
-【16】RealFormer: Transformer Likes Residual Attention
-https://arxiv.org/abs/2012.11747<br>
-【17】DeepNet: Scaling Transformers to 1,000 Layers
-https://arxiv.org/abs/2203.00555</p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>transformer</tag>
-        <tag>layernorm</tag>
-        <tag>normalization</tag>
-        <tag>batchnorm</tag>
-        <tag>post-norm</tag>
-        <tag>pre-norm</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大模型算法题(2)</title>
-    <url>/ad0bba9d.html</url>
-    <content><![CDATA[<p><img src="/images/cover.png"></p>
-<p>往期文章</p>
-<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
-<hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错误，欢迎指正</sub></p>
-<hr>
-<h1 id="在bert中词向量token-embedding和绝对位置编码position-encoding为什么可以直接相加">1、在Bert中，词向量token
-embedding和(绝对)位置编码position encoding为什么可以直接相加？</h1>
-<p>1、两个向量相加，理论上其效果等价于维度拼接concat+线性变换，而相加的操作在实现上更为方便。</p>
-<p>2、高维空间中(如768维)，两个随机向量近似为正交关系。模型在高维度有能力区分出所有组合的情况。假设共有2万个词向量，500个位置，则模型需要在768维空间区分1000万个点，即使768维每个维度只能取1和-1也具备足够的区分能力。</p>
-<p>3、词向量和位置编码可以认为都是一个one-hot向量经过一层线性变换层得到的。两个向量相加等价于把它们的one-hot编码拼接后进行线性变换。</p>
-<p>4、没有使用相乘则是出于工程考虑。相加相比相乘结果更为稳定，方便训练。</p>
-<h1 id="lora和全参数训练在计算量和显存上相比如何为什么lora能提升大模型训练效率">2、LoRA和全参数训练在计算量和显存上相比如何？为什么LoRA能提升大模型训练效率？</h1>
-<p>1、计算量上：LoRA训练时，在主干模型的（部分）全连接层增加了LoRA旁路，前向和后向的计算量都在主干模型的基础上，增加了旁路部分的计算，因此相比全参数训练，略有增加。</p>
-<p>2、显存上：训练时，显存主要有①模型参数②梯度③中间激活值④优化器参数四个部分。模型参数/梯度/激活值相比全参数训练也略微增加；而优化器则不需要再存储原模型参数的部分，只需要存储LoRA旁路部分，这部分节省较多显存。</p>
-<p>3、使用LoRA能提升训练效率主要是因为（1）优化器部分的显存需要减少了，可以增大batch（2）优化器参数减少了，分布式训练中多卡之间的通信量减少了（3）（optional）主干模型由于不用更新，可以进一步量化到int8/int4等。</p>
-<h1 id="为什么模型需要normalizationbatchnormlayernorm等">3、为什么模型需要normalization（batchnorm/layernorm等）？</h1>
-<p>1、输入数据包含多个特征，特征之间有不同的量纲和范围（如身高180和年龄18岁），通过normalization进行归一化再经过模型进行线性/非线性组合，能够防止部分特征占据主导，部分特征被忽略。</p>
-<p>2、batchnorm论文认为：模型一般有多层，前一层的输出是后一层的输入，而训练中前一层的参数更新会导致后一层的输入数据分布变化导致ICS（internal
-covariate
-shift），这样后面的层就不得不频繁剧烈更新适应分布变化，导致分布偏移进入激活函数饱和区而出现梯度消失，另外分布变化也是对i.i.d.条件的破坏。使用normalization可以保持分布的稳定，减小方差，使模型训练可以正常进行。</p>
-<p>3.《How Does Batch Normalization Help
-Optimization?》设计了实验测量使用batchnorm前后的ICS，发现batchnorm实际上并没有缓解ICS，甚至有所增加。而batchnorm能优化模型训练的原因更多是使得损失函数平面更加光滑，而便于梯度下降收敛。</p>
-<h1 id="transformer中pre-norm和post-norm各有什么优缺点">4、Transformer中pre-norm和post-norm各有什么优缺点?</h1>
-<p>1.原始的Transformer用的是post-norm，它在残差之后进行归一化（add &amp;
-norm），对参数正则化的效果更强，模型更为鲁棒；post-norm对每个通路都进行了归一化，使得梯度在回传的时候容易出现消失。</p>
-<p>2.Pre-norm相对于post-norm，残差部分存在不经过归一化的通路，因此能够缓解梯度消失，能够训练更深的网络。但是模型的等效“深度”受到影响，L+1层网络近似于一个L层的宽网络。</p>
-<p>3.也就是说，在层数较少，post-norm和pre-norm都能正常收敛的情况下，post-norm的效果更好一些；但是pre-norm更适合用于训练更深的网络。</p>
-<h1 id="对于使用multi-head-attention的模型假设hidden-sized注意力头数量为h每个头维度为d假设有ddh输入上下文长度为sbatch-size1计算self-attention模块各个部分的计算量float-operations">5、对于使用Multi-Head
-Attention的模型，假设hidden
-size=D，注意力头数量为h，每个头维度为d（假设有D=d×h），输入上下文长度为s，batch
-size=1，计算self-attention模块各个部分的计算量（Float
-Operations）。</h1>
-<p>1.QKV线性变换：6 × s ×
-D^2（矩阵乘法，每个位置有加法和乘法两个运算，因此每个位置需要2D次计算）</p>
-<p>2.QK内积：h × 2 × d × s^2（h组矩阵分别计算）</p>
-<p>3.scaling：h × s^2</p>
-<p>4.softmax：h × 3 ×
-s^2（softmax是按列进行的，每列要计算s个exp，s个exp结果的求和，以及s次除法）</p>
-<p>5.reduction（权重矩阵乘以V）：h × 2 × d × s^2</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>往期文章</p>
-<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
-]]></content>
-      <categories>
-        <category>CS</category>
-        <category>NLP</category>
-        <category>LLM</category>
-      </categories>
-      <tags>
-        <tag>NLP</tag>
-        <tag>LLM</tag>
-        <tag>算法题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>大模型算法题(1)</title>
-    <url>/3345028a.html</url>
-    <content><![CDATA[<p><img src="/images/cover.png"></p>
-<p>往期回顾</p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
-<hr>
-<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
-<p>本系列将整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错误，欢迎指正</sub></p>
-<h1 id="在transformer模型中为什么scaled-dot-product-attention在计算qk内积之后要除以根号d">1、在Transformer模型中，为什么scaled
-dot-product attention在计算QK内积之后要除以根号d？</h1>
-<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。如果不对attention值进行scaling，也可以通过在参数初始化时将方差除以根号d
-，同样可以起到预防softmax饱和的效果。</p>
-<h1 id="transformer自注意力计算中为什么q和k要使用不同的权重矩阵进行线性变换投影为什么不使用同一个变换矩阵或者不进行变换">2、Transformer自注意力计算中，为什么Q和K要使用不同的权重矩阵进行线性变换投影，为什么不使用同一个变换矩阵，或者不进行变换？</h1>
-<p>1、如果Q和K一样，则矩阵乘积的结果是一个对称矩阵，这样减弱了模型的表达能力。</p>
-<p>2、如果Q和K一样，乘积结果的对称矩阵中，对角线的值会比较大，导致每个位置过分关注自己。</p>
-<p>3、使用不同的投影矩阵，参数增多，可以增强模型表达能力。</p>
-<h1 id="transformer模型中注意力计算后面使用了两个ffn层为什么第一个ffn层先把维度提升第二个ffn层再把维度降回原大小">3、Transformer模型中，注意力计算后面使用了两个FFN层，为什么第一个FFN层先把维度提升，第二个FFN层再把维度降回原大小？</h1>
-<p>1、提升维度：类似SVM
-kernel，通过提升维度可以识别一些在低维无法识别的特征。</p>
-<p>2、提升维度：更大的可训练参数，提升模型的容量。</p>
-<p>3、降回原维度：方便多层注意力层和残差模块进行拼接，而无需进行额外的处理。</p>
-<h1 id="mqamulti-query-attention和gqagrouped-query-attention相比mhamulti-head-attention计算量变化如何主要带来了什么优化">4、MQA(Multi-Query
-Attention)和GQA(Grouped-Query Attention)相比MHA(Multi-Head
-Attention)，计算量变化如何，主要带来了什么优化？</h1>
-<p>1、MQA和GQA虽然可训练参数量比MHA少，但是计算量和MHA相比变化不大，主要在生成KV时有少量降低。</p>
-<p>2、Decoder-only的大模型由于causal
-attention的存在，使用了KV缓存加速推理。MQA和GQA能减少KV头的数量，节省了缓存，使得在输入长度较长时也能把KV放进缓存。</p>
-<h1 id="为什么现在主流的llm模型基本都是decoder-only的结构单向注意力模型为什么效果比双向注意力效果好">5、为什么现在主流的LLM模型基本都是Decoder-only的结构？单向注意力模型为什么效果比双向注意力效果好？</h1>
-<p>1、双向Attention在多层模型训练中容易退化成低秩矩阵，限制了模型容量；而Decoder-only模型使用了下三角注意力矩阵，使得训练过程中矩阵是满秩，建模能力更强。</p>
-<p>2、单向注意力模型相比双向注意力模型在训练的时候难度更大，能迫使模型学到更多信息。</p>
-<p>3、Causal
-Attention天然具有位置编码的功能，而双向Attention即使交换两个token的位置也基本不影响表示，对语序区分能力较弱。</p>
-<p>4、工程上，单向模型支持KV Cache等，对于对话场景效率友好。</p>
-<p>5、轨迹依赖，基模型训练成本高，业界倾向于沿着已经成功的模型继续开发。</p>
-<hr>
-<p>读到这了，来一发点赞收藏关注吧~</p>
-<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
-知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
-微信公众号：Linsight<br>
-<img src="/images/qrcode.jpg"></p>
-<hr>
-<p>往期回顾</p>
-<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a></p>
-<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
-<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
-<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
 ]]></content>
       <categories>
         <category>CS</category>
@@ -5695,36 +4954,338 @@ https://arxiv.org/abs/2007.14062</p>
       </tags>
   </entry>
   <entry>
-    <title>大规模对话模型：ChatGPT下的银牌选手们</title>
-    <url>/14e576c.html</url>
-    <content><![CDATA[<img src="/14e576c/1.png" class title="page_1">
-<img src="/14e576c/2.png" class title="page_2">
-<img src="/14e576c/3.png" class title="page_3">
-<img src="/14e576c/4.png" class title="page_4">
-<img src="/14e576c/5.png" class title="page_5">
-<img src="/14e576c/6.png" class title="page_6">
-<img src="/14e576c/7.png" class title="page_7">
-<img src="/14e576c/8.png" class title="page_8">
-<img src="/14e576c/9.png" class title="page_9">
-<img src="/14e576c/10.png" class title="page_10">
-<img src="/14e576c/11.png" class title="page_11">
-<img src="/14e576c/12.png" class title="page_12">
-<img src="/14e576c/13.png" class title="page_13">
-<img src="/14e576c/14.png" class title="page_14">
-<img src="/14e576c/15.png" class title="page_15">
-<img src="/14e576c/16.png" class title="page_16">
-<img src="/14e576c/17.png" class title="page_17">
-<img src="/14e576c/18.png" class title="page_18">
-<img src="/14e576c/19.png" class title="page_19">
-<img src="/14e576c/20.png" class title="page_20">
-<img src="/14e576c/21.png" class title="page_21">
-<img src="/14e576c/22.png" class title="page_22">
-<img src="/14e576c/23.png" class title="page_23">
-<img src="/14e576c/24.png" class title="page_24">
-<img src="/14e576c/25.png" class title="page_25">
-<img src="/14e576c/26.png" class title="page_26">
-<img src="/14e576c/27.png" class title="page_27">
-<img src="/14e576c/28.png" class title="page_28">
+    <title>transformer中normalization的二三事</title>
+    <url>/6a40bfa5.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>Normalization在模型中，相对于attention这种经常被魔改的结构，受到的关注度似乎没那么高，但它对模型能否顺利训练，却有很关键的作用。</p>
+<p>在此简单梳理下normalization相关的背景和内容，也分析一下在transformer发展上的相关内容。</p>
+<p>这部分内容感觉目前还有些存在争议的地方，如果有不同意见欢迎讨论。</p>
+<h1 id="why-normalization">why normalization</h1>
+<p>normalization，也叫「归一化」、「正则化」、「规范化」、「标准化」等，可以说已经是神经网络不可以或缺的一环。</p>
+<p>使用的话，现在基本只需几行代码就能实现。但要用得好，还是需要了解一下它作用的机制。</p>
+<h2 id="从输入数据看normalization">从输入数据看normalization</h2>
+<p>假设我们有一个二元损失函数 <span class="math inline">\(Loss(x_1,x_2)=x_1^2+x_2^2+b\)</span>
+，那在三维空间画出来的损失平面大概是这样</p>
+<img src="/6a40bfa5/lossfunc_surface.jpeg" class title="loss function surface">
+<p>在这样一个平面上，使用梯度下降法，梯度方向是垂直于当前位置等高线的切线方向的。</p>
+<p>如果这个损失函数的等高线是一系列完美的同心圆，那么无论我们起点在哪里，梯度下降的时候都会以垂直切线方向，沿着圆心一路奔去。</p>
+<p>这种情况下优化很快，控制好学习率不要跳过minimum就可以（也可以用自适应优化器来控制速度）。</p>
+<p>但是实际上我们的损失平面很难那么完美。损失函数的等高线更可能是个椭圆（或者更复杂的形状）。</p>
+<img src="/6a40bfa5/ellipse_1.png" class title="ellipse">
+<p>这样我们梯度下降是方向就要经常修正，训练效率就会受影响。</p>
+<p>如果这个椭圆很扁或者我们的训练参数不太好，可能会出现反复震荡收敛缓慢的情况。</p>
+<img src="/6a40bfa5/ellipse_2.png" class title="ellipse">
+<p>损失在这个狭窄的山谷中反复横跳。</p>
+<p>那损失函数等高线什么时候会是椭圆形？</p>
+<p>假设我们现在有两个输入变量，以米为单位的身高 <span class="math inline">\(x_{1}\)</span>，和以元为单位的月工资收入 <span class="math inline">\(x_{2}\)</span>。（这里对量纲的使用也会改变数值，如米-&gt;厘米）</p>
+<p>如果我们用这两个自变量训练模型，我们会发现，身高取值范围基本是在0.x米~2.x米，而工资的取值范围是0到几百几千几万或者几十万以及更多。</p>
+<p>而模型的一个主要操作就是对输入特征进行线性组合。</p>
+<p>这时模型的输出值会更大地受到 <span class="math inline">\(x_{2}\)</span>
+的影响，因为它的变化更大，取值范围也更大。</p>
+<p>这时损失函数在不同变量维度的变化速度相差很多，损失函数就会出现椭圆形等高线的情况。</p>
+<p>既然由于量纲和取值范围的问题，会导致训练困难，那最直接方法就是规定一个标准范围，所有输入变量，不管原来是什么范围，现在都归一化到标准范围里来。</p>
+<p>这就是最朴素的输入normalization的思想。</p>
+<p>输入的normalization有很多种做法<br>
+<span class="math display">\[x^{\prime}=\frac{x-\min(\mathrm{x})}{\max(\mathrm{x})-\min(\mathrm{x})}\]</span></p>
+<p><span class="math display">\[x^{\prime}=\frac{x-\mu}{\max(\mathrm{x})-\min(\mathrm{x})}\]</span></p>
+<p><span class="math display">\[x^{\prime}=\frac{x-\mu}\sigma\]</span></p>
+<p>其中 <span class="math inline">\(\mu\)</span> 为均值，<span class="math inline">\(\sigma\)</span> 为方差。</p>
+<p>第三种，均值方差归一化，也叫Z-score
+normalization，应该是我们用得比较多的。</p>
+<p>这样我们通过对输入进行一些操作，把「椭圆」拉成了「圆」，解决输入参数范围带来的一些训练问题。</p>
+<p>除了针对均值、方差、最大值、最小值的归一化，对输入还有一些其他的处理，如PCA等，就暂不展开。</p>
+<h2 id="缓解ics...吗">缓解ICS...吗？</h2>
+<p>机器学习里有一个叫i.i.d.（independent and identical
+distribution，独立同分布）的假设：独立，每次抽样之间是没有关系的，不会相互影响；同分布，即每次抽样，样本都服从同样的一个分布。</p>
+<p>为什么需要i.i.d.？</p>
+<p>由于机器学习依赖于使用现有数据来训练模型，进而对未来的数据做出预测和模拟，因此这一过程本质上是在历史数据的基础上，通过模型来推测未来的数据走向。</p>
+<p>这就要求我们使用的历史数据必须具备整体的代表性。以便从现有数据（经验）中提炼出规律，对未知数据进行决策。</p>
+<p>如果用于训练的数据缺乏总体代表性，即仅代表特殊情况，那么得出的规律可能不准确或错误，因为这些规律是基于个别案例推测出来的，就不具备泛化性。</p>
+<p>当然并不是所有机器学习都需要i.i.d.，但是有i.i.d.的话，可以简化很多事情，让模型学习起来更容易快速。</p>
+<p>对于输入，通过合理的抽样和处理（前面提到的PCA就可以用来解耦特征间的关联，达到“独立”的效果），我们可以得到输入的i.i.d.的条件，但这只是针对输入。</p>
+<p>在多层的神经网络中，上一层的输出会作为下一层的输入。</p>
+<p>而在训练过程中，由于上层的模型参数在不断学习变化，则上层输出的分布也在不断变化，靠后的层实际上要学习不断的变化的分布，这就很不i.i.d.，那靠后面的层的学习速度和效果就会收到影响，调参也变得困难，模型也难以加深。</p>
+<p>这个问题就是ICS，internal covariate shift。</p>
+<p>那有没有办法保证上一层的分布不要变化呢？</p>
+<p>一个「可能」的方案就是normalization。我们通过把上一层的输出映射到一个固定的分布上，来稳定给下一层的输入，这样就降低了学习难度。</p>
+<p>但也有一些工作表明normalization（batchnorm）的作用机制和ICS的关系并不大，这个观点下面在batchnorm部分说。</p>
+<p>当然ICS的问题也可以通过改变初始化策略、调控训练超参如学习率等方法来优化，但是这样做的效率并不是很高。</p>
+<h2 id="远离激活函数饱和区">远离激活函数饱和区</h2>
+<p>神经网络中还有一个重要组件，非线性激活函数，比如常用的sigmoid。</p>
+<img src="/6a40bfa5/sigmoid.png" class title="sigmoid">
+<p>当输入 &gt; 6 或者 &lt; -6
+的时候，sigmoid函数的梯度已经变得非常小，也就是进入了饱和区。</p>
+<p>这种情况下训练就变得困难。</p>
+<p>ICS就会加剧梯度消失的情况。在没有normalization的情况下，分布不断变化，后面层的参数变化激烈，导致输出值更容易进入到左右两端，更容易进入到激活函数的饱和区。</p>
+<p>而normalization能把部分输出值拉回到梯度正常的范围内，一定程度缓解了梯度消失的问题，使训练可以正常进行下去。</p>
+<h1 id="batchnorm">batchnorm</h1>
+<p>神经网络中使用的normalization有很多种，这里不一一展开，只梳理一下最重要的batchnorm和layernorm两类。</p>
+<h2 id="batchnorm算法">batchnorm算法</h2>
+<p>假设输入数据的形状是 <span class="math inline">\([B,C]\)</span>
+，其中 <span class="math inline">\(B\)</span> 是batch size，<span class="math inline">\(C\)</span> 是特征向量维度。</p>
+<p>这 <span class="math inline">\(C\)</span>
+个输入特征每个都有不同的含义，如我们前面的例子，第一个元素可能是身高，第二个元素可能是月收入，因此做normalization的时候这
+<span class="math inline">\(C\)</span> 个特征分别来做。</p>
+<p>具体来说，对于第 <span class="math inline">\(i\)</span>
+个特征维度，首先计算整个batch内的均值</p>
+<p><span class="math display">\[
+\mu_{i}=\frac{1}{B}\sum_{j=1}^{B}x_{i,j}
+\]</span></p>
+<p>再计算这个维度上的方差</p>
+<p><span class="math display">\[
+\sigma_{i}^{2}=\frac{1}{B}\sum_{j=1}^{B}(x_{i,j}-\mu_{i})^2
+\]</span></p>
+<p>得到均值和方差之后，对batch内维度上的所有值进行Z-score
+normalization</p>
+<p><span class="math display">\[
+x_{i,j}&#39;=\frac{x_{i,j}-\mu_{i}}{\sqrt{\sigma_{i}^{2}+\epsilon}}
+\]</span></p>
+<p>其中 <span class="math inline">\(\epsilon\)</span>
+是为了防止分母为0。这个在实际代码中挺重要的，忘记加可能会出问题。</p>
+<p>经过这样的变换之后，在 <span class="math inline">\(C\)</span>
+个特征维度上就是均值为0，方差为1的分布了。</p>
+<p>但是到这还没结束。</p>
+<p>每个维度的数值全部归一化之后，对于激活函数来说，更集中在中间的部分，而这部分的非线性特征并不强（比如上面的sigmoid），这样非线性激活层近似了一个线性变换，这样就降低了模型的学习能力。</p>
+<p>且无论输入是什么，最终输出都会被强行拉到这样一个“平均”的值，也极大抑制了模型的表达能力。</p>
+<p>所以为了保证模型的能力，也保证非线性能力的获得，对每个特征，又增加两个可学习的参数，
+缩放参数 <span class="math inline">\(\gamma\)</span> 和位移参数 <span class="math inline">\(\beta\)</span> 。</p>
+<p><span class="math display">\[
+y_{i,j} = \gamma_{i} x_{i,j}&#39; + \beta_{i}
+\]</span></p>
+<p>这样每个特征值就有机会从“线性区”移动到“非线性区”，把被归一化削弱的非线性能力找了回来。</p>
+<p>并且通过这样一个归一化再重新缩放移动的操作，解耦了上层输出分布和下层输入，本来下层参数要去适应上层分布变化，现在只需要通过每个batchnorm层中的
+<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span>
+直接学习就行了，训练变得简单了。</p>
+<p><a href="https://zhuanlan.zhihu.com/p/340856414">《Batch
+Normalization: Accelerating Deep Network》</a>给出的算法如下</p>
+<img src="/6a40bfa5/bn_algo.png" class title="batch norm">
+<h2 id="cnn中的batchnorm">CNN中的batchnorm</h2>
+<p>batchnorm最主要的应用还是在CNN模型中。</p>
+<p>假设CNN中feature map的size是 <span class="math inline">\([B,C,H,W]\)</span> ，其中 <span class="math inline">\(B\)</span> 是batch size，<span class="math inline">\(C\)</span> 是channel数（也是卷积核数量），<span class="math inline">\(H\)</span> 和 <span class="math inline">\(W\)</span> 分别是特征图的高和宽。</p>
+<p>如果按照前面batchnorm的算法，那应该有 <span class="math inline">\(C\times H\times W\)</span> 组特征，每组特征有
+<span class="math inline">\(B\)</span> 个，对每组内的 <span class="math inline">\(B\)</span> 进行归一化，再进行放缩和平移。</p>
+<p>但是实际上，CNN中卷积是一个滑动窗口，对于同一个channel下的 <span class="math inline">\(H\times W\)</span>
+个特征值其实都来自于同一个卷积核的计算，这 <span class="math inline">\(H\times W\)</span>
+也属于一个“batch”，它们要放在一起进行归一化。</p>
+<p>也就是对于卷积核来说，真正的batch数是 <span class="math inline">\(B\times H\times W\)</span> ，而只有 <span class="math inline">\(C\)</span> 组特征值，因此也只有 <span class="math inline">\(C\)</span> 个 <span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 。</p>
+<p>batchnorm原文中，batchnorm放在了relu后面，作者认为这样使得进入激活函数的分布会更加稳定，顺便对于fc层，由于batchnorm和fc都有bias项，还可以省略掉其中一个而不影响效果。</p>
+<p>btw，一般来说，batchnorm初始化的时候，把 <span class="math inline">\(\gamma\)</span> 设为1（不缩放），把 <span class="math inline">\(\beta\)</span>
+设为0（不平移），在训练中让模型从相当于没有batchnorm开始慢慢学习这两个参数。</p>
+<h2 id="训练和推理">训练和推理</h2>
+<p>现在我们知道在训练时，batchnorm对一个mini-batch计算均值和方差来进行归一化，再进行缩放和移动。</p>
+<p><span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span>
+属于模型学出来的参数，只要训练结束这两个向量就固定了，在推理的时候直接使用即可。</p>
+<p>但是推理时，均值和方差怎么计算呢。推理的时候可能是一个sample，也可能是任意个sample作为一个batch，和训练的时候一样计算肯定不合适。</p>
+<p>我们需要在训练的时候就为推理做准备：训练的时候，模型会遍历整个训练集，因此理论上可以统计出整个训练集的均值和方差，然后把这个大量样本统计出来的均值和方差当做真实分布的均值和方差，在推理的时候使用。（回想i.i.d.）</p>
+<p>当时又有一个问题，训练集可能会很大，有百万甚至千万的数据，在训练的数据记录下所有层所有特征来计算均值和方差显然效率不高，因此用一个近似的方法：</p>
+<p>moving_mean = momentum × moving_mean + (1.0 − momentum) × mean</p>
+<p>moving_var = momentum × moving_var + (1.0 − momentum) × var</p>
+<p>通过把多个batch的均值和方差进行移动平均的方式来逼近整个训练集的均值和方差。</p>
+<p>momentum为动量参数，在 TF/Keras 中，该值为0.99，在 Pytorch
+中，这个值为0.9。</p>
+<p>小的momentum值对应快的更新速度，能够更快地向真实分布靠近，但是同时也会导致更大的波动。</p>
+<p>大的momentum值对应慢的更新速度，如果更新过慢，则可能导致训练结束时还没有统计到真实的分布，是欠拟合的状态。</p>
+<p>如果batch size比较小，每个mini
+batch和全局差异较大，就不应该用太大的momentum。</p>
+<p>理论上，训练步数越长是会越靠近真实分布的，实际上，因为每个batch并不能代表整个训练集的分布，所以最后的值是在真实分布附近波动。</p>
+<p>这里还引入另外一个问题，如果batch size太小，每个mini
+batch统计的均值和方差和全局的值偏差相对会比较大，对模型收敛的稳定性有影响，因此一般来说，使用batchnorm的话，batch
+size不能太小，如下图</p>
+<img src="/6a40bfa5/bs_bn.png" class title="batch size的影响">
+<p>小结一下，batchnorm的优点是解耦了上层输出和下层输入的分布，既缓解了进入激活函数饱和区带来的梯度消失的情况，又保留了模型的表达能力。每一层的输入尺度相对固定，提供了更好的尺度不变形，使模型训练更稳定。</p>
+<p>同时每个batch分别进行归一化，相当于引入了一些随机噪音，使得模型不容易过拟合到某些微小的特征上，相当于进行了一定的正则化，将损失平面变得相对平滑。</p>
+<p>但是同时也引入了新的超参（如momentum），另外也依赖batch
+size的大小，过小的batch size可能会带来问题。</p>
+<h2 id="batchnorm起作用的真正原因">batchnorm起作用的真正原因？</h2>
+<p>虽然batchnorm原文认为batchnorm在一定程度上是缓解了ICS，但是2018年的《How
+Does Batch Normalization Help Optimization?》提出了不同观点。</p>
+<p>为了探究batchnorm的效果，是否是因为优化了ICS（或者说和优化了ICS有多大关系），做了一个这样的实验：在batchnorm后面又通过加入随机噪音来引入“covariate
+shift”，并和没有加噪音，以及没有加batchnorm的模型效果进行对比，如下图</p>
+<img src="/6a40bfa5/bn_ics.png" class title="ICS">
+<p>结果发现，即使人工加强了ICS的情况，但是只要用了batchnorm，效果依然比不用好；而人工引入ICS的模型，在效果上并没有多大影响。</p>
+<p>这就说明缓解ICS并不是batchnorm有效的真正原因。</p>
+<p>那batchnorm到底有没有缓解到ICS呢？</p>
+<p>要测量ICS的变化，就要先定义ICS。</p>
+<p>对于网络中的每一层，ICS被定义为在前一层参数更新后，当前层输入分布的变化。这种变化可以通过比较更新前后的梯度来量化。</p>
+<img src="/6a40bfa5/ics_define.png" class title="ICS 定义">
+<p>具体来说，对于每一层i，作者们计算了以下两个梯度之间的L2范数差异：</p>
+<p><span class="math inline">\(G_{t,i}\)</span>
+，在时间t，使用当前所有层的参数（包括前一层的参数）计算的梯度。</p>
+<p><span class="math inline">\(G_{t,i}&#39;\)</span>
+，在时间t，使用更新后的前一层参数计算的梯度，而其他层的参数保持不变。</p>
+<p>这个差异直观上表明了「上一层参数变化，下一层需要在多大程度上来变化，以适应新的分布」。</p>
+<p>理想来说，ICS越小，上一层参数更新对当前层的分布影响越小，梯度变化程度应该越小。</p>
+<img src="/6a40bfa5/ics_measure.png" class title="ICS measure">
+<p>但是从结果上来看，使用了batchnorm并不能有效减少这个变化，甚至还有所增加。</p>
+<p>这也说明batchnorm实际上并不能真正缓解ICS的情况。</p>
+<p>那batchnorm起效果的真正原因是什么？</p>
+<p>作者认为主要是batchnorm使得损失函数更加平滑，直观上来说就是减少了很多坑坑洼洼的位置，使得训练更不容易陷入到局部最小值中去。</p>
+<h1 id="layernorm">layernorm</h1>
+<p>看完batchnorm，再来看layernorm。</p>
+<h2 id="理解layernorm">理解layernorm</h2>
+<p>layernorm，不要被名字骗了，这里的layer指的不是模型的层，而是数值的layer。</p>
+<p>对于二维的输入，batchnorm实在batch维度上做归一化，而layernorm是在特征维度做归一化</p>
+<img src="/6a40bfa5/bn_and_ln.png" class title="bn和ln">
+<p>对于非NLP数据而言，相比batchnorm，layernorm归一化的维度似乎解释性没那么强。batchnorm对同一个特征，比如身高计算均值是有意义的，而layernorm在不同的特征，比如身高、工资、温度做归一化，好像并没有可靠的物理意义。</p>
+<p>layernorm最主要的应用就是NLP的模型，包括RNN和transfomrer模型。</p>
+<p>在transformer中，一般输入的形状是 <span class="math inline">\([B,S,H]\)</span> ，<span class="math inline">\(S\)</span>
+是序列长度，每个样本的长度可能不同，因此在这个维度需要使用padding（一般是zero-padding）来把batch内的数据处理成一样长。</p>
+<p>比如这样一批文本输入</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我  爱  中  国</span><br><span class="line">你  好</span><br><span class="line">谢  谢  你</span><br></pre></td></tr></table></figure>
+<p>为了使模型能够统一处理，会pad成</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我  爱  中  国</span><br><span class="line">你  好  [P] [P]</span><br><span class="line">谢  谢  你  [P]</span><br></pre></td></tr></table></figure>
+<p>一般来说，我们认为由于有padding的存在，做batchnorm并不合适。</p>
+<p>比如上面的例子，对“中”，“[P]”，“你”做归一化，由于 [P]
+的存在，实际的batch size只有2，并且和 [P]
+做normalization也对训练没什么帮助。</p>
+<p>而且对于文本数据，batch内同一个位置上的字是不同的，对完全没有关系的字进行归一化也并没有什么意义。</p>
+<p>也就是说，哪怕没有 [P]
+的存在，比如对第一个token“我”，“你”，“谢”做归一化，直觉上也不太有物理意义。</p>
+<p>因此使用layernorm，在 <span class="math inline">\(H\)</span>
+维度上进行normalization，同时有 <span class="math inline">\(H\)</span>
+个<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\beta\)</span> 需要学习。</p>
+<p>相当于计算每一句输入内，每个token所有特征之间的均值和方差来进行归一化。</p>
+<h2 id="为什么transformer用layernorm">为什么transformer用layernorm</h2>
+<p>和batchnorm不同的是，由于layernorm不需要再batch维度上计算均值和方差，所以不存在训练和推理的时候不一样的地方，不用保存一个全局的均值和方差供推理的时候使用。</p>
+<p>而由于layernorm和batch无关，也就不会受到batch size大小的影响。</p>
+<p>除了以上的原因，也有一些工作深入探究了在nlp任务上layernorm和batchnorm的区别。</p>
+<p>如《PowerNorm: Rethinking Batch Normalization in
+Transformers》就研究了transformer中BN为啥表现不太好。</p>
+<p>研究了训练中的四个统计量：batch的均值和方差，以及他们的梯度的均值和方差。对于batch的均值和方差，计算了他们和running
+statistics（就是用移动平均法累积的均值和方差，见前面的文章）的欧氏距离。发现NLP任务上（IWSLT14）batch的均值和方差一直震荡，偏离全局的running
+statistics，而CV任务也相对稳定。</p>
+<p>对于他们梯度的均值和方差，研究了其magnitude（绝对值），在CV任务上震荡更小，且训练完成后，也没有离群点。</p>
+<p>总结来说，transformer中BN表现不太好的原因可能在于CV和NLP数据特性的不同，对于NLP数据，前向和反向传播中，batch统计量及其梯度都不太稳定。</p>
+<p>更重要的是，实际效果就是layernorm在NLP的效果比batchnorm好，效果好，这是最重要的原因。</p>
+<h2 id="rmsnorm">RMSnorm</h2>
+<p>19年《Root Mean Square Layer
+Normalization》提出了normalization变体RMSnorm，主要针对layernorm来改进。</p>
+<p>简单地说，RMSnorm就是在标准layernorm的基础上，省略了平移，只进行缩放。</p>
+<img src="/6a40bfa5/rmsnorm.png" class title="RMSnorm">
+<p>作者认为标准layernorm计算效率并不高</p>
+<img src="/6a40bfa5/rmsnorm_eff.png" class title="RMSnorm效率">
+<p>作者用一个GRU模型做实验，对比是否添加layernorm的结果，发现在相同时间和相同步骤下，有layernorm的模型，都没有无layernorm的模型收敛得快。</p>
+<p>并且layernorm的平移对梯度方差的减小没有贡献，因此作者直接舍弃了中心化和平移两步，只对数据进行方差归一化和缩放。</p>
+<p>更近一步，作者提出pRMSnorm，只对数据中前p%的数值进行处理，这样就能进一步加速训练，而效果也基本不太受影响。</p>
+<img src="/6a40bfa5/prmsnorm.png" class title="prmsnorm">
+<p>RMSnorm现在被很多主流的大模型所采样了。</p>
+<h1 id="post-norm-pre-norm">post-norm &amp; pre-norm</h1>
+<h2 id="二者对比">二者对比</h2>
+<p>layernorm在模型里放哪也有讲究。</p>
+<p>原始的transformer模型使用的post-norm，而《On Layer Normalization in
+the Transformer Architecture》则认为pre-norm更好。</p>
+<p>post-norm和pre-norm分别是下面这样</p>
+<img src="/6a40bfa5/postnorm_prenorm.png" class title="postnorm and prenorm">
+<p>post-norm是在残差和主干相加之后进行归一化，而pre-norm则是在主干先归一化再和残差相加。</p>
+<p>post-norm和pre-norm对比，目前大家比较接受的结论是，pre-norm更容易训练，因此可以叠加更多的层，但是在层数不是特别多的情况下，post-norm最终的收敛效果会比pre-norm要好。</p>
+<p>模型中，第 <span class="math inline">\(l\)</span> 层的输出是第 <span class="math inline">\(l+1\)</span> 层的输入，对于post-norm有</p>
+<p><span class="math display">\[
+x_{l+1}=\mathrm{Norm}(x_l+\mathrm{F}_t(x_l))
+\]</span></p>
+<p>而对于pre-norm则是</p>
+<p><span class="math display">\[
+x_{l+1}=x_l+\mathrm{F}_l(\mathrm{Norm}(x_l))
+\]</span></p>
+<p>参考苏剑林在《为什么Pre Norm的效果不如Post Norm？》中的分析，认为
+<span class="math inline">\(\mathrm{F}_l(\mathrm{Norm}(x_l))\)</span>
+的方差，由于有norm的存在，是不随层数变化的。</p>
+<p>当 <span class="math inline">\(l\)</span> 比较大时，<span class="math inline">\(x_{l}、x_{l+1}\)</span> 的差距较小，因此 <span class="math inline">\(\mathrm{F}_l(\mathrm{Norm}(x_l))\)</span> 和 <span class="math inline">\(\mathrm{F}_{l+1}(\mathrm{Norm}(x_{l+1}))\)</span>
+的差距也很小，这时有</p>
+<p><span class="math display">\[\begin{aligned}
+&amp;\mathrm{F}_l(\operatorname{Norm}(x_l))+\operatorname{F}_{l+1}(\operatorname{Norm}(x_{l+1}))
+\\
+&amp;{\approx}\mathrm{F}_l(\mathrm{Norm}(x_l))+\mathrm{F}_{l+1}\left(\mathrm{Norm}(x_l)\right)
+\\
+&amp;=(\mathrm{F}_l\oplus\mathrm{F}_{l+1})(\mathrm{Norm}(\pmb{x_l}))
+\end{aligned}\]</span></p>
+<p>相当于 <span class="math inline">\(l\)</span> 层和 <span class="math inline">\(l+1\)</span> 层的效果接近于一个更宽的 <span class="math inline">\(l\)</span> 层的效果。</p>
+<p>也就是使用pre-norm的时候，模型的深度有水分，表面看起来有 <span class="math inline">\(l\)</span>
+层，实际在效果上，等效于post-norm的浅层模型。</p>
+<p>从模型结构上看，恒等分支永远有一部分不用经过normalization，这部分能够直接把梯度回传到最前面，这也是pre-norm能够训练“层数更多”的模型的原因--缓解了梯度消失。</p>
+<p>正常来说，模型深度对最终效果的影响，是大于模型宽度的。</p>
+<p>而post-norm，在残差分支之后做归一化，对参数正则化的效果更好（loss平面更平滑），且它每norm一次就削弱一次恒等分支的权重，所以post-norm相对pre-norm，是更突出残差分支的，因此它的层数更加“足秤”，训练好之后效果更优。</p>
+<h2 id="和warmup的关系">和warmup的关系</h2>
+<p>《On Layer Normalization in the Transformer
+Architecture》（认为pre-norm更好）还分析指出，使用post-norm的transformer，在初始化时候，靠近输出层的部分梯度期望很大，所以模型在开始训练的时候很依赖warmup的策略，通过缓慢提升学习率来稳定训练过程。</p>
+<p>使用warmup引入了新的超参，调参更为麻烦点。</p>
+<p>而实验表明，使用pre-norm的transformer在不需要warmup的情况下，也能收敛到post-norm+warmup的相同水平，而post-norm不加warmup效果就差点了。</p>
+<img src="/6a40bfa5/warmup_effect.png" class title="warmup影响">
+<h2 id="deepnorm">Deepnorm</h2>
+<p>2022年，《DeepNet: Scaling Transformers to 1,000
+Layers》对transformer训练不稳定的原因进行了深入分析，发现模型更新过大是导致不稳定的主要原因。</p>
+<p>为了解决这个问题，他们提出了Deepnorm，可以限制模型更新的大小。</p>
+<img src="/6a40bfa5/deepnorm.png" class title="deepnorm">
+<p>其中 <span class="math inline">\(\alpha&gt;1\)</span>
+是根据模型参数定的常数。这里相比post-norm提升了恒等分支的权重，使训练更容易进行。</p>
+<p>另外，还用了一个 <span class="math inline">\(\beta\)</span> 参数，把
+<span class="math inline">\(G_{l}\)</span>
+中的模型参数进行了缩小，以此来稳定模型的训练。</p>
+<p>实验结果上，deepnorm结合了pre-norm的容易训练，和post-norm的收敛效果好的特点，能够把百层、浅层的模型训到比较好的效果。</p>
+<img src="/6a40bfa5/deepnorm_result.png" class title="deepnorm result">
+<p>参数过程相比post-norm稳定了很多。</p>
+<h2 id="realformer--residual-attention">Realformer--residual
+attention</h2>
+<p>post-norm和pre-norm实际上改变的是模型残差分支和恒等分支怎么排布的问题，而《RealFormer:
+Transformer Likes Residual Attention》则提出了另外一种做法</p>
+<img src="/6a40bfa5/realformer.png" class title="realformer">
+<p>RealFormer的核心是在其标准Transformer编码器的每一层中引入了残差连接。这些残差连接将前一层的原始注意力分数（即在应用Softmax之前的分数）与当前层计算出的注意力分数相结合。这样做的结果是，当前层的注意力分数在计算时会考虑到前一层的信息。</p>
+<p>每个多头注意力模块都会接收来自前一层的残差注意力分数作为额外输入。这意味着每个注意力头不仅考虑了当前层内的输入序列，而且还直接利用了前一层的注意力信息。</p>
+<img src="/6a40bfa5/realformer_attention.png" class title="realformer attention">
+<p>其中 <span class="math inline">\(Prev&#39;\)</span>
+是来自上一层softmax之前的权重矩阵（多头注意力的话，则是对应的头的值），而
+<span class="math inline">\(\frac{Q^{\prime}K^{\prime
+T}}{\sqrt{d_k}}+Prev&#39;\)</span> 则是传给下一层的attention的。</p>
+<h1 id="小结">小结</h1>
+<p>本篇粗略梳理了一下关于normalization，batchnorm，以及layernorm在transformer的一些使用情况。</p>
+<p>目前主流的大模型使用的是rmsnorm + prenorm，也有使用其他变体的。</p>
+<p>关于normalization，依然留有一些探索空间。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期文章</p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】https://www.zhihu.com/question/487766088<br>
+【2】Towards Stabilizing Batch Statistics in Backward Propagation of
+Batch Normalization https://arxiv.org/abs/2001.06838<br>
+【3】Transformer中的归一化(一)：什么是归一化&amp;为什么要归一化
+https://zhuanlan.zhihu.com/p/476102712<br>
+【4】Batch Normalization: Accelerating Deep Network Training by Reducing
+Internal Covariate Shift https://arxiv.org/abs/1502.03167<br>
+【5】How Does Batch Normalization Help Optimization?
+https://arxiv.org/abs/1805.11604<br>
+【6】Batch Normalization: Accelerating Deep Network
+https://zhuanlan.zhihu.com/p/340856414<br>
+【7】Layer Normalization https://arxiv.org/abs/1607.06450<br>
+【8】详解深度学习中的Normalization，BN/LN/WN
+https://zhuanlan.zhihu.com/p/33173246<br>
+【9】Transformer中的归一化(四)：BatchNormalization的原理、作用和实现
+https://zhuanlan.zhihu.com/p/481277619<br>
+【10】Layer Normalization https://arxiv.org/abs/1607.06450<br>
+【11】PowerNorm: Rethinking Batch Normalization in Transformers
+https://arxiv.org/abs/2003.07845<br>
+【12】Root Mean Square Layer Normalization
+https://arxiv.org/abs/1910.07467<br>
+【13】On Layer Normalization in the Transformer Architecture
+https://arxiv.org/abs/2002.04745<br>
+【14】为什么Pre Norm的效果不如Post Norm？
+https://spaces.ac.cn/archives/9009<br>
+【15】Understanding the Difficulty of Training Transformers
+https://arxiv.org/abs/2004.08249<br>
+【16】RealFormer: Transformer Likes Residual Attention
+https://arxiv.org/abs/2012.11747<br>
+【17】DeepNet: Scaling Transformers to 1,000 Layers
+https://arxiv.org/abs/2203.00555</p>
 ]]></content>
       <categories>
         <category>CS</category>
@@ -5734,12 +5295,578 @@ https://arxiv.org/abs/2007.14062</p>
       <tags>
         <tag>NLP</tag>
         <tag>LLM</tag>
-        <tag>ChatGPT</tag>
-        <tag>Sparrow</tag>
-        <tag>LaMDA</tag>
-        <tag>GopherCite</tag>
-        <tag>WebGPT</tag>
-        <tag>InstructGPT</tag>
+        <tag>transformer</tag>
+        <tag>layernorm</tag>
+        <tag>normalization</tag>
+        <tag>batchnorm</tag>
+        <tag>post-norm</tag>
+        <tag>pre-norm</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Yi技术报告-划重点看细节</title>
+    <url>/41b6a819.html</url>
+    <content><![CDATA[<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>01.AI（零一万物），是李开复带队孵化的AI公司。2023年11月初，01.AI发布并开源了Yi-6B、Yi-34B
+base模型，同一周内，又开源了Yi-6B-200K和Yi-34B-200K
+base模型。Yi号称是从零预训练的双语模型。接下来的几个月，01.AI陆续推出了chat模型、多模态能力，Yi-9B、长上下文的记忆和检索能力等优化。</p>
+<p>从2023年11发布起，个人就有测试和使用Yi的模型。在SuperCLUE/CMMLU等一些榜单数据的实测上，发现Yi的效果确实不错。实际工作使用里，Yi的效果基本也都能排在同时期中文（开源）大模型里的第一梯队。</p>
+<p>2024年3月，Yi终于发布了技术报告，在此来梳理一下报告中的重点内容和值得关注的细节信息。</p>
+<h1 id="tldr">TL;DR</h1>
+<p>先给出核心内容的总结：</p>
+<ul>
+<li>Yi-34B模型int4量化之后，相比float16损失&lt;1%，可以跑在RTX4090上（24G显存）</li>
+<li>模型结构不需要太多变化，LLAMA2标准结构已经足够训出很好的效果</li>
+<li>3.1T的预训练数据远比scaling
+law建议的1T大，但是效果更好，并且模型还没饱和，继续增大数据量还能提升</li>
+<li>微调数据质量很重要，由算法人员直接标注，只要&lt;10k的数据量就足够了</li>
+<li>4k长度的基础预训练模型已经具备长文本能力，只需用长文本数据继续预训练，更新百步就有很好效果</li>
+<li>总之，数据要精心设计，数据质量要高，数据量要大</li>
+</ul>
+<h1 id="模型">模型</h1>
+<h2 id="规模选择">规模选择</h2>
+<p>Yi目前有6B、9B、34B三个规模，其中34B是主力模型。</p>
+<p>选择34B，而不是更大规模的原因，是这个规模能在24G显存的消费级显卡（如RTX4090）上运行。</p>
+<p>使用int4量化之后的34B模型可以运行在24G显存的GPU上。</p>
+<p>参考<a href="https://arxiv.org/abs/2301.12017">《Understanding INT4
+Quantization for Language Models: Latency Speedup, Composability, and
+Failure
+Cases》</a>的量化方法，Yi-34B的int8量化模型相比bf16模型，几乎可以做到效果无损（差距&lt;1%），而int4量化模型在大部分任务的损失也完全可以接受，具体效果如下表。</p>
+<img src="/41b6a819/eval.png" class title="Yi效果">
+<p>训练数据总共是3.1T token，这比DeepMind的scaling
+law所建议的1TB要大不少。目前能接触到的这个规模的模型，数据量基本都&lt;2T。</p>
+<p>（即提出Chinchilla模型的<a href="https://arxiv.org/abs/2203.15556">《Training Compute-Optimal Large
+Language Models》</a>的scaling law）</p>
+<p>也就是从scaling law的角度来说，Yi是overtrain的。</p>
+<p><big><strong>但是Yi实践结果证明，较小模型+更大规模的高质量数据，是可以获得进一步效果提升的，这也就让我们获得了高性价比的推理模型--34B推理成本+大训练投入，就能得到接近普通70B规模的推理效果。</strong></big></p>
+<h2 id="模型结构">模型结构</h2>
+<p>结构上，基于标准LLAMA2模型，做了一些变化</p>
+<ul>
+<li>注意力机制：LLAMA2只在70B用了GQA，Yi全系列都用了GQA，具体参数如下表<br>
+</li>
+<li>位置编码：RoPE，参考RoPE ABF（《Effective long-context scaling of
+foundation models》），base扩大到10M，用于支持长上下文。<br>
+</li>
+<li>激活函数：使用SwiGLU，参考《GLU Variants Improve Transformer》</li>
+</ul>
+<p>并且把activation
+size从4h降为8/3h，这里的说法是补偿了GQA带来的参数下降</p>
+<blockquote>
+<p>We use SwiGLU as Yi’s post-attention layer, reducing its activation
+size from 4h to 8/3h (h denotes hidden size) to be consistent with the
+normal post-attention layer. This adjustment also compensates for the
+reduction in parameter resulted from GQA, making the overall parameter
+count comparible of existing 7B and 34B models.</p>
+</blockquote>
+<img src="/41b6a819/model.png" class title="Yi模型结构">
+<p>关于模型结构，一个结论就是<big><strong>“虽然做了很多模型结构上的实验，但是最终发现，标准的结构就足以训出足够好的模型”</strong></big></p>
+<h2 id="tokenizer">tokenizer</h2>
+<ul>
+<li>用BPE，词表大小为64000，这个大小平衡了计算效率和表达能力；<br>
+</li>
+<li>其中数字全是单个的digit，让模型能更好地理解数字数据；<br>
+</li>
+<li>对于OOV的词，会降级用unicode编码 ；</li>
+<li>保留全角标点符号，不转为半角；</li>
+</ul>
+<p>另外，优先考虑英语的LLM在tokenizer会使用虚拟前缀（文本开头的空格）来泛化句子不同位置相同的单词。Yi不这么做，因为即使是在英语语境中，这种假设并不总是成立，比如对于以引号开头的句子，而且在中文语境中，这么做没有明显效果。</p>
+<h1 id="数据">数据</h1>
+<p>数据，是LLM最核心的部分，没有之一。Yi最核心的工作就是提升数据数量和质量。</p>
+<img src="/41b6a819/cover.png" class title="数据">
+<h2 id="预训练数据">预训练数据</h2>
+<p>预训练数据整体处理流程如下</p>
+<img src="/41b6a819/pretrain_data_pipeline.png" class title="预训练数据处理流程">
+<ol type="1">
+<li>语料获取 &amp; 语言分类</li>
+</ol>
+<p>从网络爬虫开始，爬取中英文这两种语言的网站，对网站内容进行解析。</p>
+<p>并参考CCNeT（《CCNet: Extracting High Quality Monolingual Datasets
+from Web Crawl Data》）的做法，进行语言识别。</p>
+<ol start="2" type="1">
+<li>规则过滤器 Heuristic Rule Filters</li>
+</ol>
+<p>目的是快速过滤掉明显的低质量数据。基于这些规则来过滤掉：</p>
+<ul>
+<li>URL、域名、单词黑名单和乱码文本；<br>
+</li>
+<li>文档长度、特殊符号的比例，以及短行、连续行或不完整行的比例；<br>
+</li>
+<li>重复的单词模式、n-gram或段落，参考《Scaling Language Models:
+Methods, Analysis &amp; Insights from Training
+Gopher》的做法，阈值则是来参考《CulturaX: A Cleaned, Enormous, and
+Multilingual Dataset for Large Language Models in 167 Languages》；</li>
+<li>数据脱敏：识别并匿名化个人信息（Personal Identifiable
+Information，PII），如电子邮件地址和电话号码。</li>
+</ul>
+<ol start="3" type="1">
+<li>可训练过滤器 Learned Filters</li>
+</ol>
+<p>对于不好用规则处理的，就用模型来学习模式，并进行清洗。共有4个scorer：</p>
+<ul>
+<li>Perplexity Scorer：参照《CCNet: Extracting High Quality Monolingual
+Datasets from Web Crawl
+Data》，用kenlm库，把高于平均perplexity的内容丢弃；</li>
+<li>Quality
+Scorer：识别如维基百科这样的高质量内容，丢弃低质量内容；</li>
+<li>Document Coherence
+Scorer：用于发现句子、段落零散不连贯的文本，要么分割，要么直接丢弃；</li>
+<li>Safety Scorer：识别并删除暴力、色情、涉政内容</li>
+</ul>
+<ol start="4" type="1">
+<li>基于聚类的过滤 Cluster-based Filters</li>
+</ol>
+<p>用聚类的方法，把所有文档进行分类。一方面用于给数据混合策略做参考，一方面如果整个类别的质量太差，就直接抛弃类别内的所有数据。</p>
+<ol start="5" type="1">
+<li>去重</li>
+</ol>
+<p>参考《The RefinedWeb Dataset for Falcon LLM: Outperforming Curated
+Corpora with Web Data, and Web Data
+Only》，做文档级的minhash去重，以及子文档级的完全匹配去重。</p>
+<p>最终获得的数据分布如下</p>
+<img src="/41b6a819/pretrain_data_dist.png" class title="预训练数据分布">
+<p>虽然数据规模一定要够，但是也不能因此就放弃数据质量，否则只能是garbage
+in，garbage out</p>
+<blockquote>
+<p>we prefer 3T tokens over sophasticated engineering over 10T tokens
+without extensive filtering</p>
+</blockquote>
+<p>这句话大概表示清洗前的数据有10T，这也是一个信息，符合质量的数据可能只有3成</p>
+<h2 id="微调数据">微调数据</h2>
+<p>对于微调数据，一句话：Quality is All You Need。</p>
+<p>一共只有&lt;10k条SFT数据，每条数据都通过人工多次打磨，这比大数量但质量一般的数据的效果好。</p>
+<p>这思路和《Gemini: A family of highly capable multimodal
+models.》、《Llama 2: Open Foundation and Fine-Tuned Chat
+Models》、《Lima: Less is more for alignment》一致，而和FLAN（《Scaling
+instruction-finetuned language models》）以及UltraChat（《Enhancing chat
+language models by scaling high-quality instructional
+conversations》）这样更关注数据量的做法不同。</p>
+<p>具体做法上有：</p>
+<ul>
+<li>对于<big><strong>prompt distribution
+selection</strong></big>：参考《Wizardlm: Empowering large language
+models to follow complex
+instructions》，开发复合指令，并通过指令进化，逐步增加指令的复杂度。这种做法显著减少了SFT数据量。<br>
+</li>
+<li>对于<big><strong>CoT data formatting</strong></big>：参考《Take a
+step back: Evoking reasoning via abstraction in large language
+models》，采用了“Step-Back”的模式。即通过抽象化处理，让模型学习在深入探讨原始、具体的问题之前，制定更高层次的解决方案。<br>
+</li>
+<li>对于<big><strong>response formatting</strong></big>：使用从《Lima:
+Less is more for
+alignment》扩展的默认样式。总体而言，response的结构为introduction-body-conclusion的格式，“where
+the body is usually a list of bullet point”。<br>
+</li>
+<li>在缓解<big><strong>幻觉</strong></big>问题上，思路是确保response中的知识不由模型内部产生，对应的做法是把会导致模型进行记忆的response删掉。（但是这个具体标准是什么，有没有了解的朋友说下看法？）<br>
+</li>
+<li>在缓解<big><strong>生成重复</strong></big>的问题上，则是直接把response中包含重复的部分都重写了。（核心还是洗数据，一条条打磨）<br>
+</li>
+<li>数据<big><strong>多样性</strong></big>很重要，因此参考《#instag:
+Instruction tagging for analyzing supervised fine-tuning of large
+language
+models》建立了一个打标系统，并设计一个注重多样性的采样算法，平衡了各个领域数据的分布。<br>
+</li>
+<li>为了找到最佳的数据<big><strong>配比</strong></big>，参考《How
+abilities in large language models are affected by supervised
+fine-tuning data composition》，使用近似网络搜索（approximate grid
+search），对每个领域以{1, 1/2, 1/4, 1/8, 1/16, 1/32,
+1/64}的比例进行实验和人工测评，找到最佳的组合方式。<br>
+</li>
+<li>除了内容，<big><strong>数据格式</strong></big>对效果也有很大影响。参OPENAI的ChatML格式（<a href="https://github.com/openai/openai-python/blob/e389823ba013a24b4c32ce38fa0bd87e6bccae94/chatml.md">https://github.com/openai/openai-python/blob/e389823ba013a24b4c32ce38fa0bd87e6bccae94/chatml.md</a>），这种结构化的格式使模型能够区分各种信息类型，如system
+prompt、user input和bot response。</li>
+</ul>
+<p>SFT数据质量能极大影响模型的效果，随着数据量的增加，高质量数据能带来更多提升，如下图</p>
+<img src="/41b6a819/sft.png" class title="SFT">
+<h1 id="训练">训练</h1>
+<h2 id="infra">infra</h2>
+<p>从数据处理到模型训练都需要大集群大算力的支持。Yi构建了支持全栈数据处理、预训练、微调和服务的基础设施。包括：</p>
+<ol type="1">
+<li>自动管理和监控计算资源的能力；</li>
+<li>通过优化并行策略、内核效率和长上下文支持提高训练速度；</li>
+<li>统一微调框架，支持异构分布式训练后端，例如在DPO中同时使用Megatron和DeepSpeed进行多个模型的训练；</li>
+<li>通过各种LLM服务加速技术（如量化、continuous batching 和 paged
+attention）降低部署成本。</li>
+</ol>
+<p>总之这部分工作还是很多的，比如由于经常有硬件坏，坏的硬件会被自动从资源池移除；任务失败时，会自动跟踪重启。给算法人员考法UI等。</p>
+<h2 id="预训练">预训练</h2>
+<p>训了4k基础模型。（暂时没有给出更多细节）</p>
+<h2 id="微调">微调</h2>
+<p>超参如下</p>
+<ul>
+<li>AdamW：beta=[0.9,0.999]，epsilon = 1e-8<br>
+</li>
+<li>seq_len = 4096<br>
+</li>
+<li>batch size = 64<br>
+</li>
+<li>constant lr = 1e-5，weight decay = 0.1<br>
+</li>
+<li>gradient clip = 1.0<br>
+</li>
+<li>max step = 300</li>
+<li>参考《Neftune: Noisy embeddings improve instruction
+finetuning》，对于6B模型 noise scale = 5，对于34B模型 noise scale =
+45</li>
+</ul>
+<h1 id="模型评测">模型评测</h1>
+<h2 id="基模型评测">基模型评测</h2>
+<ol type="1">
+<li>基础能力评测</li>
+</ol>
+<p>对其他开源模型，保持和公开的设置相同做法获取结果。Yi使用贪婪解码，没有进行任何后处理，结果如下表</p>
+<img src="/41b6a819/base_model_eval.png" class title="Base模型效果">
+<p>在数学和代码能力上，和GPT3.5、GPT4还存在一些差距，而这些能力是可以通过继续预训练和微调来持续提升的。Yi最初的设计并没有针对这些能力，因此没有在预训练数据中包含特别多相关数据，后续会有计划增加这部分能力的提升。</p>
+<p>而和其他开源模型相比，在代码和数学以外的任务，Yi基本上做到了跟大一倍模型的效果相近，甚至更好的水平。</p>
+<ol start="2" type="1">
+<li>观察</li>
+</ol>
+<ul>
+<li>模型规模带来的增益：尽管Yi-34B和Yi-6B使用了相同的预训练语料，但Yi-34B的性能相比Yi-6B有了质的提升。更大的模型尺寸在代码和数学基准测试上带来了明显的增益。<br>
+</li>
+<li>数据质量：高质量预训练数据的小型模型，如Yi-34B或Qwen-14B，通常表现优于尺寸更大但（可能）数据质量较低的模型，例如Falcon-180B。</li>
+<li>GPT-4与开源LLM之间的差距：开源LLM在多种基准测试上的性能仍然落后于GPT-4和GPT-3.5。然而，具有代表性的双语LLM，例如Qwen-14B和Yi-34B，可以在包括C-Eval、CMMLU和Gaokao在内的中文知识相关基准测试上匹配甚至超过GPT-4的性能。然而，在BBH、代码（HumanEval）和数学（MATH）等推理相关基准测试上，仍然存在巨大的差距。</li>
+</ul>
+<ol start="3" type="1">
+<li>In-Context Learning能力的测试</li>
+</ol>
+<p>Yi进一步研究了in-context
+learning的能力，即根据少数展示的输入-输出示例，推断underlying
+function的能力。</p>
+<p>考虑的任务是推断加权和的线性系数。具体来说，定义 y = w1x1 + w2x2 +
+... + wnxn。</p>
+<p>少量示例展示是 x1, x2, ..., xn, y，要求模型预测给定一组新输入 x 的
+y。</p>
+<p>这就要求模型隐式地推断出 w1, w2, ..., wn。</p>
+<p>评测上，使用（a）模型预测的 y 与真实值 y∗ 之间的绝对差，即 |y − y∗|
+作为连续度量，以及使用（b）精确匹配 y == y∗ 作为不连续度量。</p>
+<p>模型在算术上的效果正常，因此可以认为这样的测试不受算术能力的影响，而能直接看模型是否具备根据给定的实例进行underlying
+function推理的能力。</p>
+<p>实验发现，当问题比较简单时（系数是[1,-1]），Yi-34B和LLAMA-70B效果比较好（看下图）。</p>
+<p>当问题更复杂点（系数是[1，1，1，1，1]），只有LLAMA-70B和Mistral
+8*7B这样的大模型表现出了涌现的能力。</p>
+<img src="/41b6a819/ict.png" class title="ICT">
+<h2 id="chat模型评测">Chat模型评测</h2>
+<ol type="1">
+<li>自动评测</li>
+</ol>
+<p>评测的任务和base模型相同，分别采用zero-shot和few-shot，效果依然不错，具体结果如下</p>
+<img src="/41b6a819/eval.png" class title="Yi效果">
+<p>报告强调，如Goodhart’s
+principle所说，当一个指标变成目标，就不再是一个好指标。因此这里的测试只是为了确认微调没有使得模型的知识能力下降，而不会专门去针对任务做优化。</p>
+<p>结果上，Yi-34B-Chat数学能力不错，而Yi-6B-Chat并没有展现出强大的数学能力。推测较小的模型可能需要更多的数据在SFT阶段激活其相应的能力。</p>
+<ol start="2" type="1">
+<li>人工评测</li>
+</ol>
+<img src="/41b6a819/third_party.png" class title="三方评测">
+<h1 id="能力扩展">能力扩展</h1>
+<p>base模型的基础上，做了3个能力扩展：长上下文、多模态、深度扩展。</p>
+<h2 id="长上下文能力">长上下文能力</h2>
+<p>报告中认为，4k的base模型已经具备了长文本（200k）的能力。只要用少量数据，进行继续预训练来释放这个能力，再用轻量级的SFT来调整格式，就能获得足够好的长文本能力。</p>
+<p>长文本的继续预训练中，依然使用完整的attention，而不是线性attention或者sparse
+attention。</p>
+<p>继续预训练的数据，混合了（1）原始预训练数据（2）length-upsampled
+long-context
+data长文本数据，长文本数据主要来自书籍（3）多文档问答的人造数据。</p>
+<p>多文档问答数据的应答中，在最终答案之前会对和答案相关的段落进行复述（recitation），以此来提升模型长文本关联的能力。</p>
+<p>这部分的数据工作主要参考《Data engineering for scaling language
+models to 128k context》和《Paraphrasing the original text makes high
+accuracy long-context qa》。</p>
+<p>最终用了5B token的长文本数据，batch
+size=4M（token），只更新了100个step（这里没明白100步是怎么来，不应该是5B/4M=1250？有没有明白的朋友指点一下）。</p>
+<blockquote>
+<p>We continue pretrain the model on 5B tokens with 4M batch size, which
+translate to 100 optimization steps. Aligning with the concurrent work
+from Fu et al. [22], we observe that such light-weight continue
+pretraining is already able to enable a strong performance on
+Needle-in-a-Haystack test, as we will show in Figure 6.</p>
+</blockquote>
+<p>这个做法与《Data engineering for scaling language models to 128k
+context》一致，这样轻量级的微调已经足够在“大海捞针”任务做得很好。</p>
+<p>而微调的数据，也混合了短的SFT数据，以及长的文本问答数据。</p>
+<p>这些文本问答数据都是人工用模型造出来的。</p>
+<p>具体的做法是，随机抽一些文档，然后从中随机选择一个或者多个段落，让一个训练好的模型根据这些段落造出问题和答案。</p>
+<p>一个重要的细节是复述和改写：在给出答案之前，我们要求模型复述或改写原文段落。这种数据格式鼓励模型的检索行为，从而抑制其虚构行为：面对一个问题，模型更倾向于使用输入中的信息来构建答案，而不是使用其内部知识，后者可能与问题相关但不准确。</p>
+<p>使用以上所述的轻量级训练，已经可以在“大海捞针”任务做得很好，几乎能够做到全绿。</p>
+<img src="/41b6a819/long_context_result.png" class title="大海捞针效果">
+<h2 id="多模态">多模态</h2>
+<p>ViT部分由CLIP ViT-H/14
+model初始化，后面的transformer由Yi-Chat初始化</p>
+<img src="/41b6a819/multimodal.png" class title="多模态">
+<p>3步训练：</p>
+<p>（1）使用224^2的图像来训练ViT和projection模块的参数。这一训练利用了包含1亿个图像-文本对的数据集，这些数据来自LAION-400M。主要目标是增强ViT在架构中的知识获取能力，并实现ViT与LLM之间更好的对齐。</p>
+<p>（2）将ViT的图像分辨率提升到448^2，目的是进一步推动模型识别复杂视觉细节的能力。在这个阶段使用的数据集包括从LAION-400M中提取的2000万个图像-文本对。此外，还融入了来自不同来源的大约480万个图像-文本对，例如CLLaVA、LLaVAR、Flickr、VQAv2、RefCOCO、Visual7w等。</p>
+<p>（3）整个模型的参数一起训练。主要目标是提高模型在多模态聊天交互方面的熟练度，从而赋予它能够无缝融合和解释视觉与语言输入的能力。为此，训练数据集涵盖了多种来源，总共大约有100万张图像-文本对，包括GQA、VizWiz
+VQA、TextCaps、OCR-VQA、Visual
+Genome、ShareGPT4V等等。为了确保数据平衡，对任何单一来源的最大数据量设定了上限，将其限制在不超过50,000对。</p>
+<p>使用128张A100，6B训了3天，34B训10天。</p>
+<h2 id="depth-upscaling-深度扩展">Depth Upscaling 深度扩展</h2>
+<p>目标是把32层的6B扩展到48层的9B模型。</p>
+<p>参考《Scaling large language models with simple yet effective depth
+up-scaling》，通过复制中间的12-28层共16层，把层数扩展为48层。</p>
+<p>实验表明，要确定复制哪些层，可以通过测量输入和每层输出的cosine
+similarity来衡量。</p>
+<p>这种方法使得模型能在不额外训练的情况下，和原模型性能最接近，损失最少。</p>
+<img src="/41b6a819/9B.png" class title="9B模型">
+<p>这说明复制的这些层并不会很大地改变原模型的激活值。</p>
+<p>除了层数增加，Depth Upscaling还要做继续预训练，才能提升效果。</p>
+<p>继续预训练使用约800B token，训练过程分为两个阶段。</p>
+<p>其中约70%的数据是最近收集并精心挑选的。在最后阶段增强了代码的比例以提高代码性能。</p>
+<p>训练保持constant lr = 3e-5，并在模型损失达到平台期时，从4M
+token开始逐渐增加batch size大小。</p>
+<p>这种增加batch
+size的方法，以及保持所有其他参数与Yi-6B基础模型配置一致，继续预训练很重要。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期文章</p>
+<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+<p><a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>transformer</tag>
+        <tag>长上下文</tag>
+        <tag>技术报告</tag>
+        <tag>多模态</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(1)</title>
+    <url>/3345028a.html</url>
+    <content><![CDATA[<p><img src="/images/cover.png"></p>
+<p>往期回顾</p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<hr>
+<p>【本文已在同名微信公众号/知乎/个人博客同步上线】</p>
+<p>本系列将整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错误，欢迎指正</sub></p>
+<h1 id="在transformer模型中为什么scaled-dot-product-attention在计算qk内积之后要除以根号d">1、在Transformer模型中，为什么scaled
+dot-product attention在计算QK内积之后要除以根号d？</h1>
+<p>简单来说，就是需要压缩softmax输入值，以免输入值过大，进入了softmax的饱和区，导致梯度值太小而难以训练。如果不对attention值进行scaling，也可以通过在参数初始化时将方差除以根号d
+，同样可以起到预防softmax饱和的效果。</p>
+<h1 id="transformer自注意力计算中为什么q和k要使用不同的权重矩阵进行线性变换投影为什么不使用同一个变换矩阵或者不进行变换">2、Transformer自注意力计算中，为什么Q和K要使用不同的权重矩阵进行线性变换投影，为什么不使用同一个变换矩阵，或者不进行变换？</h1>
+<p>1、如果Q和K一样，则矩阵乘积的结果是一个对称矩阵，这样减弱了模型的表达能力。</p>
+<p>2、如果Q和K一样，乘积结果的对称矩阵中，对角线的值会比较大，导致每个位置过分关注自己。</p>
+<p>3、使用不同的投影矩阵，参数增多，可以增强模型表达能力。</p>
+<h1 id="transformer模型中注意力计算后面使用了两个ffn层为什么第一个ffn层先把维度提升第二个ffn层再把维度降回原大小">3、Transformer模型中，注意力计算后面使用了两个FFN层，为什么第一个FFN层先把维度提升，第二个FFN层再把维度降回原大小？</h1>
+<p>1、提升维度：类似SVM
+kernel，通过提升维度可以识别一些在低维无法识别的特征。</p>
+<p>2、提升维度：更大的可训练参数，提升模型的容量。</p>
+<p>3、降回原维度：方便多层注意力层和残差模块进行拼接，而无需进行额外的处理。</p>
+<h1 id="mqamulti-query-attention和gqagrouped-query-attention相比mhamulti-head-attention计算量变化如何主要带来了什么优化">4、MQA(Multi-Query
+Attention)和GQA(Grouped-Query Attention)相比MHA(Multi-Head
+Attention)，计算量变化如何，主要带来了什么优化？</h1>
+<p>1、MQA和GQA虽然可训练参数量比MHA少，但是计算量和MHA相比变化不大，主要在生成KV时有少量降低。</p>
+<p>2、Decoder-only的大模型由于causal
+attention的存在，使用了KV缓存加速推理。MQA和GQA能减少KV头的数量，节省了缓存，使得在输入长度较长时也能把KV放进缓存。</p>
+<h1 id="为什么现在主流的llm模型基本都是decoder-only的结构单向注意力模型为什么效果比双向注意力效果好">5、为什么现在主流的LLM模型基本都是Decoder-only的结构？单向注意力模型为什么效果比双向注意力效果好？</h1>
+<p>1、双向Attention在多层模型训练中容易退化成低秩矩阵，限制了模型容量；而Decoder-only模型使用了下三角注意力矩阵，使得训练过程中矩阵是满秩，建模能力更强。</p>
+<p>2、单向注意力模型相比双向注意力模型在训练的时候难度更大，能迫使模型学到更多信息。</p>
+<p>3、Causal
+Attention天然具有位置编码的功能，而双向Attention即使交换两个token的位置也基本不影响表示，对语序区分能力较弱。</p>
+<p>4、工程上，单向模型支持KV Cache等，对于对话场景效率友好。</p>
+<p>5、轨迹依赖，基模型训练成本高，业界倾向于沿着已经成功的模型继续开发。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期回顾</p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(2)</title>
+    <url>/ad0bba9d.html</url>
+    <content><![CDATA[<p><img src="/images/cover.png"></p>
+<p>往期文章</p>
+<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+<hr>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将整理一些LLM中关键的、细节的、值得关注的内容，持续更新<sub>如有错误，欢迎指正</sub></p>
+<hr>
+<h1 id="在bert中词向量token-embedding和绝对位置编码position-encoding为什么可以直接相加">1、在Bert中，词向量token
+embedding和(绝对)位置编码position encoding为什么可以直接相加？</h1>
+<p>1、两个向量相加，理论上其效果等价于维度拼接concat+线性变换，而相加的操作在实现上更为方便。</p>
+<p>2、高维空间中(如768维)，两个随机向量近似为正交关系。模型在高维度有能力区分出所有组合的情况。假设共有2万个词向量，500个位置，则模型需要在768维空间区分1000万个点，即使768维每个维度只能取1和-1也具备足够的区分能力。</p>
+<p>3、词向量和位置编码可以认为都是一个one-hot向量经过一层线性变换层得到的。两个向量相加等价于把它们的one-hot编码拼接后进行线性变换。</p>
+<p>4、没有使用相乘则是出于工程考虑。相加相比相乘结果更为稳定，方便训练。</p>
+<h1 id="lora和全参数训练在计算量和显存上相比如何为什么lora能提升大模型训练效率">2、LoRA和全参数训练在计算量和显存上相比如何？为什么LoRA能提升大模型训练效率？</h1>
+<p>1、计算量上：LoRA训练时，在主干模型的（部分）全连接层增加了LoRA旁路，前向和后向的计算量都在主干模型的基础上，增加了旁路部分的计算，因此相比全参数训练，略有增加。</p>
+<p>2、显存上：训练时，显存主要有①模型参数②梯度③中间激活值④优化器参数四个部分。模型参数/梯度/激活值相比全参数训练也略微增加；而优化器则不需要再存储原模型参数的部分，只需要存储LoRA旁路部分，这部分节省较多显存。</p>
+<p>3、使用LoRA能提升训练效率主要是因为（1）优化器部分的显存需要减少了，可以增大batch（2）优化器参数减少了，分布式训练中多卡之间的通信量减少了（3）（optional）主干模型由于不用更新，可以进一步量化到int8/int4等。</p>
+<h1 id="为什么模型需要normalizationbatchnormlayernorm等">3、为什么模型需要normalization（batchnorm/layernorm等）？</h1>
+<p>1、输入数据包含多个特征，特征之间有不同的量纲和范围（如身高180和年龄18岁），通过normalization进行归一化再经过模型进行线性/非线性组合，能够防止部分特征占据主导，部分特征被忽略。</p>
+<p>2、batchnorm论文认为：模型一般有多层，前一层的输出是后一层的输入，而训练中前一层的参数更新会导致后一层的输入数据分布变化导致ICS（internal
+covariate
+shift），这样后面的层就不得不频繁剧烈更新适应分布变化，导致分布偏移进入激活函数饱和区而出现梯度消失，另外分布变化也是对i.i.d.条件的破坏。使用normalization可以保持分布的稳定，减小方差，使模型训练可以正常进行。</p>
+<p>3.《How Does Batch Normalization Help
+Optimization?》设计了实验测量使用batchnorm前后的ICS，发现batchnorm实际上并没有缓解ICS，甚至有所增加。而batchnorm能优化模型训练的原因更多是使得损失函数平面更加光滑，而便于梯度下降收敛。</p>
+<h1 id="transformer中pre-norm和post-norm各有什么优缺点">4、Transformer中pre-norm和post-norm各有什么优缺点?</h1>
+<p>1.原始的Transformer用的是post-norm，它在残差之后进行归一化（add &amp;
+norm），对参数正则化的效果更强，模型更为鲁棒；post-norm对每个通路都进行了归一化，使得梯度在回传的时候容易出现消失。</p>
+<p>2.Pre-norm相对于post-norm，残差部分存在不经过归一化的通路，因此能够缓解梯度消失，能够训练更深的网络。但是模型的等效“深度”受到影响，L+1层网络近似于一个L层的宽网络。</p>
+<p>3.也就是说，在层数较少，post-norm和pre-norm都能正常收敛的情况下，post-norm的效果更好一些；但是pre-norm更适合用于训练更深的网络。</p>
+<h1 id="对于使用multi-head-attention的模型假设hidden-sized注意力头数量为h每个头维度为d假设有ddh输入上下文长度为sbatch-size1计算self-attention模块各个部分的计算量float-operations">5、对于使用Multi-Head
+Attention的模型，假设hidden
+size=D，注意力头数量为h，每个头维度为d（假设有D=d×h），输入上下文长度为s，batch
+size=1，计算self-attention模块各个部分的计算量（Float
+Operations）。</h1>
+<p>1.QKV线性变换：6 × s ×
+D^2（矩阵乘法，每个位置有加法和乘法两个运算，因此每个位置需要2D次计算）</p>
+<p>2.QK内积：h × 2 × d × s^2（h组矩阵分别计算）</p>
+<p>3.scaling：h × s^2</p>
+<p>4.softmax：h × 3 ×
+s^2（softmax是按列进行的，每列要计算s个exp，s个exp结果的求和，以及s次除法）</p>
+<p>5.reduction（权重矩阵乘以V）：h × 2 × d × s^2</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>往期文章</p>
+<p><a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a></p>
+<p><a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a></p>
+<p><a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a></p>
+<p><a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a></p>
+<p><a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a></p>
+<p><a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大模型算法题(5)</title>
+    <url>/336f2f3e.html</url>
+    <content><![CDATA[<p><img src="/images/cover.png"></p>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a></p>
+<hr>
+<p>【本文已在同名 微信公众号 / 知乎 / <a href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
+<p>如有错漏，欢迎指正~</p>
+<hr>
+<h1 id="使用半精度训练时bf16和fp16格式有什么异同">1.使用半精度训练时，bf16和fp16格式有什么异同？</h1>
+<p>二者都是占用16bit空间。</p>
+<p>fp16由1个符号位、5个指数位和10个尾数位组成。fp16在表达小数时具有较高的精度，但表示的最大范围相对bf16比较小。相比bf16，在表达较大的数时更容易出现上溢的情况。</p>
+<p>bf16由1个符号位、8个指数位和7个尾数位组成。相比于fp16，bf16牺牲了一些尾数位以增加指数位，扩大了表达的范围，但是精度降低了，因此对于对精度需求比较高的模型，模型可能效果不如fp16。</p>
+<p>模型训练时使用bf16和fp16都可以降低内存使用和传输量，提高训练效率。</p>
+<img src="/336f2f3e/bfloat16.jpeg" class title="bf16">
+<h1 id="支持模型长上下文的方案ntk-aware-interpolation的思路是什么">2.支持模型长上下文的方案「NTK-aware
+interpolation」的思路是什么？</h1>
+<p>1.在NTK插值之前，线性插值通过在原模型训练的两个位置编码中间，插入新的位置编码，使得同样的取值范围可以容纳更多位置。</p>
+<p>2.而NTK插值则是一种非线性插值的方法。它通过仅改变RoPE的base，使得位置编码中不同频率的信号有不同的表现，具体来说就是“高频外推，低频内插”。高频信号使用外推，防止分辨率太低，而低频信号沿用插值的方式，实现方便。</p>
+<h1 id="llm长度外推方案ntk-by-parts的思路是什么">3.LLM长度外推方案NTK-by-parts的思路是什么？</h1>
+<p>NTK-by-parts的方法在NTK插值的基础上又多想了一层。它认为无论是线性插值还是NTK-aware插值，都认为RoPE的所有分量都对网络有同样的重要性。而NTK-by-parts的思路认为，应该区别对待不同分量，他们对网络的影响有所不同。对于波长远小于上下文长度的分量（如波长&lt;=1/32上下文），就不插值只外推；而对于波长大于等于上下文长度的分量，就只外推不插值；对于介于两者之间的分量，就使用外推和插值的加权和。</p>
+<p>使用一个斜坡函数来定义NTK-by-parts的分段插值方法，如下所示</p>
+<img src="/336f2f3e/ntk_by_parts.png" class title="NTK-by-parts">
+<h1 id="llm长度外推方案yarn是怎做的">4.LLM长度外推方案YaRN是怎做的？</h1>
+<p>PI/NTK/NTK-by-parts主要的做法都是使用插值，而随着插值进行，token之间的距离变得更近（因为现在每一个位置旋转角度变小了），平均最小距离在减小，这样注意力softmax的分布会变得更尖，也就是都集中在某个区间。</p>
+<p>换句话说，就是RoPE原本远距离衰减的特性变弱了，衰减得更不明显，就会导致模型更平均地关注到更多的token，这样就削弱了注意力机制，导致输出质量下降。</p>
+<p>可以通过在softmax之前，将中间注意力矩阵乘以温度
+t&gt;1来缓解这个问题。由于RoPE被编码为一个旋转矩阵，就可以简单地给旋转矩阵乘以一个系数根号t来实现，这样可以不必修改注意力的代码。</p>
+<p>YaRN结合NTK-by-parts和这个温度系数，对attention score进行调整。</p>
+<img src="/336f2f3e/yarn.png" class title="YaRN">
+<h1 id="对于使用group-query-attention的模型假设hidden-sizedq的注意力头数量为h每个头维度为d假设有ddhkv组数为n输入上下文长度为sbatch-sizeb模型层数为l计算推理时kv-cache所需的空间">5.对于使用Group-Query
+Attention的模型，假设hidden
+size=D，Q的注意力头数量为h，每个头维度为d（假设有D=d×h），kv组数为n，输入上下文长度为s，batch
+size=b，模型层数为L，计算推理时kv cache所需的空间。</h1>
+<p>kv cache缓存的是经过投影变换之后的K和V矩阵。</p>
+<p>对于GQA，每层有n组K和V，每组的特征维度和Q的每个头的特征维度相同，为D/h。则每层每组K和V数据量为sD/h，整个模型共有2LnsD/h个数据，因此整个batch需要缓存2bLnsD/h个数据。
+如果使用的是半精度浮点数，每个浮点需要两个字节，因此共需要4bLnsD/h字节的空间。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】</p>
+<p><a href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>算法题</tag>
       </tags>
   </entry>
   <entry>
@@ -6880,6 +7007,54 @@ Parameters https://qwenlm.github.io/zh/blog/qwen-moe/</p>
         <tag>LLM</tag>
         <tag>transformer</tag>
         <tag>MoE</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大规模对话模型：ChatGPT下的银牌选手们</title>
+    <url>/14e576c.html</url>
+    <content><![CDATA[<img src="/14e576c/1.png" class title="page_1">
+<img src="/14e576c/2.png" class title="page_2">
+<img src="/14e576c/3.png" class title="page_3">
+<img src="/14e576c/4.png" class title="page_4">
+<img src="/14e576c/5.png" class title="page_5">
+<img src="/14e576c/6.png" class title="page_6">
+<img src="/14e576c/7.png" class title="page_7">
+<img src="/14e576c/8.png" class title="page_8">
+<img src="/14e576c/9.png" class title="page_9">
+<img src="/14e576c/10.png" class title="page_10">
+<img src="/14e576c/11.png" class title="page_11">
+<img src="/14e576c/12.png" class title="page_12">
+<img src="/14e576c/13.png" class title="page_13">
+<img src="/14e576c/14.png" class title="page_14">
+<img src="/14e576c/15.png" class title="page_15">
+<img src="/14e576c/16.png" class title="page_16">
+<img src="/14e576c/17.png" class title="page_17">
+<img src="/14e576c/18.png" class title="page_18">
+<img src="/14e576c/19.png" class title="page_19">
+<img src="/14e576c/20.png" class title="page_20">
+<img src="/14e576c/21.png" class title="page_21">
+<img src="/14e576c/22.png" class title="page_22">
+<img src="/14e576c/23.png" class title="page_23">
+<img src="/14e576c/24.png" class title="page_24">
+<img src="/14e576c/25.png" class title="page_25">
+<img src="/14e576c/26.png" class title="page_26">
+<img src="/14e576c/27.png" class title="page_27">
+<img src="/14e576c/28.png" class title="page_28">
+]]></content>
+      <categories>
+        <category>CS</category>
+        <category>NLP</category>
+        <category>LLM</category>
+      </categories>
+      <tags>
+        <tag>NLP</tag>
+        <tag>LLM</tag>
+        <tag>ChatGPT</tag>
+        <tag>Sparrow</tag>
+        <tag>LaMDA</tag>
+        <tag>GopherCite</tag>
+        <tag>WebGPT</tag>
+        <tag>InstructGPT</tag>
       </tags>
   </entry>
   <entry>

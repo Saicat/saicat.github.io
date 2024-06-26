@@ -20,32 +20,39 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="【往期文章】 MoE模型的前世今生 LLM长上下文的问题 解锁大模型长上下文能力 大模型推理窗口-从有限到无限大 理解Attention:从起源到MHA,MQA和GQA Yi技术报告-划重点看细节 transformer中normalization的二三事 从代码实现看normalization-到底做了什么 稀疏注意力计算:sliding window attention 理解LLM位置编码:R">
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  JetMoE是由MIT、Princeton等几个学术机构发布的MoE模型，其总参数量为8B，激活参数量为2B。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="大模型算法题(6)">
-<meta property="og:url" content="https://saicat.github.io/7c04944d.html">
+<meta property="og:title" content="成本10w刀的JetMoE">
+<meta property="og:url" content="https://saicat.github.io/f3acf042.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="【往期文章】 MoE模型的前世今生 LLM长上下文的问题 解锁大模型长上下文能力 大模型推理窗口-从有限到无限大 理解Attention:从起源到MHA,MQA和GQA Yi技术报告-划重点看细节 transformer中normalization的二三事 从代码实现看normalization-到底做了什么 稀疏注意力计算:sliding window attention 理解LLM位置编码:R">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  JetMoE是由MIT、Princeton等几个学术机构发布的MoE模型，其总参数量为8B，激活参数量为2B。">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/f3acf042/structure.png">
+<meta property="og:image" content="https://saicat.github.io/f3acf042/model_param.png">
+<meta property="og:image" content="https://saicat.github.io/f3acf042/data1.png">
+<meta property="og:image" content="https://saicat.github.io/f3acf042/data2.png">
+<meta property="og:image" content="https://saicat.github.io/f3acf042/evaluation.png">
+<meta property="og:image" content="https://saicat.github.io/f3acf042/mtbench.png">
 <meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
-<meta property="article:published_time" content="2024-05-14T11:21:09.000Z">
-<meta property="article:modified_time" content="2024-05-14T11:26:49.973Z">
+<meta property="article:published_time" content="2024-06-26T03:22:35.000Z">
+<meta property="article:modified_time" content="2024-06-26T12:49:15.240Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
-<meta property="article:tag" content="算法题">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="MoE">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta name="twitter:image" content="https://saicat.github.io/f3acf042/structure.png">
 
 
-<link rel="canonical" href="https://saicat.github.io/7c04944d.html">
+<link rel="canonical" href="https://saicat.github.io/f3acf042.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/7c04944d.html","path":"7c04944d.html","title":"大模型算法题(6)"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/f3acf042.html","path":"f3acf042.html","title":"成本10w刀的JetMoE"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>大模型算法题(6) | Linsight</title>
+<title>成本10w刀的JetMoE | Linsight</title>
   
 
 
@@ -145,7 +152,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#xavier%E5%88%9D%E5%A7%8B%E5%8C%96%E6%80%9D%E8%B7%AF%E6%98%AF%E4%BB%80%E4%B9%88%E6%98%AF%E6%80%8E%E4%B9%88%E5%81%9A%E7%9A%84"><span class="nav-number">1.</span> <span class="nav-text">1.Xavier初始化思路是什么，是怎么做的？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#rlhf%E4%B8%ADreward%E6%A8%A1%E5%9E%8B%E5%92%8Ccritic%E6%A8%A1%E5%9E%8B%E7%9A%84%E4%BD%9C%E7%94%A8%E5%88%86%E5%88%AB%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">2.</span> <span class="nav-text">2.RLHF中，Reward模型和Critic模型的作用分别是什么？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#kaiming%E5%88%9D%E5%A7%8B%E5%8C%96%E6%98%AF%E6%80%8E%E4%B9%88%E5%81%9A%E7%9A%84"><span class="nav-number">3.</span> <span class="nav-text">3.Kaiming初始化是怎么做的？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8bert%E4%B8%AD%E7%9A%84cls%E4%BD%9C%E4%B8%BA%E8%BE%93%E5%87%BA%E8%BF%9B%E8%A1%8C%E5%88%86%E7%B1%BB%E5%92%8C%E7%9B%B8%E4%BC%BC%E5%BA%A6%E8%AE%A1%E7%AE%97%E5%8F%AF%E8%83%BD%E4%BC%9A%E6%9C%89%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98"><span class="nav-number">4.</span> <span class="nav-text">4.使用Bert中的[CLS]作为输出进行分类和相似度计算，可能会有什么问题？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#pytorch%E4%B8%AD%E7%9A%84register_buffer%E6%98%AF%E4%BB%80%E4%B9%88%E6%9C%89%E4%BB%80%E4%B9%88%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">5.pytorch中的register_buffer是什么，有什么用？</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.</span> <span class="nav-text">模型设计</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E6%9E%84"><span class="nav-number">1.1.</span> <span class="nav-text">结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1"><span class="nav-number">1.2.</span> <span class="nav-text">负载均衡</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E6%95%B0%E6%8D%AE"><span class="nav-number">2.</span> <span class="nav-text">训练数据</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">3.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#alignment"><span class="nav-number">4.</span> <span class="nav-text">Alignment</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">5.</span> <span class="nav-text">效果</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -210,7 +217,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/7c04944d.html">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/f3acf042.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
@@ -223,12 +230,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="大模型算法题(6) | Linsight">
+      <meta itemprop="name" content="成本10w刀的JetMoE | Linsight">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          大模型算法题(6)
+          成本10w刀的JetMoE
         </h1>
 
         <div class="post-meta-container">
@@ -240,7 +247,7 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2024-05-14 19:21:09 / 修改时间：19:26:49" itemprop="dateCreated datePublished" datetime="2024-05-14T19:21:09+08:00">2024-05-14</time>
+      <time title="创建时间：2024-06-26 11:22:35 / 修改时间：20:49:15" itemprop="dateCreated datePublished" datetime="2024-06-26T11:22:35+08:00">2024-06-26</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -267,14 +274,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>2.8k</span>
+      <span>3.8k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>5 分钟</span>
+      <span>7 分钟</span>
     </span>
 </div>
 
@@ -284,54 +291,118 @@
     
     
     
-    <div class="post-body" itemprop="articleBody"><p>【往期文章】</p>
-<p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
-window attention</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
 <hr>
-<p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
-<p>本系列将持续整理一些LLM中关键的、细节的、值得关注的内容，持续更新~</p>
-<p>如有错漏，欢迎指正~</p>
-<hr>
-<h1 id="xavier初始化思路是什么是怎么做的">1.Xavier初始化思路是什么，是怎么做的？</h1>
-<p>2010年的《Understanding the difficulty of training deep feedforward
-neural
-networks》提出Xavier初始化，目的是为了保持模型中每一层的输出方差大致相等，这样做的原因主要有：</p>
-<p>（1）避免梯度消失或梯度爆炸：在深度神经网络中，如果层与层之间的输出方差相差很大，就会有很大的值出现，那么在反向传播过程中，梯度可能会变得非常小（梯度消失）或者非常大（梯度爆炸）导致梯度更新缓慢，或者训练过程不稳定。</p>
-<p>（2）保持信号的传播：通过保持每一层的输出方差大致相等，可以确保网络中的信号在前向传播和反向传播时不会因为方差的变化而减弱或增强，从而有助于网络更好地学习和传递信息。</p>
-<p>（3）提高训练的稳定性和效率：当每一层的输出方差保持一致时，训练过程会更加稳定，因为权重更新的magnitude更加可控。这样可以提高训练的效率。</p>
-<p>（4）避免过拟合或欠拟合：适当的方差控制有助于网络在训练过程中保持适当的泛化能力。过大的方差可能导致过拟合，而过小的方差可能导致欠拟合。</p>
-<p>Xavier初始化方法通过考虑前一层的节点数（fan-in）和后一层的节点数（fan-out）来设置初始权重的分布范围。有三种方案：</p>
-<p>（1）只考虑输入，设置参数的方差为1/fan-in</p>
-<p>（2）只考虑输出，设置参数的方差为1/fan-out</p>
-<p>（3）同时考虑输入和输出，设置参数的方差为2/（fan-in +
-fan-out）。实际使用中1/fan-in效果就较好。</p>
-<h1 id="rlhf中reward模型和critic模型的作用分别是什么">2.RLHF中，Reward模型和Critic模型的作用分别是什么？</h1>
-<p>Critic模型主要负责评估当前策略下的行为，并预测未来的回报。在PPO中，Critic模型的输出用于计算优势函数（advantage
-function），这是一个衡量实际回报与预期回报之间差异的指标。优势函数是策略梯度方法中的关键组成部分，它帮助actor模型了解哪些行为比预期要好，哪些行为比预期要差。因此，Critic模型的评分直接影响actor模型的优化过程，指导其调整行为以提高整体性能。</p>
-<p>Reward模型是基于人类反馈训练的，用于评估和打分模型生成的文本或行为的质量。在RLHF中，Reward模型的评分通常被用作奖励信号，直接反馈给Actor模型。这些奖励信号反映了人类对生成内容的偏好和评价标准，Actor模型会根据这些信号调整其行为，以生成更符合人类期望的输出。
-RLHF中，Actor模型的优化目标是最大化期望回报。这个期望回报可以由Critic模型的预测和Reward模型的评分共同决定。具体来说，Actor模型的优化目标（objective）通常包括（1）策略损失：这部分损失来自于策略模型尝试最大化奖励信号（由Reward模型提供）和/或优势函数（由Critic模型提供）。（2）价值损失：在Actor-Critic架构中，Actor模型也负责优化Critic模型，那么价值损失会尝试最小化Critic模型预测的价值与实际回报之间的差异。（3）其他正则化项：可能还包括一些正则化项。</p>
-<p>因此，Critic模型的评分用于计算优势函数，而Reward模型的评分直接作为奖励信号。这两个模型共同作用于Actor模型，帮助其学习如何生成更符合人类偏好和期望的行为。</p>
-<h1 id="kaiming初始化是怎么做的">3.Kaiming初始化是怎么做的？</h1>
-<p>Kaiming初始化在Xavier初始化的基础上做了调整。Xavier初始化的推导是基于线性函数的，但实际上今天所有模型都会大量使用非线性函数，比如ReLU，这样就导致了Xavier初始化的失效。
-Kaiming初始化针对使用ReLU的模型提出。因为ReLU会抛弃掉小于0的值，对于一个均值为0的输入数据，这就相当于砍掉了一半的值，这样输出的方差和均值就变了。因此把Xavier初始化中使用的方差sqrt(1/N)改为sqrt(2/N)，这样数据不会因为ReLU而变得越来越小。</p>
-<h1 id="使用bert中的cls作为输出进行分类和相似度计算可能会有什么问题">4.使用Bert中的[CLS]作为输出进行分类和相似度计算，可能会有什么问题？</h1>
-<p>self-attention中，每个token都天然倾向于关注自己和附近的token，而对更远的内容分配较少的注意力。在Bert中，[CLS]一般是第一个token，放在最前面。这就导致[CLS]更容易关注到靠近它的输入，也就是文本的靠前部分。如果文本较长，且关键内容出现在靠后的位置，就有可能出现[CLS]中关注不够的情况，而导致效果下降。可以通过强制注意力分配，或者使用所有位置的输出而不单是[CLS]token的方法来缓解这个问题。</p>
-<h1 id="pytorch中的register_buffer是什么有什么用">5.pytorch中的register_buffer是什么，有什么用？</h1>
-<p>register_buffer是nn.Module类中的一个方法，它用于注册一个不需要梯度的缓冲区。一般会把模型中需要持续使用或者跟踪，但是不需要通过梯度来更新的参数使用register_buffer注册。使用register_buffer注册的参数可以和其他训练的参数一样，保存在state_dict中，比如旋转位置编码的旋转矩阵，batchnorm中的全局均值和方差，一般都会用register_buffer注册。如果不使用register_buffer注册，普通的常量或者参数保存的时候不会被state_dict跟踪到。</p>
+<p>JetMoE是由MIT、Princeton等几个学术机构发布的MoE模型，其总参数量为8B，激活参数量为2B。</p>
+<p>训练JetMoE的总花费约为10w美元，而JetMoE在各个benchmark上都有不错的效果，这样看训练这个模型算是比较经济实惠的了。</p>
+<p>MoE的基础内容可以看之前梳理的 <a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a>。</p>
+<h1 id="模型设计">模型设计</h1>
+<h2 id="结构">结构</h2>
+<p>在模型结构上，和目前一些主流的模型如Deepseek MoE、Mixtral
+8x7B、Qwen-MoE等有点不同，JetMoE不仅在FFN层应用Sparsely-gated
+Mixtureof-Experts（SMOE）的设计，而且参考了《Moduleformer: Learning
+modular large language models from uncurated
+data》的做法，把attention层也设计成了混合专家的结构，如下图所示。</p>
+<img src="/f3acf042/structure.png" class title="结构">
+<p>attention层的混合专家结构也叫MoA（ Mixture of Attention heads
+(MoA)，是由《Mixture of Attention Heads: Selecting Attention Heads Per
+Token》提出的。</p>
+<p>MoA和FFN层的MoE一样，每个attention层包含多个attention
+expert。而每个attention expert e包括4个形状为 <span class="math inline">\(\mathbf{R}^{D_{emb}\times D_{att}}\)</span>
+的矩阵： <span class="math inline">\(\mathbf{W}_q^e,\mathbf{W}_k,\mathbf{W}_v,\mathbf{W}_o^e\)</span>。其中
+<span class="math inline">\(D_{att}=H\times
+D_{head}\)</span>，H是每个attention expert的attention
+head数量。每个attention expert内部和常规的注意力层是一样的。</p>
+<p>每层attention expert中的 <span class="math inline">\(\mathbf{W}_k\)</span> 和 <span class="math inline">\(\mathbf{W}_v\)</span>
+这两个矩阵的参数在同个attention层的多个expert之间共享，这样可以减少一些参数量和计算量，提升计算效率。而每个attention
+expert保留各自的 <span class="math inline">\(\mathbf{W}_q^e\)</span> 和
+<span class="math inline">\(\mathbf{W}_o^e\)</span>。</p>
+<p>对于一个输入的vector x，首先用2个共享的矩阵获得k和v</p>
+<p><span class="math display">\[\begin{aligned}\mathbf{k}&amp;=\mathbf{W}_{k}\mathbf{x}\\\mathbf{v}&amp;=\mathbf{W}_{v}\mathbf{x}\end{aligned}\]</span></p>
+<p>而在gating function选择了expert之后，再在attention
+expert内部进行标准的attention计算：</p>
+<p><span class="math display">\[\begin{aligned}&amp;\mathbf{q}_{e}=\mathbf{W}_{q}^{e}\mathbf{x}\\&amp;\mathbf{a}_{e}=\mathrm{МНА}\left(\mathbf{q}_{e},\mathbf{k},\mathbf{v}\right)\\&amp;\mathbf{o}_{e}=\mathbf{W}_{o}^{e}\mathbf{a}\end{aligned}\]</span></p>
+<p>JetMoE的FFN层的设计和gating的设计就是常规的top-k gating
+MoE，就不再赘述。</p>
+<p>JetMoE的具体模型参数如下</p>
+<img src="/f3acf042/model_param.png" class title="模型参数">
+<p>每层有8个expert，每个token激活2个expert。</p>
+<h2 id="负载均衡">负载均衡</h2>
+<p>在负载均衡上，参考Switch Transformer，加入了frequency-based auxiliary
+loss：</p>
+<p><span class="math display">\[loss_b=N\sum_{i=1}^Nf_iP_i\]</span></p>
+<p>其中N是expert数量，<span class="math inline">\(f_i\)</span>
+是分配给expert i的token占比，<span class="math inline">\(P_i\)</span>
+是router分配给expert i的概率占比。</p>
+<p>此外还加入了ST-MoE中的z-loss来提升训练稳定性：</p>
+<p><span class="math display">\[loss_z=\frac1B\sum_{i=1}^B\left(\log\sum_{j=1}^N\exp(x_j^i)\right)^2\]</span></p>
+<p>x是router给出的logits，B是token数。</p>
+<p>通过两个超参把这两个负载平衡的loss加入到训练loss中</p>
+<p><span class="math display">\[loss=loss_{lm}+\alpha loss_b+\beta
+loss_z\]</span></p>
+<p>训练中 <span class="math inline">\(\alpha=0.01\)</span>，<span class="math inline">\(\beta=0.001\)</span>。</p>
+<h1 id="训练数据">训练数据</h1>
+<p>JetMoE预训练数据使用了真实数据和合成数据两种。</p>
+<p>真实数据：<br>
+- RefinedWeb：从总共5T的token里抽取了600B来训练<br>
+- StarCoder：包含86种代码语言<br>
+- Dolma：包含3T token的英文数据集<br>
+- The Pile：825GB的英文数据集<br>
+-
+其他：还使用了Proof-Pile-2、OpenWebMath、StackMathQA、OpenAssistant、xP3x、CommitPackFT这些规模比较小、质量比较高的数据集。</p>
+<p>合成数据：<br>
+- OpenHermes 2.5<br>
+- UltraTextbooks<br>
+- UltraChat 200k<br>
+- 其他：还使用了TemplateGSM、Magicoder-Evol-110K、Evol-Code
+Alpaca、Code-290k-ShareGPT这些规模比较小、质量比较高的数据集。</p>
+<h1 id="训练">训练</h1>
+<p>JetMoE基于Megatron框架进行训练，仅使用pipeline parallelism而不expert
+parallelism。训练过程用了96个H100，消耗约30,000个GPU
+hour，训练了大概1.25T token的数据。</p>
+<p>一些训练设置：<br>
+- 使用AdamW优化器<br>
+- maximum learning rate = 5e-4<br>
+- batch size = 4M<br>
+- sequence length = 4096<br>
+- learning rate schedule = WSD，warmup = 10B token，decay = 250B
+token</p>
+<p>参考MiniCPM的做法，把训练分为两个阶段： - phase1：warmup and stable
+learning rate；使用的数据集包括RefinedWeb, Starcoder, The Pile, peS2o
+from Dolma, and OpenWebMath<br>
+- phase2:decay learning rate；使用了更多的高质量数据。</p>
+<p>phase1和phase2的具体数据混合情况如下</p>
+<img src="/f3acf042/data1.png" class title="数据">
+<img src="/f3acf042/data2.png" class title="数据">
+<h1 id="alignment">Alignment</h1>
+<p>JetMoE用Distilled Supervised
+Fine-Tuning（dSFT）的方法对模型进行微调。dSFT就是用prompt获取更强模型的应答结果，用来训练别的模型。</p>
+<p>JetMoE使用Zephyr-7b-beta的chat
+template获取GPT-4和Claude的答案用来训练JetMoE，所用的数据有：<br>
+- UltraChat 200k<br>
+- Airoboros-3.2<br>
+- Code-Feedback<br>
+- Orca-math-word-problems-200k<br>
+- SystemChat<br>
+- Capybara</p>
+<p>训练配置：<br>
+- lr = 2e-5<br>
+- batch size = 128<br>
+- epoch = 3</p>
+<p>此外，在SFT的基础上，还用了Distilled Direct Preference Optimization
+(dDPO)进一步优化模型。</p>
+<p>所用的数据集是UltraFeedback，包含了preference数据对。</p>
+<p>训练配置：<br>
+- lr = 5e-7<br>
+- batch size = 128<br>
+- epoch = 1</p>
+<h1 id="效果">效果</h1>
+<p>在各个benchmark的效果如下</p>
+<img src="/f3acf042/evaluation.png" class title="评测">
+<img src="/f3acf042/mtbench.png" class title="评测">
+<h1 id="小结">小结</h1>
+<p>JetMoE算是一次比较低成本的MoE训练实践，其中大部分的训练设置都是沿用了之前多个工作总结下来的经验。这些经验基本上可以保证训练不出什么大问题了，是相对比较成熟的了。</p>
+<p>常规的内容之外，attention expert可能是一个可以探索的方向。</p>
 <hr>
 <p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
@@ -341,21 +412,38 @@ Kaiming初始化针对使用ReLU的模型提出。因为ReLU会抛弃掉小于0�
 <hr>
 <p>【往期文章】</p>
 <p><a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
 window attention</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
-<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a></p>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】JetMoE: Reaching Llama2 Performance with 0.1M Dollars
+https://arxiv.org/abs/2404.07413</p>
 
     </div>
 
@@ -373,7 +461,7 @@ window attention</a><br>
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://saicat.github.io/7c04944d.html" title="大模型算法题(6)">https://saicat.github.io/7c04944d.html</a>
+      <a href="https://saicat.github.io/f3acf042.html" title="成本10w刀的JetMoE">https://saicat.github.io/f3acf042.html</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -384,21 +472,19 @@ window attention</a><br>
           <div class="post-tags">
               <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
               <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
-              <a href="/tags/%E7%AE%97%E6%B3%95%E9%A2%98/" rel="tag"><i class="fa fa-tag"></i> 算法题</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/MoE/" rel="tag"><i class="fa fa-tag"></i> MoE</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/f5c015c.html" rel="prev" title="大模型推理加速-投机解码">
-                  <i class="fa fa-angle-left"></i> 大模型推理加速-投机解码
+                <a href="/f0902f1a.html" rel="prev" title="RoPE的远距离衰减">
+                  <i class="fa fa-angle-left"></i> RoPE的远距离衰减
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/473f2b43.html" rel="next" title="大模型偏好对齐-DPO">
-                  大模型偏好对齐-DPO <i class="fa fa-angle-right"></i>
-                </a>
             </div>
           </div>
     </footer>
