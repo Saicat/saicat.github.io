@@ -20,36 +20,43 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="comming soon  读到这了，来一发点赞收藏关注吧~">
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  苹果开源的OpenELM系列大模型包括整套规模（0.27B、0.45B、1.08B、3.04B）的最终模型、一些模型的中间checkpoint，training log以及训练框架和具体配置等，这些资源都在https:&#x2F;&#x2F;github.com&#x2F;apple&#x2F;corenet可以找到，训练信息算是给得比较全面的了。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="大模型分布式训练101">
-<meta property="og:url" content="https://saicat.github.io/4628befb.html">
+<meta property="og:title" content="苹果的OpenELM">
+<meta property="og:url" content="https://saicat.github.io/f845f3e4.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="comming soon  读到这了，来一发点赞收藏关注吧~">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  苹果开源的OpenELM系列大模型包括整套规模（0.27B、0.45B、1.08B、3.04B）的最终模型、一些模型的中间checkpoint，training log以及训练框架和具体配置等，这些资源都在https:&#x2F;&#x2F;github.com&#x2F;apple&#x2F;corenet可以找到，训练信息算是给得比较全面的了。">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/intro.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/data.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/pretrain_hp.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/sft_hp.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/eval_1.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/eval_2.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/eval_3.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/sft_result.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/peft_eval.png">
 <meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
-<meta property="article:published_time" content="2024-06-27T13:45:52.000Z">
-<meta property="article:modified_time" content="2024-07-02T08:53:53.223Z">
+<meta property="article:published_time" content="2024-07-02T09:14:36.000Z">
+<meta property="article:modified_time" content="2024-07-03T11:13:12.738Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
 <meta property="article:tag" content="transformer">
-<meta property="article:tag" content="预训练">
-<meta property="article:tag" content="分布式">
-<meta property="article:tag" content="半精度">
-<meta property="article:tag" content="优化器">
+<meta property="article:tag" content="技术报告">
+<meta property="article:tag" content="苹果">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta name="twitter:image" content="https://saicat.github.io/f845f3e4/intro.png">
 
 
-<link rel="canonical" href="https://saicat.github.io/4628befb.html">
+<link rel="canonical" href="https://saicat.github.io/f845f3e4.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/4628befb.html","path":"4628befb.html","title":"大模型分布式训练101"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/f845f3e4.html","path":"f845f3e4.html","title":"苹果的OpenELM"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>大模型分布式训练101 | Linsight</title>
+<title>苹果的OpenELM | Linsight</title>
   
 
 
@@ -149,7 +156,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">1.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.</span> <span class="nav-text">模型设计</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">2.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">3.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#evaluation"><span class="nav-number">4.</span> <span class="nav-text">evaluation</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -175,7 +182,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">42</span>
+        <span class="site-state-item-count">40</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -214,7 +221,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/4628befb.html">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/f845f3e4.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
@@ -227,12 +234,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="大模型分布式训练101 | Linsight">
+      <meta itemprop="name" content="苹果的OpenELM | Linsight">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          大模型分布式训练101
+          苹果的OpenELM
         </h1>
 
         <div class="post-meta-container">
@@ -243,14 +250,14 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2024-06-27 21:45:52" itemprop="dateCreated datePublished" datetime="2024-06-27T21:45:52+08:00">2024-06-27</time>
+      <time title="创建时间：2024-07-02 17:14:36" itemprop="dateCreated datePublished" datetime="2024-07-02T17:14:36+08:00">2024-07-02</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2024-07-02 16:53:53" itemprop="dateModified" datetime="2024-07-02T16:53:53+08:00">2024-07-02</time>
+      <time title="修改时间：2024-07-03 19:13:12" itemprop="dateModified" datetime="2024-07-03T19:13:12+08:00">2024-07-03</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -277,14 +284,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>720</span>
+      <span>2.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>5 分钟</span>
     </span>
 </div>
 
@@ -294,7 +301,86 @@
     
     
     
-    <div class="post-body" itemprop="articleBody"><p>comming soon</p>
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>苹果开源的OpenELM系列大模型包括整套规模（0.27B、0.45B、1.08B、3.04B）的最终模型、一些模型的中间checkpoint，training
+log以及训练框架和具体配置等，这些资源都在https://github.com/apple/corenet可以找到，训练信息算是给得比较全面的了。</p>
+<p>在苹果给出的效果对比中，OpenELM-1B算是同规模模型效果比较好的，比训练数据量多一倍的OLMo也要好一些，具体如下表</p>
+<img src="/f845f3e4/intro.png" class title="OpenELM">
+<p>这里整理一下OpenELM的方案细节。</p>
+<h1 id="模型设计">模型设计</h1>
+<p>OpenELM模型设计：<br>
+- 所有linear层都没有使用bias<br>
+- pre-norm + RMSNorm<br>
+- RoPE<br>
+- GQA<br>
+- SwiGLU FFN<br>
+- 和LLAMA相同的tokenizer</p>
+<p>这些都是比较常规的设计。和目前其他主流模型比较不同的是，苹果参考《Delight:
+Deep and light-weight transformer》，在OpenELM采用了layer-wise
+scaling的设计。</p>
+<p>通常来说，主流模型的设计是每层都使用一样的超参，比如注意力头的数量，和hidden
+size的大小等。但是他们认为这样的设计在参数量的分配上不够高效，不能很好发挥这么多参数的效果，因此对每层的超参进行scaling。</p>
+<p>假设模型共有N层，每层的宽度为 <span class="math inline">\(d_{model}\)</span>，MHA有 <span class="math inline">\(n_{h}\)</span> 个头，每个头的大小为 <span class="math inline">\(d_h=\frac{d_{model}}{n_h}\)</span>，FFN层的大小为
+<span class="math inline">\(d_{\mathrm{FFN}}=m\cdot
+d_{model}\)</span>，其中m是FFN multiplier。</p>
+<p>layer-wise scaling使用 <span class="math inline">\(\alpha\)</span> 和
+<span class="math inline">\(\beta\)</span>
+两个参数来调整模型每层的attention head数量 <span class="math inline">\(n_{h}\)</span> 和FFN multiplier m。</p>
+<p>具体调整如下：对于第i层，有</p>
+<p><span class="math display">\[\begin{aligned}n_{h}^{i}&amp;=\frac{\alpha^i\cdot
+d_{model}}{d_h},\quad m^i=\beta^i\\\text{where
+}\alpha^i&amp;=\alpha_{min}+\frac{(\alpha_{max}-\alpha_{min})\cdot
+i}{N-1},\\\text{and
+}\beta^i&amp;=\beta_{min}+\frac{(\beta_{max}-\beta_{min})\cdot
+i}{N-1},0\leq i&lt;N.\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\alpha_{min}\)</span> 和 <span class="math inline">\(\alpha_{max}\)</span>
+是调整注意力头数量的超参，<span class="math inline">\(\beta_{min}\)</span> 和 <span class="math inline">\(\beta_{max}\)</span>
+是调整宽度的超参。实践中，使用了 <span class="math inline">\(\alpha_{min}=0.5\)</span>，<span class="math inline">\(\alpha_{max}=0.5\)</span>=1.0，<span class="math inline">\(\beta_{min}=0.5\)</span>，<span class="math inline">\(\beta_{max}=4.0\)</span>。</p>
+<p>（后面有整理各个模型结构和训练超参的表）</p>
+<h1 id="数据">数据</h1>
+<p>预训练数据来源包括：<br>
+- RefinedWeb<br>
+- deduplicated PILE<br>
+- a subset of RedPajama<br>
+- a subset of Dolma v1.6</p>
+<p>总共1.8T token，各个来源具体token数量如下表</p>
+<img src="/f845f3e4/data.png" class title="数据">
+<p>数据中小于200 character或者小于256
+token的数据都会被筛出来不使用。</p>
+<h1 id="训练">训练</h1>
+<p>训练超参：<br>
+- 总共约350k step<br>
+- AdamW optimizer<br>
+- cosine learning rate schedule，warmup=5k<br>
+- weight decay = 0.1<br>
+- gradient clipping = 1.0</p>
+<p>各个规模模型的结构超参、训练设置和资源消耗如下表</p>
+<img src="/f845f3e4/pretrain_hp.png" class title="超参">
+<p>微调超参如下</p>
+<img src="/f845f3e4/sft_hp.png" class title="超参">
+<h1 id="evaluation">evaluation</h1>
+<p>下游在三大类型任务上评测了OpenELM：<br>
+- Standard zero-shot tasks<br>
+- OpenLLM leaderboard tasks<br>
+- LLM360 leaderboard tasks</p>
+<img src="/f845f3e4/eval_1.png" class title="评测">
+<p>pretrained model在Standard zero-shot
+tasks的7个任务上，不同checkpoint的效果如下图</p>
+<img src="/f845f3e4/eval_2.png" class title="评测">
+<p>可以看到随着训练步数增加，效果有上升趋势。</p>
+<p>此外，研究人员观察到使用最后5个相隔5000
+step的模型checkpoint进行滑动平均获得的模型参数，比单纯使用最后一个checkpoint要好，这可能是因为多个checkpoint平均可以去掉一些noise的影响。</p>
+<p>后续评测都是使用平均后的模型。</p>
+<p>OpenELM预训练模型在各个类型的任务上和其他模型对比如下</p>
+<img src="/f845f3e4/eval_3.png" class title="评测">
+<p>OpenELM微调前后的效果如下</p>
+<img src="/f845f3e4/sft_result.png" class title="评测">
+<p>对OpenELM分别使用LoRA和DoRA微调的效果对比如下</p>
+<img src="/f845f3e4/peft_eval.png" class title="评测">
+<h1 id="小结">小结</h1>
+<p>OpenELM相比其他模型，最主要的变化是使用了layer-wise
+scaling，看起来效果不错，但是苹果并没有在消融实验整个各个变化的有效性。</p>
 <hr>
 <p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
@@ -321,6 +407,7 @@
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
@@ -336,10 +423,8 @@ window attention</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
 <hr>
 <h1 id="reference">Reference</h1>
-<p>【1】ZeRO: Memory Optimizations Toward Training Trillion Parameter
-Models https://arxiv.org/pdf/1910.02054<br>
-【2】https://colossalai.org/docs/concepts/distributed_training/<br>
-【3】https://colossalai.org/docs/concepts/paradigms_of_parallelism</p>
+<p>【1】OpenELM: An Efficient Language Model Family with Open Training
+and Inference Framework https://arxiv.org/abs/2404.14619</p>
 
     </div>
 
@@ -357,7 +442,7 @@ Models https://arxiv.org/pdf/1910.02054<br>
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://saicat.github.io/4628befb.html" title="大模型分布式训练101">https://saicat.github.io/4628befb.html</a>
+      <a href="https://saicat.github.io/f845f3e4.html" title="苹果的OpenELM">https://saicat.github.io/f845f3e4.html</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -369,24 +454,19 @@ Models https://arxiv.org/pdf/1910.02054<br>
               <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
               <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
               <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
-              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
-              <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" rel="tag"><i class="fa fa-tag"></i> 分布式</a>
-              <a href="/tags/%E5%8D%8A%E7%B2%BE%E5%BA%A6/" rel="tag"><i class="fa fa-tag"></i> 半精度</a>
-              <a href="/tags/%E4%BC%98%E5%8C%96%E5%99%A8/" rel="tag"><i class="fa fa-tag"></i> 优化器</a>
+              <a href="/tags/%E6%8A%80%E6%9C%AF%E6%8A%A5%E5%91%8A/" rel="tag"><i class="fa fa-tag"></i> 技术报告</a>
+              <a href="/tags/%E8%8B%B9%E6%9E%9C/" rel="tag"><i class="fa fa-tag"></i> 苹果</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/a5206abd.html" rel="prev" title="GLM4报告的一些技术点">
-                  <i class="fa fa-angle-left"></i> GLM4报告的一些技术点
+                <a href="/cf3f1f81.html" rel="prev" title="Gemma2">
+                  <i class="fa fa-angle-left"></i> Gemma2
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/cf3f1f81.html" rel="next" title="Gemma2">
-                  Gemma2 <i class="fa fa-angle-right"></i>
-                </a>
             </div>
           </div>
     </footer>
@@ -418,13 +498,13 @@ Models https://arxiv.org/pdf/1910.02054<br>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">246k</span>
+    <span title="站点总字数">248k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">7:28</span>
+    <span title="站点阅读时长">7:31</span>
   </span>
 </div>
 <div class="busuanzi-count">
