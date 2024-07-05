@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  苹果开源的OpenELM系列大模型包括整套规模（0.27B、0.45B、1.08B、3.04B）的最终模型、一些模型的中间checkpoint，training log以及训练框架和具体配置等，这些资源都在https:&#x2F;&#x2F;github.com&#x2F;apple&#x2F;corenet可以找到，训练信息算是给得比较全面的了。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="苹果的OpenELM">
+<meta property="og:url" content="https://saicat.github.io/f845f3e4.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  苹果开源的OpenELM系列大模型包括整套规模（0.27B、0.45B、1.08B、3.04B）的最终模型、一些模型的中间checkpoint，training log以及训练框架和具体配置等，这些资源都在https:&#x2F;&#x2F;github.com&#x2F;apple&#x2F;corenet可以找到，训练信息算是给得比较全面的了。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/intro.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/formula.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/data.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/pretrain_hp.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/sft_hp.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/eval_1.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/eval_2.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/eval_3.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/sft_result.png">
+<meta property="og:image" content="https://saicat.github.io/f845f3e4/peft_eval.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-07-02T09:14:36.000Z">
+<meta property="article:modified_time" content="2024-07-03T11:40:00.701Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="技术报告">
+<meta property="article:tag" content="苹果">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/f845f3e4/intro.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/f845f3e4.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/f845f3e4.html","path":"f845f3e4.html","title":"苹果的OpenELM"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>苹果的OpenELM | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.</span> <span class="nav-text">模型设计</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">2.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">3.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#evaluation"><span class="nav-number">4.</span> <span class="nav-text">evaluation</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">34</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">40</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/f845f3e4.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="苹果的OpenELM | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          苹果的OpenELM
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-07-02 17:14:36" itemprop="dateCreated datePublished" datetime="2024-07-02T17:14:36+08:00">2024-07-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-07-03 19:40:00" itemprop="dateModified" datetime="2024-07-03T19:40:00+08:00">2024-07-03</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2.4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>苹果开源的OpenELM系列大模型包括整套规模（0.27B、0.45B、1.08B、3.04B）的最终模型、一些模型的中间checkpoint，training
+log以及训练框架和具体配置等，这些资源都在https://github.com/apple/corenet可以找到，训练信息算是给得比较全面的了。</p>
+<p>在苹果给出的效果对比中，OpenELM-1B算是同规模模型效果比较好的，比训练数据量多一倍的OLMo也要好一些，具体如下表</p>
+<img src="/f845f3e4/intro.png" class title="OpenELM">
+<p>这里整理一下OpenELM的方案细节。</p>
+<h1 id="模型设计">模型设计</h1>
+<p>OpenELM模型设计：<br>
+- 所有linear层都没有使用bias<br>
+- pre-norm + RMSNorm<br>
+- RoPE<br>
+- GQA<br>
+- SwiGLU FFN<br>
+- 和LLAMA相同的tokenizer</p>
+<p>这些都是比较常规的设计。和目前其他主流模型比较不同的是，苹果参考《Delight:
+Deep and light-weight transformer》，在OpenELM采用了layer-wise
+scaling的设计。</p>
+<p>通常来说，主流模型的设计是每层都使用一样的超参，比如注意力头的数量，和hidden
+size的大小等。但是他们认为这样的设计在参数量的分配上不够高效，不能很好发挥这么多参数的效果，因此对每层的超参进行scaling。</p>
+<p>假设模型共有N层，每层的宽度为 <span class="math inline">\(d_{model}\)</span>，MHA有 <span class="math inline">\(n_{h}\)</span> 个头，每个头的大小为 <span class="math inline">\(d_h=\frac{d_{model}}{n_h}\)</span>，FFN层的大小为
+<span class="math inline">\(d_{\mathrm{FFN}}=m\cdot
+d_{model}\)</span>，其中m是FFN multiplier。</p>
+<p>layer-wise scaling使用 <span class="math inline">\(\alpha\)</span> 和
+<span class="math inline">\(\beta\)</span>
+两个参数来调整模型每层的attention head数量 <span class="math inline">\(n_{h}\)</span> 和FFN multiplier m。</p>
+<p>具体调整如下：对于第i层，有</p>
+<img src="/f845f3e4/formula.png" class title="公式">
+<p>其中 <span class="math inline">\(\alpha_{min}\)</span> 和 <span class="math inline">\(\alpha_{max}\)</span>
+是调整注意力头数量的超参，<span class="math inline">\(\beta_{min}\)</span> 和 <span class="math inline">\(\beta_{max}\)</span>
+是调整宽度的超参。实践中，使用了 <span class="math inline">\(\alpha_{min}=0.5\)</span>，<span class="math inline">\(\alpha_{max}=1.0\)</span>，<span class="math inline">\(\beta_{min}=0.5\)</span>，<span class="math inline">\(\beta_{max}=4.0\)</span>。</p>
+<p>（后面有整理各个模型结构和训练超参的表）</p>
+<h1 id="数据">数据</h1>
+<p>预训练数据来源包括：<br>
+- RefinedWeb<br>
+- deduplicated PILE<br>
+- a subset of RedPajama<br>
+- a subset of Dolma v1.6</p>
+<p>总共1.8T token，各个来源具体token数量如下表</p>
+<img src="/f845f3e4/data.png" class title="数据">
+<p>数据中小于200 character或者小于256
+token的数据都会被筛出来不使用。</p>
+<h1 id="训练">训练</h1>
+<p>训练超参：<br>
+- 总共约350k step<br>
+- AdamW optimizer<br>
+- cosine learning rate schedule，warmup=5k<br>
+- weight decay = 0.1<br>
+- gradient clipping = 1.0</p>
+<p>各个规模模型的结构超参、训练设置和资源消耗如下表</p>
+<img src="/f845f3e4/pretrain_hp.png" class title="超参">
+<p>微调超参如下</p>
+<img src="/f845f3e4/sft_hp.png" class title="超参">
+<h1 id="evaluation">evaluation</h1>
+<p>下游在三大类型任务上评测了OpenELM：<br>
+- Standard zero-shot tasks<br>
+- OpenLLM leaderboard tasks<br>
+- LLM360 leaderboard tasks</p>
+<img src="/f845f3e4/eval_1.png" class title="评测">
+<p>pretrained model在Standard zero-shot
+tasks的7个任务上，不同checkpoint的效果如下图</p>
+<img src="/f845f3e4/eval_2.png" class title="评测">
+<p>可以看到随着训练步数增加，效果有上升趋势。</p>
+<p>此外，研究人员观察到使用最后5个相隔5000
+step的模型checkpoint进行滑动平均获得的模型参数，比单纯使用最后一个checkpoint要好，这可能是因为多个checkpoint平均可以去掉一些noise的影响。</p>
+<p>后续评测都是使用平均后的模型。</p>
+<p>OpenELM预训练模型在各个类型的任务上和其他模型对比如下</p>
+<img src="/f845f3e4/eval_3.png" class title="评测">
+<p>OpenELM微调前后的效果如下</p>
+<img src="/f845f3e4/sft_result.png" class title="评测">
+<p>对OpenELM分别使用LoRA和DoRA微调的效果对比如下</p>
+<img src="/f845f3e4/peft_eval.png" class title="评测">
+<h1 id="小结">小结</h1>
+<p>OpenELM相比其他模型，最主要的变化是使用了layer-wise
+scaling，看起来效果不错，但是苹果并没有在消融实验整个各个变化的有效性。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】OpenELM: An Efficient Language Model Family with Open Training
+and Inference Framework https://arxiv.org/abs/2404.14619</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/f845f3e4.html" title="苹果的OpenELM">https://saicat.github.io/f845f3e4.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E6%8A%80%E6%9C%AF%E6%8A%A5%E5%91%8A/" rel="tag"><i class="fa fa-tag"></i> 技术报告</a>
+              <a href="/tags/%E8%8B%B9%E6%9E%9C/" rel="tag"><i class="fa fa-tag"></i> 苹果</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/cf3f1f81.html" rel="prev" title="Gemma2">
+                  <i class="fa fa-angle-left"></i> Gemma2
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/3df0cd42.html" rel="next" title="从Yuan2.0到Yuan2.0-M32">
+                  从Yuan2.0到Yuan2.0-M32 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">251k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">7:37</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
