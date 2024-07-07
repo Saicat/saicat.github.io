@@ -1,6 +1,12 @@
 ---
 title: 从Yuan2.0到Yuan2.0-M32
-date: '2024-07-03 20:14:06 - NLP - LLM - transformer - 技术报告 - MoE'
+date: 2024-07-03 20:14:06
+tags:
+  - NLP 
+  - LLM 
+  - transformer 
+  - 技术报告 
+  - MoE
 categories:
   - CS
   - NLP
