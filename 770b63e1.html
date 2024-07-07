@@ -20,23 +20,32 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  小结">
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  bilibili发布的Index-1.9B包含： - Index-1.9B base：在2.8T语料训练的基模型 - Index-1.9B pure：部分数据和base不同，其他相同 - Index-1.9B chat：基于base进行SFT和DPO后的模型 - Index-1.9B character：在chat">
 <meta property="og:type" content="article">
 <meta property="og:title" content="bilibili的index-1.9B">
 <meta property="og:url" content="https://saicat.github.io/770b63e1.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  小结">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  bilibili发布的Index-1.9B包含： - Index-1.9B base：在2.8T语料训练的基模型 - Index-1.9B pure：部分数据和base不同，其他相同 - Index-1.9B chat：基于base进行SFT和DPO后的模型 - Index-1.9B character：在chat">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/770b63e1/layer_num.png">
+<meta property="og:image" content="https://saicat.github.io/770b63e1/norm_head.png">
+<meta property="og:image" content="https://saicat.github.io/770b63e1/pt_data.png">
+<meta property="og:image" content="https://saicat.github.io/770b63e1/dedup.png">
+<meta property="og:image" content="https://saicat.github.io/770b63e1/scheduler.png">
+<meta property="og:image" content="https://saicat.github.io/770b63e1/wsd_quality.png">
+<meta property="og:image" content="https://saicat.github.io/770b63e1/add_instruct_data.png">
+<meta property="og:image" content="https://saicat.github.io/770b63e1/sft.png">
+<meta property="og:image" content="https://saicat.github.io/770b63e1/dpo.png">
 <meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
 <meta property="article:published_time" content="2024-07-05T08:16:59.000Z">
-<meta property="article:modified_time" content="2024-07-05T08:31:06.190Z">
+<meta property="article:modified_time" content="2024-07-05T11:51:37.531Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
 <meta property="article:tag" content="transformer">
 <meta property="article:tag" content="技术报告">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta name="twitter:image" content="https://saicat.github.io/770b63e1/layer_num.png">
 
 
 <link rel="canonical" href="https://saicat.github.io/770b63e1.html">
@@ -146,7 +155,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">1.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">2.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">2.</span> <span class="nav-text">预训练</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">2.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">2.2.</span> <span class="nav-text">训练</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%B9%E9%BD%90"><span class="nav-number">3.</span> <span class="nav-text">对齐</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#sft"><span class="nav-number">3.1.</span> <span class="nav-text">SFT</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dpo"><span class="nav-number">3.2.</span> <span class="nav-text">DPO</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -241,7 +250,7 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2024-07-05 16:16:59 / 修改时间：16:31:06" itemprop="dateCreated datePublished" datetime="2024-07-05T16:16:59+08:00">2024-07-05</time>
+      <time title="创建时间：2024-07-05 16:16:59 / 修改时间：19:51:37" itemprop="dateCreated datePublished" datetime="2024-07-05T16:16:59+08:00">2024-07-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -268,14 +277,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>543</span>
+      <span>2.8k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>5 分钟</span>
     </span>
 </div>
 
@@ -287,7 +296,117 @@
     
     <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
 <hr>
+<p>bilibili发布的Index-1.9B包含：<br>
+- Index-1.9B base：在2.8T语料训练的基模型<br>
+- Index-1.9B pure：部分数据和base不同，其他相同<br>
+- Index-1.9B chat：基于base进行SFT和DPO后的模型<br>
+- Index-1.9B
+character：在chat的基础上用RAG+fewshots提供角色扮演的能力</p>
+<p>下面看下细节。</p>
+<h1 id="模型">模型</h1>
+<p>（1）模型深度</p>
+<p>目前业界普遍的认知是模型深度比宽度对效果的影响更大（相同参数下）。对比层数分别为36层和9层，总参数都为1.01B的模型，结果如下图，36层模型（base）效果确实更好。</p>
+<img src="/770b63e1/layer_num.png" class title="层数">
+<p>需要注意的是，相同模型参数量下，层数更多的模型会有更多的activation（与L
+* hidden size成正比），因此会需要更多显存。</p>
+<p>（2）Norm-Head</p>
+<blockquote>
+<p>模型不同层的梯度尺度分布非常不同，最后一层 LM-Head
+的梯度，占据了绝大部分的梯度大小。而词表的稀疏性让 LM-Head
+层稳定性较低，影 响模型训练稳定性，进而影响模型性能表现，所以稳定的
+LM-Head 层对于训练非常重要。</p>
+</blockquote>
+<p>参考Baichuan2使用Norm-Head，即对LM-Head进行Norm，能让训练更稳定。</p>
+<p>对比有无Norm-Head的模型，效果和Gradient Norm具体情况如下图</p>
+<img src="/770b63e1/norm_head.png" class title="norm head">
+<p>Norm-Head版本的效果更好，Gradient
+Norm整体变化也比较小，相对稳定（除了开头有个突升）。</p>
+<h1 id="预训练">预训练</h1>
+<h2 id="数据">数据</h2>
+<p>数据一些细节：<br>
+- 总量2.8T<br>
+- 中文：英文 = 4：5，代码占比 = 6%<br>
+- 书籍、百科、论文、STEM相关精选数据占比10%，这部分很重要</p>
+<p>具体占比饼图如下</p>
+<img src="/770b63e1/pt_data.png" class title="预训练数据">
+<p>数据去重上做了一个事情：如果预先分局分段就有可能有一些重复没有被发现，因此这里采用支持任意长度、任意位置的文档内字符串去重。实现上基于<a target="_blank" rel="noopener" href="https://github.com/google-research/deduplicate-text-datasets">https://github.com/google-research/deduplicate-text-datasets</a>进行了优化。</p>
+<p>支持任意位置所能找到的难以发现的重复片段例子如下图。月份下拉框文字，重复了
+15.6w 次，只能通过精准字符串去重识别</p>
+<img src="/770b63e1/dedup.png" class title="去重">
+<p>训练数据在packing的时候，重置了attention-mask和position-id。</p>
+<h2 id="训练">训练</h2>
+<p>（1）训练设置</p>
+<ul>
+<li>AdamW，beta_1=0.9，beta_2=0.95，eps=1e-8<br>
+</li>
+<li>gradient clip=1.0<br>
+</li>
+<li>weight decay=0.1</li>
+</ul>
+<p>（2）lr和scheduler</p>
+<p>训练的时候使用WSD的learning rate
+scheduler，分为了两阶段的训练：<br>
+- warmup 100步 + 全局混合数据<br>
+- decay阶段，增大精选数据比例</p>
+<p>这里把decay阶段设得比较长，最大lr为5e-4，decay结束时减小到1%即5e-6，整个decay过程训练了400B数据。</p>
+<p>这里还用0.1B的模型，分别用Cosin、Linear和WSD训练1T的数据，训练过程的loss和最终模型的效果对比如下</p>
+<img src="/770b63e1/scheduler.png" class title="scheduler">
+<p>几个发现：<br>
+- 最终三种scheduler的valid loss都收敛到同一个水平<br>
+- WSD在S阶段的valid loss比较高，而在decay阶段会快速下降<br>
+- 评测指标整体没有差太多</p>
+<p>（3）decay阶段数据的配合</p>
+<p>从上面的实验发现WSD在decay阶段的loss会快速下降，那么在这个阶段加入更多的高质量精选数据应该有更好的效果。</p>
+<p>为了验证这个想法，用以下四种配置做实验：<br>
+- Cosine<br>
+- WSD<br>
+- Cosine + 后10%加入更多精选数据<br>
+- WSD + 后10%进入decay阶段，并加入更多精选数据</p>
+<p>评测结果如下，确实是在decay阶段增加高质量数据的WSD效果最好。</p>
+<img src="/770b63e1/wsd_quality.png" class title="wsd quallity">
+<p>（4）预训练阶段加入指令数据</p>
+<p>在decay阶段还做了一个实验，验证加入指令数据对最终预训练模型效果的影响。</p>
+<p>为了验证效果，训了两个版本的模型：<br>
+- index-1.9b-ablation-pure：Decay
+阶段自然文本数据，精选数据做重新放入增加浓度(书籍、论文、百科、专业等类别)<br>
+- index-1.9b-ablation-boost：在pure基础上，额外加入占比7%的指令数据</p>
+<p>在MMLU的效果对比如下</p>
+<img src="/770b63e1/add_instruct_data.png" class title="指令数据">
+<p>在decay阶段增加指令数据能明显提升下游任务指标。</p>
+<h1 id="对齐">对齐</h1>
+<h2 id="sft">SFT</h2>
+<p>（1）数据</p>
+<ul>
+<li>使用10M中英数据<br>
+</li>
+<li>使用奖励模型打分进行筛选清洗<br>
+</li>
+<li>参照了主流的聚类增强多样性<br>
+</li>
+<li>对缺少指令数据的任务，构造/标注进行补充</li>
+</ul>
+<p>（2）训练</p>
+<ul>
+<li>lr=1e-5<br>
+</li>
+<li>采用 system-query-response 格式</li>
+</ul>
+<p>实验还发现，SFT时，加载预训练优化器的参数，并加入部分预训练语效果最好。预训练语料和SFT数据response的token数占比为4:6。</p>
+<img src="/770b63e1/sft.png" class title="SFT对比">
+<h2 id="dpo">DPO</h2>
+<p>这里开发人员认为评价标准偏判别而非枚举的任务通过偏好学习可以取得最大的收益，因此DPO主要针对写作类、指令遵循和安全进一步对齐。</p>
+<p>此外在构造安全类数据的时候，发现通过prompt让模型生成拒答回复，比人写好，原因是人工构造的拒答样本在
+SFT 模型中的 ppl
+过高，如果强行对齐又会导致拒答率较高，带来灾难性遗忘。</p>
+<p>lr = 1e-6 scheduler = cosine epoch = 1 dpo 超参beta = 1</p>
+<p>评测结果如下</p>
+<img src="/770b63e1/dpo.png" class title="DPO">
 <h1 id="小结">小结</h1>
+<p>Index-1.9B验证了几个事情：<br>
+-
+在WSD的decay阶段加入高质量预训练数据，以及指令数据，对下游任务效果有明显提升。<br>
+- SFT时加载预训练优化器参数有收益。<br>
+- Norm-Head能稳定预训练过程。</p>
 <hr>
 <p>读到这了，来一发点赞收藏关注吧~</p>
 <p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
@@ -316,6 +435,7 @@
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
@@ -331,7 +451,7 @@ window attention</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
 <hr>
 <h1 id="reference">Reference</h1>
-<p>【1】</p>
+<p>【1】https://github.com/bilibili/Index-1.9B/blob/main/Index-1.9B%20%E6%8A%80%E6%9C%AF%E6%8A%A5%E5%91%8A.pdf</p>
 
     </div>
 
@@ -404,13 +524,13 @@ window attention</a><br>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">252k</span>
+    <span title="站点总字数">254k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">7:38</span>
+    <span title="站点阅读时长">7:42</span>
   </span>
 </div>
 <div class="busuanzi-count">
