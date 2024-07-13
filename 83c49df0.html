@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  DeepSeek-V2发布之后，其低价策略在国产大模型界掀起一阵降价风。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="DeepSeek-V2和MLA">
+<meta property="og:url" content="https://saicat.github.io/83c49df0.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  DeepSeek-V2发布之后，其低价策略在国产大模型界掀起一阵降价风。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/intro.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/model.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/GQA.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/GQA_compare_MHA.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/MLA.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/MLA_formula.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/MLA_cache.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/MLA_perf.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/needle.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/pt_eval.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/align_eval.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/lite_eval_1.png">
+<meta property="og:image" content="https://saicat.github.io/83c49df0/lite_eval_2.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-07-12T12:54:22.000Z">
+<meta property="article:modified_time" content="2024-07-13T05:44:27.012Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="技术报告">
+<meta property="article:tag" content="MoE">
+<meta property="article:tag" content="DeepSeek">
+<meta property="article:tag" content="MLA">
+<meta property="article:tag" content="GQA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/83c49df0/intro.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/83c49df0.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/83c49df0.html","path":"83c49df0.html","title":"DeepSeek-V2和MLA"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>DeepSeek-V2和MLA | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">模型</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#mla"><span class="nav-number">1.1.</span> <span class="nav-text">MLA</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1"><span class="nav-number">1.2.</span> <span class="nav-text">负载均衡</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">2.</span> <span class="nav-text">训练</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B6%85%E5%8F%82"><span class="nav-number">2.1.</span> <span class="nav-text">超参</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%95%BF%E7%AA%97%E5%8F%A3"><span class="nav-number">2.2.</span> <span class="nav-text">长窗口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B"><span class="nav-number">2.3.</span> <span class="nav-text">评测</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E9%BD%90"><span class="nav-number">2.4.</span> <span class="nav-text">对齐</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#deepseek-v2-lite"><span class="nav-number">3.</span> <span class="nav-text">DeepSeek-V2-Lite</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">36</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">43</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/83c49df0.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="DeepSeek-V2和MLA | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          DeepSeek-V2和MLA
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-07-12 20:54:22" itemprop="dateCreated datePublished" datetime="2024-07-12T20:54:22+08:00">2024-07-12</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-07-13 13:44:27" itemprop="dateModified" datetime="2024-07-13T13:44:27+08:00">2024-07-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>15 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>DeepSeek-V2发布之后，其低价策略在国产大模型界掀起一阵降价风。</p>
+<p>DeepSeek-V2能做到低成本推理的一个原因就是使用了MLA，使得推理时缓存量大大减小。</p>
+<p>本篇来看下MLA以及DeepSeek-V2一些其他细节。</p>
+<p>DeepSeek-V2除了一个总参数量为236B的主模型外，还有一个方便开源研究的DeepSeek-V2-Lite，总参数量为15.7B，这个在最后介绍。</p>
+<h1 id="模型">模型</h1>
+<p>DeepSeek-V2介绍：<br>
+- 总参数量为236B参数，激活21B<br>
+- 支持128k长度<br>
+- 相比DeepSeek-67B，DeepSeek-V2节省42.5%的训练成本和93.3%的推理KV
+cache需求，而最大throughput则是前者的5.76倍</p>
+<p>DeepSeek-V2和其他一些大模型在MMLU上的效果以及激活参数量的对比如下图</p>
+<img src="/83c49df0/intro.png" class title="DeepSeek-V2">
+<p>可以看到DeepSeek-V2以更少的激活参数量达到了接近70B
+dense模型水平的效果。</p>
+<p>DeepSeek-V2模型结构如下图</p>
+<img src="/83c49df0/model.png" class title="模型">
+<p>同V1版本一样，V2在MoE层使用了fine-grained expert和shared
+expert（或者叫DeepSeekMoE结构）（可参考《<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a>》）。而V2在结构上最重要的变动就是在注意力层使用了Multi-Head
+Latent Attention（MLA）。</p>
+<h2 id="mla">MLA</h2>
+<p>MLA是DeepSeek-V2提升推理效率，减低KV cache需求的关键。</p>
+<p>（关于KV cache和MHA/GQA/MQA的对比，可参考<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/686149289">《理解Attention:从起源到MHA,MQA和GQA》</a>）</p>
+<p>1、从MHA出发</p>
+<p>先回顾下标准的MHA。假设 <span class="math inline">\(n_h\)</span>
+是注意力头的数量，<span class="math inline">\(d_h\)</span>
+是每个注意力头的大小，<span class="math inline">\(\mathbf{h}_{t}\in\mathbb{R}^{d}\)</span>
+是第t个输入token。</p>
+<p>MHA首先通过三个投影矩阵 <span class="math inline">\(W^{Q},W^{K},W^{V}\in\mathbb{R}^{d_{h}n_{h}\times
+d}\)</span> 获得<span class="math inline">\(\mathbf{q}_t,\mathbf{k}_t,\mathbf{v}_t\in\mathbb{R}^{d_hn_h}\)</span>：</p>
+<p><span class="math display">\[\mathbf{q}_t=W^Q\mathbf{h}_t\]</span></p>
+<p><span class="math display">\[\mathbf{k}_t=W^K\mathbf{h}_t\]</span></p>
+<p><span class="math display">\[\mathbf{v}_t=W^V\mathbf{h}_t\]</span></p>
+<p>之后 <span class="math inline">\(\mathbf{q}_t,\mathbf{k}_t,\mathbf{v}_t\)</span>
+就会被切成 <span class="math inline">\(n_h\)</span>
+份，分别进行注意力计算：</p>
+<p><span class="math display">\[[\mathbf{q}_{t,1};\mathbf{q}_{t,2};...;\mathbf{q}_{t,n_{h}}]=\mathbf{q}_{t}\]</span></p>
+<p><span class="math display">\[[\mathbf{k}_{t,1};\mathbf{k}_{t,2};...;\mathbf{k}_{t,n_{h}}]=\mathbf{k}_{t}\]</span></p>
+<p><span class="math display">\[[\mathbf{v}_{t,1};\mathbf{v}_{t,2};...;\mathbf{v}_{t,n_{h}}]=\mathbf{v}_{t}\]</span></p>
+<p><span class="math display">\[\mathbf{o}_{t,i}=\sum_{j=1}^t\mathrm{Softmax}_j(\frac{\mathbf{q}_{t,i}^T\mathbf{k}_{j,i}}{\sqrt{d_h}})\mathbf{v}_{j,i}\]</span></p>
+<p><span class="math display">\[\mathbf{u}_t=W^O[\mathbf{o}_{t,1};\mathbf{o}_{t,2};...;\mathbf{o}_{t,n_h}]\]</span></p>
+<p>其中 <span class="math inline">\(\mathbf{q}_{t,i},\mathbf{k}_{t,i},\mathbf{v}_{t,i}\in\mathbb{R}^{d_{h}}\)</span>，<span class="math inline">\(W^O\in\mathbb{R}^{d\times d_hn_h}\)</span>。</p>
+<p>在推理的时候，为了加速会对已经计算过的K、V值进行缓存，那么每个token每层就要保存
+<span class="math inline">\(2{n}_{h}{d}_{h}\)</span> 个数值。</p>
+<p>而GQA/MQA通过减少K、V头的数量并重复使用，减少了需要缓存的KV的量。</p>
+<img src="/83c49df0/GQA.png" class title="GQA">
+<p>MQA相当于组数为1的GQA，它在推理时，每层每个token所需要缓存的量为
+<span class="math inline">\(2{d}_{h}\)</span>，相比MHA有了1~2两个数量级的减少。可以说这是这种减少KV组数的思路的极限了。但是GQA/MQA毕竟相当于减少了注意力头的数量，在效果上就会有一定的损失。</p>
+<p>DeepSeek-V2报告里也对此进行了验证：用1.33T
+token的数据分别训练了MHA、GQA、MQA的7B模型，在4个benchmark的对比如下</p>
+<img src="/83c49df0/GQA_compare_MHA.png" class title="MHA&#x2F;GQA&#x2F;MQA效果对比">
+<p>相比MHA，MQA效果损失最大，GQA次之。</p>
+<p>2、MLA</p>
+<p>MLA通过对K和V做low-rank joint compression来压缩KV
+cache，理论上可以更有效地压缩KV缓存值。</p>
+<img src="/83c49df0/MLA.png" class title="MLA">
+<p>下面看下MLA具体是怎么做的。</p>
+<p>在MHA中，K和V是对 <span class="math inline">\(h_t\)</span>
+分别用投影矩阵进行变化得到的，而MLA把KV的变换改成使用一个共用的down-projection
+matrix和两个up-projection matrices进行操作：</p>
+<p><span class="math display">\[\mathbf{c}_t^{KV}=W^{DKV}\mathbf{h}_t\]</span></p>
+<p><span class="math display">\[\mathbf{k}_t^C=W^{UK}\mathbf{c}_t^{KV}\]</span></p>
+<p><span class="math display">\[\mathbf{v}_t^C=W^{UV}\mathbf{c}_t^{KV}\]</span></p>
+<p><span class="math inline">\(\mathfrak{c}_t^{KV}\in\mathbb{R}^{d_c}\)</span>
+就是K和V的compressed latent vector，这也是推理时要缓存的部分。</p>
+<p>这里相当于把MHA中的 <span class="math inline">\(W^{K},W^{V}\)</span>
+拆成两个矩阵：</p>
+<p><span class="math display">\[\mathbf{k}_t=W^K\mathbf{h}_t\rightarrow\mathbf{k}_tW^{UK}W^{DKV}\mathbf{h}_t\]</span></p>
+<p><span class="math display">\[\mathbf{v}_t=W^V\mathbf{h}_t\rightarrow\mathbf{k}_tW^{UV}W^{DKV}\mathbf{h}_t\]</span></p>
+<p><span class="math inline">\(d_c\)</span> 是KV的压缩维度，让 <span class="math inline">\(d_c\ll
+d_hn_h\)</span>，就可以大大减少需要推理时需要缓存的数据量。</p>
+<p>看回attention计算，在得到q、k、v之后，会计算权重矩阵并获得最终注意力输出结果：</p>
+<p><span class="math display">\[\operatorname{Attention}(Q,K,V)=\operatorname{softmax}(\frac{Q^TK}{\sqrt{d}})V\]</span></p>
+<p>而 <span class="math inline">\(Q^TK=H^T(W^Q)^TW^{UK}C\)</span>
+中，因此 <span class="math inline">\(W^{UK}\)</span> 可以被吸收进 <span class="math inline">\(W^{Q}\)</span>
+中，而不用在计算时显式算出K，只需调整 <span class="math inline">\(W^Q\)</span> 的shape后直接输入C即可。同理 <span class="math inline">\(W^{UV}\)</span> 可以被吸收进 <span class="math inline">\(W^{O}\)</span>。实操上，这样的矩阵合并可能会带来一些精度损失，这是一个值得注意的问题。</p>
+<p>此外，DeepSeek-V2还对Q也做了low-rank
+compression，跟对K、V的操作类似：</p>
+<p><span class="math display">\[\mathbf{c}_t^Q=W^{DQ}\mathbf{h}_t,\\\mathbf{q}_t^C=W^{UQ}\mathbf{c}_t^Q,\]</span></p>
+<p>关于对Q进行压缩的原因，这里原文说的是为了减少训练时的activation。但是两个矩阵所得的activation按道理应该比直接使用单个投影矩阵还要多一些，因此此处有点疑问。苏神在<a target="_blank" rel="noopener" href="https://kexue.fm/archives/10091">《缓存与效果的极限拉扯：从MHA、MQA、GQA到MLA》</a>中也认为Q的压缩更多是减少了参数量和梯度，而非激活值。</p>
+<p>3、兼容RoPE</p>
+<p>到这里似乎MLA已经完成了，即减少了缓存的量，也不用引入其他overhead（两个up-projection
+matrices都不用算了）。</p>
+<p>但是实际上还有一个问题没有解决。同大部分其他大模型一样，DeepSeek-V2使用的位置编码是RoPE，而RoPE是通过在Q、K上乘一个旋转矩阵来编码位置的。相关内容可参考<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/684072868">《理解LLM位置编码:RoPE》</a>。</p>
+<p>而在上面MLA的设计中，已经没有显式计算K了，而RoPE也不能加在latent
+vector上。一个方法是重新把K和V显式计算出来，但是这样计算量就会增加，MLA的推理加速效果就会打折扣。</p>
+<p>针对这个问题，DeepSeek-V2提出decoupled
+RoPE的解决方案，使用额外的multi-head queries <span class="math inline">\(\mathbf{q}_{t,i}^R\in\mathbb{R}^{d_h^R}\)</span>
+和一个shared key <span class="math inline">\(\mathbf{k}_t^R\in\mathbb{R}^{d_h^R}\)</span>
+来携带RoPE的位置信息，<span class="math inline">\(d_h^R\)</span>
+是decoupled queries的维度。</p>
+<p>新增的q和k维度使用常规的RoPE计算，用于携带位置信息；而原来的维度依然使用低秩分解的方式计算，最后再计算attention的时候两个部分拼接起来。</p>
+<p>最终完整的MLA计算如下</p>
+<img src="/83c49df0/MLA_formula.png" class title="MLA公式">
+<p>蓝框中的部分就是推理时需要缓存的内容。</p>
+<p>MLA所需的缓存量约等于组数为2.5的GQA：</p>
+<img src="/83c49df0/MLA_cache.png" class title="MLA缓存量">
+<p>在效果上，DeepSeek-V2分别对比了MLA和MHA的16B模型（训练1.33T
+token）和250B模型（训练420B token）：</p>
+<img src="/83c49df0/MLA_perf.png" class title="MLA效果">
+<p>在4个benchmark上看，MLA基本都比要比MHA要好。这个结果还是有些出乎意料的，这妥妥就是免费的午餐，在节省KV
+cache的同时还能获得效果提升。感觉MLA效果还有待进一步验证。</p>
+<h2 id="负载均衡">负载均衡</h2>
+<p>负载均衡策略是MoE永远要考虑的问题，对效果和效率都有很大的影响。</p>
+<p>1、Device-Limited Routing</p>
+<p>在使用专家并行的情况下，每个token所需的通讯量取决于它的target
+expert所在的device数。而由于使用了fine-grained
+expert，这个device数量可能会比较大，就会导致通讯成为瓶颈。</p>
+<p>因此DeepSeek-V2会基于target
+expert的得分，限制最多所能发送的device数量M。实践中，发现M≥3就能达到和不限制相同的效果了。</p>
+<p>2、Expert-Level Balance Loss</p>
+<p>和DeepSeekMoE V1一样，专家级的负载均衡如下：</p>
+<p><span class="math display">\[\begin{aligned}
+\mathcal{L}_{\mathrm{ExpBal}}&amp; =\alpha_1\sum_{i=1}^{N_r}f_iP_i
+\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}
+f_{i}&amp; =\frac{N_{r}}{K_{r}T}\sum_{t=1}^T\mathbb{1}(\text{Token
+}t\text{ selects Expert }i)
+\end{aligned}\]</span></p>
+<p><span class="math display">\[\begin{aligned}
+P_{i}&amp; =\frac1T\sum_{t=1}^Ts_{i,t}
+\end{aligned}\]</span></p>
+<p><span class="math inline">\(\alpha_1\)</span> 是expert-level balance
+factor，T为token数。</p>
+<p>3、Device-Level Balance Loss</p>
+<p>在使用专家并行的情况下，专家被分成D个组<span class="math inline">\(\{\mathcal{E}_1,\mathcal{E}_2,...,\mathcal{E}_D\}\)</span>，各个组之间的负载均衡损失：</p>
+<p><span class="math display">\[\mathcal{L}_\mathrm{DevBal}=\alpha_2\sum_{i=1}^Df_i^{\prime}P_i^{\prime}\]</span></p>
+<p><span class="math display">\[f_i&#39;=\frac1{|\mathcal{E}_i|}\sum_{j\in\mathcal{E}_i}f_j\]</span></p>
+<p><span class="math display">\[P_i&#39;=\sum_{j\in\mathcal{E}_i}P_j\]</span></p>
+<p><span class="math inline">\(\alpha_2\)</span> 是device-level balance
+factor。</p>
+<p>4、Communication Balance Loss</p>
+<p>前面对token发送target专家的总device数做了限制，但是依然有可能出现某些device【接收】的token数量不平衡的情况，这同样会影响通讯效率。</p>
+<p>因此这里还加了一个communication balance loss：</p>
+<p><span class="math display">\[\mathcal{L}_{\mathrm{CommBal}}=\alpha_3\sum_{i=1}^Df_i^{\prime\prime}P_i^{\prime\prime}\]</span></p>
+<p><span class="math display">\[f_i^{\prime\prime}=\frac
+D{MT}\sum_{t=1}^T1(\text{Token t is sent to Device i})\]</span></p>
+<p><span class="math display">\[P_i&#39;&#39;=\sum_{j\in\mathcal{E}_i}P_j\]</span></p>
+<p><span class="math inline">\(\alpha_3\)</span> 是communication balance
+factor。</p>
+<p>5、Token-Dropping Strategy</p>
+<p>前面虽然加了各种负载均衡loss，但是实际上还是没有办法保证能够得到严格的负载均衡，因此在训练时还引入了一个device-level
+token-dropping
+strategy，对每个device设定一个capacity，如果在一个batch中，某个device所处理的token达到了容量，那么后面再分配到这个device的token就都会被drop。</p>
+<p>另外为了保证模型能够处理到完整的sequence，训练时有10%的sequence保证永远不drop任何token。</p>
+<p>注意这个策略只在训练时时候，推理时不会给device设置容量限制。</p>
+<h1 id="训练">训练</h1>
+<p>DeepSeek-V2使用和DeepSeek
+67B一样的tokenizer，BBPE训练出来的100k词表。</p>
+<p>模型的所有预训练数据约有8.1T，其中12%是中文。</p>
+<h2 id="超参">超参</h2>
+<p>1、模型超参</p>
+<ul>
+<li>layer num = 60<br>
+</li>
+<li>hidden size = 5120<br>
+</li>
+<li>initialization standard deviation = 0.006<br>
+</li>
+<li>attention head数量 = 128，每个attention head size = 128<br>
+</li>
+<li>KV压缩维度 <span class="math inline">\(d_c=512\)</span><br>
+</li>
+<li>Q压缩维度 <span class="math inline">\(d_c&#39;=1536\)</span><br>
+</li>
+<li>decoupled queries and key per head dimension = 64<br>
+</li>
+<li>2个共享专家 + 6/160路由专家<br>
+</li>
+<li>专家大小 = 1536<br>
+</li>
+<li>总参数236B，激活参数21B</li>
+</ul>
+<p>2、预训练超参</p>
+<ul>
+<li>AdamW：beta_1 = 0.9，beta_2 = 0.95，weight_decay = 0.1<br>
+</li>
+<li>lr scheduler：warmup-and-step-decay，warmup = 2k step，最大lr =
+2.4E-4；在训练进度60%和90%的时候lr乘以0.316<br>
+</li>
+<li>gradient clipping norm = 1.0<br>
+</li>
+<li>batch size scheduling strategy：在训练的前225B，batch
+size逐渐从2304增大到9216，之后保持不变<br>
+</li>
+<li>maximum sequence length = 4k<br>
+</li>
+<li>负载均衡权重：<span class="math inline">\(\alpha_1=0.003\)</span>，<span class="math inline">\(\alpha_2=0.05\)</span>，<span class="math inline">\(\alpha_3=0.02\)</span></li>
+</ul>
+<h2 id="长窗口">长窗口</h2>
+<p>在完成基础预训练后，通过在 <span class="math inline">\(k_t^R\)</span>
+上使用YaRN把模型窗口从4k推广到128k。YaRN的参数设置如下：<br>
+- s = 40<br>
+- α = 1<br>
+- β = 32<br>
+- target maximum context length = 160k</p>
+<p>和原始的YaRN有所不同，由于注意力机制有所改动，所以把length scaling
+factor改成 <span class="math inline">\(\sqrt{t}=0.0707\ln
+s+1\)</span>，以更好调控注意力熵。</p>
+<p>整个长文本训练在32k长度，batch size =
+576的数据上训练了1000步，最终在大海捞针评测上的结果如下</p>
+<img src="/83c49df0/needle.png" class title="大海捞针">
+<h2 id="评测">评测</h2>
+<p>DeepSeek-V2的base模型和其他较大规模模型的效果对比如下</p>
+<img src="/83c49df0/pt_eval.png" class title="评测">
+<p>DeepSeek-V2看起来基本达到了和70B规模dense模型竞争的水平。</p>
+<h2 id="对齐">对齐</h2>
+<p>SFT共使用了1.5M条数据，其中1.2M条以helpfulness为主，0.3M条以safety为主。</p>
+<p>训练设置：<br>
+- epoch = 2<br>
+- lr = 5e-6</p>
+<p>在SFT基础上，DeepSeek-V2通过GRPO进行了强化学习训练。</p>
+<p>最终对齐模型的评测如下</p>
+<img src="/83c49df0/align_eval.png" class title="评测">
+<h1 id="deepseek-v2-lite">DeepSeek-V2-Lite</h1>
+<p>为方便开源研究，研究人员还提供一个稍小一点规模的DeepSeek-V2-Lite。</p>
+<p>模型超参：<br>
+- layer num = 27<br>
+- hidden size = 2048<br>
+- initialization standard deviation = 0.006<br>
+- attention head数量 = 16，每个attention head size = 128<br>
+- KV压缩维度 <span class="math inline">\(d_c=512\)</span><br>
+- Q不进行压缩<br>
+- decoupled queries and key per head dimension = 64<br>
+- 2个共享专家 + 6/64路由专家<br>
+- 第一层不使用MoE<br>
+- 专家大小 = 1408<br>
+- 总参数15.7B，激活参数2.4B</p>
+<p>预训练超参：<br>
+- AdamW：beta_1 = 0.9，beta_2 = 0.95，weight_decay = 0.1<br>
+- lr scheduler：warmup-and-step-decay，warmup = 2k step，最大lr =
+4.2E-4；在训练进度60%和90%的时候lr乘以0.316<br>
+- gradient clipping norm = 1.0<br>
+- constant batch size = 4608<br>
+- maximum sequence length = 4k<br>
+- 负载均衡权重：<span class="math inline">\(\alpha_1=0.003\)</span>，没有使用其他负载均衡loss<br>
+- 总训练量 = 5.7T</p>
+<img src="/83c49df0/lite_eval_1.png" class title="评测">
+<img src="/83c49df0/lite_eval_2.png" class title="评测">
+<h1 id="小结">小结</h1>
+<ul>
+<li>MLA是DeepSeek-V2很重要一个模块，在提升推理效率上有很大帮助，这个方向后续应该会有更多工作。<br>
+</li>
+<li>MoE受到越来越多的关注，几乎有一半的popular的模型是MoE结构了。</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
+<hr>
+<h1 id="reference">Reference</h1>
+<p>【1】DeepSeek-V2: A Strong, Economical, and Efficient
+Mixture-of-Experts Language Model https://arxiv.org/abs/2405.04434<br>
+【2】缓存与效果的极限拉扯：从MHA、MQA、GQA到MLA
+https://kexue.fm/archives/10091</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/83c49df0.html" title="DeepSeek-V2和MLA">https://saicat.github.io/83c49df0.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E6%8A%80%E6%9C%AF%E6%8A%A5%E5%91%8A/" rel="tag"><i class="fa fa-tag"></i> 技术报告</a>
+              <a href="/tags/MoE/" rel="tag"><i class="fa fa-tag"></i> MoE</a>
+              <a href="/tags/DeepSeek/" rel="tag"><i class="fa fa-tag"></i> DeepSeek</a>
+              <a href="/tags/MLA/" rel="tag"><i class="fa fa-tag"></i> MLA</a>
+              <a href="/tags/GQA/" rel="tag"><i class="fa fa-tag"></i> GQA</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/770b63e1.html" rel="prev" title="bilibili的index-1.9B">
+                  <i class="fa fa-angle-left"></i> bilibili的index-1.9B
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">262k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">7:57</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
