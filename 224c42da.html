@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  北大、快手和AGIBang共同提出MoE模型的dynamic routing机制，把gating的top-k routing改成top-p routing，在减少平均激活参数量的同时效果还略有提升。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MoE的top-p routing">
+<meta property="og:url" content="https://saicat.github.io/224c42da.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  北大、快手和AGIBang共同提出MoE模型的dynamic routing机制，把gating的top-k routing改成top-p routing，在减少平均激活参数量的同时效果还略有提升。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/224c42da/top-p.png">
+<meta property="og:image" content="https://saicat.github.io/224c42da/perf.png">
+<meta property="og:image" content="https://saicat.github.io/224c42da/diff_p.png">
+<meta property="og:image" content="https://saicat.github.io/224c42da/active_num.png">
+<meta property="og:image" content="https://saicat.github.io/224c42da/task_expert.png">
+<meta property="og:image" content="https://saicat.github.io/224c42da/diff_layer.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-07-15T12:34:00.000Z">
+<meta property="article:modified_time" content="2024-07-15T13:03:11.099Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="MoE">
+<meta property="article:tag" content="routing">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/224c42da/top-p.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/224c42da.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/224c42da.html","path":"224c42da.html","title":"MoE的top-p routing"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>MoE的top-p routing | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#routing"><span class="nav-number">1.</span> <span class="nav-text">routing</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#top-k-routing"><span class="nav-number">1.1.</span> <span class="nav-text">top-k routing</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#top-p-routing"><span class="nav-number">1.2.</span> <span class="nav-text">top-p routing</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#loss"><span class="nav-number">2.</span> <span class="nav-text">Loss</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#dynamic-loss"><span class="nav-number">2.1.</span> <span class="nav-text">Dynamic Loss</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#load-balance-loss"><span class="nav-number">2.2.</span> <span class="nav-text">Load Balance Loss</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#final-loss"><span class="nav-number">2.3.</span> <span class="nav-text">Final Loss</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">3.</span> <span class="nav-text">实验</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">3.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">3.2.</span> <span class="nav-text">模型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#p%E7%9A%84%E5%BD%B1%E5%93%8D"><span class="nav-number">4.1.</span> <span class="nav-text">p的影响</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BF%80%E6%B4%BB%E4%B8%93%E5%AE%B6%E6%94%B6%E6%95%9B"><span class="nav-number">4.2.</span> <span class="nav-text">激活专家收敛</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#top-p-moe%E9%80%82%E5%90%88%E6%9B%B4%E9%9A%BE%E7%9A%84%E4%BB%BB%E5%8A%A1"><span class="nav-number">4.3.</span> <span class="nav-text">top-p MoE适合更难的任务</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BA%95%E5%B1%82%E9%9C%80%E8%A6%81%E6%BF%80%E6%B4%BB%E6%9B%B4%E5%A4%9A%E4%B8%93%E5%AE%B6"><span class="nav-number">5.</span> <span class="nav-text">底层需要激活更多专家</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">37</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">44</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/224c42da.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="MoE的top-p routing | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MoE的top-p routing
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-07-15 20:34:00 / 修改时间：21:03:11" itemprop="dateCreated datePublished" datetime="2024-07-15T20:34:00+08:00">2024-07-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>北大、快手和AGIBang共同提出MoE模型的dynamic
+routing机制，把gating的top-k routing改成top-p
+routing，在减少平均激活参数量的同时效果还略有提升。</p>
+<p>MoE相关基础可参考<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a>。</p>
+<h1 id="routing">routing</h1>
+<h2 id="top-k-routing">top-k routing</h2>
+<p>目前大部分的MoE模型采用的routing策略是top-k routing。比如当 k =
+2，则每个输入token在每个MoE层会激活2个专家（忽略token drop等机制）。</p>
+<p>假设每个MoE层有N个expert，这些expert的集合记为 <span class="math inline">\(E=\{e_{1},e_{2},..,e_{N}\}\)</span>，那么输入token
+x在MoE层的计算如下：</p>
+<p><span class="math display">\[MoE(\mathbf{x})=\sum_{i=1}^Ng_i(\mathbf{x})*e_i(\mathbf{x})\]</span></p>
+<p><span class="math display">\[g_i(\mathbf{x})=\begin{cases}\frac{P_i}{\sum_{j\in
+TopK(\mathbf{P})}P_j},&amp;i\in TopK(\mathbf{P})\\0,&amp;i\notin
+TopK(\mathbf{P})\end{cases}\]</span></p>
+<p><span class="math display">\[\mathbf{P}=Softmax(\mathbf{W_r}\cdot\mathbf{x}^T)\]</span></p>
+<p>top-k routing由Google在《Outrageously large neural networks: The
+sparsely-gated mixture-of-experts
+layer》中提出，应用在LSTM模型上，之后的一些工作比如《Gshard》、《Switch
+Transformer》、《ST-MoE》和《Taming sparsely activated transformer with
+stochastic
+experts》等则引入了相关constraint来确保多个专家间的负载均衡，以保障模型的效果和效率。</p>
+<h2 id="top-p-routing">top-p routing</h2>
+<p>虽然top-k
+routing的效果不错，但是每个token都激活相同数量的专家这个假设粗暴地忽略了不同输入token之间的难度区别，并且在不同MoE层也都激活相同数量的专家这样的策略也没有考虑到模型不同层间的表达能力差异。</p>
+<p>针对这个情况，就有了top-p
+routing的策略：不直接限制每个token激活的专家数量，而是根据设定的阈值p（超参），一个一个把候选专家中gating得分最高的加入到激活专家集合里，直到激活专家集合的accumulative
+confidence超过p。写成公式如下：</p>
+<p><span class="math display">\[t=\underset{k\in\{1...,N\}}{argmin}\sum_{j&lt;=k}P_{i,j}\geq
+p\]</span></p>
+<p><span class="math display">\[g_i(\mathbf{x})=\begin{cases}P_i&amp;e_i\in
+S\\0,&amp;e_i\notin S\end{cases}\]</span></p>
+<p><span class="math display">\[S=\{e_{I_1},e_{I_2}...e_{I_t}\}\]</span></p>
+<p>top-k routing和top-p routing的示意图如下：</p>
+<img src="/224c42da/top-p.png" class title="top-p">
+<h1 id="loss">Loss</h1>
+<h2 id="dynamic-loss">Dynamic Loss</h2>
+<p>使用top-p
+routing会有一个风险：模型可能会学到把gating的权重在所有专家间进行均匀分配的策略，因为这样可以使得激活的专家数最大。</p>
+<p>比如阈值p设置为0.5，那么在所有专家的权重均匀分配的情况下，激活专家数为总专家数的一半，这远多于正常MoE机制下的激活比例。这样由于激活参数量较大，最终模型的效果就会更好。</p>
+<p>但这样的均匀分配策略显然是违背了MoE设计的初衷的。</p>
+<p>为了避免这个问题，避免出现均匀分布的情况，可以增加一个dynamic
+loss，要求模型最小化权重分布P的熵，让不同专家可以专注在特定的领域，提高专家化的程度：</p>
+<p><span class="math display">\[Loss_d=-\sum_{i=1}^NP_i*log(P_i)\]</span></p>
+<h2 id="load-balance-loss">Load Balance Loss</h2>
+<p>这里负载均衡损失的设计就比较常规，和很多其他MoE模型所用的一致：</p>
+<p><span class="math display">\[Loss_b=N*\sum_{i=1}^Nf_i*Q_i\]</span></p>
+<p><span class="math display">\[f_i=\frac{1}{M}\sum_{j=1}^M1\{e_i\in
+S^j\}\]</span></p>
+<p><span class="math display">\[Q_i=\frac{1}{M}\sum_{j=1}^nP_i^j\]</span></p>
+<p><span class="math inline">\(S^{j}\)</span>
+是第j个token激活的专家集合。</p>
+<h2 id="final-loss">Final Loss</h2>
+<p>最后完整的训练loss计算如下：</p>
+<p><span class="math display">\[Loss=Loss_{lm}+\alpha Loss_b+\beta
+Loss_d\]</span></p>
+<p>训练中，使用了 <span class="math inline">\(\alpha=1e-2\)</span>，<span class="math inline">\(\beta=1e-4\)</span>。</p>
+<h1 id="实验">实验</h1>
+<h2 id="数据">数据</h2>
+<p>从RedPajama抽了100B数据，包括common crawl (CC), C4, github,
+Wikipedia, books, arxiv 和 Stackexchange。</p>
+<h2 id="模型">模型</h2>
+<p>模型采用LLaMA的结构：<br>
+- vocab size = 32000<br>
+- layer num = 24<br>
+- 初始化standard deviation = 0.006<br>
+- MHA，head num = 16，head size = 64</p>
+<p>共设计了5个模型：<br>
+- dense模型1：hidden size = 1024，总参数量 = 374M<br>
+- dense模型2：hidden size = 1280，总参数量 = 570M<br>
+- top-1 MoE模型：hidden size = 1024，专家数 = 16，总参数量 =
+3.5B，激活参数量 = 374M<br>
+- top-2 MoE模型：hidden size = 1024，专家数 = 16，总参数量 =
+3.5B，激活参数量 = 581M<br>
+- top-p MoE模型：hidden size = 1024，专家数 = 16，总参数量 = 3.5B，阈值p
+= 0.4</p>
+<p>训练设置如下：<br>
+- AdamW，beta_1 = 0.9, beta_2 = 0.95<br>
+- weight decay = 0.1<br>
+- cosine schedule<br>
+- max lr = 3e-4，final lr = 3e-5<br>
+- warmup = 2000 step<br>
+- context length = 2048<br>
+- batch size = 2048</p>
+<p>上面5个模型的在下游任务的对比如下</p>
+<img src="/224c42da/perf.png" class title="performance">
+<p>top-p MoE在下游任务上的平均激活专家数为1.76。</p>
+<p>top-p MoE以≤top-2 MoE模型90%的激活参数量，获得了比top-2
+MoE提升0.7%的效果。</p>
+<h1 id="分析">分析</h1>
+<h2 id="p的影响">p的影响</h2>
+<p>不同的阈值p（0.1~0.7）下的模型效果</p>
+<img src="/224c42da/diff_p.png" class title="p">
+<p>当p值特别低比如0.1或者0.2时，效果比较差，而p≥0.3之后基本就效果保持在比较好的水平了。</p>
+<h2 id="激活专家收敛">激活专家收敛</h2>
+<p>top-p
+MoE在训练一开始激活的专家数会比较多，而随着训练进行，激活专家数逐渐下降：</p>
+<img src="/224c42da/active_num.png" class title="训练过程激活专家数">
+<p>可以看到在60B以后就逐渐低于2了，并且从图上看还有下降趋势。这里实验只做了100B，如果训了1T或者10T，应该会有更大的收益。</p>
+<h2 id="top-p-moe适合更难的任务">top-p MoE适合更难的任务</h2>
+<p>BBH（BIG-Bench Hard），包括了23个比较有挑战性的BIG-Bench任务。</p>
+<p>从下图可以看到，相比其他任务，模型在BBH任务会激活更多的专家</p>
+<img src="/224c42da/task_expert.png" class title="激活专家数">
+<p>并且相对于其他下游任务，top-p MoE在BBH上的提升也是最多的。</p>
+<p>这说明top-p
+MoE允许模型激活更多的专家，以获得足够的能力和信息，从而能在更难的任务上进一步提升效果。</p>
+<h1 id="底层需要激活更多专家">底层需要激活更多专家</h1>
+<p>top-p
+MoE以更少的激活参数量在下游任务取得更好的效果，这归功于专家在不同层间的合理分配。</p>
+<p>下图给出模型不同MoE层的平均激活专家数量</p>
+<img src="/224c42da/diff_layer.png" class title="不同层激活专家数">
+<p>这样的现象和overthinking有些相似。</p>
+<p>按《Shallow-deep networks: Understanding and mitigating network
+overthinking》说法，overthinking指相对于最终层的复杂表示，更早期层中输入样本的更简单表示就足以做出正确的预测。</p>
+<p>随着层数增多，激活的专家数量逐渐下降。模型能够把更多的计算budget用在收益更大的浅层表征，提升最终效果。</p>
+<h1 id="小结">小结</h1>
+<ul>
+<li>解除MoE模型的专家激活数限制，可以让模型自由选择需要的专家，以应对更难的任务，应该是个不错的思路。</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Harder Tasks Need More Experts: Dynamic Routing in MoE Models
+https://arxiv.org/abs/2403.07652</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/224c42da.html" title="MoE的top-p routing">https://saicat.github.io/224c42da.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/MoE/" rel="tag"><i class="fa fa-tag"></i> MoE</a>
+              <a href="/tags/routing/" rel="tag"><i class="fa fa-tag"></i> routing</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/83c49df0.html" rel="prev" title="DeepSeek-V2和MLA">
+                  <i class="fa fa-angle-left"></i> DeepSeek-V2和MLA
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">266k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">8:04</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
