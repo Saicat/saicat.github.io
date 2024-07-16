@@ -27,16 +27,23 @@
 <meta property="og:site_name" content="Linsight">
 <meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  包括清华和港科大的五所高校对几个MoE模型进行一些研究，并给出一些相应的模型设计建议。">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/models.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/matrix_level.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/t2.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/gating_1.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/gating_2.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/dynamic.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/norm.png">
 <meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
 <meta property="article:published_time" content="2024-07-16T12:14:40.000Z">
-<meta property="article:modified_time" content="2024-07-16T12:18:37.879Z">
+<meta property="article:modified_time" content="2024-07-16T12:33:17.731Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
 <meta property="article:tag" content="transformer">
 <meta property="article:tag" content="MoE">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta name="twitter:image" content="https://saicat.github.io/5e1d14b3/models.png">
 
 
 <link rel="canonical" href="https://saicat.github.io/5e1d14b3.html">
@@ -244,7 +251,7 @@ and Gate Scores</span></a></li><li class="nav-item nav-level-2"><a class="nav-li
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2024-07-16 20:14:40 / 修改时间：20:18:37" itemprop="dateCreated datePublished" datetime="2024-07-16T20:14:40+08:00">2024-07-16</time>
+      <time title="创建时间：2024-07-16 20:14:40 / 修改时间：20:33:17" itemprop="dateCreated datePublished" datetime="2024-07-16T20:14:40+08:00">2024-07-16</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -304,17 +311,17 @@ d_{\mathrm{mid}}}\]</span></p>
 <p>这里把 <span class="math inline">\(W_{\mathrm{up}}[i,:]\)</span> 和
 <span class="math inline">\(W_{\mathrm{gate}}[i,:]\)</span>
 这两个行向量以及 <span class="math inline">\(W_{\mathrm{down}}[:,i]\)</span>
-这个列向量定义为一个neuron，这样每个专家就包含d_mid个专家。这些neuron后面会用于分析。</p>
+这个列向量定义为一个neuron，这样每个专家就包含d_mid个专家，这些neuron后面会有分析。</p>
 <h1 id="研究对象">研究对象</h1>
 <p>文章中选择了Mixtral 8x7B，DeepSeekMoE 和
-Grok-1三个MoE作为研究对象，另外还加上了Mistral
+Grok-1三个MoE模型作为研究对象，另外还加上了Mistral
 7B这个dense模型作为对比。</p>
 <p>各个模型设置对比如下</p>
-<p>【table 1】</p>
+<img src="/5e1d14b3/models.png" class title="模型">
 <p>后续研究使用的相似度如无说明都是指cosine similarity。</p>
 <h1 id="analysis-of-static-parameters">Analysis of Static
 Parameters</h1>
-<p>对这些模型的研究主要包含（1）MoE
+<p>对这些模型的静态参数研究主要是（1）MoE
 experts和（2）gating，这两个也是MoE最重要的部分。</p>
 <h2 id="moe-experts">MoE experts</h2>
 <p>参照《Transformer feed-forward layers are keyvalue
@@ -328,31 +335,33 @@ matrices可以看做是keys和values：<br>
 <p>1、matrix level</p>
 <p>各个模型不同层下，所有专家三个投影矩阵对应的相似度如下图（DeepSeekMoE忽略了shared
 expert）。计算相似度的时候把矩阵进行了一维展开，之后通过PCA把维度转换到2维。</p>
-<p>【Figure 1】</p>
+<img src="/5e1d14b3/matrix_level.png" class title="matrix level">
 <p>一些发现：<br>
 -
-DeepSeekMoE和Grok-1的专家相似度比Mixtral低，而DeepSeekMoE和Grok-1是从零训练的，这表明Mixtral很可能是从dense模型初始化的。<br>
+DeepSeekMoE和Grok-1的专家相似度比Mixtral低，而DeepSeekMoE和Grok-1是从零训练的，这表明Mixtral可能不是从零初始化的。<br>
 -
-Mixtral中有一些专家和其他所有专家的相似度都极低，这表明这些专家可能学到了一些特殊的内容。<br>
-- 深层的专家相似度相比浅层更低，这可能说明有更强的专业化程度。</p>
+Mixtral中有一些专家和其他所有专家的相似度都极低，表明这些专家可能学到了一些特殊的内容。<br>
+-
+深层的专家相似度相比浅层更低，这说明深层专家可能有更高的专业化程度。</p>
 <p>2、neuron level</p>
 <p>matrix
 level的计算没有考虑到这样的情况：两个专家有相似的neuron，但是这些neuron的位置不同，这样也会导致相似度不高。因此这里通过取平均和重排序的方式来研究neuron
 level的相关性。重排序使用了Jonker-Volgenant算法。</p>
-<p>重排序后的相似度增长和Kendall’s
-coefficient如下。是一种用于衡量多个评分者或多个方法对同一组对象进行评分或排名的一致性的统计量：1表示完全正相关，即两个变量的排名完全一致，-1表示完全负相关，即一个变量的排名与另一个变量的排名完全相反，0表示没有相关性，即两个变量的排名之间没有一致的模式。</p>
-<p>【table 2】</p>
-<p>可以看到Mixtral的相似度依然是显著高于其他模型。</p>
+<p>重排序后的相似度增长和Kendall’s coefficient如下表所示。Kendall’s
+coefficient是一种用于衡量多个评分者或多个方法对同一组对象进行评分或排名的一致性的统计量：1表示完全正相关，即两个变量的排名完全一致，-1表示完全负相关，即一个变量的排名与另一个变量的排名完全相反，0表示没有相关性，即两个变量的排名之间没有一致的模式。</p>
+<img src="/5e1d14b3/t2.png" class title="neuron level">
+<p>可以看到Mixtral的相关性依然是显著高于其他模型，说明其各个专家之间的初始化可能有关联。</p>
 <h2 id="gate-embedding">Gate Embedding</h2>
-<p>对于gating，文章首先计算了gate
-embedding向量之间的相似度，发现和matrices之间的相似度结果相似。</p>
+<p>对于gating，研究人员首先计算了gate
+embedding向量之间的相似度，发现gate
+embedding的相似度和matrices之间的相似度结果相似。</p>
 <p>而后又研究了gate
 embedding（X）和W_up、W_gate、W_down（Y）的相似关系，并做了linear
 regression。下表是各个模型所有层平均之后的square of Pearson correlation
 coefficients。</p>
-<p>【table 3】</p>
+<img src="/5e1d14b3/gating_1.png" class title="gating">
 <p>具体各层的数据</p>
-<p>【table 4】</p>
+<img src="/5e1d14b3/gating_2.png" class title="gating">
 <p>一些发现：<br>
 - gate embedding和W_gate的相似度最高。<br>
 -
@@ -371,8 +380,7 @@ Behaviours</h1>
 <h2 id="outputs-of-experts">Outputs of Experts</h2>
 <p>对于MoE模型，一个自然的问题是，选中专家和未选中专家的输出之间有哪些相似性和差异性。</p>
 <p>短文本和长文本的各个专家（包含没有被选中的专家）的输出的相似度如下。</p>
-<p>【figure 2】</p>
-<p>【figure 3】</p>
+<img src="/5e1d14b3/dynamic.png" class title="相似度">
 <p>这里长文本使用的是angular similarity：</p>
 <p><span class="math display">\[\text{angular
 sim}=1-\frac{\arccos{(\text{cosine sim})}}{\pi}\]</span></p>
@@ -385,7 +393,7 @@ and Gate Scores</h2>
 <p>在上面这个实验发现被选中的专家的相似度会比较高，为了探索可能的原因，这里对experts的L2
 norm和gating decision的关系进行了研究。</p>
 <p>使用了短文本作为输入，gate score和对应专家的norm如下</p>
-<p>【figure 4】</p>
+<img src="/5e1d14b3/norm.png" class title="norm">
 <p>Mixtral：发现被门控网络选中的两个expert通常都是feature vector
 norm最高的那两个。这个发现和《Competesmoe–effective training of sparse
 mixture of experts via
