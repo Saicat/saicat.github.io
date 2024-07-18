@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  包括清华和港科大的五所高校对几个MoE模型进行一些研究，并给出一些相应的模型设计建议。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="对MoE模型的一些观察">
+<meta property="og:url" content="https://saicat.github.io/5e1d14b3.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  包括清华和港科大的五所高校对几个MoE模型进行一些研究，并给出一些相应的模型设计建议。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/models.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/matrix_level.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/t2.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/gating_1.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/gating_2.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/dynamic.png">
+<meta property="og:image" content="https://saicat.github.io/5e1d14b3/norm.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-07-16T12:14:40.000Z">
+<meta property="article:modified_time" content="2024-07-16T12:33:17.731Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="MoE">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/5e1d14b3/models.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/5e1d14b3.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/5e1d14b3.html","path":"5e1d14b3.html","title":"对MoE模型的一些观察"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>对MoE模型的一些观察 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#moe"><span class="nav-number">1.</span> <span class="nav-text">MoE</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%A0%94%E7%A9%B6%E5%AF%B9%E8%B1%A1"><span class="nav-number">2.</span> <span class="nav-text">研究对象</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#analysis-of-static-parameters"><span class="nav-number">3.</span> <span class="nav-text">Analysis of Static
+Parameters</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#moe-experts"><span class="nav-number">3.1.</span> <span class="nav-text">MoE experts</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gate-embedding"><span class="nav-number">3.2.</span> <span class="nav-text">Gate Embedding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#summary"><span class="nav-number">3.3.</span> <span class="nav-text">Summary</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#analysis-of-dynamic-behaviours"><span class="nav-number">4.</span> <span class="nav-text">Analysis of Dynamic
+Behaviours</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#outputs-of-experts"><span class="nav-number">4.1.</span> <span class="nav-text">Outputs of Experts</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#norms-of-expert-outputs-and-gate-scores"><span class="nav-number">4.2.</span> <span class="nav-text">Norms of Expert Outputs
+and Gate Scores</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#summary-1"><span class="nav-number">4.3.</span> <span class="nav-text">Summary</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#suggestions"><span class="nav-number">5.</span> <span class="nav-text">Suggestions</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">40</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">46</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/5e1d14b3.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="对MoE模型的一些观察 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          对MoE模型的一些观察
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-07-16 20:14:40 / 修改时间：20:33:17" itemprop="dateCreated datePublished" datetime="2024-07-16T20:14:40+08:00">2024-07-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>9 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>包括清华和港科大的五所高校对几个MoE模型进行一些研究，并给出一些相应的模型设计建议。</p>
+<h1 id="moe">MoE</h1>
+<p>当前主流的Sparse Mixture-of-Experts模型在N个专家中激活k个，k &lt;
+N，具体建模如下</p>
+<p><span class="math display">\[\mathbf{y}=\sum_{n\in
+N}g_n(\mathbf{x};\mathbf{G},\mathbf{k})E_n(\mathbf{x})\]</span></p>
+<p><span class="math display">\[\mathrm{Expert}(x)=W_\text{down}(W_\text{up}x\odot\mathrm{Act}(W_\text{gate}x))\]</span></p>
+<p><span class="math display">\[W_{\mathrm{up}},W_{\mathrm{gate}}\in\mathbb{R}^{d_{\mathrm{mid}}\times
+d_{\mathrm{hid}}}\]</span></p>
+<p><span class="math display">\[W_{\mathrm{down}}\in\mathbb{R}^{d_{\mathrm{hid}}\times
+d_{\mathrm{mid}}}\]</span></p>
+<p>这里把 <span class="math inline">\(W_{\mathrm{up}}[i,:]\)</span> 和
+<span class="math inline">\(W_{\mathrm{gate}}[i,:]\)</span>
+这两个行向量以及 <span class="math inline">\(W_{\mathrm{down}}[:,i]\)</span>
+这个列向量定义为一个neuron，这样每个专家就包含d_mid个专家，这些neuron后面会有分析。</p>
+<h1 id="研究对象">研究对象</h1>
+<p>文章中选择了Mixtral 8x7B，DeepSeekMoE 和
+Grok-1三个MoE模型作为研究对象，另外还加上了Mistral
+7B这个dense模型作为对比。</p>
+<p>各个模型设置对比如下</p>
+<img src="/5e1d14b3/models.png" class title="模型">
+<p>后续研究使用的相似度如无说明都是指cosine similarity。</p>
+<h1 id="analysis-of-static-parameters">Analysis of Static
+Parameters</h1>
+<p>对这些模型的静态参数研究主要是（1）MoE
+experts和（2）gating，这两个也是MoE最重要的部分。</p>
+<h2 id="moe-experts">MoE experts</h2>
+<p>参照《Transformer feed-forward layers are keyvalue
+memories》和《Empirical study on updating key-value memories in
+transformer feed-forward layers》的说法，expert的projection
+matrices可以看做是keys和values：<br>
+- W_down的列向量表示possible outputs<br>
+- W_up的行向量决定各个possible outputs的权重<br>
+- W_gate决定是否激活对应的neuron</p>
+<p>对experts的研究又分为matrix level和neuron level。</p>
+<p>1、matrix level</p>
+<p>各个模型不同层下，所有专家三个投影矩阵对应的相似度如下图（DeepSeekMoE忽略了shared
+expert）。计算相似度的时候把矩阵进行了一维展开，之后通过PCA把维度转换到2维。</p>
+<img src="/5e1d14b3/matrix_level.png" class title="matrix level">
+<p>一些发现：<br>
+-
+DeepSeekMoE和Grok-1的专家相似度比Mixtral低，而DeepSeekMoE和Grok-1是从零训练的，这表明Mixtral可能不是从零初始化的。<br>
+-
+Mixtral中有一些专家和其他所有专家的相似度都极低，表明这些专家可能学到了一些特殊的内容。<br>
+-
+深层的专家相似度相比浅层更低，这说明深层专家可能有更高的专业化程度。</p>
+<p>2、neuron level</p>
+<p>matrix
+level的计算没有考虑到这样的情况：两个专家有相似的neuron，但是这些neuron的位置不同，这样也会导致相似度不高。因此这里通过取平均和重排序的方式来研究neuron
+level的相关性。重排序使用了Jonker-Volgenant算法。</p>
+<p>重排序后的相似度增长和Kendall’s coefficient如下表所示。Kendall’s
+coefficient是一种用于衡量多个评分者或多个方法对同一组对象进行评分或排名的一致性的统计量：1表示完全正相关，即两个变量的排名完全一致，-1表示完全负相关，即一个变量的排名与另一个变量的排名完全相反，0表示没有相关性，即两个变量的排名之间没有一致的模式。</p>
+<img src="/5e1d14b3/t2.png" class title="neuron level">
+<p>可以看到Mixtral的相关性依然是显著高于其他模型，说明其各个专家之间的初始化可能有关联。</p>
+<h2 id="gate-embedding">Gate Embedding</h2>
+<p>对于gating，研究人员首先计算了gate
+embedding向量之间的相似度，发现gate
+embedding的相似度和matrices之间的相似度结果相似。</p>
+<p>而后又研究了gate
+embedding（X）和W_up、W_gate、W_down（Y）的相似关系，并做了linear
+regression。下表是各个模型所有层平均之后的square of Pearson correlation
+coefficients。</p>
+<img src="/5e1d14b3/gating_1.png" class title="gating">
+<p>具体各层的数据</p>
+<img src="/5e1d14b3/gating_2.png" class title="gating">
+<p>一些发现：<br>
+- gate embedding和W_gate的相似度最高。<br>
+-
+Mixtral和DeepSeekMoE的（X，Y_gate）保持正相关，而Grok-1在&gt;25层后出现了负相关。<br>
+- gate
+embedding和W_gate的功能有些类似：前者决定专家的选择，后者则决定要激活的neuron，这两个部分有可能学习到了相近的知识。</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li>深层的专家间的相似度更低，可能是专门化的程度更高。<br>
+</li>
+<li>专家的W_up、W_gate、W_down的相似度关系相近。</li>
+</ul>
+<h1 id="analysis-of-dynamic-behaviours">Analysis of Dynamic
+Behaviours</h1>
+<p>前面研究的是模型的静态参数，这里通过使用一个6个token的短文本，和一个1100token的长文本对各个模型的动态特性进行探索。（emmm只用一两条数据是不是有点少）</p>
+<h2 id="outputs-of-experts">Outputs of Experts</h2>
+<p>对于MoE模型，一个自然的问题是，选中专家和未选中专家的输出之间有哪些相似性和差异性。</p>
+<p>短文本和长文本的各个专家（包含没有被选中的专家）的输出的相似度如下。</p>
+<img src="/5e1d14b3/dynamic.png" class title="相似度">
+<p>这里长文本使用的是angular similarity：</p>
+<p><span class="math display">\[\text{angular
+sim}=1-\frac{\arccos{(\text{cosine sim})}}{\pi}\]</span></p>
+<p>Mixtral：被选中的专家间的相似度更大，这可能是因为它们的norm更大。随着深度增加，在比较深的层中，整体的相似度较低，但是最后一两层却又突然变得特别相似。</p>
+<p>DeepSeek：和Mixtral相似，在最后一层也出现了相似度增大的情况。</p>
+<p>Grok：可能是因为Grok的expert
+size比较大，导致各个专家都能学到比较全面的内容，因此所有专家之间的输出相似度显著高于其他两个模型。</p>
+<h2 id="norms-of-expert-outputs-and-gate-scores">Norms of Expert Outputs
+and Gate Scores</h2>
+<p>在上面这个实验发现被选中的专家的相似度会比较高，为了探索可能的原因，这里对experts的L2
+norm和gating decision的关系进行了研究。</p>
+<p>使用了短文本作为输入，gate score和对应专家的norm如下</p>
+<img src="/5e1d14b3/norm.png" class title="norm">
+<p>Mixtral：发现被门控网络选中的两个expert通常都是feature vector
+norm最高的那两个。这个发现和《Competesmoe–effective training of sparse
+mixture of experts via
+competition》一致。另外层数越深，norm的值也越大，这和《Improved
+transformer pretraining with extra normalization》中的增长相似。</p>
+<p>DeepSeek：和Mixtral不同，DeepSeek的gating选择对norm的依赖看上去相对较低，但是top-1专家的得分更加突出，并且但是同样有随着层数增长，norm增大的特性。</p>
+<p>Grok：Grok的gating和norm没有明显的相关关系。可能的原因之一是GeLU相对较低的激活比率导致gating对norm的依赖性较弱。此外，与Mixtral和DeepSeek不同，Grok专家的norm在模型不同深度内几乎不变，而且其中一些norm值可能小于1，这是其他两个模型没有的现象。</p>
+<h2 id="summary-1">Summary</h2>
+<ul>
+<li>在Mixtral和DeepSeek中，各个专家的输出相似度随着深度加深而变弱，而在最后一两层相似度又会突然提高。<br>
+</li>
+<li>expert output的heat map和neuron-level相似度的heat
+map相似，这说明这两个测量某种程度上可以等价。<br>
+</li>
+<li>对于Mixtral和DeepSeek，具有large norm
+output的expert更容易被选中。</li>
+</ul>
+<h1 id="suggestions">Suggestions</h1>
+<p>基于上面的一些观察，文章提出了一些建议：<br>
+- Neuron-level experts：直观上gate
+embedding决定了专家的选择，而W_gate负责激活特定的neuron。而gate
+embedding和W_gate之间的相似性又存在关联。这意味着neuron可能是更细粒度的专家。应该进一步在微观层面上研究对专家的操作。<br>
+- Model
+architecture：由于专家之间的相似性在深层/最后一层倾向于相对较低/高，可以考虑在深层增加专家的数量，而在最后一层减少专家数量。此外，gating机制通常选择输出norm较大的专家，因此使用norm作为路由机制是合理的。<br>
+- Correlation measurement：在分析专家之间的相关性时，测量它们的weight
+matrices之间的相似性与测量它们在token上的输出特征向量之间的相似性在某种程度上是等价的。因此，测量weight
+matrices可以获取overview。<br>
+- Training
+scheme：从零训练的DeepSeek和Grok比（可能）从dense模型初始化的Mixtra的专家相关性更低，说明从零训练能促进专家多样性。</p>
+<h1 id="小结">小结</h1>
+<ul>
+<li>文章基于几个比较知名的MoE模型做了一些研究，但是研究样本量感觉应该再增大一些。<br>
+</li>
+<li>基于观察结果的一些建议和一些其他工作结论不同，最好能一起对比下。<br>
+</li>
+<li>说明MoE确实还有很多内容没有搞清楚。</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】A Closer Look into Mixture-of-Experts in Large Language Models
+https://arxiv.org/abs/2406.18219</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/5e1d14b3.html" title="对MoE模型的一些观察">https://saicat.github.io/5e1d14b3.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/MoE/" rel="tag"><i class="fa fa-tag"></i> MoE</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/224c42da.html" rel="prev" title="MoE的top-p routing">
+                  <i class="fa fa-angle-left"></i> MoE的top-p routing
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/a8f8b641.html" rel="next" title="Qwen2技术报告">
+                  Qwen2技术报告 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">278k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">8:25</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
