@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  目前已经有很多优秀的dense大模型，那么要通过MoE获得更强的模型，用已有的dense模型进行初始化是一个自然的想法。Google的sparse upcycling对此做了一些实验，由于实验是在2022年做的，模型用的是T5系列语言模型和Vision Transformer系列视觉模型。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从dense到MoE -- sparse upcycling">
+<meta property="og:url" content="https://saicat.github.io/a0824e29.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  目前已经有很多优秀的dense大模型，那么要通过MoE获得更强的模型，用已有的dense模型进行初始化是一个自然的想法。Google的sparse upcycling对此做了一些实验，由于实验是在2022年做的，模型用的是T5系列语言模型和Vision Transformer系列视觉模型。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/intro.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/models.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/1.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/2.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/3.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/4.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/a1.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/a2.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/a3.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/a4.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/a5.png">
+<meta property="og:image" content="https://saicat.github.io/a0824e29/a6.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-07-19T13:03:12.000Z">
+<meta property="article:modified_time" content="2024-07-19T14:21:50.417Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="MoE">
+<meta property="article:tag" content="预训练">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/a0824e29/intro.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/a0824e29.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/a0824e29.html","path":"a0824e29.html","title":"从dense到MoE -- sparse upcycling"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>从dense到MoE -- sparse upcycling | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%BE%E7%BD%AE"><span class="nav-number">1.</span> <span class="nav-text">设置</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">2.</span> <span class="nav-text">实验</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#core-results"><span class="nav-number">2.1.</span> <span class="nav-text">CORE RESULTS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B6%88%E8%9E%8D%E5%AE%9E%E9%AA%8C"><span class="nav-number">2.2.</span> <span class="nav-text">消融实验</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">2.3.</span> <span class="nav-text">其他</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">42</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">46</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/a0824e29.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="从dense到MoE -- sparse upcycling | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          从dense到MoE -- sparse upcycling
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-07-19 21:03:12 / 修改时间：22:21:50" itemprop="dateCreated datePublished" datetime="2024-07-19T21:03:12+08:00">2024-07-19</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>目前已经有很多优秀的dense大模型，那么要通过MoE获得更强的模型，用已有的dense模型进行初始化是一个自然的想法。Google的sparse
+upcycling对此做了一些实验，由于实验是在2022年做的，模型用的是T5系列语言模型和Vision
+Transformer系列视觉模型。</p>
+<p>文中给出两个适合使用sparse upcycling的场景：<br>
+- 已有dense模型，想在有限的计算资源下提升模型效果。<br>
+-
+要训一个模型，不知道dense模型和MoE哪个会有更好的效果（虽然通常来说MoE更好，但是训练难度和结果不确定也更大），那么就可以先训练一个dense模型保底，然后再在dense模型的基础上扩展成MoE结构继续优化。</p>
+<p>下面具体看下一些实验细节。</p>
+<h1 id="设置">设置</h1>
+<p>对于transformer模型，sparse upcycling的操作如下图</p>
+<img src="/a0824e29/intro.png" class title="upcycling">
+<p>除了原模型的MLP层替换成MoE层外，其他组件包括layernorm、attention都直接从原dense模型copy到MoE模型。</p>
+<p>实验上，一些具体的基础设置如下：<br>
+- 在原模型基础上，每2层替换一个MoE层，从第二层开始替换<br>
+- MoE模型的总层数的dense模型层数相同<br>
+-
+每个MoE层专家数为32个；虽然使用更多的专家不会明显增大训练的FLOPS，但是更多的专家会带来larger
+initial quality drop relative to baseline dense
+model，而需要更多的计算资源来恢复这个quality
+drop；后续会有实验探索expert数量的影响<br>
+- 每个expert都用原模型的MLP层参数初始化<br>
+- router使用standard deviation=0.02的zero-mean normal
+distribution随机初始化<br>
+- 在encoder使用expert choice routing，基础的设置是capacity factor C =
+2，后面也做了关于capacity factor的消融实验<br>
+- 在decoder使用token choice routing（top-k
+routing），k=2，并加上auxiliary
+loss帮助负载均衡，权重为0.01；在decoder使用top-k routing的原因是"to
+avoid train time (full batch teacher forcing) versus inference time
+(single token auto-regressive decoding) discrepancies"（和expert choice
+routing的设计相关）</p>
+<p>MoE模型训练时使用和dense模型一致的batch size、learning rate
+schedule和weight decay等。</p>
+<p>其中learning rate schedule用的是inverse square root learning rate
+schedule，因此MoE的训练可以接着dense模型的schedule接着进行。</p>
+<p>实验中所用的一些模型参数如下表</p>
+<img src="/a0824e29/models.png" class title="模型">
+<h1 id="实验">实验</h1>
+<h2 id="core-results">CORE RESULTS</h2>
+<p>1、dense模型继续训练 vs upcycling</p>
+<p>随着训练量的增加，upcycling相比dense模型继续预训练的优势逐渐扩大，如下图所示</p>
+<img src="/a0824e29/1.png" class title="实验">
+<p>2、下游任务模型效果</p>
+<p>上面对比的是预训练模型。这些预训练模型经过微调后的效果对比如下。</p>
+<img src="/a0824e29/2.png" class title="实验">
+<p>相比预训练模型，微调模型表现出相对更大的震荡，不过大致趋势还是可以看出MoE模型更有优势。</p>
+<p>3、MoE from scratch vs upcycling</p>
+<p>从零开始训练的MoE和upcycling方法的对比如下</p>
+<img src="/a0824e29/3.png" class title="实验">
+<ul>
+<li>从零开始预训练的MoE模型效果提升得更快，这可能得益于多样化的专家初始化和更大的lr。<br>
+</li>
+<li>只要给的计算资源足够多，从零开始训练的模型最终会赶上甚至超过upcycling的模型。<br>
+</li>
+<li>在有限的训练资源下，upcycling的训练效率更高，从零开始训练的模型大约需要相当于原dense模型1.2倍的训练资源才能达到upcycling模型的效果。如果现在的训练资源&lt;=训练dense模型的资源，那么sparse
+upcycling是更划算的。</li>
+</ul>
+<p>4、sparse upcycling vs dense upcycling</p>
+<p>对比《Scaling language models: Methods, analysis &amp; insights from
+training gopher》中的depth tiling（dense upcycling） 和 sparse
+upcycling的预训练效果，结果当然是sparse
+upcycling效率更高点，如下图所示</p>
+<img src="/a0824e29/4.png" class title="实验">
+<p>（不过这里没有提及depth tiling之后的模型规模）</p>
+<h2 id="消融实验">消融实验</h2>
+<p>1、Amount of dense pretraining</p>
+<p>upcycling的效果可能受用于初始化的dense模型的收敛情况影响，因此取了不同step的dense模型checkpoint作为upcycling的初始化，并且都继续训练了200k个step，结果如下图</p>
+<img src="/a0824e29/a1.png" class title="实验">
+<p>结论是基本上无论从哪个checkpoint初始化MoE模型，收益都比较稳定。</p>
+<p>2、Router type</p>
+<p>使用不同的router（expert choice和token choice）对比结果如下</p>
+<img src="/a0824e29/a2.png" class title="实验">
+<p>结论是，在相同的step下，expert choice和token
+choice的效果基本一样，但是如果从时间上来看，使用expert choice
+routing的模型训练更快。</p>
+<p>3、Expert capacity factor</p>
+<p>每个专家处理的token越多，计算量就越大，理论上效果也越好。</p>
+<p>使用不同的capacity factor，模型效果对比如下</p>
+<img src="/a0824e29/a3.png" class title="实验">
+<p>结论是，虽然理论上增加专家容量可以提升效果，但时间上，通常C =
+2的效率比较好，即一定的时间内提升的效果最多（注意计算资源是有限的）。</p>
+<p>4、Number of MoE layers</p>
+<p>在视觉模型上对MoE层数的效果进行了式样。</p>
+<p>如下图右边两个小图，是使用不同的MoE层的效果，比如1表示只把最后一层MLP层替换为MoE层，以此类推</p>
+<img src="/a0824e29/a4.png" class title="实验">
+<p>结论是，更多的MoE层并不总是更好，大概是把5<sub>6层替换成MoE层的时候效果最好（40%</sub>50%的层数）。</p>
+<p>5、Initialization of experts</p>
+<p>对比了使用dense模型的MLP层初始化专家，和随机初始化专家，结果如下</p>
+<img src="/a0824e29/a5.png" class title="实验">
+<p>结果上看，使用dense模型的参数初始化专家效果更好。</p>
+<p>6、Number of experts</p>
+<p>如前面提到的，增加专家数并不会增大计算量，下图实验了2~128个专家下的效果</p>
+<img src="/a0824e29/a6.png" class title="实验">
+<p>结果上来看，效果是随着专家的增加而提升的，虽然最后表现出了收益递减的情况。</p>
+<h2 id="其他">其他</h2>
+<p>1、optimizer</p>
+<p>在vision模型上，还尝试了使用dense模型的optimizer状态来训练MoE模型，但是并没有带来任何收益。</p>
+<p>2、router normalization</p>
+<p>另外，为了减少从dense到MoE初始化的performace
+drop，尝试了对router的输出进行normalization，以保持每个token得到的weight总和是1。</p>
+<p>这个做法直觉上应该是有益的，不过会有一个小问题，那就是对于只被一个expert选中的token，会有vanishing
+routing gradients。</p>
+<p>实践上，router
+normalization在视觉模型上基本和不进行normalization的效果差不多，但是在语言模型上，会使得MoE模型效果变差。这二者的表现差异可能是因为语言模型上部分router使用了token
+choice routing。</p>
+<p>实际上目前大部分最新的MoE模型都没有开router
+normalization，但这里的原因感觉还有待深入验证。</p>
+<h1 id="小结">小结</h1>
+<ul>
+<li>如果资源无限，那么从零初始化MoE模型更好，这点和天工MoE的实验是相同的；<br>
+</li>
+<li>从结果上看，MoE层和专家数不是越多越好，但是多少是好，感觉至今其实没有很明确；<br>
+</li>
+<li>目前大部分的MoE都使用token choice
+routing了，这里可能需要重新实验一下效果。</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">大模型算法题(1)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">大模型算法题(2)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(3)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">大模型算法题(4)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">大模型算法题(5)</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">大模型算法题(6)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">大模型算法题(7)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">大模型算法题(8)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】SPARSE UPCYCLING: TRAINING MIXTURE-OF-EXPERTS FROM DENSE
+CHECKPOINTS https://arxiv.org/abs/2212.05055</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/a0824e29.html" title="从dense到MoE -- sparse upcycling">https://saicat.github.io/a0824e29.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/MoE/" rel="tag"><i class="fa fa-tag"></i> MoE</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/e287b9c3.html" rel="prev" title="大模型算法题(8)">
+                  <i class="fa fa-angle-left"></i> 大模型算法题(8)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2c8bbc7.html" rel="next" title="MoE路由--expert choice routing">
+                  MoE路由--expert choice routing <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">286k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">8:41</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
