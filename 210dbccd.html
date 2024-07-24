@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  LLM预训练最重要的工作就是数据的准备，可以说90%的时间都在处理数据。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="预训练数据处理--长度分解">
+<meta property="og:url" content="https://saicat.github.io/210dbccd.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  LLM预训练最重要的工作就是数据的准备，可以说90%的时间都在处理数据。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/buckets.png">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/dist.png">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/model.png">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/base_freq.png">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/efficiency.png">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/bias.png">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/mixture.png">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/curriculum.png">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/scaling.png">
+<meta property="og:image" content="https://saicat.github.io/210dbccd/sota.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-07-23T13:23:22.000Z">
+<meta property="article:modified_time" content="2024-07-24T14:20:20.308Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="数据">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/210dbccd/buckets.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/210dbccd.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/210dbccd.html","path":"210dbccd.html","title":"预训练数据处理--长度分解"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>预训练数据处理--长度分解 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83%E6%95%B0%E6%8D%AE%E5%87%86%E5%A4%87"><span class="nav-number">1.</span> <span class="nav-text">预训练数据准备</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#concat-and-chunk"><span class="nav-number">1.1.</span> <span class="nav-text">concat-and-chunk</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#variable-sequence-length"><span class="nav-number">1.2.</span> <span class="nav-text">Variable Sequence Length</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">2.</span> <span class="nav-text">实验</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E6%95%88%E7%8E%87"><span class="nav-number">2.1.</span> <span class="nav-text">训练效率</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sequence-length-bias"><span class="nav-number">2.2.</span> <span class="nav-text">Sequence length bias</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#data-mixture"><span class="nav-number">2.3.</span> <span class="nav-text">Data mixture</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#length-based-curriculum"><span class="nav-number">2.4.</span> <span class="nav-text">Length-based curriculum</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#scaling"><span class="nav-number">2.5.</span> <span class="nav-text">Scaling</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%92%8Csota%E7%9A%84%E5%AF%B9%E6%AF%94"><span class="nav-number">2.6.</span> <span class="nav-text">和sota的对比</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">43</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">47</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/210dbccd.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="预训练数据处理--长度分解 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          预训练数据处理--长度分解
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-07-23 21:23:22" itemprop="dateCreated datePublished" datetime="2024-07-23T21:23:22+08:00">2024-07-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-07-24 22:20:20" itemprop="dateModified" datetime="2024-07-24T22:20:20+08:00">2024-07-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>9 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>LLM预训练最重要的工作就是数据的准备，可以说90%的时间都在处理数据。</p>
+<p>苹果提出Dataset
+Decomposition，对数据按长度进行分桶，提升预训练的效率。</p>
+<h1 id="预训练数据准备">预训练数据准备</h1>
+<h2 id="concat-and-chunk">concat-and-chunk</h2>
+<p>目前一般的做法是准备好文档数据后，获取对应的token，再通过特殊的分隔token把数据拼接起来，最后按训练窗口大小，切分成相应的长度，这就是concat-and-chunk。</p>
+<p>这样的做法存在一些问题：<br>
+-
+不同的文档拼接在一起，如果在训练的时候没有对注意力进行特殊处理，那就会出现模型在对当前文档数据进行next
+token prediction的时候，关注到前面拼接的不相关内容。<br>
+-
+不同文档的拼接训练效果上未必有很大帮助，但是却带来了额外的计算成本，因为attention的复杂度和输入长度的平方相关。<br>
+-
+多个文档拼接后切分，这样就有很多处于窗口边界的文档被切开，导致模型所见到的实际长度小于平均文档长度，影响了模型的长文本能力。</p>
+<p>也有一些方法在concat-and-chunk基础上进行了改进，比如 document masking
+(DM)、 best-fit sequence packing和in-context
+pretraining等，后面会一起比较效果。</p>
+<h2 id="variable-sequence-length">Variable Sequence Length</h2>
+<p>针对以上问题，一个自然的想法就是做Dataset Decomposition（DD）。</p>
+<p>数据集分解的规则有：<br>
+-
+把原文档数据集重构成多个bucket，每个bucket内的sequence有不同的长度<br>
+- 每个bucket内的sequence都是一个完整文档的subsequence<br>
+- 所有bucket内的token没有重复</p>
+<p>符合这样规则的分解方法并不唯一，苹果提出一个具体的做法：对于长度为l的文档，按
+<span class="math inline">\(l=2^{i_1}+2^{i_2}+\ldots+2^{i_k}\)</span>
+进行长度分解，k个subsequence的长度都是2的幂次方。这就是Variable Sequence
+Length（VSL）。</p>
+<p>比如一个文档的长度为200，那么就分解成128 + 64 +
+8三个长度的子序列。不同长度的子序列分别集中到对应长度的bucket中（D_i），如下图</p>
+<img src="/210dbccd/buckets.png" class title="分解">
+<p>最终各个bucket所包含的token数量分布如下图（b）。可以看到长度为512的序列总token数是最多的。此外长度为2^i的bucket主要也都是来源于长度为<span class="math inline">\(2^i\leq l&lt;2^{i+1}\)</span> 的文档。</p>
+<img src="/210dbccd/dist.png" class title="分布">
+<p>这样的切分方法能够保持切分后的序列长度分布基本和原数据一致。此外，上图（c）给出了concat-and-chunk和VSL的context
+length分布对比。</p>
+<h1 id="实验">实验</h1>
+<p>基于VSL训练的时候，保证了每个batch中的token数b总不变的。训练时会先从多个bucket中进行采样（假设选中的bucket
+i），选择当前要训练的长度，然后根据当前选择的长度，计算sample数量 = b /
+2^i。</p>
+<p>这样保持不同长度下都能有相同token数的做法，能够使得训练时不需要改变超参，比如learning
+rate等。</p>
+<p>使用所用模型基于OpenLM，具体参数如下</p>
+<img src="/210dbccd/model.png" class title="模型">
+<p>另外把RoPE的base frequency从10,000增加到100,000。不同base
+frequency下的下游任务评测效果如下，使用100k的效果更好。</p>
+<img src="/210dbccd/base_freq.png" class title="base frequence">
+<p>评测任务分成两部分，regular language modeling benchmarks和long
+context task。</p>
+<p>regular包括：<br>
+- Commonsense Reasoning (CSR):
+PIQA-0-shot，COPA-0-shot，OpenBookQA-10-shots<br>
+- Language Understanding (LU):
+Lambada-OpenAI，Hellaswag-0-shot，Winograd-3-shots，WinoGrande-5-shots<br>
+- Reading Comprehension (RC):
+SQuAD-3-shots，BoolQ-0-shot，CoQA-0-shot<br>
+- World Knowledge (WK):
+Jeopardy-3-shots，ArcEasy-3-shots，ArcChallenge-3-shots，WikiDataQA-3-shots</p>
+<p>long context包括：<br>
+- Multi-Document Question Answering
+(MDQA)：从NaturalQuestions-Open里抽的一些问题，多个从Wikipedia抽的文档<br>
+- TOEFL：多项选择题<br>
+- QuALITY：多项选择题</p>
+<h2 id="训练效率">训练效率</h2>
+<p>保持batch size = 8 * 8192，用OpenLM-1B/3B/7B分别训练 <span class="math inline">\(2^6\)</span> 到 <span class="math inline">\(2^13\)</span> 的窗口长度。</p>
+<p>各个模型在不同窗口下的单步训练时间如下图</p>
+<img src="/210dbccd/efficiency.png" class title="训练效率">
+<p>随着窗口长度增大，每步的training overhead增长的速度也在加快。</p>
+<p>对于concat-and-chunk方案，每步所需平均时间是固定的，而对于VSL，每步训练所需的平均时间是不同长度下的加权平均。</p>
+<p>按前面分桶获得的长度分布，同样训练8k长度的情况下，VSL可以节省20%的训练时间。</p>
+<h2 id="sequence-length-bias">Sequence length bias</h2>
+<p>这个实验是为了了解使用不同长度的预训练数据对模型的效果有什么影响。</p>
+<p>首先是在OpenLM-1B上，固定用不同长度的窗口进行训练，各个模型在评测任务上的标下如下图（a）</p>
+<img src="/210dbccd/bias.png" class title="Sequence length bias">
+<p>结果上，reasoning, language understanding和world
+knowledge的准确性随着预训练长度的增加呈现出倒U型行为，而阅读理解则从随训练长度增加而变好。这样的结果可能和“与任务相关的数据在预训练语料中的长度分布”相关，比如和阅读理解任务相关的预训练数据，长度往往较长，这也就使得在更大窗口长度上训练出来的模型有更好的阅读理解能力。</p>
+<p>上图（b）给出了各个下游任务的长度分布，结果也符合上面的分析。</p>
+<p>但是还有一个问题，比如在适中长度数据上训练有收益的regular任务，其收益是来自于这些有合适长度的“数据”内容，还是只要窗口长度合适就行，而不论是什么数据？</p>
+<p>对此另外训了两个模型：<span class="math inline">\(\mathcal{D}_{13\to10}\)</span> 和 <span class="math inline">\(\mathcal{D}_{7\to10}\)</span>，分别把8k数据拆成8个1k长度，和把8个128个数据拼接成1k长度窗口。结果如上图（c）。</p>
+<p>首先 <span class="math inline">\(\mathcal{D}_{13\to10}\)</span> 比
+<span class="math inline">\(\mathcal{D}_{13}\)</span>
+有2.6分的提升，这证明了窗口长度的影响。</p>
+<p>而 <span class="math inline">\(\mathcal{D}_{13\to10}\)</span> 又比
+<span class="math inline">\(\mathcal{D}_{10}\)</span>
+的得分低一些，这说明长的文档其内容和段文档与特定任务的惯性性确实有所不同。</p>
+<p>此外，<span class="math inline">\(\mathcal{D}_{7\to10}\)</span> 相比
+<span class="math inline">\(\mathcal{D}_{7}\)</span>
+没有提升，这说明拼接并不能缓解长度相关性的问题。</p>
+<h2 id="data-mixture">Data mixture</h2>
+<p>训练数据集中，不同长度的比例如何影响结果呢？为了研究这个问题，这里用了7种不同的数据混合比例做实验（保持总token数相同）。</p>
+<img src="/210dbccd/mixture.png" class title="Data mixture">
+<p>首先，观察到较小上下文长度的mixture在MDQA上的表现较差，因为MDQA需要长上下文理解的能力。而较大的平均上下文长度也与阅读理解任务的性能呈正相关，但是训练的代价更大。此外，1k-only在regular任务的效果不错，但在长上下文任务则表现较差。</p>
+<p>最后Natural分布在regular任务和MDQA任务上的效果都接近最佳，这证明了VSL方法在更大数据集上的可扩展性。</p>
+<h2 id="length-based-curriculum">Length-based curriculum</h2>
+<p>经验上，短文本的训练难度应该更低，而长文本则难度更大。</p>
+<p>这个实验使用不同的采样比例，探索长度的curriculum
+learning。各个采样比例和模型效果如下</p>
+<img src="/210dbccd/curriculum.png" class title="Length-based curriculum">
+<p>由于lr会衰减，这样可能导致采样比例较低的数据学习不足，因此使用了多个epoch来缓解这样的差异影响。</p>
+<p>结果显示，“Grow-P2” curriculum在不同的指标上接近最优。</p>
+<p>curriculum learning另一个好处是训练的稳定性。《The
+stability-efficiency dilemma: Investigating sequence length warmup for
+training gpt
+models》中就提到长序列在训练的开始阶段会导致比较极端的梯度方差，从而造成训练的不稳定。</p>
+<h2 id="scaling">Scaling</h2>
+<p>下图（a）显示，VSL方法在不同的总训练量下，在regular任务上的效果都比更高，而训练效率也大概提升了一倍。</p>
+<img src="/210dbccd/scaling.png" class title="Scaling">
+<p>（但是这里没有报告长文本的效果？）</p>
+<p>而图（b）则显示在不同规模的模型上，VSL也有稳定收益。</p>
+<h2 id="和sota的对比">和sota的对比</h2>
+<p>VSL和document masking (DM)、 best-fit sequence packing、in-context
+pretraining的效果对比如下</p>
+<img src="/210dbccd/sota.png" class title="和sota的对比">
+<p>DM相比baseline-8k在regular的效果有提升，但是长文本的能力下降了。如《Effective
+long-context scaling of foundation
+models》指出的，即使的不想管的文档拼接，在长文本上也有一定的收益，因此DM直接屏蔽不相关文档的做法对长文本效果有损害。</p>
+<p>best-fit sequence
+packing通过更好地组合文档，在regular任务和长上下文任务都有所提升。</p>
+<p>in-context
+pretraining则是拼接相似文档构建长数据序列，因此长文本效果有提升，不过相似性搜索对资源的消耗比较大。</p>
+<p>和以上的方法相比，VSL方法在效果和成本上算是有比较好的平衡。</p>
+<h1 id="小结">小结</h1>
+<ul>
+<li>这些实验探索了窗口长度、文档长度和下游各个任务效果的关系，能给我们做特定任务提升提供一些参考。<br>
+</li>
+<li>通过长度对数据集进行分解的方案在效果上看起来略有提升，主要是能在资源消耗模型训练稳定性上有帮助，在大规模模型上，这应该更为重要。<br>
+</li>
+<li>DeepSeek-V2、LLAMA3.1和苹果的DCLM也都提到了关于长度的curriculum
+learning，这还是一个值得尝试的方法。</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a> <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a> <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a> <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a> <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a> <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a> <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a> <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Dataset Decomposition: Faster LLM Training with Variable
+Sequence Length Curriculum https://arxiv.org/abs/2405.13226</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/210dbccd.html" title="预训练数据处理--长度分解">https://saicat.github.io/210dbccd.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE/" rel="tag"><i class="fa fa-tag"></i> 数据</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2c8bbc7.html" rel="prev" title="MoE路由--expert choice routing">
+                  <i class="fa fa-angle-left"></i> MoE路由--expert choice routing
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">291k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">8:49</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
