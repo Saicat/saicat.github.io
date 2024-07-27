@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  书接上回：Llama3.1--预训练要点一览，继续整理一下Llama-3.1中post-training的内容。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Llama3.1--post-training要点一览">
+<meta property="og:url" content="https://saicat.github.io/93328a2a.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  书接上回：Llama3.1--预训练要点一览，继续整理一下Llama-3.1中post-training的内容。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/93328a2a/post_training.png">
+<meta property="og:image" content="https://saicat.github.io/93328a2a/preference_data.png">
+<meta property="og:image" content="https://saicat.github.io/93328a2a/sft_data.png">
+<meta property="og:image" content="https://saicat.github.io/93328a2a/code_sample.png">
+<meta property="og:image" content="https://saicat.github.io/93328a2a/multi_step_tool.png">
+<meta property="og:image" content="https://saicat.github.io/93328a2a/file_upload.png">
+<meta property="og:image" content="https://saicat.github.io/93328a2a/steerability.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-07-26T13:10:04.000Z">
+<meta property="article:modified_time" content="2024-07-27T12:36:52.204Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="技术报告">
+<meta property="article:tag" content="Meta">
+<meta property="article:tag" content="Llama">
+<meta property="article:tag" content="post-training">
+<meta property="article:tag" content="SFT">
+<meta property="article:tag" content="DPO">
+<meta property="article:tag" content="RM">
+<meta property="article:tag" content="RS">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/93328a2a/post_training.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/93328a2a.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/93328a2a.html","path":"93328a2a.html","title":"Llama3.1--post-training要点一览"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Llama3.1--post-training要点一览 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#modeling"><span class="nav-number">1.</span> <span class="nav-text">Modeling</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#chat-dialog-format"><span class="nav-number">1.1.</span> <span class="nav-text">Chat Dialog Format</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reward-modeling"><span class="nav-number">1.2.</span> <span class="nav-text">Reward Modeling</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sft"><span class="nav-number">1.3.</span> <span class="nav-text">SFT</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dpo"><span class="nav-number">1.4.</span> <span class="nav-text">DPO</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#model-averaging"><span class="nav-number">1.5.</span> <span class="nav-text">Model Averaging</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">2.</span> <span class="nav-text">数据</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%81%8F%E5%A5%BD%E6%95%B0%E6%8D%AE"><span class="nav-number">2.1.</span> <span class="nav-text">偏好数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sft-data"><span class="nav-number">2.2.</span> <span class="nav-text">SFT Data</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86-%E8%B4%A8%E9%87%8F%E6%8E%A7%E5%88%B6"><span class="nav-number">2.3.</span> <span class="nav-text">数据处理 &amp; 质量控制</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#capabilities"><span class="nav-number">3.</span> <span class="nav-text">Capabilities</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#code"><span class="nav-number">3.1.</span> <span class="nav-text">Code</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#expert-training"><span class="nav-number">3.1.1.</span> <span class="nav-text">Expert training</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%88%E6%88%90%E6%95%B0%E6%8D%AE"><span class="nav-number">3.1.2.</span> <span class="nav-text">合成数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90%E7%9A%84%E6%96%B9%E6%B3%95"><span class="nav-number">3.1.3.</span> <span class="nav-text">代码生成的方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">3.1.4.</span> <span class="nav-text">其他</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E8%AF%AD%E8%A8%80"><span class="nav-number">3.2.</span> <span class="nav-text">多语言</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#expert-training-1"><span class="nav-number">3.2.1.</span> <span class="nav-text">Expert training</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E8%AF%AD%E8%A8%80%E6%95%B0%E6%8D%AE%E6%94%B6%E9%9B%86"><span class="nav-number">3.2.2.</span> <span class="nav-text">多语言数据收集</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#math-and-reasoning"><span class="nav-number">3.3.</span> <span class="nav-text">Math and Reasoning</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#long-context"><span class="nav-number">3.4.</span> <span class="nav-text">Long Context</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tool-use"><span class="nav-number">3.5.</span> <span class="nav-text">Tool Use</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#factuality"><span class="nav-number">3.6.</span> <span class="nav-text">Factuality</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#steerability"><span class="nav-number">3.7.</span> <span class="nav-text">Steerability</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">45</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">53</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/93328a2a.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Llama3.1--post-training要点一览 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Llama3.1--post-training要点一览
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-07-26 21:10:04" itemprop="dateCreated datePublished" datetime="2024-07-26T21:10:04+08:00">2024-07-26</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-07-27 20:36:52" itemprop="dateModified" datetime="2024-07-27T20:36:52+08:00">2024-07-27</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>13k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>24 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>书接上回：<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a>，继续整理一下Llama-3.1中post-training的内容。</p>
+<p>在Llama-3的报告中，任何在pre-training之后发生的训练都属于post-training，包括SFT、DPO等。</p>
+<p>Llama-3的post-training不是一次完成的，而是多个round迭代进行，整个post-training包含6轮的SFT和DPO。</p>
+<h1 id="modeling">Modeling</h1>
+<p>post-training的流程如下图</p>
+<img src="/93328a2a/post_training.png" class title="post-training">
+<h2 id="chat-dialog-format">Chat Dialog Format</h2>
+<p>Llama-3相比之前的版本多了一些能力，比如tool
+use。在这些场景下，模型可能生成多个结果，并发送给不同的接收方，之后再由模型汇总各方结果。为了支持这些能力，Meta设计了multi-message
+chat protocol。</p>
+<h2 id="reward-modeling">Reward Modeling</h2>
+<p>reward model（RM）是post-training中的一个重要部分。</p>
+<p>和Llama-2相比，这次RM的一个变化是移除了训练时加入的margin
+term（用于把chosen和rejected
+response区分得更开），因为随着模型规模的增大，加入margin
+term收益越来越小了。</p>
+<p>另一方面，同Llama-2一样，preference
+data中只有区分度比较大的数据对用于训练RM。</p>
+<p>数据上，除了常规的chosen和rejected response之外，还引入了第三种 --
+“edited
+response”，即在chosen的基础上通过（人工）编辑，进一步提升这条response的质量。这样每条ranking
+sample就可能有3条response（edited &gt; chosen &gt; rejected）。</p>
+<p>训练的时候，prompt和对应的多条随机打乱的response拼接在一起训练（prompt
++ resp_1 + resp_2 +
+resp_3），这和通常的做法，即每个response都拼接prompt有些不同（prompt +
+resp_1, prompt + resp_2, prompt +
+resp_3）。从结果上来看，都拼接到一起在accuracy上没有什么损失，而训练效率更高。（个人理解这里可能是通过乐死document
+mask来实现的）</p>
+<h2 id="sft">SFT</h2>
+<p>训练好的RM模型会用于rejection sampling，对human annotation
+prompt的不同生成结果进行过滤。得到的高质量数据会和其他来源的SFT数据一起用来微调模型。</p>
+<p>SFT训练的时候使用lr=1e-5，步数为8.5k~9k步。实践上这样的参数设置在多轮的post-training中都能保持较好的效果。</p>
+<h2 id="dpo">DPO</h2>
+<p>在DPO阶段，会用在上一轮post-training得到的最佳模型收集偏好数据对，这样能使得偏好数据的分布和强化学习时的policy
+model更一致。</p>
+<p>除了DPO以外，Meta也尝试了一些on-policy的方案，如PPO。但是相对来说，DPO消耗更少的计算资源，并且效果也更好，特别是在instruction
+following的能力上，所以还是选择在post-training使用DPO。</p>
+<p>DPO训练中，使用lr=1e-5，beta=0.1。</p>
+<p>此外，训练中还做了一些不同于标准做法的改动：</p>
+<p>1、Masking out formatting tokens in DPO loss</p>
+<p>把特殊token比如header和termination
+token屏蔽，不用于计算训练loss。因为使用这些token计算loss会使得模型在生成时，出现如复读机或者在不合适的地方截断的情况。这可能就是因为chosen
+repsponse和rejected
+response同时包含的这些特殊token，让模型在训练时要同时增大和较小它们的likelihood，导致冲突。</p>
+<p>2、Regularization with NLL loss</p>
+<p>除了DPO的常规loss，Meta额外加入了NLL损失项，这和《Iterative reasoning
+preference optimization》的做法类似。这也有点像PPO里加入next token
+prediction
+loss，能使训练更加稳定，并能保持SFT学到的生成格式，并保持chosen
+response的log probability不下降（《Smaug: Fixing failure modes of
+preference optimisation with dpo-positive》）。</p>
+<h2 id="model-averaging">Model Averaging</h2>
+<p>参考《Averaging weights leads to wider optima and better
+generalization》《Model soups: averaging weights of multiple fine-tuned
+models improves accuracy without increasing inference
+time》和《Branch-train-merge: Embarrassingly parallel training of expert
+language
+models》，在RM、SFT和DPO阶段，分别把“用不同版本的数据和超参训练得到模型”进行平均，以获得最终模型。</p>
+<h1 id="数据">数据</h1>
+<h2 id="偏好数据">偏好数据</h2>
+<p>偏好数据的处理过程和Llama-2类似。</p>
+<p>首先，在每轮训练完后部署一批“在不同数据、超参、训练策略上训练”得到的模型，这些模型有各自的特点，比如有些擅长写代码，有些擅长数学推理。</p>
+<p>对于每个user
+prompt，从这些模型里采样两个response。之后标注人员给每对chosen和rejected
+response分成4类：<br>
+- significantly better - better<br>
+- slightly better<br>
+- marginally better</p>
+<p>过程中标注人员也可以对chosen
+response进一步编辑，获得更好的response。</p>
+<p>下表给出了偏好数据的的统计：</p>
+<img src="/93328a2a/preference_data.png" class title="preference data">
+<p>相比Llama-2的数据，Llama-3所用的prompt和response的长度都有所增加，这说明Llama-3的任务复杂度提升了。</p>
+<p>在每一轮的post-training之后，都会分析当前版本模型效果不好的领域，并针对这些领域提升prompt的复杂度。</p>
+<p>每轮post-training中，训练RM的时候，会使用所有来自不同轮所收集到的偏好数据。而DPO训练则只会用到最新的偏好数据。</p>
+<p>对于RM和DPO，都只使用分类为significantly better 和
+better的数据进行训练，而另外两类质量相近的偏好数据对则被丢弃。</p>
+<h2 id="sft-data">SFT Data</h2>
+<p>SFT数据主要有这几个来源：<br>
+- 人工收集的prompt，以及对应的通过拒绝采样得到的response<br>
+- 特定领域的合成数据（后面capacities部分会讲到）<br>
+- 少量人类真实数据</p>
+<p>1、拒绝采样（RS）</p>
+<p>在RS阶段，每个prompt会从“最新的/领域最佳的chat模型”采样K个回复（一般10~30个），然后用RM选出最佳回复（《Constitutional
+AI: harmlessness from AI feedback》）。</p>
+<p>在靠后轮次的post-training里，RS引入了控制风格、格式、语气等特性的system
+prompt以更精细地控制数据质量。不同的领域（如代码、推理、工具使用等）可能会采用不同的prompt。</p>
+<p>2、数据组成</p>
+<p>下表给出了helpful数据中每个大类别的数据统计：</p>
+<img src="/93328a2a/sft_data.png" class title="sft data">
+<h2 id="数据处理-质量控制">数据处理 &amp; 质量控制</h2>
+<p>由于大部分数据都是模型生成的，所以需要仔细地清洗。</p>
+<p>1、数据清洗</p>
+<p>在post-training的前几轮中，研究人员发现数据中混入了一些包含过量emoji或者感叹号之类的数据，因此用专门的规则对发现的低质量pattern进行了清洗。此外有些数据还有overly-apologetic（比如模型经常回复“我很抱歉”）的问题，也会有规则识别如“I‘m
+sorry”这样的内容，并降低这类数据的比例。</p>
+<p>2、Data pruning</p>
+<p>一系列model-based的方法用来过滤低质量数据：<br>
+- 话题分类：用Llama-3-8B来做粗粒度 &amp; 细粒度的领域分类。<br>
+-
+质量打分：一方面，RM模型会用于识别高质量回复，只有RM得分在前四分之一的数据被认为是高质量的；另一方面，基于Llama-3
+checkpoint，使用特定的prompt（不同领域prompt可能不同）进行多个方面的打分，只有得分最高的数据会被认为是高质量的。RM和Llama-3二者的高质量数据识别一致性并不高，实践上，取二者结果的并集对高质量数据的召回效果最好。<br>
+- 难度打分：用了Instag和Llama模型打分两种方式来衡量数据的难度。<br>
+- 语义去重：用Roberta对对话进行聚类，在每个类别中按quality score ×
+difficulty
+score进行排序，然后只保留“和已选高质量数据相似度小于阈值”的样本（《Semdedup:
+Data-efficient learning at web-scale through semantic
+deduplication》、《What makes good data for alignment? a comprehensive
+study of automatic data selection in instruction tuning》）</p>
+<h1 id="capabilities">Capabilities</h1>
+<p>在不同的具体领域上，Meta分别有一套方法，来提升对应的能力。</p>
+<h2 id="code">Code</h2>
+<p>代码上，要提升的目标语言包括：Python, Java, Javascript, C/C++,
+Typescript, Rust, PHP, HTML/CSS, SQL, bash/shell。</p>
+<p>代码能力提升的方法包括训练code
+expert、生成数据用于SFT训练、通过system prompt调整格式以及使用quality
+filter过滤低质量数据。</p>
+<h3 id="expert-training">Expert training</h3>
+<p>首先，在主预训练模型的基础上，增加1T的代码继续预训练，其中&gt;85%的样本是代码数据。然后采用和CodeLlama类似的方法训练code
+expert。</p>
+<p>在训练的最后几千个step，会加入repo-level的长代码数据，以提升code
+expert的长窗口能力。</p>
+<p>继续预训练之后会采用前面提到的方法进行post-training，只是所用数据主要是代码数据。</p>
+<p>得到的code expert用于：<br>
+- 在主模型的post-training中获取高质量的代码数据<br>
+- code prompt的rejection sampling</p>
+<h3 id="合成数据">合成数据</h3>
+<p>生成的代码会存在一些问题，包括难以遵循指令、语法错误、生成错误代码和难以修复错误等。</p>
+<p>虽然人工标注理论上可以解决这些问题，但合成数据的成本更低、更方便扩展到更大规模，因此还是使用Llama
+3和code expert生成大量SFT合成数据。</p>
+<h3 id="代码生成的方法">代码生成的方法</h3>
+<p>基于以下三个方法，一共生成了超过2.7M的代码SFT数据。</p>
+<p>1、执行反馈</p>
+<p>Llama-3的8B和70B模型在用更大的模型（比如405B）所生成的数据训练时，获得了明显的收益。但是405B模型在用自己生成的数据训练之后（毕竟这个规模下很难有更大的模型了），不仅没有提升，甚至还有些退化。</p>
+<p>为了解决这个问题，Meta引入了execution
+feedback，来对代码进行正确性校验，并让模型从错误中学习。</p>
+<p>具体来说，用以下的过程获得了1M左右的训练数据：</p>
+<p>（1）生成问题描述</p>
+<p>这一步生成大量涵盖广泛主题的编程问题描述。为了增加多样性，从不同的来源随机抽取代码片段，然后根据代码片对生成对应的问题描述。（《Magicoder:
+Empowering code generation with oss-instruct》）</p>
+<p>（2）Solution生成</p>
+<p>这一步用Llama-3生成代码问题的答案。</p>
+<p>这个过程中，会在prompt里加入优质代码的general
+rule，并要求模型在注释里给出思路。这两个做法能有效促进代码质量的提升。</p>
+<p>（3）正确性分析</p>
+<p>检查生成的solution正确性包括两个方面。</p>
+<p>一是静态分析，即通过parser和linter保证基础的语法正确性。</p>
+<p>另一个是动态检查，通过让模型给代码生成单元测试并执行来判断代码的正确性。</p>
+<p>（4）错误反馈 &amp; 迭代修正</p>
+<p>对于有问题的代码，并不是直接舍弃，而是让模型修改优化。</p>
+<p>通过prompt把错误信息给到模型，不断迭代修改，直到代码通过所有单元测试。</p>
+<p>原数据里大概有20%的样本通过这样的修改才通过测试，说明如果不对正确性进行校验的话，会在训练数据里引入大量的错误信息。</p>
+<p>（5）微调 &amp; 迭代优化</p>
+<p>微调迭代了多个round，每个round产生的模型都用来生成新的数据给下一次迭代训练。</p>
+<p>2、programming language translation</p>
+<p>不同语言的代码数据量有不平衡的情况，因此Meta基于Llama-3把高频语言的代码“翻译”成低频语言的数据，并通过syntax
+parsing, compilation, execution等来保证翻译数据的质量。（类似《Breaking
+language barriers in multilingual mathematical reasoning: Insights and
+observations》的思路）</p>
+<p>3、backtranslation</p>
+<p>在代码相关的能力如documentation、debugging和explanation上，执行+反馈的做法并不适用。</p>
+<p>因而采用一个多步方法backtranslation，从代码片段开始：<br>
+- Generate：让模型先生成，比如文档，或者代码功能解释<br>
+- Backtranslate：再要求用生成的文档或者功能说明生成代码<br>
+-
+Filter：如果第二步生成的代码和原代码一致性够高，则说明生成的文档/代码解释好用，可作为训练数据</p>
+<p>通过backtranslation，大约获得了1.2M的documentation、debugging和explanation等数据。</p>
+<h3 id="其他">其他</h3>
+<p>1、system prompt</p>
+<p>使用代码专用的system
+prompt可以提高生成数据的质量，下图是一个样例，右边多了comment，变量名更为合理，还更省空间。</p>
+<img src="/93328a2a/code_sample.png" class title="样例">
+<p>2、Filtering training data with execution and model-as-judge
+signals</p>
+<p>rejection
+sampling的过程会遇到有问题的代码，但是检验这些代码并不是想象中的那么straightforward，比如生成的内容可能包含了不能执行的内容（如伪代码），或者用户要求生成的是完整代码的一个小片段（无法单独执行），这些都无法直接通过单元测试来检验。</p>
+<p>因此使用“model-as-judge”的方法，即通过Llama-3对生成内容做正确性和风格好坏的二分类，只有当二者都被分为好，对应的代码数据才会被使用。</p>
+<p>但是这种方法会倾向于保留简单任务（因为复杂的任务更容易出现问题），导致模型在复杂问题上的能力受损。因此研究人员还专门人为地修改了困难任务上的response，直到这些response符合Llama-3的要求。</p>
+<h2 id="多语言">多语言</h2>
+<p>Llama-3支持8种语言：German, French, Italian, Portuguese, Hindi,
+Spanish, Thai。</p>
+<h3 id="expert-training-1">Expert training</h3>
+<p>用包含超过90%的多语言（即除英语以外的语言）的data
+mix，对主预训练模型做继续预训练，之后再进行同code
+expert类似的post-training。得到的多语言expert
+model用于收集高质量的非英文数据。</p>
+<h3 id="多语言数据收集">多语言数据收集</h3>
+<p>多语言的SFT数据中，包含：<br>
+- 2.4%的人类数据<br>
+- 44.2%的NLP task数据<br>
+- 18.8%来自rejection sampling<br>
+- 34.6%来自translated reasoning data</p>
+<p>1、人类数据</p>
+<p>这部分都是从native
+speaker收集的，大部分包含开放的多轮对话，代表了真实世界的数据。</p>
+<p>2、NLP task</p>
+<ul>
+<li>把常规NLP任务改写成对话格式。<br>
+</li>
+<li>为了提升语言的alignment，使用了来自《Parallel global voices: a
+collection of multilingual corpora with citizen media
+stories》和Wikimedia的parallel text。<br>
+</li>
+<li>用LID based filtering和Blaser2.0 （《Seamlessm4t—massively
+multilingual &amp; multimodal machine
+translation》）清洗掉低质量数据。</li>
+</ul>
+<p>3、拒绝采样数据</p>
+<p>相比英文数据，多语言数据的RS做了几点改动：<br>
+-
+Generation：在post-training的前几轮中，使用0.2~1.0的随机温度来生成回复，以提升多样性。而在最后一轮中，则使用0.6的温度，以保持生成结果中创新性和流畅性的平衡。<br>
+-
+Selection：在RM模型之前，对prompt和response做了语言检查，保证语言的匹配性（比如不会出现一种语言问，另一种语言回答，除非明确要求）。</p>
+<p>4、翻译数据</p>
+<p>大部分数据都没有做翻译，以避免引入翻译腔等问题，除了一个例外：synthetic
+quantitative reasoning data。</p>
+<p>这类数据的语言描述通常比较简单，所以翻译之后没有什么质量问题，而推理数据可以帮助改善多语言的定量推理能力。</p>
+<h2 id="math-and-reasoning">Math and Reasoning</h2>
+<p>reasoning被定义为“执行多步计算并得出最终正确答案”的能力。</p>
+<p>reasoning能力的训练有几个挑战：<br>
+- 缺少prompt：这种高难度的任务数据相对较少<br>
+-
+缺少正确的CoT：reasoning任务一般有多步，包含这些多步CoT的正确答案的数据也不多<br>
+- 错误的中间步骤：基于模型生成的CoT很容易有错误的中间步骤<br>
+- 使用外部工具：教会模型使用外部工具能极大提升效果，但这并不容易<br>
+-
+训练与推理的差异：推理的时候可能需要在中间和用户进行交互获取反馈，这可能和训练数据不完全一致</p>
+<p>针对这些问题，Meta给出以下解决方案。</p>
+<p>1、解决缺少prompt的问题</p>
+<p>为了解决缺少prompt的问题，研究人员从数学相关的context抽取数据片段并转换为对话形式。</p>
+<p>对于模型表现不好的数学领域，专门收集了人类的prompt。为此构建了数学相关的分类体系（《Metacognitive
+capabilities of llms: An exploration in mathematical problem
+solving》），并让人类专家提供相应的prompt和问题。</p>
+<p>2、Augmenting training data with step-wise reasoning traces</p>
+<p>就是用Llama-3为一系列的prompt生成step-by-step的解决方案。</p>
+<p>对于每个prompt，模型会生成不同数量的结果。这些生成结果随后根据正确答案进行筛选（《Common
+7b language models already possess strong math capabilities》）。</p>
+<p>此外还进行了自我验证，即使用Llama-3来验证给定的步骤解决方案对于特定问题是否有效。</p>
+<p>3、Filtering incorrect reasoning trace</p>
+<p>训练outcome RM和stepwise RM来把中间过程错误的数据清洗掉（《Let’s
+verify step by step》，《Math-shepherd:Verify and reinforce llms
+step-by-step without human annotations》）。</p>
+<p>对于更难的prompt，使用Monte Carlo Tree Search (MCTS)来处理（《Monte
+carlo tree search boosts reasoning via iterative preference
+learning》）。</p>
+<p>4、Interleaving code and text reasoning</p>
+<p>在文本推理之外，加上python
+code的执行反馈来对结果正确性做进一步确认（《Tora: A tool-integrated
+reasoning agent for mathematical problem solving》）。</p>
+<p>5、Learning from feedback and mistakes</p>
+<p>为了模仿人类的反馈，使用包含错误的生成结果，并要求模型给出修正（《Learning
+from mistakes makes llm better reasoner》，《Generating sequences by
+learning to self-correct》，《Self-refine: Iterative refinement with
+self-feedback》）。</p>
+<h2 id="long-context">Long Context</h2>
+<p>在预训练的最后阶段，训练窗口从8k扩展到128k。</p>
+<p>而和预训练相似，在post-training阶段也需要仔细平衡模型的短文本能力和长文本能力。</p>
+<p>1、SFT</p>
+<p>如果直接把常规的、较短的SFT数据应用在预训练模型上做SFT，会使得预训练阶段得到的长文本能力退化，因此SFT阶段必须加上长数据。</p>
+<p>由于让人类来给出超长（128k）的SFT数据，难度太大耗时太长，并不现实，所以主要还是依赖合成数据。</p>
+<p>用早期的Llama-3版本来生成长文本关键场景的数据，比如多轮问答、长文本摘要和代码仓库级别的reasoning。</p>
+<p>（1）Question answering</p>
+<p>从预训练数据里筛选一些长文档，并把它们切分为8k的片段，之后让（短窗口）模型对随机选择的片段生成QA数据。长文本训练时则是把完整的文档和相关的QA作为输入。</p>
+<p>（2）Summarization</p>
+<p>摘要采用层次化的方式，即先用8k的模型对长文档的每个8k片段进行摘要，多个片段摘要合在一起再进行二次摘要，获得最终结果。</p>
+<p>此外，Meta还基于文档摘要生成QA对，要求模型回答那些需要对文档做全面理解的问题。</p>
+<p>（3）Long context code reasoning</p>
+<p>首先解析Python文件，识别导入语句并确定它们的依赖关系。</p>
+<p>接下来，对那些被至少五个其他文件使用的文件，随机删除一个，训练时要求模型识别哪些文件依赖于被删除的文件，并生成所需的缺失代码。</p>
+<p>以上这些数据都被分成16K, 32K,
+64K和128K的长度，方便进行细粒度的微调。</p>
+<p>另外，消融实验发现，在原SFT数据中混入0.1%的这些合成的长文本，对模型的短文本和长文本能力都有提升。</p>
+<p>2、DPO</p>
+<p>实验发现DPO阶段仅使用短文本并不会对模型长文本能力造成明显影响，可能是因为DPO的更新步数比较少，因此DPO没有特意增加长文本数据。</p>
+<h2 id="tool-use">Tool Use</h2>
+<p>使用工具的能力可以拓展模型的能力边界，让模型从单纯的聊天机器人变成有用的智能助手。Llama-3被训练使用以下core
+tools：<br>
+- 搜索引擎：Brave Search<br>
+- Python interpreter：用于执行生成的代码<br>
+- Mathematical computational engine：Wolfram Alpha API</p>
+<p>当用户的query需要用到多个工具时，Llama-3可以给出plan，对工具进行串行调用，并在每次调用之后进行推理整合。</p>
+<p>除了core
+tool之外，Llama-3还有zero-shot的工具调用能力，能根据query调用此前没见过的用户定义的工具。</p>
+<p>1、Implementation</p>
+<p>Meta将core tools实现为具有不同方法的Python对象。</p>
+<p>而zero-shot
+tool可以作为带有描述、文档（使用示例）的Python函数来实现，模型只需要函数的签名和文档字符串作为上下文来生成适当的调用。</p>
+<p>函数的定义和调用都转换为json格式，例如用于Web API调用。</p>
+<p>所有工具调用都由Python解释器执行，且需要在Llama-3的system
+prompt中启用（即告诉模型可以使用哪些工具能力）。core tool可以在system
+prompt中单独启用或禁用。</p>
+<p>2、Data collection</p>
+<p>与ToolFormer不同，Llama-3主要依赖人类的标注数据和偏好数据来训练。</p>
+<p>人类标注员对模型给出的多个message进行排序，如果两个都不好，就手动编辑一个好的，并让对话继续。</p>
+<p>工具使用的训练没有使用rejection
+sampling，因为实践上来看这样做没有效果。</p>
+<p>为了减少标注的人力投入，会先进行基本的finetune让模型具备基本的工具使用能力，并且会先从单轮对话开始，慢慢迭代到多轮对话。</p>
+<p>3、Tool datasets</p>
+<p>通过以下方法来获取数据。</p>
+<p>（1）Single-step tool use</p>
+<p>先用few-shot prompt让模型生成core
+tools的调用，之后要求模型基于用户query和调用结果回答问题。</p>
+<p>顺序如下：system prompt, user prompt, tool call, tool output, final
+answer。</p>
+<p>生成的数据里有30%的数据有诸如无法执行，或者有格式问题，就被清除掉了。</p>
+<p>（2）Multi-step tool use</p>
+<p>先让Llama-3生成至少需要调用2次core
+tool（可以相同也可以不同）的prompt，然后再用few shot
+prompt让Llama-3生成一个由交错推理步骤和工具调用组成的解决方案，和ReAct类似。下图是一个多步工具调用的例子：</p>
+<img src="/93328a2a/multi_step_tool.png" class title="多步工具调用">
+<p>（3）File uploads</p>
+<p>使用这些格式的文件：.txt, .docx, .pdf, .pptx, .xlsx, .csv, .tsv, .py,
+.json, .jsonl, .html, .xml。</p>
+<p>基于上传的文件，要求模型进行摘要生成、查找并修复错误、优化代码片段、执行数据分析和可视化等任务。下图是一个示例</p>
+<img src="/93328a2a/file_upload.png" class title="文件上传样例">
+<p>在使用这些合成数据进行了微调之后，Meta进一步收集了多样化且具有挑战性的任务数据，包括多轮交互、三个以上步骤的工具使用，以及工具调用未能得到满意答案的case。</p>
+<p>为了让模型避免对简单的query调用工具，使用了简单数学或问答数据集的query，及其不使用工具的response，但在system
+prompt中激活了工具。这样模型就能学到，即使工具时available的，但是对于简单问题可以不调用工具，避免了工具滥用。</p>
+<p>4、Zero-shot tool use data</p>
+<p>通过在一个大型的多样化（合成）数据集上微调，提高了Llama-3的zero-shot工具使用能力（函数调用）。</p>
+<p>数据包括函数定义、用户query和相应的调用。然后另一批从未见过的工具上进行评测。</p>
+<p>（1）Single, nested, and parallel function calling</p>
+<p>函数的调用情况有多重，可以是简单的单次调用，也可以是嵌套的（即将一个函数调用作为另一个函数的参数），或者是并行的（即模型返回一个独立的函数调用列表）。</p>
+<p>要生成多样化的工具调用数据并不容易（《Toolverifier: Generalization to
+new tools via self-verification》），因此通过在Stack里（《The stack: 3
+tb of permissively licensed source
+code》）进行挖掘，确保函数调用和定义是真实的。即从里面提取出真实的函数调用和定义，过滤掉如文档有问题或者无法执行的函数，之后用Llama-3生成函数调用的query。</p>
+<p>（2）Multi-turn function calling</p>
+<p>参照《Api-bank: A comprehensive benchmark for tool-augmented
+llms》的做法，为带有函数调用的多轮对话生成了合成数据。</p>
+<p>通过使用不同的prompt，让Llama-3扮演不同的agent，分别用于生成domains,
+APIs, user queries, API calls, 和 responses。</p>
+<h2 id="factuality">Factuality</h2>
+<p>Hallucination依然是大模型的一个问题。即使在模型不怎么了解的领域，模型也会给出很自信的回答，这就会给大模型的使用带来风险。</p>
+<p>Meta遵循的原则是，post-training应该使模型 “know what it knows”
+，而不是增加知识（《Does fine-tuning llms on new knowledge encourage
+hallucinations?》，《Linguistic calibration through metacognition:
+aligning dialogue agent responses with expected correctness》）。</p>
+<p>主要方法是生成数据 --
+生成与预训练数据中存在的实际数据保持一致的微调数据。</p>
+<p>为了实现这一点，Meta开发了一种基于Llama-3的in-context能力的knowledge
+probing技术。</p>
+<p>这个数据生成过程包括以下步骤：</p>
+<ul>
+<li>从预训练数据抽取一个片段<br>
+</li>
+<li>用Llama-3对这个片段生成一个事实性问题<br>
+</li>
+<li>用Llama-3采样这个问题的答案<br>
+</li>
+<li>用原片段的context对生成答案的正确性进行打分<br>
+</li>
+<li>对生成结果的informativeness进行打分<br>
+</li>
+<li>用Llama-3生成对“信息丰富但错误的response”的refusal</li>
+</ul>
+<p>Meta使用knowledge
+probing生成的数据，来鼓励模型只回答它有知识的问题，并拒绝回答它不确定的问题。</p>
+<p>此外，预训练数据并不总是一致或正确的。因此还专门收集了一个数据集，处理那些事实矛盾或不正确陈述普遍存在的敏感话题。</p>
+<h2 id="steerability">Steerability</h2>
+<p>可操控性是指引导模型的行为和结果以满足开发者和用户需求的能力。</p>
+<p>由于Llama-3是一个通用的基础模型，它应该具备在不同使用场景下的可操控性。</p>
+<p>Meta主要通过system
+prompt来增强Llama-3的可操控性，特别是在response长度、格式、语气等方面。</p>
+<p>数据收集上，首先要求annotator为Llama-3设计不同的system
+prompt，然后，annotator与模型进行对话，评估模型在对话过程中遵循system
+prompt中定义指令的一致性，并收集偏好数据。</p>
+<p>以下是一个增强可操控性的system prompt例子：</p>
+<img src="/93328a2a/steerability.png" class title="steerability">
+<h1 id="小结">小结</h1>
+<ul>
+<li>Llama-3不仅仅是一个模型，而且是一个巨大的工程<br>
+</li>
+<li>大量的工作仍然是在数据上，而且post-training的权重提高了许多<br>
+</li>
+<li>对各个领域数据的细致整理，也提醒开发者们，目前阶段的“通用能力”说到底还是多任务训练，而多任务，就需要一个领域一个领域踏实优化</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】The Llama 3 Herd of Models
+https://ai.meta.com/research/publications/the-llama-3-herd-of-models/</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/93328a2a.html" title="Llama3.1--post-training要点一览">https://saicat.github.io/93328a2a.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E6%8A%80%E6%9C%AF%E6%8A%A5%E5%91%8A/" rel="tag"><i class="fa fa-tag"></i> 技术报告</a>
+              <a href="/tags/Meta/" rel="tag"><i class="fa fa-tag"></i> Meta</a>
+              <a href="/tags/Llama/" rel="tag"><i class="fa fa-tag"></i> Llama</a>
+              <a href="/tags/post-training/" rel="tag"><i class="fa fa-tag"></i> post-training</a>
+              <a href="/tags/SFT/" rel="tag"><i class="fa fa-tag"></i> SFT</a>
+              <a href="/tags/DPO/" rel="tag"><i class="fa fa-tag"></i> DPO</a>
+              <a href="/tags/RM/" rel="tag"><i class="fa fa-tag"></i> RM</a>
+              <a href="/tags/RS/" rel="tag"><i class="fa fa-tag"></i> RS</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/7d7294cb.html" rel="prev" title="Llama3.1--预训练要点一览">
+                  <i class="fa fa-angle-left"></i> Llama3.1--预训练要点一览
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">311k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:25</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
