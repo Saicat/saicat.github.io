@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  最近苹果的DCLM和Llama-3.1技术报告都提到了model soup：《Model soups: averaging weights of multiple fine-tuned models improves accuracy without increasing inference time》。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="模型平均 -- model soup">
+<meta property="og:url" content="https://saicat.github.io/bb8fcf21.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  最近苹果的DCLM和Llama-3.1技术报告都提到了model soup：《Model soups: averaging weights of multiple fine-tuned models improves accuracy without increasing inference time》。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/bb8fcf21/swa_1.png">
+<meta property="og:image" content="https://saicat.github.io/bb8fcf21/swa_2.png">
+<meta property="og:image" content="https://saicat.github.io/bb8fcf21/swa_3.png">
+<meta property="og:image" content="https://saicat.github.io/bb8fcf21/method_soup.png">
+<meta property="og:image" content="https://saicat.github.io/bb8fcf21/algo.png">
+<meta property="og:image" content="https://saicat.github.io/bb8fcf21/angle.png">
+<meta property="og:image" content="https://saicat.github.io/bb8fcf21/angle_2.png">
+<meta property="og:image" content="https://saicat.github.io/bb8fcf21/compare.png">
+<meta property="og:image" content="https://saicat.github.io/bb8fcf21/result.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-07-30T12:33:25.000Z">
+<meta property="article:modified_time" content="2024-07-30T12:51:36.203Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="微调">
+<meta property="article:tag" content="模型融合">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/bb8fcf21/swa_1.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/bb8fcf21.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/bb8fcf21.html","path":"bb8fcf21.html","title":"模型平均 -- model soup"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>模型平均 -- model soup | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#swa-ema"><span class="nav-number">2.</span> <span class="nav-text">SWA &amp; EMA</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#model-soup%E6%96%B9%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text">model soup方法</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#model-soup%E5%AE%9E%E9%AA%8C"><span class="nav-number">4.</span> <span class="nav-text">model soup实验</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">46</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">54</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/bb8fcf21.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="模型平均 -- model soup | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          模型平均 -- model soup
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-07-30 20:33:25 / 修改时间：20:51:36" itemprop="dateCreated datePublished" datetime="2024-07-30T20:33:25+08:00">2024-07-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>8 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>最近苹果的DCLM和Llama-3.1技术报告都提到了model soup：《Model soups:
+averaging weights of multiple fine-tuned models improves accuracy
+without increasing inference time》。</p>
+<p>拿model soup出来和SWA已经EMA一起看下。</p>
+<h1 id="背景">背景</h1>
+<p>一般来说，模型微调的过程是这样的：<br>
+- 1、用不同的超参训练多个模型，每个配置下得到一系列模型checkpoint<br>
+- 2、选择在验证集上最佳的checkpoint，其他的就丢弃掉了</p>
+<p>这样的常规做法方便易操作，但是有几个缺点：<br>
+-
+多个微调得到的模型如果进行合适的ensemble应该能有超过单个模型的效果，直接选择一个”最佳模型“浪费了一部分算力<br>
+- 微调之后对于out-of-distribution
+data的效果可能变差，而这在验证集是看不出来的；而模型在实际使用中，很容易遇到有分布偏移的数据</p>
+<h1 id="swa-ema">SWA &amp; EMA</h1>
+<p>针对单次训练的模型平均方法主要有SWA和EMA。</p>
+<p>Stochastic Weight
+Averaging（SWA）算是模型微调里比较常见、普遍有效的方法了。</p>
+<p>SWA一般取训练后期的等间隔checkpoint，然后计算他们的参数平均。</p>
+<img src="/bb8fcf21/swa_1.png" class title="swa">
+<img src="/bb8fcf21/swa_2.png" class title="swa">
+<p>SWA为什么有效呢？</p>
+<p>一般SGD会让模型收敛到loss平面的一个wide flat
+region。这个空间的维度很高，所以wide flat
+region的大部分volume都集中在边界附近（类似碗口附近），所以SGD得到的解更容易出现在边界附近。</p>
+<p>另外，train loss和test error的曲面并非完全对齐。位于wide flat
+region中心的解不像边界附近的解那样容易受到训练和测试曲面之间的偏移影响，也就是靠近中间的解有更好的泛化性。</p>
+<p>SWA对多个解进行平均，能使其能够朝着区域的中心移动，因此得到的模型有更好的效果。</p>
+<p>下图是SWA和SGD解的train loss和test
+error曲面，虽然SWA得到的位置，train
+loss较大，但是它在收敛区域的中心，有更好的泛化性，在test
+error上更好。</p>
+<img src="/bb8fcf21/swa_3.png" class title="swa">
+<p>EMA和SWA类似，只是对模型进行平均的方法不一样，细节可以参照《【炼丹技巧】指数移动平均（EMA）的原理及PyTorch实现》(<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/68748778">https://zhuanlan.zhihu.com/p/68748778</a>)。</p>
+<h1 id="model-soup方法">model soup方法</h1>
+<p>关于model average的一些工作：<br>
+- 《What is being transferred in transfer
+learning?》里观察到，从同一个预训练模型进行微调的下游模型，会收敛到同一个error
+landscape basin。<br>
+- 《Rethinking the inception architecture for computer
+vision》和《Averaging weights leads to wider optima and better
+generalization》（SWA）的结果显示在单个微调训练路径上进行weight
+average有效果。<br>
+- 《No one representation to rule them all: Overlapping features of
+training
+methods》中观察到，把使用不同超参微调出来的模型进行ensemble有效果提升。</p>
+<p>受上面这些方法和观察的启发，model soup把model
+average扩展到使用多个超参的independent
+run，而不仅是如EMA/SWA那样的单次训练。</p>
+<p>假设使用多套超参 <span class="math inline">\([h_1,...h_k]\)</span>
+对预训练模型（<span class="math inline">\(\theta_0\)</span>）进行微调，得到 <span class="math inline">\([\theta_1,...,\theta_k]\)</span>
+共k个模型checkpoint，分别是各自超参下，在验证集上取得最佳结果的checkpoint。通过对这k个checkpoint的模型参数进行平均，获得比单次微调的模型更好的效果，这就是model
+soup。</p>
+<p>文中提出了3种具体model soup方法：uniform soup、greedy soup和learned
+soup：</p>
+<img src="/bb8fcf21/method_soup.png" class title="model soup">
+<p>其中uniform soup把所有模型都用起来，计算均值。</p>
+<p>而greedy
+soup的做法则是把k个checkpoint按在验证集上的效果排序，按从高到低的顺序逐个验证checkpoint，只有当前checkpoint的加入对最终效果有提升时，才会保留它，否则就丢弃。算法如下：</p>
+<img src="/bb8fcf21/algo.png" class title="model soup">
+<p>uniform soup和greedy soup都比较直接，learned
+soup方法则需要额外训练。假设 <span class="math inline">\(\alpha\in\mathbb{R}^k\)</span> 是mixing
+coefficients，<span class="math inline">\(\beta\)</span> 是temperature
+scaling parameter，learned soup基于以下目标解出 <span class="math inline">\(\alpha\)</span> 和 <span class="math inline">\(\beta\)</span>：</p>
+<p><span class="math display">\[\arg\min_{\alpha\in\mathbb{R}^k,\beta\in\mathbb{R}}\sum_{j=1}^n\ell\Bigg(\beta\cdot
+f\Bigg(x_j,\sum_{i=1}^k\alpha_i\theta_i\Bigg),y_j\Bigg)\]</span></p>
+<p>当k比较大时，learned soup对显存的需要会很大。</p>
+<p>综合来看，greedy soup应该是比较方便有效，性价比高的做法。</p>
+<h1 id="model-soup实验">model soup实验</h1>
+<p>图像上，用CLIP、ALIGN和BASIC模型做了验证，而文本则是用文本分类transformer模型。</p>
+<p>1、Error landscape visualizations</p>
+<p>用CLIP在ImageNet上使用不同超参进行多次微调，training loss和test
+error的可视化如下：</p>
+<img src="/bb8fcf21/angle.png" class title="model soup">
+<p>x和y轴是二维化的模型参数空间。多次的的微调模型本身并不在error
+landscape的最低点，而是分布在边缘上。</p>
+<p>这结果说明：<br>
+- 对多个finetuned solution取平均能获得超过单个模型的效果<br>
+- 越不相关的solution --
+参数空间上和initialization模型构成的连线之间的夹角越大 --
+的平均效果可能更好（个人这点感觉不是很直观）</p>
+<p>为了验证solution相关性对model
+average效果的影响，分别改变随机数种子、学习率和图像数据增强，得到多对结果。model
+soup的准确性增益随着solution之间的差异增大而增加，如下图：</p>
+<img src="/bb8fcf21/angle_2.png" class title="model soup">
+<p>2、Ensemble comparison</p>
+<p>model soup和ensemble方法，在不同learning rate下的对比如下：</p>
+<img src="/bb8fcf21/compare.png" class title="model soup">
+<p>观察到：<br>
+- 当lr较小时，ensemble和model soup的效果同样，都比较差<br>
+- 当lr适中时，ensemble和model soup的效果都较好<br>
+- 当lr较大时，ensemble比model soup好，但都比适中lr差<br>
+- 整体上，在in-distribution的数据上，ensemble效果更好，而在distribution
+shift数据上，则model soup更好</p>
+<p>3、One dimensional hyperparameter grids</p>
+<p>仅改变一个超参，获得的多个模型进行平均，效果是否有提升？</p>
+<p>针对这个问题，文章在optimizer、augmentation和lr上分别做了实验，结果是除了太大或者太小的lr，其他都有正收益。</p>
+<p>4、效果</p>
+<p>图像和文本模型在下游任务上使用model soup的效果如下：</p>
+<img src="/bb8fcf21/result.png" class title="model soup">
+<p>从结果上来看，都有比较稳定的收益，但是文本任务的收益没有图像那么明显。</p>
+<h1 id="小结">小结</h1>
+<ul>
+<li>model soup中性价比比较高的就是greedy model
+soup，操作简单，不影响推理成本，大部分任务都能获得提升<br>
+</li>
+<li>model
+soup的方法可以和adapter比如LoRA结合起来使用，还是比较有可扩展性的<br>
+</li>
+<li>是和对抗训练、r-drop之类的方式一样，涨点好用，但是水文不多的方案</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【往期文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Averaging Weights Leads to Wider Optima and Better
+Generalization https://arxiv.org/abs/1803.05407<br>
+【2】Model soups: averaging weights of multiple fine-tuned models
+improves accuracy without increasing inference time
+https://arxiv.org/abs/2203.05482<br>
+【3】Stochastic Weight Averaging in PyTorch
+https://pytorch.org/blog/stochastic-weight-averaging-in-pytorch/<br>
+【4】【炼丹技巧】指数移动平均（EMA）的原理及PyTorch实现
+https://zhuanlan.zhihu.com/p/68748778</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/bb8fcf21.html" title="模型平均 -- model soup">https://saicat.github.io/bb8fcf21.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E5%BE%AE%E8%B0%83/" rel="tag"><i class="fa fa-tag"></i> 微调</a>
+              <a href="/tags/%E6%A8%A1%E5%9E%8B%E8%9E%8D%E5%90%88/" rel="tag"><i class="fa fa-tag"></i> 模型融合</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/93328a2a.html" rel="prev" title="Llama3.1--post-training要点一览">
+                  <i class="fa fa-angle-left"></i> Llama3.1--post-training要点一览
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">315k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:33</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
