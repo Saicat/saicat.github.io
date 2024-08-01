@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  之前苹果在WWDC24发布了包含多个强大模型的Apple Intelligence系统，苹果刚刚最新发出来的技术报告《Apple Intelligence Foundation Language Models》介绍了关于其中两个模型的一些细节 -- 端侧使用的，大小约3B的AFM-on-device，和云侧使用的更">
+<meta property="og:type" content="article">
+<meta property="og:title" content="苹果智能系统模型--AFM">
+<meta property="og:url" content="https://saicat.github.io/1e34e252.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  之前苹果在WWDC24发布了包含多个强大模型的Apple Intelligence系统，苹果刚刚最新发出来的技术报告《Apple Intelligence Foundation Language Models》介绍了关于其中两个模型的一些细节 -- 端侧使用的，大小约3B的AFM-on-device，和云侧使用的更">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/1e34e252/afm.png">
+<meta property="og:image" content="https://saicat.github.io/1e34e252/core_ablation.png">
+<meta property="og:image" content="https://saicat.github.io/1e34e252/distill.png">
+<meta property="og:image" content="https://saicat.github.io/1e34e252/pretrain_1.png">
+<meta property="og:image" content="https://saicat.github.io/1e34e252/pretrain_2.png">
+<meta property="og:image" content="https://saicat.github.io/1e34e252/intelligence.png">
+<meta property="og:image" content="https://saicat.github.io/1e34e252/recover.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-07-31T14:28:10.000Z">
+<meta property="article:modified_time" content="2024-08-01T12:49:54.506Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="技术报告">
+<meta property="article:tag" content="SFT">
+<meta property="article:tag" content="post-training">
+<meta property="article:tag" content="DPO">
+<meta property="article:tag" content="RM">
+<meta property="article:tag" content="RS">
+<meta property="article:tag" content="苹果">
+<meta property="article:tag" content="端侧模型">
+<meta property="article:tag" content="蒸馏">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/1e34e252/afm.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/1e34e252.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/1e34e252.html","path":"1e34e252.html","title":"苹果智能系统模型--AFM"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>苹果智能系统模型--AFM | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">2.</span> <span class="nav-text">预训练</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">2.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">2.2.</span> <span class="nav-text">训练</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#core-pre-training"><span class="nav-number">2.2.1.</span> <span class="nav-text">Core pre-training</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#continued-pre-training"><span class="nav-number">2.2.2.</span> <span class="nav-text">Continued pre-training</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B"><span class="nav-number">2.2.3.</span> <span class="nav-text">评测</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#post-training"><span class="nav-number">3.</span> <span class="nav-text">Post-Training</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE-1"><span class="nav-number">3.1.</span> <span class="nav-text">数据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%88%E6%88%90%E6%95%B0%E6%8D%AE"><span class="nav-number">3.1.1.</span> <span class="nav-text">合成数据</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sft"><span class="nav-number">3.2.</span> <span class="nav-text">SFT</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rlhf"><span class="nav-number">3.3.</span> <span class="nav-text">RLHF</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#rm"><span class="nav-number">3.3.1.</span> <span class="nav-text">RM</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#iterative-teaching-committeeitec"><span class="nav-number">3.3.2.</span> <span class="nav-text">Iterative teaching
+committee（iTeC）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#online-rlhf-algorithm-mdloo"><span class="nav-number">3.3.3.</span> <span class="nav-text">Online RLHF algorithm: MDLOO</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%B5%8B%E8%83%BDapple-intelligence"><span class="nav-number">4.</span> <span class="nav-text">赋能Apple Intelligence</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#accuracy-recovery-adapter"><span class="nav-number">4.1.</span> <span class="nav-text">accuracy-recovery adapter</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#task-specific-adapter"><span class="nav-number">4.2.</span> <span class="nav-text">task-specific adapter</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">47</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">56</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/1e34e252.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="苹果智能系统模型--AFM | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          苹果智能系统模型--AFM
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-07-31 22:28:10" itemprop="dateCreated datePublished" datetime="2024-07-31T22:28:10+08:00">2024-07-31</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-08-01 20:49:54" itemprop="dateModified" datetime="2024-08-01T20:49:54+08:00">2024-08-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>18 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>之前苹果在WWDC24发布了包含多个强大模型的Apple
+Intelligence系统，苹果刚刚最新发出来的技术报告《Apple Intelligence
+Foundation Language Models》介绍了关于其中两个模型的一些细节 --
+端侧使用的，大小约3B的AFM-on-device，和云侧使用的更大模型AFM-server（AFM=Apple
+Foundation Model）。报告里没有给出AFM-server的规模。</p>
+<h1 id="模型">模型</h1>
+<p>模型的设计比较常规（没有和OpenELM一样玩底大头尖的设计）：</p>
+<img src="/1e34e252/afm.png" class title="afm">
+<p>几个细节：<br>
+- 共享了输入输入的embedding，减少参数量<br>
+- 参考《Small-scale proxies for large-scale transformer training
+instabilities》，使用Query/key normalization，提升训练稳定性<br>
+- RoPE的base frequency为500k</p>
+<p>tokenizer是基于SentencePiece用BPE训的，所有数字都切分为单个数字。AFM-server模型的词表大小为100k，AFM-on-device则小一些，只有49k。</p>
+<h1 id="预训练">预训练</h1>
+<h2 id="数据">数据</h2>
+<ul>
+<li>数据的来源主要包括：开源数据，从出版商获得使用许可的数据，已经通过苹果的爬虫Applebot爬取的数据<br>
+</li>
+<li>苹果认为相比数量，预训练数据的质量对模型在下游任务的影响更大</li>
+</ul>
+<p>另外苹果（自称）特别看重隐私和安全性，因此所有数据的几乎全部流程都有大量移除有害数据、personally
+identifiable information（PII）、成人内容的处理工作。</p>
+<p>下面罗列一些预训练数据的处理细节。</p>
+<p>1、网页数据</p>
+<p>处理pipeline包括：<br>
+- 结合Safari的reader mode和Boilerpipe算法提取网页的主体内容<br>
+- 规则+model based的安全过滤<br>
+- 基于locality-sensitive n-gram hashing的模糊去重<br>
+- 质量过滤（《Large language model-guided document
+selection》，《Datacomp-lm: In search of the next generation of training
+sets for language models》）<br>
+-
+Decontamination：从预训练数据按n-gram删除和811个benchmark过度相关的数据，避免测试集污染</p>
+<p>2、授权数据</p>
+<p>从出版社获取的高质量长文本数据，主要用在二阶段和三阶段的预训练（各阶段方案在后面）。同样做了避免测试集污染的操作。</p>
+<p>3、代码</p>
+<p>来自github的开源仓库，包含14种语言，经过去重、PII过滤、质量过滤和Decontamination处理。</p>
+<p>4、数学</p>
+<p>包括3B数学QA内容，和14B数学相关的文档，来自数学论坛、博客、tutorial和seminar等。为了提取这些数据，苹果专门开发了对应的模板、数学符号filter、数学相关的quality
+filter以及领域filter。</p>
+<p>5、公开数据</p>
+<p>从公开数据里挑了一部分高质量数据。</p>
+<h2 id="训练">训练</h2>
+<p>AFM的预训练分为3个stage：<br>
+- core：大部分训练预算都在这一个阶段消耗<br>
+- continued：上采样高质量数据，更多的code、math等内容<br>
+-
+context-lengthening：和continued类似，使用更大的训练窗口和长文本数据</p>
+<p>三个stage在调参的时候，用了和《Small-scale proxies for large-scale
+transformer training instabilities》中的“μParam
+(simple)”类似的方法。</p>
+<h3 id="core-pre-training">Core pre-training</h3>
+<p>规模较大的AFM-server模型是从0开始训的，而较小的AFM-on-device则是从更大的模型蒸馏+剪枝来的。</p>
+<p>1、AFM-server</p>
+<ul>
+<li>使用6.3T数据<br>
+</li>
+<li>sequence length = 4096<br>
+</li>
+<li>batch size = 4096<br>
+</li>
+<li>weight decay = 3.16e-4<br>
+</li>
+<li>cosine lr schedule, max lr = 0.01, min lr = 0.5% max lr<br>
+</li>
+<li>warmup step = 5000</li>
+</ul>
+<p>batch size是通过scaling
+law的实验决定的，不过实践中发现，下游任务的效果对预训练的batch
+size并不敏感：batch
+size增大一倍或者缩小一半下游任务效果没有影响，因此虽然scaling
+law给出的预测最佳batch
+size是3072，实际训练的时候，为了效率还是使用了4096。</p>
+<p>通过proxy
+model的lr扫描，定了最佳lr在0.01~0.02，最终选择了0.01。（这里使用类似μParam的方法，各参数初始化和前向计算的时候应该都有缩放，所以这个lr会相对大一些）</p>
+<p>苹果训练的时候选择的优化器是RMSProp with
+momentum，而其他大部分大模型基本都是使用AdamW。</p>
+<p>对于训练设置的问题，苹果做了消融实验，把上面的core
+training和以下配置的训练（baseline）进行对比：<br>
+- 使用AdamW，beta_1 = 0.9，beta_2 = 0.95<br>
+- weight decay = 1e-4<br>
+- lr 最小decay到0.0001<br>
+- batch size = 1024</p>
+<p>其他设置保持一致，用AFM-on-device模型结构训练3.1T数据。</p>
+<p>二者的对比如下：</p>
+<img src="/1e34e252/core_ablation.png" class title="afm">
+<p>整体上AFM的core
+training比baseline略略好一点，基本上可以认为是持平。</p>
+<p>2、AFM-on-device</p>
+<p>AFM-on-device模型不是从零训练的，而是基于一个6.4B的模型（使用和AFM-server一样的训练方法得到的），使用了structural
+pruning和distillation得到的。</p>
+<p>所用的structural pruning和《Structured pruning of large language
+models》、《Sheared llama: Accelerating language model pre-training via
+structured pruning》相似，除了几点变化：<br>
+- 只对FFN层做prune<br>
+- 使用Soft-Top-K masking（《Conditional adapters: Parameter-efficient
+transfer learning with fast inference》）<br>
+- 用了和core training一样的data mix训练了188B得到pruning mask</p>
+<p>以得到的模型的为初始化，进行知识蒸馏：把原来core训练的target
+label替换成：0.9 * teacher top-1 prediction + 0.1 * true label。</p>
+<p>同样进行了6.3T的蒸馏训练。</p>
+<p>相比直接从零训练，pruning和distillation在数据效率和最终结果上都有收益。使用不同方法训练出来的模型效果对比如下：</p>
+<img src="/1e34e252/distill.png" class title="afm">
+<p>整体来看，prune + distill能比多5倍training
+cost的从零训练baseline更好一点，训练效率更高。</p>
+<h3 id="continued-pre-training">Continued pre-training</h3>
+<p>这一stage提高了math和code的比例，而降低了低质量的爬虫数据比例，进行了1T
+token的训练。</p>
+<p>训练设置：<br>
+- sequence length = 8192<br>
+- max lr = 3e-4，min lr = 0.1% max lr<br>
+- weight decay = 1e-5<br>
+- warmup step = 1000</p>
+<p>其他和core training保持一致。</p>
+<p>这一阶段数据蒸馏没有什么收益，所以AFM-on-device和AFM-server一样，采用直接训练的方式。</p>
+<p>3、Context lengthening</p>
+<p>最后这一阶段使用100B的长窗口训练来提升模型的长文本能力：<br>
+- sequence length = 32768<br>
+- RoPE base frequency 500k --&gt; 6315089（《Scaling laws of rope-based
+extrapolation》）<br>
+- 在二阶段数据的基础上，增加长的QA合成数据</p>
+<h3 id="评测">评测</h3>
+<p>三个阶段后，AFM-on-device和AFM-server的评测效果如下（报告提到，使用了internal的formulation，所以没法和其他模型直接比较）</p>
+<img src="/1e34e252/pretrain_1.png" class title="afm">
+<img src="/1e34e252/pretrain_2.png" class title="afm">
+<p>continued
+pre-training和预期的一样，对math和code的能力有比较大的提升。</p>
+<h1 id="post-training">Post-Training</h1>
+<p>AFM的post-training包括SFT和RLHF两个阶段，并使用了两个新方法iTec和MDLOO。</p>
+<h2 id="数据-1">数据</h2>
+<p>post-training的数据包括人类真实数据和合成数据。</p>
+<h3 id="合成数据">合成数据</h3>
+<p>一个好的reward model是合成高质量数据的关键，同时扩展prompt
+set提高多样化和覆盖范围也很重要。</p>
+<p>苹果介绍了数学、工具使用和代码这3个领域的数据合成。</p>
+<p>1、Mathematics</p>
+<p>数学数据的合成包括两个stage：<br>
+- 生成数学问题<br>
+- 生成对应答案</p>
+<p>基于一些种子prompt，通过以下方法获取数量更大、更多样化的prompt：<br>
+- Problem rephrase and reversion：参考《Metamath: Bootstrap your own
+mathematical questions for large language models》，进行问题重述<br>
+- Problem evolution：和指令进化类似（《WizardLM: Empowering large
+language models to follow complex
+instructions》），深度进化提升指令的复杂度，而广度进化提升话题的覆盖范围</p>
+<p>2、Tool use</p>
+<p>先从简单的single-tool数据开始，训练模型。然后逐步包含multi-tool和multi-step的问题，提升模型能力。此外，还会在数据里混入oracle
+tool和其他相似同居，增加工具选择的难度。</p>
+<p>另外还增加了tool intent detection数据，以减少过度使用工具的问题。</p>
+<p>3、Coding</p>
+<p>从71个话题的种子数据开始，通过self-instruct和rejection
+sampling让模型自动化学习。</p>
+<p>对于每个问题，模型会生成单元测试和多个solution，通过执行这些solution能够检验结果的正确性，组中选择通过测试最多的solution。</p>
+<p>另外还会给通过的单元测试设定一个阈值，只要高于这个阈值才会被使用。最终得到了12k的高质量代码数据。</p>
+<h2 id="sft">SFT</h2>
+<p>1、数据选择</p>
+<p>在质量过滤、去重之外，通过数据合成 + rejection
+sampling来提供大量合成数据，提升SFT训练数据规模。</p>
+<p>2、比例调整</p>
+<p>对不同数据组成部分的权重进行训练，然后调整比例。对此进行了大量实验，移除掉一些影响较小的数据。</p>
+<p>3、训练超参</p>
+<p>模型使用constant
+lr训练，AFM-server和AFM-on-device的lr分别为5e−6和2e−5。</p>
+<p>和其他家做法比较不同的，苹果使用的0.1的dropout rate。</p>
+<p>由于不同checkpoint的eval指标会有波动，因此使用RM选择best-of-N的方式来挑选最佳checkpoint。</p>
+<h2 id="rlhf">RLHF</h2>
+<p>苹果的RLHF有多轮，迭代提升模型。</p>
+<h3 id="rm">RM</h3>
+<p>用前面收集的偏好数据训练RM：<br>
+- 每条prompt有两个response（对比一下，Llama-3可能有3条）<br>
+- 偏好数据分为significantly better, better, slightly better, negligibly
+better四个等级<br>
+-
+除了综合的对比之外，每条response还有细粒度的打分，维度包括指令跟随、真实性、有害性、简明程度，每个维度的打分有3个等级</p>
+<p>RM取最后一层的最后一个non-padding
+token的embedding，再加上一个linear层和4个MLPhead来输出打分。linear层输出偏好奖励，而4个MLP层分别输出4个细粒度打分的分类结果，四个分类头的输出分别是
+<span class="math inline">\(u_\phi^\mathrm{if},u_\phi^\mathrm{verb},u_\phi^\mathrm{truth},u_\phi^\mathrm{harm}\)</span>。</p>
+<p>RM训练时，使用soft label loss
+function，这样可以把偏好的程度也纳入考虑。同时细粒度的打分也作为regularization
+term加入训练，实验发现这些细粒度打分能提升RM的准确性。</p>
+<p>1、Soft label loss</p>
+<p>基于Bradley-Terry
+model，y_c（c=chosen）比y_r（r=rejected）的概率是</p>
+<p><span class="math display">\[\sigma(r_\phi(x,y_c)-r_\phi(x,y_r))\]</span></p>
+<p>直观来说，如果两条response的质量差距越大，这个值应该越大。</p>
+<p>因此对于不同的偏好程度l，设计了一个超参，target preference
+probability p_l，并构造一个soft label loss：</p>
+<p><span class="math display">\[\begin{aligned}
+L_{\mathrm{ranking}}(\phi)=&amp;
+-p_\ell\log(\sigma(r_\phi(x,y_c)-r_\phi(x,y_r))  \\
+&amp;-\left(1-p_\ell\right)\log(\sigma(r_\phi(x,y_r)-r_\phi(x,y_c))
+\end{aligned}\]</span></p>
+<p>如果偏好程度比较高，那么p_l的值应该更大。实践中，p_l使用了0.95、0.85、0.75、0.65这四个值。</p>
+<p>2、Single-sided grading as regularization</p>
+<p>regularization loss如下：</p>
+<p><span class="math display">\[\begin{aligned}L_{\mathrm{regu}}(\phi)&amp;=\sum_{\text{grade}\in\text{if,verb,truth,harm}}\left(\text{cross}_\text{entropy}(u_\phi^\mathrm{grade}(x,y_c),z_c^\mathrm{grade})\right.\\&amp;+\text{cross}_\text{entropy}(u_\phi^\mathrm{grade}(x,y_r),z_r^\mathrm{grade})\Big)\end{aligned}\]</span></p>
+<p>其中z是各个细粒度维度的打分。</p>
+<p>最终RM的训练loss为：</p>
+<p><span class="math display">\[L_\text{ranking}(\phi)+\lambda
+L_\text{regu}(\phi)\]</span></p>
+<h3 id="iterative-teaching-committeeitec">Iterative teaching
+committee（iTeC）</h3>
+<p>苹果提出一个iterative RLHF框架来优化模型。</p>
+<p>苹果在AFM的RLHF中，学到的最重要的事情之一就是“refresh online human
+preference data collection using a diverse set of the best performing
+models”。</p>
+<p>具体来说，构建一个由SFT、拒绝采样、DPO/IPO和RL训练出来的最佳模型，以及前几轮的最佳模型组成的集合，称之为“model
+committee”，并从这个model committee收集最新的偏好数据。</p>
+<p>在获取最新的偏好数据之后，会更新RM，让后训练一组新的最佳模型，这些新的模型会加入model
+comittee，继续下一轮迭代。</p>
+<p>不同的优化算法训练出来的模型有不同的特点，比如使用负例的算法，online
+RLHF、DPO、IPO等，在数学推理方面的能力较好，而rejection
+sampling在指令遵循和写作方面更有效。通过在model
+comittee进行采样，并用最新的RM进行排序，可以结合多个模型的强项。</p>
+<h3 id="online-rlhf-algorithm-mdloo">Online RLHF algorithm: MDLOO</h3>
+<p>从经典的RLHF优化目标出发：</p>
+<p><span class="math display">\[\max_\theta\mathbb{E}_{x\sim\mathcal{D},y\sim\pi_\theta(\cdot|x)}\left[r_\phi(x,y)-\beta
+D_{\mathrm{KL}}\left(\pi_\theta(\cdot|x)\|\pi_{\mathrm{ref}}(\cdot|x)\right)\right]\]</span></p>
+<p>苹果选用的reward function是</p>
+<p><span class="math display">\[R(x,y)=r_\phi(x,y)-\beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}\]</span></p>
+<p>这个reward function的前面的expectation是等价的。</p>
+<p>和经典RLHF有所不同的是，这里把一整个response视为一个action，因此就不再需要critic模型来对每个token的reward进行打分了。</p>
+<p>此外，苹果还做了几个改动。</p>
+<p>1、Leave-One-Out (LOO) estimator of the advantage</p>
+<p>对于底k个iteration的policy
+model，每次输入n条prompt，每个prompt采样K条数据。</p>
+<p>那么按照定义，advantage就是：</p>
+<p><span class="math display">\[A_k(x,y_i)=R(x,y_i)-\mathbb{E}_{y\sim\pi_{\theta_k}(\cdot|x)}[R(x,y)]\]</span></p>
+<p>苹果使用leave-one-out (LOO)方法来估计 <span class="math inline">\(A_k(x,y_i)\)</span>，即通过prompt
+x和其他K-1个response：</p>
+<p><span class="math display">\[\widehat{A}_k(x,y_i)=R(x,y_i)-\frac{1}{K-1}\sum_{j\neq
+i}R(x,y_j)\]</span></p>
+<p>同《Back to basics: Revisiting reinforce style optimization for
+learning from human feedback in
+LLMs》发现的一样，这样的advantage估计在RLHF有一些收益。另外，实践上发现这样做能让训练更加稳定。</p>
+<p>2、Mirror descent policy optimization (MDPO)</p>
+<p>和常用的clipping-based PPO不同，使用KL
+divergence作为regularization。</p>
+<h1 id="赋能apple-intelligence">赋能Apple Intelligence</h1>
+<p>AFM是给Apple Intelligence使用的，而Apple
+Intelligence主要是支持iPhone、iPad和Mac等设备的，因此「计算效率」和针对这些设备场景下的「专用能力」是重点。</p>
+<p>虽然经过post-training之后，模型的通用能力已经不错，但是针对设别上的任务进行专门的微调，还能获得进一步的提升。苹果通过使用多个任务相关的adapter，在提升多个任务效果的同时，保持了参数和计算的高效。这些adapter很小，运行时可以在内存中随意切换。</p>
+<p>整体的框架如下图所示</p>
+<img src="/1e34e252/intelligence.png" class title="afm">
+<h2 id="accuracy-recovery-adapter">accuracy-recovery adapter</h2>
+<p>1、效果恢复</p>
+<p>端侧设备的空间比较小，所以量化是必须要做的。首先，post-training后的模型会用4-bit的精度进行量化。</p>
+<p>但是由于量化模型会带来一定的效果损失，所以这个量化模型并不是直接使用，而是会在固定量化模型的基础上，用16-bit的LoRA进行训练，以尽量恢复因为量化带来的效果损失。这个LoRA就叫accuracy-recovery
+adapter。</p>
+<p>accuracy-recovery
+adapter的训练过程和主干模型的训练保持一致，也进行了pre-training和post-training的训练。不过由于参数量很小（只有几十MB），所以整个预训练大概只用了10B的数据，并且基本可以恢复大部分由于量化带来的效果损失。</p>
+<p>实践上，rank
+16基本上可以获得比较好的效果，不过出于灵活性的考虑，还是提供了不同rank的LoRA参数给下游使用：8、16、32。</p>
+<p>模型量化前后，以及使用accuracy-recovery
+adapter之后的效果对比如下：</p>
+<img src="/1e34e252/recover.png" class title="afm">
+<p>rank
+16的adapter基本可以恢复大部分量化带来的效果损失，并且量化的损失越多，adapter恢复的比例越大。也就是使用了accuracy-recovery
+adapter之后，基本可以不用太在意量化的损失，可以进一步提高模型压缩的程度。</p>
+<p>2、Quantization schemes</p>
+<p>以往量化的时候，因为要兼顾效率和效果损失，一般把block
+size设成32或者64这样比较小的规模。现在有了accuracy-recovery
+adapter，反正损失掉的基本都可以恢复，那block
+size就可以设得更大了，甚至可以达到100k。</p>
+<p>另外，由于AFM的输入输出embedding是shared的，为了有更好的效率，embedding部分使用8-bit的per-channel
+quantization。</p>
+<p>3、混合精度量化</p>
+<p>模型中明显每层对效果的影响是不同的，对于对最终效果影响较小的层，苹果进一步用2-bit的量化精度，最终整体可以达到3.5~3.7的bpw。</p>
+<h2 id="task-specific-adapter">task-specific adapter</h2>
+<p>针对不同的下游任务，可以在accuracy-recovery
+adapter的基础上再进一步微调。这样在保持主干网络为4-bit模型的情况下，下游任务就能有很好的效果。</p>
+<p>以summarization为例，具体任务是对设备上的email、message和notification进行摘要。使用AFM-server模型，用设备上真实信息的格式构造训练数据，然后用这些训练数据训练adapter。</p>
+<h1 id="小结">小结</h1>
+<ul>
+<li>模型设计、pre-training和post-training大部分使用的都是比较常规有效的做法，但是在训练上使用了RMSProp
+with momentum，和其他大部分模型的做法不太一样。<br>
+</li>
+<li>accuracy-recovery
+adapter看起来是比较合理有效的，看后面其他手机厂商怎么follow。</li>
+</ul>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【推荐文章】</p>
+<ul>
+<li>MoE：<br>
+
+<p style="line-height: 1.2;">
+<small> <a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+</small>
+</p></li>
+<li>预训练：<br>
+
+<p style="line-height: 1.2;">
+<small> <a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+</small>
+</p></li>
+<li>数据：<br>
+
+<p style="line-height: 1.2;">
+<small> <a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+</small>
+</p></li>
+<li>长上下文：<br>
+
+<p style="line-height: 1.2;">
+<small> <a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+</small>
+</p></li>
+<li>推理加速：<br>
+
+<p style="line-height: 1.2;">
+<small> <a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+</small>
+</p></li>
+<li>对齐：<br>
+
+<p style="line-height: 1.2;">
+<small> <a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+</small>
+</p></li>
+<li>Transformer：<br>
+
+<p style="line-height: 1.2;">
+<small> <a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+</small>
+</p></li>
+<li>大模型算法题：<br>
+
+<p style="line-height: 1.2;">
+<small> <a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a><br>
+</small>
+</p></li>
+</ul>
+<h1 id="reference">Reference</h1>
+<p>【1】Apple Intelligence Foundation Language Models
+https://machinelearning.apple.com/papers/apple_intelligence_foundation_language_models.pdf</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/1e34e252.html" title="苹果智能系统模型--AFM">https://saicat.github.io/1e34e252.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E6%8A%80%E6%9C%AF%E6%8A%A5%E5%91%8A/" rel="tag"><i class="fa fa-tag"></i> 技术报告</a>
+              <a href="/tags/SFT/" rel="tag"><i class="fa fa-tag"></i> SFT</a>
+              <a href="/tags/post-training/" rel="tag"><i class="fa fa-tag"></i> post-training</a>
+              <a href="/tags/DPO/" rel="tag"><i class="fa fa-tag"></i> DPO</a>
+              <a href="/tags/RM/" rel="tag"><i class="fa fa-tag"></i> RM</a>
+              <a href="/tags/RS/" rel="tag"><i class="fa fa-tag"></i> RS</a>
+              <a href="/tags/%E8%8B%B9%E6%9E%9C/" rel="tag"><i class="fa fa-tag"></i> 苹果</a>
+              <a href="/tags/%E7%AB%AF%E4%BE%A7%E6%A8%A1%E5%9E%8B/" rel="tag"><i class="fa fa-tag"></i> 端侧模型</a>
+              <a href="/tags/%E8%92%B8%E9%A6%8F/" rel="tag"><i class="fa fa-tag"></i> 蒸馏</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/bb8fcf21.html" rel="prev" title="模型平均 -- model soup">
+                  <i class="fa fa-angle-left"></i> 模型平均 -- model soup
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">325k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:51</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
