@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  最近在做端侧模型和数据合成的工作，微软的phi系列是受到关注比较多的一个小规模模型，整理一下细节，看看有什么可以借鉴使用的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="phi系列模型">
+<meta property="og:url" content="https://saicat.github.io/fe13b56f.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  最近在做端侧模型和数据合成的工作，微软的phi系列是受到关注比较多的一个小规模模型，整理一下细节，看看有什么可以借鉴使用的。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_1_result.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_1_code_case.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_1_compare.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_1_example_1.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_1_example_2.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_15_result.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_15_bench_1.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_15_bench_2.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_15_bench_3.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_2_1.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_2_2.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_2_3.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_2.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_3_sparse.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/phi_3_result.png">
+<meta property="og:image" content="https://saicat.github.io/fe13b56f/overfit.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-08-13T12:41:06.000Z">
+<meta property="article:modified_time" content="2024-08-13T13:10:22.333Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="微软">
+<meta property="article:tag" content="端侧模型">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/fe13b56f/phi_1_result.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/fe13b56f.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/fe13b56f.html","path":"fe13b56f.html","title":"phi系列模型"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>phi系列模型 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#phi-1"><span class="nav-number">1.</span> <span class="nav-text">phi-1</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.1.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">1.2.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">1.3.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">1.4.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#phi-1.5"><span class="nav-number">2.</span> <span class="nav-text">phi-1.5</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE-1"><span class="nav-number">2.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83-1"><span class="nav-number">2.2.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#filtered-web-data"><span class="nav-number">2.3.</span> <span class="nav-text">filtered web data</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">2.4.</span> <span class="nav-text">效果</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#phi-2"><span class="nav-number">3.</span> <span class="nav-text">phi-2</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#scale-up"><span class="nav-number">3.1.</span> <span class="nav-text">scale up</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#phi-2-1"><span class="nav-number">3.2.</span> <span class="nav-text">phi-2</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#phi-3"><span class="nav-number">4.</span> <span class="nav-text">phi-3</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B-1"><span class="nav-number">4.1.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE-%E8%AE%AD%E7%BB%83"><span class="nav-number">4.2.</span> <span class="nav-text">数据 &amp; 训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%88%E6%9E%9C-1"><span class="nav-number">4.3.</span> <span class="nav-text">效果</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E6%B1%A1%E6%9F%93"><span class="nav-number">5.</span> <span class="nav-text">数据污染？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">50</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">57</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/fe13b56f.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="phi系列模型 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          phi系列模型
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-08-13 20:41:06 / 修改时间：21:10:22" itemprop="dateCreated datePublished" datetime="2024-08-13T20:41:06+08:00">2024-08-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.1k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>13 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>最近在做端侧模型和数据合成的工作，微软的phi系列是受到关注比较多的一个小规模模型，整理一下细节，看看有什么可以借鉴使用的。</p>
+<h1 id="phi-1">phi-1</h1>
+<p>phi-1包括两个模型：350M参数的phi-1-small和1.3B参数的phi-1-base。</p>
+<p>相比其他SLM/LLM，phi-1的特点是所用数据极少，预训练只有7B：<br>
+- 6B从web数据筛选而来<br>
+- 1B使用GPT-3.5生成</p>
+<p>训练资源也只用到了A100*8，共训练了4天。</p>
+<p>由于模型规模较小，并且为了快速验证方法的有效性，phi-1把关注点放在模型的code能力上（python语言）。phi-1-base和其他通用LM/代码LM在参数量、训练数据量，以及在HumanEval和MBPP上的效果对比如下表：</p>
+<img src="/fe13b56f/phi_1_result.png" class title="phi系列">
+<h2 id="模型">模型</h2>
+<p>phi-1关注点在数据上，因此模型结构上没有特别设计，使用的标准的decoder-only，phi-1两个模型的参数如下：</p>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th>phi-1-base</th>
+<th>phi-1-small</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>参数量</td>
+<td>1.3B</td>
+<td>350M</td>
+</tr>
+<tr class="even">
+<td>层数</td>
+<td>24</td>
+<td>20</td>
+</tr>
+<tr class="odd">
+<td>hidden size</td>
+<td>2048</td>
+<td>1024</td>
+</tr>
+<tr class="even">
+<td>intermediate size</td>
+<td>8192</td>
+<td>4096</td>
+</tr>
+<tr class="odd">
+<td>attention head num</td>
+<td>32</td>
+<td>16</td>
+</tr>
+</tbody>
+</table>
+<p>两个模型都使用了MHA，位置编码RoPE的dimension为32（每个注意头的大小为64，即只有一半的维度加上了位置编码的信息）。</p>
+<p>而tokenizer则是复用了codegen-350M-mono的。</p>
+<h2 id="数据">数据</h2>
+<p>以往的scaling
+law关注在模型的参数量和训练的数据量。而phi-1的工作则主要关注在另一个维度：数据质量。</p>
+<p>参考《Tinystories: How small can language models be and still speak
+coherent english?》的工作，数据质量是能够极大地改变scaling
+law的形状的。</p>
+<p>如文章标题《Textbooks Are All You
+Need》，phi-1最主要的工作就是提高训练数据质量，达到“textbook”的水平。</p>
+<p>1、现有数据集的问题</p>
+<p>对于代码领域，公开的数据集比如The
+Stack、StackOverflow和CodeContest等，都存在指导性不足的问题，具体来说有以下问题：<br>
+- not
+self-contained：这些代码片段或者文件依赖外部的库或者文件，因此无法单纯从当前的文件理解代码在干什么<br>
+- not
+meaningful：一些代码片段可能主要内容是大量的定义、参数设置或者GUI配置相关的内容，而没有计算和逻辑推理内容，这样的内容显然并不有足够的教育意义，下图就是一个例子<br>
+-
+部分文件或者代码过于复杂，且缺乏注释或者文档说明，这也让模型的学习变得困难<br>
+- topic分布不均匀</p>
+<img src="/fe13b56f/phi_1_code_case.png" class title="phi系列">
+<p>设想一下，如果让一个人类初学者用这些资料进行代码学习，效果一定也是很差的，因为里面包含了很多噪音、不完整的内容以及概念的模糊不清。</p>
+<p>从这个角度出发，打造textbook级别质量的数据就是很自然的想法。</p>
+<p>2、数据过滤</p>
+<p>首先就是从已有的数据中，过滤提取高质量数据。</p>
+<p>The
+Stack和StackOverflow两个数据集的python子集，在去重之后有35M个文件，约35B的数据。微软从中抽取了100k个文件，让GPT-4进行打分，“determine
+its educational value for a student whose goal is to learn basic coding
+concepts”。</p>
+<p>（可惜这里没有给出具体的prompt）</p>
+<p>由此获得100k的训练数据，之后用codegen模型的output
+embedding作为feature，训练random forest
+classifier，再回头对35M的数据进行打分、筛选。</p>
+<p>单独使用这些过滤后的数据进行训练，效果已经比不过滤的好（且训练的step数更少，96k
+vs 36k），如下图所示（橙色和浅蓝色对比）</p>
+<img src="/fe13b56f/phi_1_compare.png" class title="phi系列">
+<p>3、synthetic textbook dataset</p>
+<p>另一个获取高质量预训练数据的方法是数据合成。</p>
+<p>数据合成主要问题之一就是「多样性」： -
+训练数据的多样性很重要，因为多样性的内容可以让模型学到不同topic的内容、同一问题的不同表达和不同解法，以此提升模型泛化性，以及对未见过case的稳定性<br>
+-
+生成数据的多样性不容易获得，因为LLM训练的时候就是学习输出最大概率的内容，因此模型天然倾向于给出少量几个最可能的结果</p>
+<p>这里phi-1参考了《Tinystories》的做法，通过prompt给GPT-3.5的输出结果注入了一些随机性，限制了topic和（模型输出文本的）目标观众，获取了约1B
+token的数据。</p>
+<p>这些数据包含自然语言和相关的代码片段，下图是一个示例：</p>
+<img src="/fe13b56f/phi_1_example_1.png" class title="phi系列">
+<p>4、CodeExercises dataset</p>
+<p>数据合成也用于生成高质量的SFT数据。</p>
+<p>微软用GPT-3.5生成了约180M
+token的微调数据，要求模型根据自然语言指令写出代码。这里提升多样性的方法是限定了function
+name。下图是一个示例：</p>
+<img src="/fe13b56f/phi_1_example_2.png" class title="phi系列">
+<h2 id="训练">训练</h2>
+<p>phi-1的预训练和微调都使用以下配置：<br>
+- AdamW optimizer，weight decay = 0.1<br>
+- linear-warmup-linear-decay learning rate schedule<br>
+- dropout = 0.1<br>
+- 窗口大小 = 2048<br>
+- 数据精度 = fp16</p>
+<p>预训练共训练了36000 step，最终选择了24000
+step的checkpoint，相当于7B的预训练数据共训了8个epoch，约50B；训练参数如下：<br>
+- batch size = 1024<br>
+- max lr = 1e-3<br>
+- warmup step = 750</p>
+<p>微调共进行了6000个step，参数如下：<br>
+- batch size = 256<br>
+- max lr = 1e-4<br>
+- warmup step = 50</p>
+<p>论文还指出，微调对模型代码能力的提升很大，只要体现在指令遵循能力，和使用外部代码库的能力上。</p>
+<h2 id="小结">小结</h2>
+<ul>
+<li>phi-1使用极小的数据量，和较小规模的模型，在代码能力验证了高质量数据的影响，可惜没有给出更具体的prompt等<br>
+</li>
+<li>合成数据会是一条通往更强只能的重要道路，苹果和Meta都已经做了很多工作<br>
+</li>
+<li>这样的方案是否能scaling
+up？数据有没有可能存在污染？后面工作继续探索这些问题</li>
+</ul>
+<h1 id="phi-1.5">phi-1.5</h1>
+<p>phi-1.5延续phi-1的思路，使用和phi-1完全一样的模型结构，把目标领域扩展到了代码
++ common sense reasoning，探索“how small can a LLM be to achieve certain
+capabilities”这个问题的答案。</p>
+<img src="/fe13b56f/phi_15_result.png" class title="phi系列">
+<h2 id="数据-1">数据</h2>
+<p>phi-1.5的预训练数据在phi-1预训练数据集（7B
+token）的基础上，加入了约20B的高质量合成数据，用于让模型学习common sense
+reasoning和general knowledge。</p>
+<p>这20B数据来自于精心挑选的20k topics，并通过在prompt中加入来自web
+dataset的sample提升模型生成数据的多样性。</p>
+<p>文中指出，数据的生成不仅需要算力，“It requires intricate iterations,
+strategic topic selection, and a deep understanding of knowledge gaps to
+ensure quality and diversity of the data.”</p>
+<h2 id="训练-1">训练</h2>
+<p>phi-1.5的预训练设置：<br>
+- 模型随机初始化<br>
+- max lr = 2e-4<br>
+- no warmup<br>
+- AdamW，beta_1 = 0.9, beta_2 = 0.98, epsilon = 1e-7<br>
+- DeepSpeed ZeRO stage 2<br>
+- fp16数据格式<br>
+- batch size = 2048</p>
+<p>共训练了150B（多个epoch），其中20%来自phi-1的数据集，80%来自新合成的数据。</p>
+<h2 id="filtered-web-data">filtered web data</h2>
+<p>为了探索traditional web
+data的效果，研究人员还搞了phi-1.5-web-only模型（只使用web
+data训练），和phi-1.5-web模型（混合了phi-1数据、合成数据和web
+data，比例为2:4:4）。所用的filtered web data共有95B，其中88B来自Falcon
+refined web dataset，7B来自The Stack和StackOverflow。</p>
+<h2 id="效果">效果</h2>
+<p>phi-1.5、phi-1.5-web和phi-1.5-web-only与其他模型，在几个common
+sense的benchmark的效果对比如下</p>
+<img src="/fe13b56f/phi_15_bench_1.png" class title="phi系列">
+<ul>
+<li>phi-1.5-web-only已经比很多其他模型效果好，微软把这个提升归功于数据过滤<br>
+</li>
+<li>phi-1.5-web相比phi-1.5提升不大，说明合成数据已经够好</li>
+</ul>
+<p>在language understanding task上，phi-1.5的效果如下</p>
+<img src="/fe13b56f/phi_15_bench_2.png" class title="phi系列">
+<p>最后，通过数学能力和代码能力来评估模型的reasoning
+ability，结果如下：</p>
+<img src="/fe13b56f/phi_15_bench_3.png" class title="phi系列">
+<ul>
+<li>phi-1.5在reasoning上相比其他模型优势很大<br>
+</li>
+<li>phi-1.5-web则在phi-1.5的基础上，有明显提升，说明web
+data对reasoning能力有帮助<br>
+</li>
+<li>phi-1.5的代码能力和phi-1差不多，这也说明高质量数据的训练更高效（加入更多非代码数据没有太多帮助）</li>
+</ul>
+<h1 id="phi-2">phi-2</h1>
+<p>phi-2（2.7B）是基于phi-1.5模型参数进行scale up的工作。</p>
+<h2 id="scale-up">scale up</h2>
+<p>以phi-1-small和phi-1-base为例，直接train from
+scratch，结果是这样的：</p>
+<p>【22页】</p>
+<p>而另外一个做法，就是复用小模型训练好的参数，用于初始化更大的模型。大模型和小模型的数和hidden
+size不同，因此需要做一些处理。</p>
+<p>1、scaling number of layers</p>
+<p>参考《Scaling language models: Methods, analysis &amp; insights from
+training
+gopher》，通过以下映射，把phi-1.5的每层的参数复制到更大的模型（20层--&gt;24层）：</p>
+<p>round_int(range(num_layers_new)/num_layers_new * num_layers_old)</p>
+<p>2、Scaling attention layer dimensions</p>
+<p>大小模型的QKV投影矩阵维度不同，最简单的复用方法就是大的矩阵部分直接使用小矩阵参数，其余多出来的参数直接随机初始化（weight
+reuse，WR），如下图</p>
+<img src="/fe13b56f/phi_2_1.png" class title="phi系列">
+<p>更进一步，还可以使用tiling，把大矩阵多出来的维度用小矩阵的参数填满，如下图</p>
+<img src="/fe13b56f/phi_2_2.png" class title="phi系列">
+<p>直接训练大模型、WR和WR + tiling的效果如下</p>
+<img src="/fe13b56f/phi_2_3.png" class title="phi系列">
+<h2 id="phi-2-1">phi-2</h2>
+<p>用WR + tiling，从phi-1.5初始化phi-2（2.7B）的效果如下</p>
+<img src="/fe13b56f/phi_2.png" class title="phi系列">
+<h1 id="phi-3">phi-3</h1>
+<p>phi-3包括3个模型：<br>
+- phi-3-mini，3.8B参数，适用于移动设备<br>
+- phi-3-small，7B参数<br>
+- phi-3-medium，14B参数</p>
+<h2 id="模型-1">模型</h2>
+<ul>
+<li>phi-3使用和Llama-2相似的模型结构<br>
+</li>
+<li>不同规模的模型(mini、small &amp; medium)词表大小不同<br>
+</li>
+<li>通过LongRoPE的方法把窗口扩展到了128k<br>
+</li>
+<li>phi-3-small使用了GQA</li>
+</ul>
+<p>推理时，使用了blocksparse attention对KV
+cache进行压缩：每个头仅保留部分不同的KV
+block，这样在减少缓存用量的同时，可以保障模型的一定程度的正常推理和长文本能力，示意图如下：</p>
+<img src="/fe13b56f/phi_3_sparse.png" class title="phi系列">
+<h2 id="数据-训练">数据 &amp; 训练</h2>
+<p>按照《Textbooks Are All You Need》的路径，phi-3使用了”heavily
+filtered publicly web data“进行训练，这些数据通过”educational
+level“进行清洗和分类。</p>
+<p>预训练包括两个phase：<br>
+- phase1：大量的web sources，让模型学习通用知识 &amp; 语言理解<br>
+- phase2：使用更多heavily filtered
+webdata（phase-1数据的子集），以及一些可以提升模型reasoning能力和其他技能的合成数据</p>
+<p>phi-3-mini的训练数据总共有3.3T。</p>
+<p>和”compute optimal“相似，微软认为给定规模下的小模型存在一个”data
+optimal“的状态，即把数据调到最优状态。</p>
+<p>有些数据是不适合给小规模的模型训练的，但是可以给更大的模型使用。例如，某一天英超联赛中一场比赛的结果可能是大模型的良好训练数据，但对于小型模型，需要去除这类信息，以便为“推理”留出更多的模型容量。</p>
+<p>训练中发现在部分benchmark上，phi-3-medium（14B）和phi-3-small（7B）的差距远小于phi-3-small和phi-3-mini的差距，这可能说明目前的这份数据目前并不是phi-3-medium这个规模下的”data
+optimal“，而需要进一步的调试。</p>
+<h2 id="效果-1">效果</h2>
+<p>在MMLU上，phi系列和Llama-2系列模型的对比如下</p>
+<img src="/fe13b56f/phi_3_result.png" class title="phi系列">
+<p>phi系列的效率看起来更高，处于”data optimal regime“。</p>
+<h1 id="数据污染">数据污染？</h1>
+<p>phi系列，以及其他一些模型，在模型参数量较小/训练数据量较小的情况下获得了媲美模型规模数倍于这些模型的效果。其中是否存在过拟合的情况？</p>
+<p>《A Careful Examination of Large Language Model Performance on Grade
+School
+Arithmetic》针对这个问题做了实验。研究人员参考GSM8k，构造了GSM1k数据集。GSM1k数据在长度、难度、覆盖范围等方面都和GSM8k吻合。</p>
+<p>如果一个模型没有过拟合到GSM8k，那么用GSM1k进行测试，应该获得和GSM8k相近的结果，反之则在GSM1k上的效果会比较差。</p>
+<p>文章选取了Mixtral系列、phi系列、Llama系列等模型，测试结果如下：</p>
+<img src="/fe13b56f/overfit.png" class title="phi系列">
+<p>phi-3在GSM1k上的效果和GSM8k的gap排在前列，某种程度上说明phi-3是有过拟合到测试数据集上的。</p>
+<p>不过这也未必说明phi毫无可取之处，如果在过拟合的情况下，能够保证目标领域内的效果，那从业务上来说完全是可以接受的。在ChatGPT之前，模型训练基本就是在单个任务上做数据工程。我们进入到”通用智能“的时代才不到两年，大部分的业务逻辑和形态并没有转换过来。</p>
+<p>当然，通用的能力依然是我们追求的目标。只是目前来看，除了Claude、GPT-4和Llama，其他模型都还有一定差距。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Textbooks Are All You Need
+https://arxiv.org/abs/2306.11644<br>
+【2】Textbooks Are All You Need II: phi-1.5 technical report
+https://arxiv.org/abs/2309.05463<br>
+【3】Phi-2: The Surprising Power of Small Language Models
+https://nips.cc/media/neurips-2023/Slides/83968_5GxuY2z.pdf<br>
+【4】Phi-3 Technical Report: A Highly Capable Language Model Locally on
+Your Phone https://arxiv.org/abs/2404.14219<br>
+【5】A Careful Examination of Large Language Model Performance on Grade
+School Arithmetic https://arxiv.org/abs/2405.00332</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/fe13b56f.html" title="phi系列模型">https://saicat.github.io/fe13b56f.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E5%BE%AE%E8%BD%AF/" rel="tag"><i class="fa fa-tag"></i> 微软</a>
+              <a href="/tags/%E7%AB%AF%E4%BE%A7%E6%A8%A1%E5%9E%8B/" rel="tag"><i class="fa fa-tag"></i> 端侧模型</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/fb9c8882.html" rel="prev" title="大模型算法题(9)">
+                  <i class="fa fa-angle-left"></i> 大模型算法题(9)
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">337k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">10:13</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
