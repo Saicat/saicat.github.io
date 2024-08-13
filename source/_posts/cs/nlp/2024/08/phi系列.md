@@ -195,7 +195,7 @@ phi-2（2.7B）是基于phi-1.5模型参数进行scale up的工作。
 
 以phi-1-small和phi-1-base为例，直接train from scratch，结果是这样的：  
 
-【22页】
+{% asset_img phi_2_0.png phi系列 %}  
 
 而另外一个做法，就是复用小模型训练好的参数，用于初始化更大的模型。大模型和小模型的数和hidden size不同，因此需要做一些处理。  
 
