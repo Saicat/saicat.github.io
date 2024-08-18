@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  这是一篇关于三四年前的旧项目的回顾。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一个模型支持智能助手系统">
+<meta property="og:url" content="https://saicat.github.io/9c593ccd.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  这是一篇关于三四年前的旧项目的回顾。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/9c593ccd/system_1.png">
+<meta property="og:image" content="https://saicat.github.io/9c593ccd/xiaomi_1.png">
+<meta property="og:image" content="https://saicat.github.io/9c593ccd/xiaomi_2.png">
+<meta property="og:image" content="https://saicat.github.io/9c593ccd/bfm.png">
+<meta property="og:image" content="https://saicat.github.io/9c593ccd/task_emb.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-08-16T18:37:42.000Z">
+<meta property="article:modified_time" content="2024-08-17T12:45:53.497Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="Bert">
+<meta property="article:tag" content="智能助手">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/9c593ccd/system_1.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/9c593ccd.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/9c593ccd.html","path":"9c593ccd.html","title":"一个模型支持智能助手系统"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>一个模型支持智能助手系统 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%99%BA%E8%83%BD%E5%8A%A9%E6%89%8B"><span class="nav-number">1.</span> <span class="nav-text">智能助手</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1"><span class="nav-number">1.1.</span> <span class="nav-text">任务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%93%E7%B3%BB%E5%88%92%E5%88%86"><span class="nav-number">1.2.</span> <span class="nav-text">体系划分</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9F%BA%E7%A1%80%E6%96%B9%E6%A1%88"><span class="nav-number">2.</span> <span class="nav-text">基础方案</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%AE%BE%E8%AE%A1"><span class="nav-number">3.</span> <span class="nav-text">模型设计</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">4.</span> <span class="nav-text">预训练</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BE%AE%E8%B0%83"><span class="nav-number">5.</span> <span class="nav-text">微调</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A2%86%E5%9F%9F%E7%BB%A7%E7%BB%AD%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">5.1.</span> <span class="nav-text">领域继续预训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#task-specific-embedding"><span class="nav-number">5.2.</span> <span class="nav-text">task-specific embedding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%92%B8%E9%A6%8F"><span class="nav-number">5.3.</span> <span class="nav-text">蒸馏</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%94%A8%E5%BE%AE%E8%B0%83%E6%8A%80%E5%B7%A7"><span class="nav-number">5.4.</span> <span class="nav-text">实用微调技巧</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B7%A5%E7%A8%8B"><span class="nav-number">6.</span> <span class="nav-text">工程</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">7.</span> <span class="nav-text">效果</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">8.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">51</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">59</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/9c593ccd.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="一个模型支持智能助手系统 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          一个模型支持智能助手系统
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-08-17 02:37:42 / 修改时间：20:45:53" itemprop="dateCreated datePublished" datetime="2024-08-17T02:37:42+08:00">2024-08-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.1k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>16 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>这是一篇关于三四年前的旧项目的回顾。</p>
+<p>前一阵看<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果AFM端侧模型</a>的做法，让我想起了前几年做的项目：用一个Bert模型支持智能助手多个任务。方便起见，本文后续就把这个Bert模型叫BFM（Bert-based
+Foundation Model）吧。</p>
+<p>项目虽然有些旧，但是有些思路还是可以参考的，整理一下，看能不能提炼出一些有启发的内容。</p>
+<h1 id="智能助手">智能助手</h1>
+<p>项目主要是智能助手的NLU能力相关。</p>
+<h2 id="任务">任务</h2>
+<p>先看下早期智能助手在干什么。早期的智能助手（比如Siri），能力上基本可以分成三大类：</p>
+<p>1、指令类</p>
+<p>包括手机和智能设备如iot的操作，经典的用户query有“打开窗帘”（开关设置），“明天早上八点叫我起床”（设定闹钟）等。</p>
+<p>指令类的任务基本上可以认为是封闭域任务，因为大部分设置/操作状态是有限的，可遍历的。当然其中也存在部分包含开放域内容的情况，比如“添加一条明天参加小A生日派对的日程”，其中“参加小A生日派对”是要写入日程的值，理论上这个值可以是任意内容，这就属于开放域。不过一般来说，我们通过识别“添加日程”的意图，可以为此制定一些特殊的逻辑处理对应的开放域内容，所以难度还是比真·开放域任务要低一些的。</p>
+<p>指令类任务的NLU处理方式相对比较straightforward，几乎所有的指令都可以通过intent
++
+slot的方式来确定用户的唯一意图。比如“明天早上八点叫我起床”的intent就是“设定闹钟”，而slot值就是“八点”，通过intent和slot值我们就可以确定需要进行什么操作。（部分intent不需要slot值，比如”打开窗帘“；而部分intent需要多个slot值，比如“删除早上8点以前的重复闹钟”，就有两个条件“早上8点以前”和“重复”；不过不同的系统对intent和slot的定义并不完全相同，比如“打开窗帘”也可以把“窗帘”看做是slot值；细节就暂不展开了，以后有机会再单独开篇讨论）</p>
+<p>intent的范围是有限的，因为如果设备不支持对应的操作，那么这条指令自然就是无效的。因此intent的识别可以建模成一个分类任务。类似地，每个intent下的slot提取可以建模成一个NER任务。</p>
+<p>一个智能助手需要支持成千上万的intent，因此intent的分类一般会使用多级分类体系，降低训练难度。比如query“明天早上八点叫我起床”，一级分类会分到“闹钟”，之后再分到二级分类“设定新闹钟”。</p>
+<p>总之，对于指令类任务，NLU所做的事情可以简单拆分为intent分类 +
+NER识别slot值。</p>
+<p>2、知识类</p>
+<p>知识类任务主要目的是帮助用户解决信息获取的问题，主要包括实时信息如“美国加州现在几点”和“港币兑人民币汇率多少”，以及一些冷门或者领域属性较强的知识，比如“偷窃5000元以上一般怎么判刑”，或者“梅西和C罗分别有几次欧冠冠军”这样对于大部分人来说需要查资料才能回答的问题。</p>
+<p>知识类的任务相对指令类的任务更加开放，基本上不太可能把用户所有可能问到的内容整理成分类体系，因此会在基础分类（是否问知识类、是否问时效性相关问题）之上，使用知识库匹配的方式：通过QQ或者QA匹配，再附以后校验的方式回答用户问题。</p>
+<p>对于时效性问题也会涉及到接口调用和结果的处理等，从今天的角度看可以认为是一个简化版本的agent
++ RAG。</p>
+<p>整体上，知识类的任务会用到分类、NER以及相似度/相关性匹配的能力。</p>
+<p>3、聊天类</p>
+<p>在ChatGPT出来之前，聊天机器人做得其实并不好，包括当时很火的小冰在内，都会大量使用人工设计的模板、路径、状态机等来维护聊天状态。</p>
+<p>在聊天这样的完全开放域场景，由于生成的内容很不可控，也很容易出现风险（bot的暴论），因此当时很大一部分内容还是会使用QA匹配式的方案，所以多轮能力很弱。</p>
+<p>业界有些方案会把聊天话题拿出来分析，对于用户经常聊到的话题训练专门的“领域对话模型”，比如专门聊“情感”类的，或者专门聊“体育运动”类的垂域聊天模型。</p>
+<p>总之，聊天类单独拉出来是因为理论上来说，它应该是一个用模型几乎全自动完成聊天的能力，虽然最终的实现方式还是插入了很多人为控制的环节。</p>
+<p>（业界很多人，包括我们，从很早就开始探索让模型自己把控整个对话的做法，但是确实受模型能力所限，当时的使用范围有限）</p>
+<p>4、客服类</p>
+<p>不是说智能助手的能力分为3大类吗，怎么冒出来个第4类？</p>
+<p>从用户输入特点和解决方案上，客服类实际上是前三种的融合版本，不过客服在很多应用上重要性都比较高，，所以这里单独再拉出来说下。</p>
+<p>总结一下，上面提到的智能助手的这些能力，从算法模型角度看，主要是通过分类、NER和相似/相关度计算能力来支持。</p>
+<p>（实际上整个智能系统内还有很多其他工作，包括输入端的语音+语义的拒绝识别，纠正由于语音输入带来的错别字，还有用户个性化设置相关的特别响应等）</p>
+<h2 id="体系划分">体系划分</h2>
+<p>如前面提到的，智能助手要支持的intent很多，轻易就超过一千个，如果直接对这些intent由一个模型进行统一分类，会带来几个问题：<br>
+- 很容易出现intent分布的不平衡，增加训练难度<br>
+-
+在修复错误case，或者定期更新模型的时候，如果部分intent的数据有所改变，就会对所有其他intent的结果产生影响，导致出现新的问题，这样显然是不合理的</p>
+<p>因此，会采用多个子系统同时并行处理的方案，方便隔离和屏蔽部分intent更新带来的影响。每个子系统内部可能包含一个或者多个模型，用于对所负责的intent进行响应，如下图：</p>
+<img src="/9c593ccd/system_1.png" class title="一个模型支持智能助手系统">
+<p>子系统A只负责处理和闹钟相关的指令操作，比如新增闹钟、打开闹钟、关闭闹钟、删除闹钟等，在识别到相关intent之后进行NER获取slot值。而其他所有非闹钟操作相关的用户输入，都会被这个子系统统一拒绝，不给出任何处理结果。类似地，会有专门处理iot设备操作的子系统、专门负责运动健康的子系统，以及专门处理知识问答相关的子系统等。</p>
+<p>最后会把多个子系统的结果综合起来，通过后置的rank模块来获取最终结果。</p>
+<p>对intent体系进行这样的划分之后，每个子系统内部的修改，比如分类模型更新等，不会直接影响到其他子系统，而能够将影响范围尽量限制在子系统内部，使得智能助手整体更加稳定，多人协作也容易一些。</p>
+<p>不过，这样的体系划分也带来一些问题：<br>
+-
+随着系统覆盖范围的扩展，rank模块的压力会越来越大，比如多任务的情况，已经存在歧义的输入<br>
+- 随着子系统的增多，模型用量也随之上升，使得计算成本增大</p>
+<p>第一个问题先放下，看下第二个问题。</p>
+<p>最早期的时候，分类能力主要是规则配合fasttext来实现。这个阶段计算量不大，只用cpu完全可以支持。</p>
+<p>随着业务发展，在一些复杂的领域开始使用textcnn和lstm模型的各种变体。在输入长度不大的情况下（如&lt;=50
+token），还是可以在几十毫秒内完成。</p>
+<p>再后来，Bert出来之后显示出了一统NLU江湖的能力，我们自然也要用上。Bert模型的分类和NER能力效果确实不错，相比textcnn和lstm基本上都能有三五个点的提升，而且对困难任务提升有加成
+-- 难度越大，Bert优势越大。</p>
+<p>Bert效果是好，但是如果所有子系统都单独使用各自的Bert微调模型，那么计算压力会大很多倍，毕竟我们可能有几十个子系统，而大部分子系统内都包含多个模型。如果使用CPU推理的话，在高并发下Bert-base模型的p99耗时基本上可以轻易突破200ms，在对时延要求较高的场景下就需要上GPU推理了，而这又是一笔不小的成本。</p>
+<p>直观上来说，这么强大的Bert模型只用来微调之后做一小块的分类或者NER工作，其实是有点浪费的，那么有什么办法可以减少浪费呢？</p>
+<h1 id="基础方案">基础方案</h1>
+<p>有人可能会想到可以使用adapter/LoRA这样的微调方式，然后让每个模型训练并保留自己的adapter，在使用的时候调用自己的adapter参数和主干Bert模型一起进行推理。</p>
+<p>这样确实可以只保留一份主干模型，但是注意多个子系统是并行的，而adapter的结果会合并到主干网络中，因此没法做到“一次推理获得多个子系统结果”。实际总的推理计算量和使用单独微调全微调模型时是一样的。</p>
+<p>这里我们参考的原型方案是小米的《A Flexible Multi-Task Model for BERT
+Serving》中的做法。</p>
+<p>小米的方案如下图所示：</p>
+<img src="/9c593ccd/xiaomi_1.png" class title="一个模型支持智能助手系统">
+<p>首先采用top-k层微调的方式获取每个task下的分类任务，然后把各个task下的教师模型蒸馏到层数更少的student模型上。训练teacher和student模型的时候，都保持使用Bert模型frozen的部分bottom层
++ 微调部分top层的方式。（这里Bert是12层的Bert-base模型）</p>
+<p>这样最终获取的student模型相当于共享了同一个冻结的Bert模型的不同层输出，无论下游有多少个任务，这个共享的Bert模型都只要进行一次推理就行，各个下游任务模型则各取所需，在各层的中间输出结果上继续进行少量层的推理，获得最终结果。</p>
+<p>小米论文中的几个细节：</p>
+<p>1、第一步训练teacher
+model时为什么不是全微调？因为对于不同的任务，有时候全微调未必就是最好的，只微调10层的效果可能比微调12层的更好。在不同任务下，不同层的微调效果如下表：</p>
+<img src="/9c593ccd/xiaomi_2.png" class title="一个模型支持智能助手系统">
+<p>论文中基于实验结果，把微调层数范围限制在[4,10]。</p>
+<p>2、student模型和teacher模型所用的Bert frozen层数相同。</p>
+<h1 id="模型设计">模型设计</h1>
+<p>在小米方案的基础上，我们做了几点改变。</p>
+<p>首先就是基模型，也就是我们BFM主干模型的设计。</p>
+<p>使用BFM +
+部分层微调方案的一大目标就是节省推理计算量，因此我们想要微调的层数越少越好。</p>
+<p>假设BFM总共有12层，共有10个下游模型，我们估算下一次推理总计算量随下游模型微调层数的变化情况。如果是全微调，那么推理时所需计算的层数为12
+* 10 = 120层，BFM + 部分层微调的计算量如下表：</p>
+<table>
+<thead>
+<tr class="header">
+<th>下游模型平均微调层数</th>
+<th>总计算量（层）</th>
+<th>节省计算量（%）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>8层</td>
+<td>12 + 8 * 10 = 92</td>
+<td>23%</td>
+</tr>
+<tr class="even">
+<td>7层</td>
+<td>12 + 7 * 10 = 82</td>
+<td>32%</td>
+</tr>
+<tr class="odd">
+<td>6层</td>
+<td>12 + 6 * 10 = 72</td>
+<td>40%</td>
+</tr>
+<tr class="even">
+<td>5层</td>
+<td>12 + 5 * 10 = 62</td>
+<td>48%</td>
+</tr>
+<tr class="odd">
+<td>4层</td>
+<td>12 + 4 * 10 = 52</td>
+<td>56%</td>
+</tr>
+<tr class="even">
+<td>3层</td>
+<td>12 + 3 * 10 = 42</td>
+<td>65%</td>
+</tr>
+<tr class="odd">
+<td>2层</td>
+<td>12 + 2 * 10 = 32</td>
+<td>73%</td>
+</tr>
+<tr class="even">
+<td>1层</td>
+<td>12 + 1 * 10 = 22</td>
+<td>82%</td>
+</tr>
+</tbody>
+</table>
+<p>减少推理总计算量的最直接方法就是限制下游模型微调层数。实际上我们确实也这么做了，限制了下游模型微调层数范围为[1，6]。实际上最终大部分的下游模型微调层数都&lt;=3层，效果就已经有明显的提升。</p>
+<p>另外一个减少推理计算量的方法就是重新设计模型结构，把更多的参数放在frozen的层，而把可能微调的层参数量减小。我们的做法就是把Bert中靠近输入的第1~6层的hidden
+size从768提升到1024，而把靠近输出的第7~12层（也是可以被用于微调的层）的hidden
+size减小到512。</p>
+<img src="/9c593ccd/bfm.png" class title="一个模型支持智能助手系统">
+<p>由于hidden
+size在第6层和第7层之间存在变化，所以中间会用一个bottleneck模块进行维度的转换。</p>
+<p>这样的模型设计和苹果最近的OpenELM有些相似，不过OpenELM的做法看起来更加高级一点，通过一个缩放参数来设计模型每层的宽度。</p>
+<p>这样模型的总参数和计算量保持基本不变，但用于微调的部分参数量则减少了。这样一来，对于只微调了一两层的任务，用CPU也可以在几十毫秒内完成推理了。</p>
+<p>计算一下这样的模型结构在微调不同层时的计算量情况。方便起见，这里简单粗暴地把hidden
+size = 512的层的计算量当做原Bert层计算量的一半：</p>
+<table>
+<thead>
+<tr class="header">
+<th>下游模型平均微调层数</th>
+<th>总计算量（层）</th>
+<th>节省计算量（%）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>6层</td>
+<td>12 + 6 * 10 * 0.5 = 42</td>
+<td>65%</td>
+</tr>
+<tr class="even">
+<td>5层</td>
+<td>12 + 5 * 10 * 0.5 = 37</td>
+<td>69%</td>
+</tr>
+<tr class="odd">
+<td>4层</td>
+<td>12 + 4 * 10 * 0.5 = 32</td>
+<td>73%</td>
+</tr>
+<tr class="even">
+<td>3层</td>
+<td>12 + 3 * 10 * 0.5 = 27</td>
+<td>78%</td>
+</tr>
+<tr class="odd">
+<td>2层</td>
+<td>12 + 2 * 10 * 0.5 = 22</td>
+<td>82%</td>
+</tr>
+<tr class="even">
+<td>1层</td>
+<td>12 + 1 * 10 * 0.5 = 17</td>
+<td>85%</td>
+</tr>
+</tbody>
+</table>
+<h1 id="预训练">预训练</h1>
+<p>重新设计了Bert模型结构之后，就需要进行预训练。我们选择了从随机初始化开始训练。</p>
+<p>训练方式采用了RoBerta的MLM训练方式，没有NSP等其他任务。在RoBerta的while
+word mask基础上，进一步增加了短语级别的mask，提升学习难度。</p>
+<p>短语识别是在百度的LAC（Lexical Analysis of
+Chinese）工具基础上开发的，通过分词、词性识别和一些人工设定的规则，可以找出一些边界较明显的短语。</p>
+<p>数据上以开源数据为主，比如悟道的200G数据，CLUE的100G数据，以及维基百科和百度百科等。</p>
+<p>当时在batch size、learning
+rate和optimizer等各种参数上也做了很多实验，参考了很多业界的先进论文，现在回想起来，最重要的一条经验就是：没有开源可复现代码的工作不要轻易相信。有太多的改进和设置建议最终都会让训练loss起飞，一去不复返。</p>
+<p>最终得到的预训练模型在常规的分类和NER任务上效果都比RoBerta更好一些，但是在句子相似度任务上效果比较一般，想来想要提升相似度任务效果，还是需要在预训练中显式地加入对比学习任务。</p>
+<h1 id="微调">微调</h1>
+<p>微调上也应用了不少技术来提升效果。</p>
+<h2 id="领域继续预训练">领域继续预训练</h2>
+<p>首先是继续预训练，包括domain-adaptive
+pretraining（DAPT）和task-adaptive pretraining（TAPT）。</p>
+<p>TAPT就是把本来要用来微调的数据先用来做继续预训练，而DAPT则是扩大范围，把和微调任务相同domain的数据用来做继续预训练。比如所有操作相关的指令就和“设定闹钟”这个任务是属于同一个domain的。</p>
+<p>虽然叫继续预训练，但我们用到的数据规模要比预训练小很多，基本上都在1B以下，所以这个阶段还是更贴近微调一些。</p>
+<p>关于DAPT和TAPT，更详细的内容可以参考《Don't Stop Pretraining: Adapt
+Language Models to Domains and Tasks》。</p>
+<p>从论文中的实验结果和我们自己的实验结果来看，任务/领域的继续预训练基本上总是有正收益的，收益的大小则取决于下游任务的难度，以及继续预训练所用的数据量和数据内容。</p>
+<p>每个下游任务的模型都会进行自己的继续预训练，因此这里的继续预训练只会修改将用于微调的层。</p>
+<p>继续预训练中参考《Training Language Models with Memory
+Augmentation》，通过内存增强提升模型效果，基本能有比较稳定的收益。</p>
+<h2 id="task-specific-embedding">task-specific embedding</h2>
+<p>对于继续预训练数据量较大，而改动层数较少的任务，由于参数量的限制，可能使得继续预训练的效果不明显，为此我们专门设计task-specific
+embedding，作为微调层的旁路分支加入模型，以提升可训练的数据量。</p>
+<p>task-specific embedding的设计如下图所示：</p>
+<img src="/9c593ccd/task_emb.png" class title="一个模型支持智能助手系统">
+<p>由于embedding层的操作很快，所以虽然参数量增大了不少，但是基本上并不影响下游模型的推理时延。</p>
+<p>task-specific embedding的做法有点像在Bert中加入一个fasttext。</p>
+<h2 id="蒸馏">蒸馏</h2>
+<p>和小米的方案一样，我们也使用蒸馏提升最终下游模型的效果。在实现上和小米有几点区别：<br>
+-
+我们的teacher模型不限制微调的层数，实际上大部分teacher模型都是使用全微调训练得来的<br>
+- student模型的微调层 +
+frozen层总是保持12；这主要是因为我们已经把微调层的范围限制得比较小了，因此也没有比较再对微调层数进行进一步的压缩</p>
+<p>蒸馏的时候，student模型除了学习teacher模型的logits，同时也会学习ground
+truth。两个loss按一定的权重相加。</p>
+<h2 id="实用微调技巧">实用微调技巧</h2>
+<p>一些实用的微调技巧：</p>
+<p>1、FGM（Fast Gradient Method）</p>
+<p>对抗学习在某些场景下能够获得一定的效果提升：<br>
+- 超参不好调的情况下，对抗学习基本上能够获得一个平均值以上的结果<br>
+- 训练数据量较少的情况下，对抗学习能够提升模型的泛化性</p>
+<p>而如果训练数据量足够多，超参也比较成熟的话，对抗学习就不太有收益。而且FGM由于要计算对抗样本，训练速度要慢一半。</p>
+<p>2、multi-sample dropout</p>
+<p>multi-sample
+dropout通过使用多次不同的dropout而要求模型输出稳定的结果来提升模型的泛化性，且实现和训练都比较方便。</p>
+<p>3、r-drop</p>
+<p>和multi-sample
+dropout类似，r-drop也是把两次dropout后增加一个输出概率分布的KL散度作为auxiliary
+loss加到训练中，来提升模型的稳定性和泛化性。</p>
+<p>也有一些试验过但没什么效果的方案，比如《NoisyTune: A Little Noise Can
+Help You Finetune Pretrained Language Models
+Better》，不知道是否是打开方式不对。</p>
+<p>以上的方案都做成了可配置的形式。为了进一步方便微调，用超参微调框架optuna把batch
+size、learning
+rate以及上面这些方案都打包起来，可一键启动任务，自动进行超参搜索，把一个任务的微调人力投入压缩到分钟级别：只要配置好数据、参数范围就可以等拿最佳结果了。</p>
+<h1 id="工程">工程</h1>
+<p>1、服务</p>
+<p>BFM模型部署位GPU服务，对所有输入统一计算出后6层的中间输出，并写入临时缓存（1分钟后就会释放）；下游服务在需要某层的中间输出是，会去缓存进行查询，获取结果。</p>
+<p>由于BFM后6层的维度减小了，相比原Bert模型，所需的缓存和传输量也更少。</p>
+<p>2、时延</p>
+<p>通过onnx +
+fp16，在推理GPU上，下游模型基本上能把p99控制在10ms以内，如果不想用GPU，在CPU上也能在几十毫秒的时间内完成2层模型的推理。</p>
+<p>关于onnx有一个小坑，使用onnx进行fp16下的算子优化之后，模型的输出结果可能会有所变化。对于分类模型大概在logits的数值上有1%以内的difference，这个影响不大；但是在NER任务上对最终实体准确率的影响却恨到，甚至可以达到5%的差异，这基本上磨平了从lstm到Bert的提升了。</p>
+<h1 id="效果">效果</h1>
+<p>BFM模型为下游的多个分类和NER模型提供了服务，相比fasttext/textcnn/lstm平均能有3%的提升。</p>
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】A Flexible Multi-Task Model for BERT Serving
+https://arxiv.org/pdf/2107.05377<br>
+【2】Don't Stop Pretraining: Adapt Language Models to Domains and Tasks
+https://arxiv.org/abs/2004.10964<br>
+【3】OpenELM: An Efficient Language Model Family with Open Training and
+Inference Framework https://arxiv.org/abs/2404.14619<br>
+【4】Apple Intelligence Foundation Language Models
+https://arxiv.org/pdf/2407.21075<br>
+【5】Stochastic Weight Averaging in PyTorch
+https://pytorch.org/blog/stochastic-weight-averaging-in-pytorch/<br>
+【6】Multi-Sample Dropout for Accelerated Training and Better
+Generalization https://arxiv.org/abs/1905.09788<br>
+【7】Adversarial Training Methods for Semi-Supervised Text
+Classification https://arxiv.org/abs/1605.07725<br>
+【8】Training Language Models with Memory Augmentation
+https://aclanthology.org/2022.emnlp-main.382.pdf<br>
+【9】R-Drop: Regularized Dropout for Neural Networks
+https://arxiv.org/abs/2106.14448<br>
+【10】NoisyTune: A Little Noise Can Help You Finetune Pretrained
+Language Models Better https://arxiv.org/abs/2202.12024</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/9c593ccd.html" title="一个模型支持智能助手系统">https://saicat.github.io/9c593ccd.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/Bert/" rel="tag"><i class="fa fa-tag"></i> Bert</a>
+              <a href="/tags/%E6%99%BA%E8%83%BD%E5%8A%A9%E6%89%8B/" rel="tag"><i class="fa fa-tag"></i> 智能助手</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/fe13b56f.html" rel="prev" title="phi系列模型">
+                  <i class="fa fa-angle-left"></i> phi系列模型
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">346k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">10:30</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
