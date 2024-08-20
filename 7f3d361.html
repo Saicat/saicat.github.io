@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  InternLM系列模型的参与方有上海AI实验室、商汤、香港中文大学，以及复旦和上交。主力应该是前两个，InternLM中的Intern这个名字也是继承自它们之前的视觉模型项目的名字。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="InternLM系列模型">
+<meta property="og:url" content="https://saicat.github.io/7f3d361.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  InternLM系列模型的参与方有上海AI实验室、商汤、香港中文大学，以及复旦和上交。主力应该是前两个，InternLM中的Intern这个名字也是继承自它们之前的视觉模型项目的名字。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/model.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/pt_data_dist.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/pt_data_pipeline.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/code_lang_dist.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/code_quality.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/model.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/specific_data.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/sft_data.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/crm.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/l_rank.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/u_shape.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/critic_loss.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/condition_ppo.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/long_code_data.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/tool_case.png">
+<meta property="og:image" content="https://saicat.github.io/7f3d361/internlm25.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-08-20T13:32:53.000Z">
+<meta property="article:modified_time" content="2024-08-20T13:49:14.740Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/7f3d361/model.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/7f3d361.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/7f3d361.html","path":"7f3d361.html","title":"InternLM系列模型"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>InternLM系列模型 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#internlm%E4%B8%80%E4%BB%A3"><span class="nav-number">1.</span> <span class="nav-text">InternLM一代</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#internlm2"><span class="nav-number">2.</span> <span class="nav-text">InternLM2</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#internlm2%E6%A6%82%E8%A7%88"><span class="nav-number">2.1.</span> <span class="nav-text">InternLM2概览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.2.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">2.3.</span> <span class="nav-text">预训练</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">2.3.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#tokenizer"><span class="nav-number">2.3.2.</span> <span class="nav-text">tokenizer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.3.3.</span> <span class="nav-text">预训练设置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E9%98%B6%E6%AE%B5%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">2.3.4.</span> <span class="nav-text">多阶段预训练</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E9%BD%90"><span class="nav-number">2.4.</span> <span class="nav-text">对齐</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#sft"><span class="nav-number">2.4.1.</span> <span class="nav-text">SFT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cool-rlhf"><span class="nav-number">2.4.2.</span> <span class="nav-text">COOL RLHF</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#conditional-reward-model"><span class="nav-number">2.4.2.1.</span> <span class="nav-text">Conditional Reward Model</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#online-rlhf"><span class="nav-number">2.4.2.2.</span> <span class="nav-text">Online RLHF</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%95%BF%E6%96%87%E6%9C%ACfinetune"><span class="nav-number">2.4.3.</span> <span class="nav-text">长文本finetune</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#tool-augmented-llms"><span class="nav-number">2.4.4.</span> <span class="nav-text">Tool-Augmented LLMs</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#internlm2.5"><span class="nav-number">3.</span> <span class="nav-text">InternLM2.5</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">52</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">59</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/7f3d361.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="InternLM系列模型 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          InternLM系列模型
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-08-20 21:32:53 / 修改时间：21:49:14" itemprop="dateCreated datePublished" datetime="2024-08-20T21:32:53+08:00">2024-08-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>16 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>InternLM系列模型的参与方有上海AI实验室、商汤、香港中文大学，以及复旦和上交。主力应该是前两个，InternLM中的Intern这个名字也是继承自它们之前的视觉模型项目的名字。</p>
+<p>最近InternLM2.5发布，在HuggingFace的大模型榜单上有不错的成绩，因此梳理一下InternLM相关的资料，学习一下。</p>
+<h1 id="internlm一代">InternLM一代</h1>
+<p>首先是最早发布的一代模型。</p>
+<p>InternLM第一代是2023年6月发布的，时间比较早，技术报告中透露的内容也不多，把关键信息简单整理一下：<br>
+- 104B参数的模型<br>
+- 1.6T的多语言数据，以英语为主，部分中文，少量其他语言<br>
+- 窗口长度为2k<br>
+-
+使用多阶段的预训练策略，在每个阶段分别进行lr退火；不同的阶段在数据比例上有所不同；使用多阶段的训练策略好处是方便调整效果，并且如果需要回退不用全部重新训练<br>
+- 对齐阶段包括SFT和RLHF；5M条SFT数据，部分来自self-instruct<br>
+- 效果上，和Llama一代可比，和ChatGPT还有差距</p>
+<p>后来发布了新版，模型规模提升到了123B。在2023年8、9月又发布了7B和20B规模的base模型和chat模型。</p>
+<h1 id="internlm2">InternLM2</h1>
+<p>2024年初，InternLM2发布。</p>
+<h2 id="internlm2概览">InternLM2概览</h2>
+<p>InternLM2包括1.8B、7B和20B三个规模的模型，最大支持200k的窗口长度（Needle-in-a-Haystack评测），不同规模的模型训练数据量从2.0~2.6T不等。</p>
+<p>对齐阶段包括SFT和COnditional OnLine Reinforcement Learning from Human
+Feedback (COOL RLHF)，细节后面说。</p>
+<h2 id="模型">模型</h2>
+<p>开源模型比如Llama、Qwen、Baichuan和Mistral等基本上把当前LLM的标准结构定了下来，而很多训练和推理相关的配套优化也是支持这样的标准化设置的。</p>
+<p>出于对目前业界优化复用的考虑，在模型结构上InternLM并没有作什么改变，三个规模的模型结构超参如下：</p>
+<img src="/7f3d361/model.png" class title="InternLM系列模型">
+<h2 id="预训练">预训练</h2>
+<h3 id="数据">数据</h3>
+<p>预训练数据主要包括三类：通用的文本数据、代码相关的数据，以及长文本数据。</p>
+<p>1、通用文本数据</p>
+<p>通用数据来源主要包含web数据、书籍和technical
+literature（techlit）等，这几类数据在预训练数据中的占比如下：</p>
+<img src="/7f3d361/pt_data_dist.png" class title="InternLM系列模型">
+<p>通用数据的处理流程基本上也是标准做法：</p>
+<img src="/7f3d361/pt_data_pipeline.png" class title="InternLM系列模型">
+<p>highlight几个细节：<br>
+- 去重的时候，对文档的5-gram使用128个hash function，threshold =
+0.7<br>
+- 出现重复的时候保留most recent的数据<br>
+- 安全过滤使用了kaggle的“Toxic Comment Classification
+Challenge”数据集</p>
+<p>2、代码数据</p>
+<p>代码数据主要来自github爬取、公开数据，以及一些和代码/编程相关的论坛、网页等。</p>
+<p>不同编程语言在代码数据的分布如下</p>
+<img src="/7f3d361/code_lang_dist.png" class title="InternLM系列模型">
+<p>代码数据会经历format cleaning、deduplication、quality
+filtering和dependency sorting几个阶段。</p>
+<p>（1）format cleaning</p>
+<p>所有代码数据都要转成unified markdown
+format。会有少量数据由于原始数据的问题，没有直接转换格式成功，因此会再用一些规则进行处理。</p>
+<p>使用markdown格式是因为它比较简单，并且可以兼容自然语言和代码。</p>
+<p>预训练中实际使用的格式会更加复杂一点，包括多段代码和dependecy文件的拼接处理。</p>
+<blockquote>
+<p>The main idea is to utilize the interleaving data, which is pivotal
+for teaching the model about programming.</p>
+</blockquote>
+<p>这和《DeepSeek-Coder》提到的类似。</p>
+<p>（2）deduplication</p>
+<p>去重的过程和通用的文本数据大致一样，除了一个地方 -- tokenizer。</p>
+<p>比如python中，有的代码indent会用2个空格，有些是4个token，还有写是tab。这就对去重效果造成了影响。因此需要用一个能把这些情况合并的tokenizer。</p>
+<p>实际上目前有很多数据去重方法已经做到了段落或者line的粒度，这样当然去重效果更好。不过这里还是用了file
+level的去重。</p>
+<p>（3）quality filtering</p>
+<p>几个要点：<br>
+-
+基于规则的打分可以对各种维度进行打分，不过代码风格可能不是一个好的评分维度，会很容易把数据错分为低质量<br>
+-
+模型评分和人类评分的一致性并不很高，因此只在“模型评分和人类评分一致性足够高”的语言上，应用了模型分数进行过滤<br>
+-
+为了提高模型打分的准确率，使用了三轮的迭代，每轮包括人类标注和重新训练</p>
+<p>（4）dependency sorting</p>
+<p>InternLM2的最大训练窗口达到了32k。而在之前的数据处理流程中，来自同一个代码仓库的文件已经被打乱，因此需要把这些文件重新按顺序排列好。</p>
+<p>最终代码数据质量被分成高中低三类，其中高质量数据会训练多轮，中等质量数据训练一轮，而低质量数据则不会用于训练。</p>
+<img src="/7f3d361/code_quality.png" class title="InternLM系列模型">
+<p>3、长文本数据</p>
+<p>长文本数据的处理参考《Longwanjuan: Towards systematic measurement for
+long text quality》的做法。</p>
+<p>长文本数据过滤包括：<br>
+- 长度选择，选择至少32k byte长度的数据<br>
+- statistical filters<br>
+- perplexity filters</p>
+<p>（1）statistical filters</p>
+<p>用于过滤掉无意义的数据，而不是用于筛选高质量数据。统计过滤器在长文本特别有效，因为长文本的统计特征相比短文本更加稳定和可靠。</p>
+<p>（2）perplexity filters</p>
+<p>这里ppl的用法和以往的有所不同。</p>
+<p>对于一段文本S，计算其ppl可能会受到模型和tokenizer的影响。InternLM2这里的做法是把文本切分成S1和S2，对于正常长文本，P(S2|S1)应该比P(S2)要低，因为前文提供了更多的信息。而如果P(S2|S1)&gt;P(S2)，那么就说明S1对S2造成了干扰，那么这段文本上下文关联就很弱甚至是负向的。这样的文本就会被过滤掉。</p>
+<p>（3）threshold selection</p>
+<p>关于阈值的选择，有两个要点：<br>
+- 对不同的domain使用不同的阈值能够比使用统一阈值效果更好<br>
+-
+更多关注在得分在阈值周围的数据，因为统计过滤器和ppl相比model-based的打分更加平滑，这些边界case可以很大程度反映过滤器的打分标准</p>
+<h3 id="tokenizer">tokenizer</h3>
+<p>基于cl100k，抽取了top
+60,004个token，加上32,397个中文token获得新词表。为了让词表的大小是128的倍数，方便分布式训练，再加上147个spare
+token。</p>
+<h3 id="预训练设置">预训练设置</h3>
+<p>各个模型的预训练设置如下：</p>
+<img src="/7f3d361/model.png" class title="InternLM系列模型">
+<ul>
+<li>AdamW optimizer，beta_1 = 0.9, beta_2 = 0.95<br>
+</li>
+<li>epsilon = 1e-8<br>
+</li>
+<li>weight decay = 0.1<br>
+</li>
+<li>final lr = 10% * max lr</li>
+</ul>
+<h3 id="多阶段预训练">多阶段预训练</h3>
+<p>不同规模的模型总训练量为2.0T~2.6T不等。预训练过程分为3个阶段。</p>
+<p>1、阶段1：4k</p>
+<p>窗口长度为4096，消耗90%的token。</p>
+<p>2、阶段2：长窗口</p>
+<p>窗口长度为32,768，消耗9%的token。</p>
+<p>虽然窗口长度为32,768，不过超过50%的数据本身长度还是 &lt; 4096的。</p>
+<p>这一阶段把RoPE的base frequency从50,000提升到100,000。得益于flash
+attention和可扩展的训练框架，32k训练窗口下的训练速度相比4k只降低了40%。</p>
+<p>3、阶段3：能力增强</p>
+<p>这一阶段是针对reasoning、数学能力、知识学习的提升的，共消耗约24B的数据。</p>
+<p>所用数据分布如下</p>
+<img src="/7f3d361/specific_data.png" class title="InternLM系列模型">
+<h2 id="对齐">对齐</h2>
+<p>对齐阶段包括SFT和RLHF。</p>
+<h3 id="sft">SFT</h3>
+<p>共有10M的SFT数据，分布如下：</p>
+<img src="/7f3d361/sft_data.png" class title="InternLM系列模型">
+<p>数据格式使用ChatML（《chat markup
+language》https://github.com/MicrosoftDocs/azure-docs/blob/main/
+articles/ai-services/openai/includes/chat-markup-language.md），7B和20B模型都进行了一个epoch的微调，lr
+= 4e-5。</p>
+<h3 id="cool-rlhf">COOL RLHF</h3>
+<p>RLHF有两个问题：<br>
+- preference
+conflict：比如满足helpful的response更容易在安全性上出现问题，目前的做法通常是使用多个preference模型，导致训练慢了<br>
+- reward
+hacking：随着训练进行，actor模型学到一些获得搞reward的捷径，但实际上response的质量并没有提升</p>
+<p>为了解决这两个问题，InternLM把RLHF框架修改为Conditional OnLine
+RLHF。</p>
+<h4 id="conditional-reward-model">Conditional Reward Model</h4>
+<p>简单地说，conditional reward model就是利用不同的system
+prompt，达到一个模型对多个维度进行打分的目的，如下图：</p>
+<img src="/7f3d361/crm.png" class title="InternLM系列模型">
+<p>reward模型的训练用了2.4M对偏好数据，覆盖了不同的能力。</p>
+<p>1、loss function</p>
+<p>reward模型训练的loss function做了一些改动。</p>
+<p>首先，参考focal
+loss的思路，为了让难样本的loss更大，而简单样本的loss更小，loss函数修改如下：</p>
+<p><span class="math display">\[L_{ranking}=-(1-2\times\max(0,P_{i,j}-\frac12))^\gamma\log(P_{i,j}))\]</span></p>
+<p>图像画出来是这样的</p>
+<img src="/7f3d361/l_rank.png" class title="InternLM系列模型">
+<p>附上代码</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># Define the function again for plotting</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">g</span>(<span class="params">P</span>):</span><br><span class="line">    <span class="keyword">return</span> -(<span class="number">1</span> - <span class="number">2</span> * np.maximum(<span class="number">0</span>, P - <span class="number">0.5</span>))**<span class="number">2</span> * np.log(P)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Generate P values</span></span><br><span class="line">P = np.linspace(<span class="number">0.01</span>, <span class="number">1</span>, <span class="number">400</span>)  <span class="comment"># P values from a small number above 0 to 1</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Generate y values</span></span><br><span class="line">y = g(P)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Plotting the corrected graph</span></span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">6</span>))</span><br><span class="line">plt.plot(P, y, label=<span class="string">r&#x27;$-(1-2 \times \max(0, P-\frac&#123;1&#125;&#123;2&#125;))^&#123;2&#125; \log(P)$&#x27;</span>)</span><br><span class="line">plt.title(<span class="string">r&#x27;Graph of $-(1-2 \times \max(0, P-\frac&#123;1&#125;&#123;2&#125;))^&#123;2&#125; \log(P)$&#x27;</span>)</span><br><span class="line">plt.xlabel(<span class="string">&#x27;P&#x27;</span>)</span><br><span class="line">plt.ylabel(<span class="string">&#x27;Function Value&#x27;</span>)</span><br><span class="line">plt.legend()</span><br><span class="line">plt.grid(<span class="literal">True</span>)</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+<p>模型输出的win vs lose
+response的概率越大，说明case越简单，loss就趋向于0，反之则loss会增大。</p>
+<p>另外就是如果不对reward的分数进行限制，那么就有可能出现绝对值特别大的数，这样可能导致训练不稳定。因此再加上一个对reward
+score的logarithmic barrier penalty：</p>
+<p><span class="math display">\[L_{penalty}=-(\log(x+5)+\log(5-x))\]</span></p>
+<p>这个函数只在(-5, 5)之间有定义，画一下图像如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"></span><br><span class="line"><span class="comment"># Define the function</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">f</span>(<span class="params">x</span>):</span><br><span class="line">    <span class="keyword">return</span> -np.log(x + <span class="number">5</span>) - np.log(<span class="number">5</span> - x)</span><br><span class="line">    </span><br><span class="line">x = np.linspace(-<span class="number">10</span>, <span class="number">10</span>, <span class="number">1000</span>)  <span class="comment"># x values from -10 to 10</span></span><br><span class="line">x = x[(x + <span class="number">5</span>) &gt; <span class="number">0</span>]  <span class="comment"># Filter out values where the function is undefined for the first log</span></span><br><span class="line">x = x[(<span class="number">5</span> - x) &gt; <span class="number">0</span>]  <span class="comment"># Filter out values where the function is undefined for the second log</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Generate y values for the filtered x values</span></span><br><span class="line">y = f(x)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Plotting the updated range</span></span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">6</span>))</span><br><span class="line">plt.plot(x, y, label=<span class="string">r&#x27;$-(\log(x+5)+\log(5-x))$&#x27;</span>)</span><br><span class="line">plt.title(<span class="string">r&#x27;Graph of $-(\log(x+5)+\log(5-x))$&#x27;</span>)</span><br><span class="line">plt.xlabel(<span class="string">&#x27;x&#x27;</span>)</span><br><span class="line">plt.ylabel(<span class="string">&#x27;y&#x27;</span>)</span><br><span class="line">plt.legend()</span><br><span class="line">plt.grid(<span class="literal">True</span>)</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+<img src="/7f3d361/u_shape.png" class title="InternLM系列模型">
+<p>对于绝对值比较大的reward
+score（靠近-5或者5），这个loss值就会增大。</p>
+<p>最终reward模型的训练loss如下：</p>
+<p><span class="math display">\[L=L_{ranking}+\lambda
+L_{penalty}\]</span></p>
+<p><span class="math inline">\(L_{penalty}\)</span> 的系数 <span class="math inline">\(\lambda=0.02\)</span>。</p>
+<p>2、训练</p>
+<p>一些训练细节：<br>
+- RM训练的时候保持每个batch的token数为16,384，不管数据条数为多少<br>
+- cosine lr schedule，max lr = 1e-5, final lr = 5e-6<br>
+- weight decay = 0.01<br>
+- 为了防止过拟合，只训练一个epoch</p>
+<h4 id="online-rlhf">Online RLHF</h4>
+<p>Online RLHF说白了就是建立feedback机制，多次迭代。</p>
+<p>InternLM2的online RLHF建立了两条反馈机制的path： fast path和slow
+path。</p>
+<p>1、Fast Path</p>
+<p>fast path用于修正在训练中出现的reward hacking的问题。</p>
+<p>随着PPO训练进行，actor模型很可能会找到一些获得高reward的捷径，相当于是作弊了。这写情况大部分都源自RM训练时的漏洞，或者是覆盖不全，或者是过拟合了。</p>
+<p>总之fast
+path就是在每次进行完RLHF的训练之后，找到这些容易触发很高reward值的case，并根据这些case构建对应的训练样例，修补漏洞。20~100条样本就足够修补对应的漏洞了。</p>
+<p>2、Slow Path</p>
+<p>相对于fast path，slow
+path可以说是regular的、更全面的反馈修复。其中会用到更多的数据和标注。</p>
+<p>由于大量数据的标注需要时间，所以slow
+path的训练数据可能是滞后的，比如在第二次RLHF完成之后，第一轮的slow
+path标注数据才完成，那么这些数据就会加到第三轮的训练中去。</p>
+<p>整个online RLHF一共进行了3个round。</p>
+<p>PPO训练用了200k左右的query，模型更新了约400次。</p>
+<p>文中还提到了一些训练的实用细节。</p>
+<p>1、关于初始化</p>
+<p>在PPO训练开始的时候，会先固定actor模型，单独对critic模型训练50步。</p>
+<p>因为critic模型的目标和sft模型或者reward模型都有所不同，所以从这个两个模型初始化之后，critic模型在训练前期其实是出于一性能不佳的状态的。在这个阶段如果参考critic模型的反馈对actor模型进行更新，可能会带来不稳定。</p>
+<img src="/7f3d361/critic_loss.png" class title="InternLM系列模型">
+<p>2、conditional reward</p>
+<p>如前面提到的，RM是使用不同的system prompt获取对应维度的reward
+score的，而在PPO训练时也需要根据输入的prompt调整给RM的system
+prompt。</p>
+<img src="/7f3d361/condition_ppo.png" class title="InternLM系列模型">
+<p>3、pretrain gradient</p>
+<p>为了缓解灾难性遗忘的问题，PPO训练中加入了预训练数据，并计算pretrain
+loss，加入到模型的整体损失中。pretrain
+loss的系数为0.5，预训练数据量大约相当于PPO训练数据的50%。</p>
+<p>4、超参</p>
+<ul>
+<li>KL divergence coefficent = 0.01<br>
+</li>
+<li>actor model lr = 1e-6<br>
+</li>
+<li>critic model lr = 5e-6<br>
+</li>
+<li>actor model解码top_p = 0.9<br>
+</li>
+<li>larger λ value for PPO leads to higher rewards in our case, so we
+set it to 0.99</li>
+</ul>
+<h3 id="长文本finetune">长文本finetune</h3>
+<p>在SFT和RLHF中都使用了长文本数据。数据主要来源有两个：<br>
+- 书籍<br>
+- github仓库</p>
+<p>代码数据使用了DS-1000（《Ds-1000: A natural and reliable benchmark
+for data science code generation》）中超过10k
+star的仓库，并按如下流程进行拼接，以获取32k长度的数据：</p>
+<img src="/7f3d361/long_code_data.png" class title="InternLM系列模型">
+<h3 id="tool-augmented-llms">Tool-Augmented LLMs</h3>
+<p>为了让模型具备一定的工具调用能力，修改了ChatML格式，加入了新的角色 --
+“environment”，让模型可以从外部接口获取反馈。</p>
+<p>下面是一个模型调用工具的例子：</p>
+<img src="/7f3d361/tool_case.png" class title="InternLM系列模型">
+<p>工具训练的方式是按照《Agent-flan: Designing data and methods of
+effective agent tuning for large language models》的做法进行的。</p>
+<h1 id="internlm2.5">InternLM2.5</h1>
+<p>InternLM2.5的模型结构和InternLM2一样。</p>
+<p>InternLM2.5主要有几个提升：</p>
+<blockquote>
+<p>卓越的推理性能：在数学推理方面取得了同量级模型最优精度，超越了 Llama3
+和 Gemma2-9B。</p>
+</blockquote>
+<blockquote>
+<p>有效支持百万字超长上下文：模型在 1
+百万字长输入中几乎完美地实现长文“大海捞针”，而且在 LongBench
+等长文任务中的表现也达到开源模型中的领先水平。</p>
+</blockquote>
+<blockquote>
+<p>工具调用能力整体升级：InternLM2.5
+支持从上百个网页搜集有效信息进行分析推理，相关实现将于近期开源到
+Lagent。InternLM2.5
+具有更强和更具有泛化性的指令理解、工具筛选与结果反思等能力，新版模型可以更可靠地支持复杂智能体的搭建，支持对工具进行有效的多轮调用，完成较复杂的任务。</p>
+</blockquote>
+<p>评测结果如下：</p>
+<img src="/7f3d361/internlm25.png" class title="InternLM系列模型">
+<hr>
+<p>读到这了，来一发点赞收藏关注吧~</p>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】InternLM: A Multilingual Language Model with Progressively
+Enhanced Capabilities
+https://github.com/InternLM/InternLM-techreport/blob/main/InternLM.pdf<br>
+【2】InternLM2 Technical Report https://arxiv.org/abs/2403.17297<br>
+【3】书生·浦语
+https://www.baike.com/wikiid/7382383761788551219?anchor=lxmlbsze188r<br>
+【4】https://github.com/InternLM/InternLM/blob/main/README_zh-CN.md</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/7f3d361.html" title="InternLM系列模型">https://saicat.github.io/7f3d361.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/9c593ccd.html" rel="prev" title="一个模型支持智能助手系统">
+                  <i class="fa fa-angle-left"></i> 一个模型支持智能助手系统
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">355k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">10:45</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
