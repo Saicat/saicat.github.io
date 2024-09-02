@@ -1,0 +1,1316 @@
+---
+title: 长文详解--LLM高效预训练(一)
+tags:
+  - NLP
+  - LLM
+  - transformer
+  - 预训练
+  - 高效训练
+  - 参数复用
+  - MoE
+categories:
+  - CS
+  - NLP
+  - LLM
+abbrlink: dcb57672
+date: 2024-08-24 12:43:09
+---
+
+【本文已在同名 微信公众号 / 知乎 / [个人博客linsight.cn](http://www.linsight.cn/) 上线】  
+
+***  
+
+大模型在生产和生活中的应用越来越多，这对大模型开发者来说是利好消息。  
+
+不过随着应用场景增多，对大模型的需求也多种多样。比如有些场景需要参数量为5B的模型，但是开源模型中正好没有这个规模的；也可能有些场景需要一个“总共5个专家激活其中2个专家”的MoE模型，开源模型中很可能也没有能满足这个设置的。  
+
+如果每次需要新的模型参数量，或者遇到某些模型结构维度有特定需求的情况，都从零（随机初始化）开始，对模型进行完整的预训练，成本就太高了。  
+
+在当下，训练数据动辄5T、10T，预训练的计算成本起步就是几万甚至几十万的GPU hours，即使是头部大公司也扛不住经常这么做。  
+
+因此如何对LLM进行高效的预训练，用较低的计算成本获得我们想要的模型，就是一个很重要的方向。  
+
+# 简介  
+
+如今开源LLM已经有不少，各个大模型团队内部积累没有公开的LLM则更多。复用这些已有模型的参数来初始化新的模型，就是高效预训练的一个方法。  
+
+那么具体怎么复用参数呢？最自然的一个想法就是用已经训练好的小模型（reference model）来初始化一个更大的模型（destinatioin model），使得大模型能够在初始化就继承了小模型的（部分）知识。在这个基础上通过继续预训练，利用大模型多出来的容量进一步学习，从而快速获得比较好的效果。  
+
+这样的升级不仅可以进行一次，而且可以迭代多次进行，这么一来我们从一个很小的模型出发，也可以以较低成本获得规模很大的模型。  
+
+在这里，这样的做法统一归类为“从小到大”。正文涉及的“从小到大”的工作如下：  
+
+<center>
+
+| 方法/模型 | 发布时间 | 论文 |
+| :----: | :----: | :----: |
+| Net2Net | 2015年11月 | Net2Net: Accelerating Learning via Knowledge Transfer |
+| Stacking | 2019年 | Efficient Training of BERT by Progressively Stacking |
+| Stacking 2.0 | 2020年11月 | Progressively Stacking 2.0: A Multi-stage Layerwise Training Method for BERT Training Speedup |
+| bert2BERT | 2021年10月 | bert2BERT: Towards Reusable Pretrained Language Models |
+| LiGO | 2023年3月 | Learning to Grow Pretrained Models for Efficient Transformer Training |
+| MSG | 2023年5月 | Masked Structural Growth for 2x Faster Language Model Pre-training |
+| FLM-101B | 2023年9月 | FLM-101B: An Open LLM and How to Train It with $100K Budget |
+| Apollo | 2024年1月 | Preparing Lessons for Progressive Training on Language Models |
+| LLAMA PRO | 2024年1月 | LLAMA PRO: Progressive LLaMA with Block Expansion |
+| 52B to 1T | 2024年7月 | 52B to 1T: Lessons Learned via Tele-FLM Series |
+
+</center>  
+
+除了复用小模型参数来获得大模型，也可以复用大模型的参数，来提升小模型的训练速度和效果。本文会讲到的“从大到小”的工作如下：  
+
+<center>
+
+| 方法/模型 | 发布时间 | 论文 |
+| :----: | :----: | :----: |
+| Sheared LLaMA | 2023年10月 | Sheared LLaMA: Accelerating Language Model Pre-training via Structured Pruning |
+| Weight Subcloning | 2023年12月 | Weight Subcloning: Direct Initialization of Transformers Using Larger Pretrained Ones |
+| Inheritune | 2024年4月 | Pre-training Small Base LMs with Fewer Tokens |
+
+</center>  
+
+实际上，“从大到小”的方法有很多，我们比较熟悉的有蒸馏、剪枝和甚至量化等，都算是从大模型到小模型。这里这几个工作主要是从初始化的角度来提升小模型的训练效率和效果。其他“从大到小”的方案待下次再整理。  
+
+除了“从小到大”和“从大到小”，还可以“从dense到sparse”，用dense模型来加速MoE模型的训练：  
+
+<center>
+
+| 方法/模型 | 发布时间 | 论文 |
+| :----: | :----: | :----: |
+| Sparse Upcycling | 2022年12月 | Sparse Upcycling: Training Mixture-of-Experts from Dense Checkpoints |
+| Qwen2-57B-A14B | 2024年07月 | QWEN2 TECHNICAL REPORT |
+| AquilaMoE | 2024年08月 | AquilaMoE: Efficient Training for MoE Models with Scale-Up and Scale-Out Strategies |
+
+</center>  
+
+# 从小到大  
+
+## Net2Net  
+
+论文：《Net2Net: Accelerating Learning via Knowledge Transfer》  
+
+收益：相比随机初始化，Net2Net收敛更快，在Inception模型实验中，前期的收敛速度能达到1~2倍。  
+
+实验模型：inception model  
+
+### TL;DR  
+
+15年的Net2Net是模型参数复用的经典工作，核心就是function-preserving initialization（FPI）这个初始化方法，即用训练好的小模型初始化一个大模型，使得大模型在初始化完之后，就立刻有和小模型（基本）完全一致的输出。  
+
+然后在这样的初始化基础上进行训练，比完全从零开始训练效率更高。  
+
+{% asset_img net2net_intro.png LLM高效训练 %}  
+
+### FPI  
+
+1、FPI分析  
+
+把FPI公式化：要求对训练好的小模型（参数为 $\theta $ ），以及要初始化的大模型（参数为 $\theta^{\prime}$ ），对于所有的输入 x，有  
+
+$$\forall x,f(x;\theta)=g(x;\theta')$$  
+
+这里FPI隐含了几个限制：  
+- 大小模型的基本结构要一致，如每层内的操作要一样，都是同样设计的卷积层/transformer层等，而只有模型深度和模型宽度不同，这样才能通过FPI进行张量的扩展  
+- 大模型的层数 ≥ 小模型层数（如果大模型层数 < 小模型层数的话当然也可以直接裁剪，但是这样就没法保证效果相同了）  
+- 大模型张量维度 ≥ 小模型张量维度（同上，如果大模型维度小了就没法保证效果相同了）  
+
+FPI有几个好处：  
+- 大模型初始化之后的训练基本上可以保证收益总是正的 -- 在模型容量更大的情况下，基于小模型学到的知识进行继续预训练  
+- 所有参数可以一起训练，这相比拼接随机初始化的参数或者新模型层的做法更稳定一些；拼接随机初始化参数的做法可能需要先冻结训练过的参数，对随机初始化的参数进行warmup，待所有参数都收敛得差不多之后，才能所有参数共同学习  
+
+2、FPI实现  
+
+FPI包括两个维度的扩展，横向和纵向。  
+
+（1）纵向  
+
+纵向的扩展就是增加层数，要保持模型在增加层数之后输出结果不变，最简单的方法就是增加一个identity mapping层：  
+
+{% asset_img net2net_depth.png LLM高效训练 %}  
+
+由于提出的时间比较早，这个时候还没有残差连接。如果是在有残差连接的模型，想要在新增层之后保持模型的输出不变，那么应该要让新增加的层的输出为0，从而不影响residual connection中恒等路径的值。  
+
+（2）横向  
+
+FPI横向的扩展相对复杂一点。横向扩展对应着张量维度的扩展。  
+
+比如对于linear层，对应的就是矩阵的行和列的增加，而对于卷积层，那就对应着channel数量的增加。  
+
+那么怎么扩展这些张量，使得扩展前后在相同的输入下，输出不变呢？  
+
+这里用bert2BERT论文里的图举例：  
+
+{% asset_img b2b_fpi.png LLM高效训练 %}  
+
+这里默认向量是列向量，因此增加矩阵输入维度相当于增加矩阵的列数，而增加矩阵输出维度相当于增加矩阵的行数。  
+
+首先，要扩展输入维度，可以从前面的列随机采样一列，比如上图中间增加的红色x1输入。扩展的第三列参数来自第一列。  
+
+增加一个输入当然就会改变输出值。比如原来是  
+
+h1 = o·x1 + p·x2  
+
+h2 = q·x1 + r·x2  
+
+复制x1输入和对应的权重之后就变成  
+
+h1' = o·x1 + p·x2 + o·x1  
+
+h2' = q·x1 + r·x2 + q·x1  
+
+保证h1、h2接收到的数值不变，需要把第一列和第三列都乘以1/2。  
+
+h1' = (o/2)·x1 + p·x2 + (o/2)·x1 = h1  
+
+h2' = (q/2)·x1 + r·x2 + (q/2)·x1 = h2  
+
+乘的这个系数和采样的列重复次数相关：某列的参数重复了n次，那么所有对应的参数都要乘以1/n。  
+
+类似地，矩阵输出维度的扩展也可以通过随机从前面的行采样得到。  
+
+这里要注意的是，新增加的红色h2神经元相当于增加下一个矩阵的输入维度，所以下一个矩阵也要调整输入列的系数，保证输出结果不变。  
+
+把模型的横向（宽度）扩展和纵向（深度）扩展结合起来，就可以同时在两个维度扩展模型。  
+
+3、实验  
+
+Net2Net论文以inception network为例，进行了实验。  
+
+横向扩展得到的网络叫做Net2WiderNet，纵向扩展得到的网络叫Net2DeeperNet。  
+
+作为和对比，还有两个baseline方案：  
+- random pad：把横向扩展的参数进行随机初始化，作为Net2WiderNet的对比照  
+- random initialization：把加深的层进行随机初始化，作为Net2DeeperNet的对照  
+
+Net2WiderNet的效果如下：  
+
+{% asset_img net2net_wide.png LLM高效训练 %}  
+
+各种lr下，Net2WiderNet能够和随机初始化/random pad的模型达到相同的水平，而收敛速度更快。在前期大约能有一倍的收敛提速。  
+
+Net2DeeperNet的效果如下：  
+
+{% asset_img net2net_deep.png LLM高效训练 %}  
+
+Net2DeeperNet比随机初始化和random initialization达到相同accuracy的速度更快。这里DeeperNet最终的validation accuracy比原模型也要略高一些，毕竟模型参数量更大。  
+
+除了可以利用小模型快速训练更大的目标模型，Net2Net的另一个应用场景就是可以基于一个训练好的小模型，快速探索各种模型设计下的实际模型容量和效果。  
+
+比如试下扩大线性层的维度、扩大卷积数量、增加层数等，进行多次的实验，而耗费的资源和时间相比全部随机初始化可以节省很多。  
+
+## Stacking  
+
+论文：《Efficient Training of BERT by Progressively Stacking》  
+
+收益：相比随机初始化，Bert模型整体训练速度可以有25%左右的提升。  
+
+实验模型：Bert  
+
+### TL;DR  
+
+进入到transformer时代，《Efficient Training of BERT by Progressively Stacking》提出渐进式堆叠（progressive stacking）的方法，来提升训练的效率，整体训练速度可以有25%左右的提升。  
+
+简单来说，就是先训练一个n层的模型，然后把训练好的参数复制多次，填满一个2n层的模型（宽度相同），再进行继续预训练。以此类推，可以较快得到层数2n、4n、8n等的模型。  
+
+### 观察  
+
+论文实验主要是针对Bert模型的。  
+
+首先，随机输入一个数据，观察Bert模型的注意力分布（下图），有两个发现：  
+- 在同一个模型中，不同层的注意力分布都有两种模式：（1）local attention，即关注本token周围的内容（2）CLS token会吸引大量注意力，这现象我们之前在讲长文本的方案里也有其他工作提及，叫attention sink  
+- 在浅层模型和深层模型两个模型中，注意力的分布是类似的  
+
+{% asset_img stack_observation.png LLM高效训练 %}  
+
+### 堆叠  
+
+基于这些观察，可以推测深层模型和浅层模型的知识是可以共享的，因此可以考虑通过在浅层模型上堆叠注意力层，以此来低成本获得效果更好的大模型：  
+
+{% asset_img stack_intro.png LLM高效训练 %}  
+
+复制时，浅层模型中的第i层（i < L）会复制到深层模型的L+i层中。比如原来有一个3层的模型[1,2,3]，通过stacking就得到一个6层模型[1,2,3,1,2,3]。  
+
+这样的复制不单可以进行一次，还可以多次进行，也就是“渐进式”（progressive stacking）：比如先训练一个3层模型，通过stacking + 继续预训练得到6层的模型，然后再重复一次stacking + 继续预训练，获得12层的模型，以此类推。  
+
+### 实验  
+
+那么这里我们就要问，通过stacking获得的模型是否可以获得和baseline模型（参数随机初始化）相同的效果？论文里做了实验，设置如下：  
+- 先用3层模型训练50,000步  
+- stack到6层之后训练70,000步  
+- stack到12层之后训练280,000步  
+
+训练过程loss的下降如下图  
+
+{% asset_img stack_train.png LLM高效训练 %}  
+
+其中：  
+- baseline是随机初始化的模型  
+- identity是把增加的层数初始化为identity mapping的方法，和Net2Net中提出的深度扩展方法相同  
+- identity + noise加入了随机噪音，是为了打破identity mapping带来的对称性，帮助模型收敛  
+
+从训练的loss曲线上来看，stacking的趋势和速度都是比较好的。另外identity的效果看起来并不太好。  
+
+在下游测试集上，stacking也基本上能保持和bseline相同的performance：  
+
+{% asset_img stack_eval.png LLM高效训练 %}  
+
+### 分析  
+
+为了验证前面“深层模型和浅层模型attention分布相近”的假设，把各个方法下的attention分布可视化如下：  
+
+{% asset_img stack_pattern.png LLM高效训练 %}  
+
+可以看到stacking的分布和baseline模型是比较接近的，并且stacking在训练前后变化不大，这说明深层和浅层参数确实共享了一些注意力模式，因此可以支持这样的stacking方式。  
+
+前面的实验从3层切换到6层，和6层切换到12层模型，分别是在50,000步和50,000步 + 70,000步 = 120,000步，那么这个切换的时间有什么讲究，对训练的效率和结果有什么影响呢？  
+
+论文做了消融实验：先用3层模型训练100,000，然后后面每10,000步都实验切换到6层模型的效果；6层到12层也做相同的实验。实验的结果如下：  
+
+{% asset_img stack_ablation.png LLM高效训练 %}  
+
+结论是，存在一个时间点，在这个时间点之前切换到更大模型，那么就能获得一定的训练速度提升，否则难以获得明显的速度提升。  
+
+这个结论也很符合直觉，因为只要我们训的时间足够长，容量更大的深层模型在后期的训练速度就会逐渐超过浅层模型。  
+
+这个时间点会随着模型深度增大而增大，上面左图的结果更能体现切换时间的影响。可以看到在5~15小时切换，训练效率的收益还是比较大的，而到了25小时之后再切换，基本上就和直接训练6层小模型的效率一样了。  
+
+## Stacking 2.0  
+
+论文：《Progressively Stacking 2.0: A Multi-stage Layerwise Training Method for BERT Training Speedup》  
+
+收益：相比随机初始化，Bert模型的预训练速度能提升110%。  
+
+实验模型：Bert  
+
+### TL;DR  
+
+《PROGRESSIVELY STACKING 2.0: A MULTI-STAGE LAYERWISE TRAINING METHOD FOR BERT TRAINING SPEEDUP》在前面的stacking方法上进一步改进了，提出了multi-stage layerwise training(MSLT)，让Bert的训练速度能够提升110%，而效果上没有明显的退化。  
+
+Stacking 2.0相比Stacking主要的改进在训练策略上，通过冻结已经在上一阶段训练好的参数，只训练新增加层的参数，进一步提升训练速度。  
+
+### 分析 & 思路  
+
+前面的stacking方法存在几个问题：  
+- 只有在层数比较少的几个训练阶段，训练速度会比较快（这也是stacking方法加速收益的主要阶段）；当层数逐渐变多了之后，速度也慢下来了  
+- bottom layer在整个过程中都在训练，但是通过可视化观察attention的分布，发现实际上到后期，bottom layer的参数已经不怎么变了，换句话说，bottom layer在早期几个阶段的训练中，就已经饱和了，因此后续阶段对bottom layer的训练其实收益很少  
+
+基于以上的思路，提出了stacking 2.0的做法：依然是多阶段的训练，但是每次增加新的层之后，会把在上一阶段已经训练的层固定，而只训练新增加的层（和分类头）：  
+
+{% asset_img stack2_intro.png LLM高效训练 %}  
+
+### 实验  
+
+在实验中，对于12层Bert模型的训练，分成了5个阶段：  
+- 训练3层的模型，训练步数为总步数的20%  
+- 基于3层的模型，初始化6层的训练，固定embed层和1-3层，只训练4-6层，训练步数为总步数的20%  
+- 基于6层的模型，初始化9层的训练，固定embed层和1-6层，只训练6-9层，训练步数为总步数的20%  
+- 基于9层的模型，初始化12层的训练，固定embed层和1-9层，只训练9-12层，训练步数为总步数的20%  
+- retraining：最后整个模型所有参数一起训练，训练步数为总步数的20%  
+
+每个阶段增加的3层，参数都是来自第一阶段训练的那3层。  
+
+24层模型的训练也是类似的，只是每个阶段新增和训练的层数变多了（3 -> 6）。  
+
+在同样的训练step数下（总共1M步，MSLT每个stage训练200k步），MSLT和baseline的训练和测试结果如下：  
+
+{% asset_img stack2_result.png LLM高效训练 %}  
+
+MSLT在Bert的base和large模型上的效果都和原生模型基本一致，而所需的训练时间则短很多。  
+
+上面的实验是步数相同，如果保持训练时间相同都是40小时，MSLT和baseline的对比如下：  
+
+{% asset_img stack2_sametime.png LLM高效训练 %}  
+
+MSLT由于在各个stage只有一部分层更新参数，因此同样时间内可以跑更多的步数，效果也更好。  
+
+论文中还探索了最后一个步骤retraining，即全部参数一起训练的影响。  
+
+有无使用retraining phase的模型在下游任务上的效果如下：  
+
+{% asset_img stack2_retrain.png LLM高效训练 %}  
+
+可以看到retraining还是有收益的。由于前面的训练让模型已经是near-optimal的状态了，因此retraining所需的步数并不用太多，大约是10%~20%的总训练步数就够了。  
+
+总体上，MSLT的方法在相同步数下所需的时间更短（因为每个阶训练的层数减少），而效果基本可以保持不变；而在相同时间下，MSLT可以跑更多的训练步数，效果会更好。  
+
+## Bert2BERT  
+
+论文：《bert2BERT: Towards Reusable Pretrained Language Models》  
+
+收益：训练Bert-base和GPT-base分别可以节省45%和47%的计算成本  
+
+实验模型：Bert，GPT  
+
+### TL;DR  
+
+Bert2BERT可以认为是Net2Net在transformer上的应用，是Net2Net的升级版。除了FPI在Bert上各个模块的应用，Bert2BERT还提出了效果更好的初始化方法advanced knowledge initialization（AKI），是FPI的改进版，能够更好地把小模型的知识迁移到大模型上。  
+
+另外Bert2BERT还提出了two-stage的训练方法：第一阶段训练中，每次会抽取部分层和分类头进行训练和更新，待收敛之后，再进入第二阶段的全参数训练。这样相比直接进行全参数训练的成本更低。  
+
+### AKI  
+
+Net2Net中主要的初始化方法是FPI，Bert2BERT除了实验FPI，还提出了一个效果更好的advanced knowledge initialization（AKI）。  
+
+AKI的灵感来自之前论文的观察（《What does BERT learn about the structure of language?》，《What does BERT look at? an analysis of BERT’s attention》）：  
+- transformer中相邻层有相近的功能  
+- 因此可以把已经训练好的小模型的相邻层知识，用于大模型的初始化  
+
+这样做还有一个好处，就是可以打破FPI中的对称性，从而解放大模型的能力。和FPI不同，AKI并不保证初始化后的大模型输出结果和小模型一致。  
+
+AKI的大致做法如下图：  
+
+{% asset_img b2b_aki.png LLM高效训练 %}  
+
+AKI输入维度的扩展和FPI相同，而输出维度的扩展则把从当前矩阵抽样，变成从下一层的参数中抽样。  
+
+针对transformer模型，不同模块的处理略有不同。  
+
+1、embedding  
+
+（1）FPI：在词表大小不变的情况下，只要增加hidden size，增加的维度从已经训练好的维度随机采样并缩放得到（这个随机采样结果要和下一层输入维度增加的采样结果相同）。  
+
+（2）AKI：和FPI做法一样。  
+
+2、MHA  
+
+（1）FPI：MHA的扩展使用head-wise expansion，也就是大模型增加的注意力头参数会整个从小模型已经训练的注意力头复制过来，然后每个头如果维度变化了，再按标准的FPI矩阵扩展方法来做。  
+
+（2）AKI：在注意力头数量的扩展上和FPI一样，但是在注意力头输出维度的扩展上，会采用AKI的方法 -- 把下一层的参数纳入到扩展的参数中。  
+
+3、FFN  
+
+（1）FPI：对两个线性层采用标准的FPI矩阵扩展。  
+
+（2）AKI：对两个线性层采用标准的AKI矩阵扩展。  
+
+4、LayerNorm  
+
+方法和FFN类似。  
+
+LayerNorm扩展维度之后，没法保证和原来的模型输出结果完全一致，不过实验上的结果表明LayerNorm扩展带来的gap并不大。  
+
+从小模型到大模型，除了宽度扩展，还需要做深度扩展。bert2BERT采用前面提到的stacking的做法来扩展深度：  
+
+{% asset_img b2b_init.png LLM高效训练 %}  
+
+bert2BERT还使用了two-stage的训练策略：  
+
+{% asset_img b2b_train_algo.png LLM高效训练 %}  
+
+在用小模型初始化大模型之后，第一阶段训练中，每一步会抽取部分层和分类头进行训练和更新（sub-model training），待收敛之后，再进入第二阶段的全参数训练（full-model training）。这样相比直接进行全参数训练的成本更低。  
+
+### 实验  
+
+1、主实验  
+
+主实验用一个12层hidden size=512的模型，初始化12层hidden size=768的Bert-base模型。  
+
+总共训练40个epch，其中第一个阶段训练5个epoch，全参数训练35个epoch。  
+
+下表给出bert2BERT以及其他对比方法，达到和原生Bert模型相同效果所需的计算量：  
+
+{% asset_img b2b_exp.png LLM高效训练 %}  
+
+DirectCopy是把小模型参数直接复制到大模型，而剩余没有覆盖的部分则是保持随机初始化。  
+
+FPI和AKI是仅使用了相应的初始化手段，而bert2BERT是加上了two-stage训练方案的做法。  
+
+相比MSLT、StackBERT和DirectCopy，FPI、AKI和bert2BERT的训练效率提升比较明显。bert2BERT由于用two-stage的训练策略，因此提升最大。  
+
+2、消融实验：source模型大小  
+
+前面的实验中，大小模型的规模差异不大，那么如果用更小的模型的参数进行初始化，是否还能有好的效果？论文中尝试了使用6层hidden size=512的模型（参数量约35M）训练Bert-base：  
+
+{% asset_img b2b_smaller_source.png LLM高效训练 %}  
+
+和DirectCopy方法对比，在效果和效率上依然有一定的提升。不过这里和AKI、FPI和完全随机初始化没有进行对比，缺了点说服力。  
+
+3、消融实验：sub-model训练量  
+
+two-stage训练包括sub-model的训练（Eb个epoch），和full-model的训练（E-Eb个epoch），总的训练epoch数为E。  
+
+那么sub-model应该训练多少才比较好？下表给出了实验结果。注意从的训练epoch数为40。  
+
+{% asset_img b2b_epoch.png LLM高效训练 %}  
+
+结果上看，Eb=5的时候是最好的。论文的解释是，一定的sub-model训练可以帮助模型快速收敛到一个稳定状态，但是过多的sub-model训练会让模型遗忘前面已经学习的知识，导致结果下降。  
+
+4、GPT  
+
+同样的实验用到GPT上，bert2BERT的方法也有47%的训练效率提升：  
+
+{% asset_img b2b_gpt.png LLM高效训练 %}  
+
+## Linear Growth Operator（LiGO）  
+
+论文：《LEARNING TO GROW PRETRAINED MODELS FOR EFFICIENT TRANSFORMER TRAINING》  
+
+收益：相比随机初始化，大约可以节约50%的训练量。  
+
+实验模型：Bert  
+
+### TL;DR  
+
+LiGO是《LEARNING TO GROW PRETRAINED MODELS FOR EFFICIENT TRANSFORMER TRAINING》提出的做法，可以应用到transformer模型上。相比从零预训练，LiGO大约可以节约50%的训练量。  
+
+大致来说，LiGO的做法就是通过学习一个线性映射，把小模型的参数映射到大模型上。这个线性映射包括宽度算子和深度算子：  
+
+{% asset_img ligo_intro.png LLM高效训练 %}  
+
+LiGO算子需要通过少量的训练来学习，论文里的使用是100步。  
+
+## Masked Structural Growth (MSG)  
+
+论文：《Masked Structural Growth for 2x Faster Language Model Pre-training》  
+
+收益：训练效率提升为2.2倍，且下游效果更好  
+
+实验模型：Bert，GPT  
+
+### TL;DR  
+
+MSG方法来自《Masked Structural Growth for 2x Faster Language Model Pre-training》。主要思路是把小模型参数迁移到大模型之后，把未覆盖的，随机初始化参数先用一个mask屏蔽。在之后的训练中，逐渐降低mask的强度，让新增的参数逐渐参与训练。    
+
+### 分析  
+
+从小模型增长到大模型（progressive growth），主要有两个问题要解决：  
+- 使用什么增长算子（growth operator），也就是在什么维度增大模型，以及怎么增大  
+- 使用什么样的growth schedule，也就是什么时候扩展模型  
+
+模型增大的维度共有4个：  
+- layer number  
+- hidden size  
+- intermediate size  
+- head num  
+
+目前的模型扩展方法存在问题：扩展的时候难以保证扩展前后的模型有严格的函数一致性（strict function preservation），也就是初始化后的大模型，输出结果和训练好的小模型没法保持一样。  
+
+现有一些模型扩展方法支持的扩展维度，以及一致性的情况如下表：  
+
+{% asset_img msg_other.png LLM高效训练 %}  
+
+比如stacking这种方式支持模型在layer number的维度进行扩展，但是并不能保持扩展之后大模型有严格的一致性。  
+
+而Net2Net的宽度扩展方法，虽然能保持函数一致性，但是存在对称性，不利于模型最终训练结果的提升。  
+
+### MSG  
+
+MSG的大致思路则是这样：  
+- 比如对于全连接层，如果我们要扩展输出维度，那么就会引入新的没有训练过的参数，这些参数通过随机初始化得到；  
+- 输出维度扩展完成之后，在训练时会引入一个针对新的输出的mask vector，把随机初始化参数的输出置0，而原来已经训练过的维度不变，这样就能保证刚刚利用小模型权重初始化得到的大模型，其输出结果是和小模型严格一致的；  
+- 随着训练的进行，新参数部分的mask会逐渐增大（最大为1，相当于没有mask），让新增加的参数可以逐步参与训练。  
+
+对于深度扩展，也是类似的做法，通过对新增加的残差层的结果进行mask，在初始化时保持输出的一致性，然后逐渐减少对新增加层的屏蔽，让参数参与训练。  
+
+上面是growth operator的思路，还有另外一个要解决的问题就是growth schedule的选择。  
+
+论文中定义了一个pre-training rate γ 来表征学习速度：  
+
+$$\gamma\triangleq\frac{\Delta\mathrm{loss}}{\Delta\mathrm{t}}=\frac{\Delta\mathrm{loss}}{\Delta\mathrm{step}}\cdot\frac{\Delta\mathrm{step}}{\Delta\mathrm{t}}\triangleq\alpha\cdot\tau $$  
+
+γ 随着训练进行会逐渐减小，如果 γ 太小了就要扩展模型结构了。  
+
+论文通过网格搜索探索了各个增长维度对 γ 的影响，得到一些结论：  
+- 对于Bert，较大的layer num会严重影响 τ，且对 α 的提升不大，因此应该放在后期来做；  
+- 较大的 hidden size能为浅层模型带来更好的 γ，因此应该从较大的值开始；  
+- intermediate size对 α 和 τ 有一定的平衡作用，对 γ 的影响较小；  
+- 较小的head number对深层模型的 γ 更有利。  
+
+{% asset_img msg_hparam.png LLM高效训练 %}  
+
+基于以上这些发现，为Bert-base和large模型构建了训练时间表：  
+
+{% asset_img schedule.png LLM高效训练 %}  
+
+根据这个schedule进行训练，相比从头训练，能够获得1.4~2.2倍不等的速度提升。  
+
+### 实验  
+
+Bert和GPT模型的实验对比如下：  
+
+{% asset_img msg_result.png LLM高效训练 %}  
+
+另外关于mask从0增长到1需要多少时间，论文做了实验。结论是这个增长的过程>=500，就足够保证模型的稳定收敛了。当然目前的预训练step数很多，因此这个值设大一点也没有问题，比如5k。  
+
+{% asset_img msg_mask_step.png LLM高效训练 %}  
+
+## FLM-101B，Tele-FLM-1T  
+
+论文：《FLM-101B: An Open LLM and How to Train It with $100K Budget》，《52B to 1T: Lessons Learned via Tele-FLM Series》  
+
+收益：10w美元的成本训练出101B模型，较低成本训出1T参数的模型  
+
+实验模型：FLM-101B，Tele-FLM-1T  
+
+### FLM-101B  
+
+《FLM-101B: An Open LLM and How to Train It with $100K Budget》是MSG的应用，这篇论文的亮点是仅用10w美元就训出可用的101B参数量的模型，总的训练量为310B token。  
+
+首先直观感受一下不同的growth schedule对训练成本的影响。下图(b)(c)(d)给出了三种典型的growth schedule，横轴为训练的总token数，纵轴为模型参数。由于训练的总计算量和模型参数以及训练数据量成正比，可以认为全曲线和横轴围成的面积就是所需的计算量成本。直观上来说，模型参数量在前期增长慢，在后期增长快，这样的策略是比较节省计算成本的。  
+
+{% asset_img flm101_growth_schedule.png LLM高效训练 %}  
+
+论文中串行地训练了3个规模的模型，从小到大：16B、51B和101B。可以认为这是训练101B的三个阶段。下一个阶段的模型由上一个阶段的模型通过MSG的方法扩展而来。各个阶段的训练量和设置如下：  
+
+{% asset_img flm101_stage.png LLM高效训练 %}  
+
+这个训练策略相比直接从零训练101B模型节省了72%的时间，或者说速度提升到了3.56倍。  
+
+文中还训练稳定性做了一些探索。大规模的模型，特别是千亿级别的模型，在训练的时候很容易出现不稳定的情况。训练的不稳定令训练成本的评估变得困难，因为可能需要重新调参，回退模型checkpoint重新训练等。  
+
+那么为了让训练稳定，需要找到一个比较好的超参。论文使用了μP（《Tuning large neural networks via zero-shot hyperparameter transfer.》，《Research without re-search: Maximal update parametrization yields accurate loss prediction across scales》）的方法，在100M的proxy model对learning rate、initialization standard deviation和softmax temperature in the output layer这三个超参进行搜索，然后再把得到的最佳组合通过μP的策略，应用在16B以及更大的模型上。  
+
+文中还提到，在μP策略下，在其他参数都相同的情况下，更宽的模型总是比窄的模型loss更低。那么只要宅模型能够收敛，那么宽的模型一定能够收敛。  
+
+另外，bf16在靠近0的时候的精度比fp16的精度更高一些，更适合配合μP使用。  
+
+介绍一下μP：μP（maximum update parameterization）主要是通过对初始化和模型forward值进行一定的缩放和配置，使得transformer模型可以在不同的规模下，保证在同样超参下的训练结果。比如如果我们要训练一个100B的模型，但是100B模型的网格搜索调参成本太高，我们可以在μP的规则下初始化一个100M的模型，然后再100M的模型上调整batch size和learning rate等参数，得到的最佳超参组合可以保证在100B模型上也是最佳的超参组合。  
+
+dense模型的具体μP做法可以参考《Tensor Programs V: Tuning Large Neural Networks via Zero-Shot Hyperparameter Transfer》，而MoE模型的则可以参考《Sparse maximal update parameterization: A holistic approach to sparse training dynamics》。  
+
+最终三个阶段模型训练的loss如下：  
+
+{% asset_img flm101_loss.png LLM高效训练 %}  
+
+而101B模型和Llama等模型的benchmark评测对比如下：  
+
+{% asset_img flm101_eval.png LLM高效训练 %}  
+
+有一说一，从效果上看，101B还Llama同规模甚至低一两级规模的模型比并不算好，不过胜在成本比较低。  
+
+### Tele-FLM-1T  
+
+《52B to 1T: Lessons Learned via Tele-FLM Series》是FLM-101B的一个后续工作，进一步把模型规模通过MSG的训练方式提升到了1T参数。各个阶段的训练设置如下：  
+
+{% asset_img flm1t_train.png LLM高效训练 %}  
+
+可以看到训练的token数相比FLM-101B更多了。不过论文没有给出FLM-1T模型的详细效果。  
+
+## Apollo  
+
+论文：《Preparing Lessons for Progressive Training on Language Models》
+
+收益：最大约41.6%的加速  
+
+实验模型：Bert，GPT  
+
+### TL;DR  
+
+Apollo是《Preparing Lessons for Progressive Training on Language Models》提出的训练方法。参考知乎上论文原作者的解释[AAAI2024: Preparing Lessons for Progressive Training on Language Models https://zhuanlan.zhihu.com/p/678392914](https://zhuanlan.zhihu.com/p/678392914)，概括一下做法。  
+
+首先前面提到的stacking的方法，会把3层的模型[1,2,3]堆叠成[1,2,3,1,2,3]这样的6层模型，但是这样对于堆叠的层1，其输入空间变化比较大（从emb层变成原来的输出层），这样会带来训练的不稳定。因此这篇文章把stacking改成interpolation。  
+
+{% asset_img apollo_interpolation.png LLM高效训练 %}  
+
+实验结果表明interpolation的loss更小一些，并且gradient norm也比stacking要小一些，而小的gradient norm在训练时会更稳定一些，更少出现loss spike等情况：  
+
+{% asset_img apollo_init.png LLM高效训练 %}  
+
+整个训练过程也是分为多阶段的，如下图所示。在每个阶段，要训练的模型有N(s)层，为了让模型提前学到后续会被怎么扩展，每个训练step会通过interpolation构建一个L(t)层的模型，N(s)<=L(t)。每步基于构建出的L(t)层模型进行训练。  
+
+{% asset_img apollo_intro.png LLM高效训练 %}  
+
+L(t)的值会通过一定的随机抽样策略来获得。抽样策略会更倾向于给出小的值，这样会让训练成本更低。  
+
+整个算法具体如下：  
+
+{% asset_img apollo_algo.png LLM高效训练 %}  
+
+## Llama Pro  
+
+论文：《LLaMA PRO: Progressive LLaMA with Block Expansion》  
+
+收益：基于LLaMA2-7B，在不影响原能力的情况下，用80B的数据，提升数学和代码能力，得到LLaMA-PRO-8B  
+
+实验模型：LLaMA2  
+
+### 方法  
+
+一般来说，如果想要提升预训练模型在某些领域的能力，可以使用对应的数据进行继续预训练。但是由于灾难性以往，这样的继续预训练对其他没有强化的能力会有明显的损害。比如基于LLaMA2-7B训练的codeLLaMA-7B，除了代码能力有提升，其他都下降了。看下面雷达图的橙线和蓝线对比。  
+
+在已经预训练好的模型的基础上，通过少量增加参数 & 轻量级的继续预训练，提升某些领域上的效果的同时，避免灾难性以往，保持在通用能力上不会有明显损失。  
+
+论文在LLaMA2-7B模型上，把模型参数扩大到8B，从而在数学和代码能力上获得明显提升，而其他能力基本不变，看下图黄线和橙线：  
+
+{% asset_img llama_pro_intro.png LLM高效训练 %}  
+
+第一个问题是怎么搞扩展参数。LLAMA PRO只在模型层维度上进行扩展。  
+
+LLaMA2-7B本身有32层，这32层会被分成8组，每组是连续的4层，即[1,2,3,4],[5,6,7,8],...,[29,30,31,32]。之后在每组内进行扩展，使用每组最后一层的参数进行Identity Copy，扩展成[1,2,3,4,4'],[5,6,7,8,8'],...,[29,30,31,32,32']。新扩展的层通过把attention层和FFN层的输出linear置0，保持在初始化的时候不影响原模型的输出。  
+
+{% asset_img llama_pro_copy.png LLM高效训练 %}  
+
+继续预训练的时候，原模型的层都会被冻结，不参与训练，只有新扩展的参数会进行训练，这样可以保持原模型已有的能力不会被破坏。  
+
+### 实验  
+
+论文里训练了80B的数学和代码数据，得到LLaMA-PRO-8B。  
+
+{% asset_img llama_pro_data.png LLM高效训练 %}  
+
+LLaMA-PRO-8B和其他模型对比如下  
+
+{% asset_img llama_pro_perf.png LLM高效训练 %}  
+
+从结果上看还是，LLaMA-PRO-8B还是很有前途的，原模型的能力基本上都没有受损，而数学和代码能力有很大的提升。  
+
+1、消融实验：其他reference model  
+
+{% asset_img llama_pro_mistral.png LLM高效训练 %}  
+
+使用Mistral-7B作为reference model，训练Mistral-Pro，效果同样不错。  
+
+2、消融实验：增加的参数量  
+
+对比总共增加1层、2层、4层、8层、16层和32层参数的训练结果：  
+
+{% asset_img llama_pro_add_block.png LLM高效训练 %}  
+
+整体上，随着参数量增多，效果是在提升的。不过8层的性价比是比较高的，8层->16层的提升就很小了，而增加32层的效果还出现略微下降。  
+
+# 从大到小  
+
+## Sheared LLaMA  
+
+论文：《Sheared LLaMA: Accelerating Language Model Pre-training via Structured Pruning》  
+
+收益：和随机初始化相比，Sheared-LLaMA-2.7B只需要约3%的训练量就能达到相同的训练效果。    
+
+实验模型：LLaMA  
+
+### TL;DR  
+
+Sheared LLaMA通过对Llama2-7B进行裁剪（1.3B和2.7B） + 少量继续预训练，获得效果超越其他从零训练的同规模模型模型。  
+
+Sheared-LLaMA-2.7B模型在下游任务上的平均得分随训练量变化，以及和其他相近规模模型的规避如下：  
+
+{% asset_img sheared_llama_intro.png LLM高效训练 %}  
+
+和从零训练的模型相比，Sheared-LLaMA-2.7B只需要约3%的训练量就能达到相同的训练效果。  
+
+### 方法  
+
+Sheared LLaMA的方案包括2个操作：  
+- 裁剪：targeted structured pruning  
+- 继续预训练：dynamic batch loading  
+
+#### 裁剪：targeted structured pruning  
+
+以往也有通过模型裁剪，从大模型获取小模型的方法，比如CoFiPruning（《Structured pruning learns compact and accurate
+models》）。  
+
+这些裁剪方法主要从保持最佳效果的目的出发，因此模型裁剪结果可能出现每层异构的情况，比如第一层保留了原模型16个注意力头中的8个，第二层保留了原模型16个注意力头中的10个。这样的异构在推理时很可能不被现有的加速框架支持，或者出现推理资源分配的不合理，导致裁剪模型的实际推理效率相比原模型提升不大。  
+
+除了异构问题之外，还有可能出现模型深度和宽度等参数组合不够合理的情况。现在各个规模的主流开源模型结构可以说都是经过大量验证和对比保留下来的，是目前能搜索到的最佳设置。如果裁剪模型的结构和这些成熟的结构差别很大，那么很可能就得不到最佳效果。比如主流的7B模型层数都在32层左右，而裁剪得到的模型是16层，就可能效果不好。  
+
+targeted structured pruning就是为了解决裁剪模型结构的问题。  
+
+模型裁剪会在4个维度进行：  
+- 模型层数  
+- hidden size  
+- 注意力头数量  
+- intermediate size  
+
+通过在这些维度设定我们想要的数值，可以限制裁剪后的模型结构，保证推理时的效率。  
+
+裁剪通过对原模型的所有参数使用一个可学习的mask来实现：  
+
+{% asset_img sheared_llama_mask.png LLM高效训练 %}  
+
+理想状态下mask应该只输出0或者1，告诉我们哪些参数是要的，哪些参数是不要的，但是由于这个mask需要通过训练来获取，所以需要时连续的。因此这里使用了《Learning sparse neural networks through l_0 regularization》中引入的hard concrete distribution来参数化mask。hard concrete distribution是一个大部分概率集中在靠近0或者1的分布：  
+
+{% asset_img hard_concrete_dist.png LLM高效训练 %}  
+
+训练mask的时候，把各个维度裁剪的损失，和模型预训练的language modeling loss加在一起，获得最终训练目标：  
+
+$$\mathcal{L}_\text{prune}{(\theta,z,\lambda,\phi)}=\mathcal{L}(\theta,z)+\sum_{j=1}^{L_S}\tilde{\mathcal{L}}_j^\text{head}+\sum_{j=1}^{L_S}\tilde{\mathcal{L}}_j^\text{int}+\tilde{\mathcal{L}}^\text{layer}+\tilde{\mathcal{L}}^\text{hidden}$$  
+
+mask的训练相对正常的预训练会比较慢（roughly 5x slower），不过好在所需的训练量并不大。论文里使用了不超过1B的token训练mask。  
+
+#### 继续预训练：dynamic batch loading  
+
+对大模型进行参数裁剪，得到小模型之后，需要进行一定量的继续预训练来恢复损失的效果。  
+
+研究人员发现，从零训练得到的模型，和通过裁剪得到的模型，在同样的训练数据上训练，各个领域（比如Github、Book、Wiki、C4等）的loss变化情况有所不同。  
+
+具体来说，通过deepmind的scaling function（scaling law）对Llama2系列的模型进行拟合，可以预测特定规模下各个领域的loss。通过这个方法，可以预测从零训练的1.3B/2.7B模型在各个领域应该达到的loss水平。下图蓝色图（左边）是通过scaling function预测的loss，和实际从零预训练的模型的loss的对比：  
+
+{% asset_img loss_diff.png LLM高效训练 %}  
+
+右边是对裁剪后的模型用在相同数据进行继续预训练之后，在各个领域上的loss和预测loss的对比。可以看到在相同的训练数据下，从零训练的模型和裁剪+继续预训练的模型在某些领域的loss有较大的差异，比如C4和Github。  
+
+按上图分析，同规模下，裁剪得到的模型，相比从零预训练的模型，更容易保留low entropy和相对封闭的领域的知识，比如Github，而对high-entropy以及更加开放的领域，则保留的知识少一些。  
+
+这就说明按照原预训练数据的配比进行继续预训练，可能不是最佳的选择。于是参考《Doremi: Optimizing data mixtures speeds up language model pretraining》，提出dynamic batch loading的方法。  
+
+简单来说就是在没m步训练之后，都会测一下模型在各个领域验证集上的loss情况，然后根据各个领域的loss，调整后面m步的数据配比。调整配比的方法和《Doremi》一样：  
+
+$$\alpha_t=w_{t-m}\cdot\exp(\Delta_t);\quad w_t=\frac{\alpha_t}{\sum_i\alpha_t[i]}$$  
+
+$$\Delta_t(D_i)=\ell_\text{ref}[i]\mathrm-\ell_t[i]$$  
+
+i表示domain index。  
+
+Sheared LLaMA在模型裁剪和继续预训练阶段都使用了dynamic batch loading。  
+
+两个阶段所用的初始分布：  
+
+> For pruning, we use the original pre-training data’s domain weights as w0. For continued pre-training, we use the final weights from the pruning stage as w0.  
+
+这里调整配比时还会用到一个reference loss。文中给出了两种做法，一个是直接使用scaling function所预测的，一个是使用裁剪前的原模型的loss。实践上，两种都可以行，使用scaling function所预测的loss在下游任务上的效果会略好一点。  
+
+#### 实验  
+
+Sheared LLaMA用LLaMA2-7B裁剪了一个1.3B的模型，和一个2.7B的模型。用于对比的模型，和对应的训练数据如下：  
+
+{% asset_img sheared_llama_baseline.png LLM高效训练 %}  
+
+使用了0.4B的数据进行模型裁剪，并继续预训练了50B模型后，Sheared-LLaMA-1.3B和Sheared-LLaMA-2.7B效果如下：  
+
+{% asset_img sheared_llama_perf.png LLM高效训练 %}  
+
+结果上看，相比规模的模型，Sheared LLaMA在评测benchmark上是有一点优势的。  
+
+相比使用原数据分布，dynamic batch loading在整个训练过程都展现出更好的效果：  
+
+{% asset_img sheared_llama_dynamic.png LLM高效训练 %}  
+
+和其他模型裁剪方案相比，Sheared LLaMA更合理的结构使得推理效率更高：  
+
+{% asset_img sheared_llama_speed.png LLM高效训练 %}  
+
+研究人员对训练资源在模型裁剪和继续预训练的分配比例也做了一下消融实验。保持两个阶段的总训练量为4.8B，对比裁剪阶段使用0.2B、0.4B、0.8B和1.6B时的最终效果：  
+
+{% asset_img sheared_llama_train_token.png LLM高效训练 %}  
+
+结果上看，是裁剪阶段的token效率更高，裁剪阶段训练的token越多效果越好。不过最终还是使用了0.4B也不是更高的比例，原因是裁剪阶段的训练速度更慢。不过个人觉得这不是很成立，毕竟裁剪才几B的数据量，哪怕训练慢5倍，总量相差也不大，可能还有别的原因这里没有说吧。  
+
+## Weight Subcloning  
+
+论文：《Weight Subcloning: Direct Initialization of Transformers Using Larger Pretrained Ones》，苹果  
+
+收益：相比随机初始化，预训练速度提升至4倍左右  
+
+实验模型：VIT，GPT2  
+
+### TL;DR  
+
+weight subcloning的目的是通过利用已有的预训练模型，通过一定的手段选择重要度比较高的神经元，用于初始化一个小模型，从而加速小模型的训练。论文中把已训练好的模型称为parent model，而小模型称为destination model。  
+
+weight subcloning方法相比随机初始化，预训练速度能提升4倍左右：  
+
+{% asset_img subclone_intro.png LLM高效训练 %}  
+
+### 分析  
+
+我们知道transformer模型中用了残差连接，对于输入x，一个transformer block的输出是y=x+f(x)，这个transformer block拟合的是非残差部分f(x)。  
+
+使用残差连接的一个原因：随着模型层数的加深，新增加的层的输出y和x会很相近，通过增加恒等路径，新增加的层可以专注在拟合差值上。也就是靠后的层的f(x)相比这一层的输入x在数值上应该小很多。  
+
+下图中，第一行的两个子图给出了VIT模型和GPT-2模型分别在图像分类数据和语言建模数据上，模型各层的$\frac{||f(x)||}{||x+f(x)||}$值，可以看到最前面和最后面的层的值会大一些，而中间层的值相对小一些，特别是在GPT模型上。  
+
+{% asset_img subclone_residule.png LLM高效训练 %}  
+
+既然模型中间层对输出值的影响很小，那也就是说移除一个中间层，或者额外复制一个中间层在模型中，对输出值的影响也很小。上图的第二行就给出了增加或者减少某一个中间层对整个模型validation loss的影响。  
+
+可以看到在GPT2上，除了第一层和最后一层外，移除或者增加一个中间层对最终的loss几乎没有任何影响。  
+
+这些对模型效果影响较小的中间层就是我们后面对模型结构进行裁剪或者复制的理想候选。  
+
+既然输出值主要来自前面的层，那么各个神经元的重要性差异也是在early transformer block建立的。换句话说，如果某个神经元在第i层的重要性比较高，那么在第i+n层中，同样位置的神经元应该也有相应的重要度。  
+
+下图画出模型第一层和第二层神经元的输出值。  
+
+{% asset_img subclone_neuron.png LLM高效训练 %}  
+
+可以看到有少量的神经元的值要远超其他神经元，且一二层对应神经元的输出值有很强的相关关系，正如上面分析的那样。  
+
+### 方法  
+
+第一步要获得模型各个维度上的重要neuron。  
+
+1、Neuron importance ordering in linear layers  
+
+所用数据分别为0.5%的ImageNet数据，和0.003%的Pile数据。  
+
+通过这些数据得到各个线性层各个neuron的输出值的绝对值，再取平均。这个均值就是各个neuron的重要性得分。下图给出了模型某层中重要性得分前50个neuron：  
+
+{% asset_img subclone_linear_importance.png LLM高效训练 %}  
+
+2、Importance ordering in attention layers  
+
+论文中以attention head为单位计算重要性得分。方法和linear层类似，只是最终算的是整个attention head输出向量的magnitude。
+
+{% asset_img subclone_head_order.png LLM高效训练 %}  
+
+3、Importance ordering in residual blocks  
+
+由于模型存在残差链接，所以要保证相加的两部分所用的神经元是一致的，如下图蓝色部分  
+
+{% asset_img subclone_order_res.png LLM高效训练 %}  
+
+而没有用于残差链接的输出，即上图的黄色部分，则是独立的，可以单独选择神经元而不受其他层的影响。  
+
+既然蓝色部分的神经元要一一对应，那么计算重要性的时候就要把所有层放在一起考虑，选出global重要度最高的神经元（的位置）。  
+
+4、Weight scaling  
+
+完成神经元重要度的选择之后，我们就可以用来初始化destination model。需要注意的是，把权重值复制到destination model之后，位置保证输出值standard deviation不变，需要对参数进行缩放，假设D和d分别是parent model和destination model的hidden size，那么缩放的系数就是 $\sqrt\frac{D}{d}$ 。  
+
+layer norm、batch norm、bias部分的参数则不需要处理。  
+
+### 实验  
+
+论文用VIT和GPT2做实验，并分别增加一个随机初始化的模型作为对比。
+
+{% asset_img subclone_exp_model.png LLM高效训练 %}  
+
+这几个模型随训练量增加，效果的变化如下：  
+
+{% asset_img subclone_exp_train.png LLM高效训练 %}  
+
+通过weight subcloning初始化的模型收敛速度要快很多。  
+
+1、消融实验：Effect of learning rate and weight decay  
+
+weight subcloning得到的模型，需要用小一点的lr才能收敛，太大的lr反而可能会造成灾难性以往，这和随机初始化的模型不同。另外由于模型权重已经在parent model中训练过，经历过了weight decay和其他形式的regularization，因此在继续预训练时不需要太大的weight decay值。不同lr和weight decay下，destination model的收敛情况：  
+
+{% asset_img subclone_lr.png LLM高效训练 %}  
+
+2、消融实验：Effect of weight scaling  
+
+如果不对weight subcloning之后的模型权重做scaling，模型收敛会慢一下，看下图橙色和绿色线：  
+
+{% asset_img subclone_scaling.png LLM高效训练 %}  
+
+3、消融实验：Effect of parent Model Architecture  
+
+前面的实验看到weight subcloning+继续预训练的效果不错，那么一个自然的想法是，如果使用更强的模型作为parent model，那么效果是不是能进一步提升？收敛速度的收益会不会更大？  
+
+前面的实验使用GPT2-L作为parent model训练GPT2-M，这里实验一下用GPT2-XL作为parent model，同样训练GPT2-M，收敛情况如下  
+
+{% asset_img subclone_larger_parent.png LLM高效训练 %}  
+
+更大的parent model并没有得到更好的收敛效果。这说明和模型蒸馏类似，如果parent model和destination model之间的gap比较大，有可能小模型没法很好地继承大模型的能力。  
+
+4、消融实验：Effect of neuron reordering  
+
+如果不对nueron做reorder，而是随机挑选，进行weight subcloning，那么效果会大打折扣：  
+
+{% asset_img subclone_exp_reorder.png LLM高效训练 %}  
+
+## Inheritune  
+
+论文：《Pre-training Small Base LMs with Fewer Tokens》
+
+收益：仅用1B的数据，10B左右的训练量，就在小模型上保持了大模型90%的能力  
+
+实验模型：GPT  
+
+### 方法  
+
+Inheritune是《Pre-training Small Base LMs with Fewer Tokens》提出的方法，目标是低成本地从已经训练好的大模型，获取一个效果可用的小模型。  
+
+包含两步：  
+- 用大模型初始化小模型  
+- 对小模型进行轻量级继续预训练  
+
+这里初始化小模型的方法比较简单，就是直接复制大模型的embedding层，前n个transformer层，以及最后的分类头。这样的初始化保留了原模型前n层所有学到的知识，但是缺点是小模型参数在各个维度（hidden size、注意力头数、模型层数等）可能不是最佳的。  
+
+Inheritune在继续预训练时所用的数据是原模型训练所用的数据的子集。这样论文没有对数据分布做其他的探索，这个条件其实有点难达成，毕竟大部分所谓的开源模型并不会给出真实使用的训练数据。  
+
+Inheritune的算法描述如下：  
+
+{% asset_img inheritune_algo.png LLM高效训练 %}  
+
+### 实验  
+
+论文用26层的OpenLLaMA-3B作为reference模型，初始化了13层的1.5B。  
+
+并在1B的训练数据上训练了8个epoch，batch size为121k token，总的update数大约为66115步。  
+
+和同规模下的其他模型的效果对比：  
+
+{% asset_img inheritune_perf.png LLM高效训练 %}  
+
+这里黑体的表示小模型保留了reference model 90%+的效果。  
+
+把训练所用数据和效果画出来是这样的：  
+
+{% asset_img inheritune_perf_token.png LLM高效训练 %}  
+
+不过这里用的是“数据量”，而不是“训练token数”，感觉有点不太公平，毕竟Inheritune训了8个epoch。  
+
+1、消融实验：参数复用层数  
+
+前面是把26层的OpenLLaMA-3B直接取了13层。那么取的层数对效果影响如何？论文了做了使用，分别对比了n=$\{4,6,8,10,13,16,18,20\}$ 时，在MMLU上的效果：  
+
+{% asset_img inheritune_n.png LLM高效训练 %}  
+
+大致的趋势是往上的。不过这里用的指标是MMLU，而小模型在MMLU这种困难任务上的波动可能是比较大的，个人觉得这里这个指标换一个会更好。  
+
+2、不同的reference model & 数据  
+
+如果使用不同的reference model，以及更多的数据，Inheritune效果会怎么样呢？  
+
+{% asset_img inheritune_larger_ref.png LLM高效训练 %}  
+
+相比1B的数据，使用50B的数据在效果上略好一些。而使用更大的reference model提升则更加明显。  
+
+3、训练数据重复次数  
+
+《Scaling data-constrained language models》中指出，（足够大的）预训练数据训练4个epoch以内不会因为重复而带来明显的负面影响。那么对于Inheritune可以重复多少次呢？  
+
+{% asset_img inheritune_repeat.png LLM高效训练 %}  
+
+从上表的结果上来看，1B的数据重复20次仍然有收益。  
+
+# 从dense到sparse  
+
+## Sparse Upcycling  
+
+论文：《Sparse Upcycling: Training Mixture-of-Experts from Dense Checkpoints》
+
+收益：相同的训练时间和计算成本下，MoE模型的提升更大  
+
+实验模型：transformer  
+
+### 背景  
+
+目前已经有很多优秀的dense大模型，那么要通过MoE获得更强的模型，用已有的dense模型进行初始化是一个自然的想法。Google的sparse upcycling对此做了一些实验，由于实验是在2022年做的，模型用的是T5系列语言模型和Vision Transformer系列视觉模型。  
+
+文中给出两个适合使用sparse upcycling的场景：  
+- 已有dense模型，想在有限的计算资源下提升模型效果。  
+- 要训一个模型，不知道dense模型和MoE哪个会有更好的效果（虽然通常来说MoE更好，但是训练难度和结果不确定也更大），那么就可以先训练一个dense模型保底，然后再在dense模型的基础上扩展成MoE结构继续优化。  
+
+下面具体看下一些实验细节。  
+
+### 设置  
+
+对于transformer模型，sparse upcycling的操作如下图：  
+
+{% asset_img upcycling_intro.png upcycling %}  
+
+除了原模型的MLP层替换成MoE层外，其他组件包括layernorm、attention都直接从原dense模型copy到MoE模型。  
+
+实验上，一些具体的基础设置如下：  
+- 在原模型基础上，每2层替换一个MoE层，从第二层开始替换  
+- MoE模型的总层数的dense模型层数相同  
+- 每个MoE层专家数为32个；虽然使用更多的专家不会明显增大训练的FLOPS，但是更多的专家会带来larger initial quality drop relative to baseline dense model，而需要更多的计算资源来恢复这个quality drop；后续会有实验探索expert数量的影响  
+- 每个expert都用原模型的MLP层参数初始化  
+- router使用standard deviation=0.02的zero-mean normal distribution随机初始化  
+- 在encoder使用expert choice routing，基础的设置是capacity factor C = 2，后面也做了关于capacity factor的消融实验  
+- 在decoder使用token choice routing（top-k routing），k=2，并加上auxiliary loss帮助负载均衡，权重为0.01；在decoder使用top-k routing的原因是"to avoid train time (full batch teacher forcing) versus inference time (single token auto-regressive decoding) discrepancies"（和expert choice routing的设计相关）  
+
+MoE模型训练时使用和dense模型一致的batch size、learning rate schedule和weight decay等。  
+
+其中learning rate schedule用的是inverse square root learning rate schedule，因此MoE的训练可以接着dense模型的schedule接着进行。  
+
+实验中所用的一些模型参数如下表  
+
+{% asset_img upcycling_models.png 模型 %}  
+
+### 实验  
+
+#### core results  
+
+1、dense模型继续训练 vs upcycling  
+
+随着训练量的增加，upcycling相比dense模型继续预训练的优势逐渐扩大，如下图所示  
+
+{% asset_img upcycling_1.png 实验 %}  
+
+2、下游任务模型效果  
+
+上面对比的是预训练模型。这些预训练模型经过微调后的效果对比如下。  
+
+{% asset_img upcycling_2.png 实验 %}  
+
+相比预训练模型，微调模型表现出相对更大的震荡，不过大致趋势还是可以看出MoE模型更有优势。  
+
+3、MoE from scratch vs upcycling  
+
+从零开始训练的MoE和upcycling方法的对比如下  
+
+{% asset_img upcycling_3.png 实验 %}  
+
+- 从零开始预训练的MoE模型效果提升得更快，这可能得益于多样化的专家初始化和更大的lr。  
+- 只要给的计算资源足够多，从零开始训练的模型最终会赶上甚至超过upcycling的模型。  
+- 在有限的训练资源下，upcycling的训练效率更高，从零开始训练的模型大约需要相当于原dense模型1.2倍的训练资源才能达到upcycling模型的效果。如果现在的训练资源<=训练dense模型的资源，那么sparse upcycling是更划算的。  
+
+4、sparse upcycling vs dense upcycling  
+
+对比《Scaling language models: Methods, analysis & insights from training gopher》中的depth tiling（dense upcycling） 和 sparse upcycling的预训练效果，结果当然是sparse upcycling效率更高点，如下图所示  
+
+{% asset_img upcycling_4.png 实验 %}  
+
+（不过这里没有提及depth tiling之后的模型规模）  
+
+#### 消融实验  
+
+1、Amount of dense pretraining  
+
+upcycling的效果可能受用于初始化的dense模型的收敛情况影响，因此取了不同step的dense模型checkpoint作为upcycling的初始化，并且都继续训练了200k个step，结果如下图  
+
+{% asset_img upcycling_a1.png 实验 %}  
+
+结论是基本上无论从哪个checkpoint初始化MoE模型，收益都比较稳定。  
+
+2、Router type  
+
+使用不同的router（expert choice和token choice）对比结果如下  
+
+{% asset_img upcycling_a2.png 实验 %}  
+
+结论是，在相同的step下，expert choice和token choice的效果基本一样，但是如果从时间上来看，使用expert choice routing的模型训练更快。  
+
+3、Expert capacity factor  
+
+每个专家处理的token越多，计算量就越大，理论上效果也越好。
+
+使用不同的capacity factor，模型效果对比如下  
+
+{% asset_img upcycling_a3.png 实验 %}  
+
+结论是，虽然理论上增加专家容量可以提升效果，但时间上，通常C = 2的效率比较好，即一定的时间内提升的效果最多（注意计算资源是有限的）。  
+
+4、Number of MoE layers  
+
+在视觉模型上对MoE层数的效果进行了实验。  
+
+如下图右边两个小图，是使用不同的MoE层的效果，比如1表示只把最后一层MLP层替换为MoE层，以此类推  
+
+{% asset_img upcycling_a4.png 实验 %}  
+
+结论是，更多的MoE层并不总是更好，大概是把5~6层替换成MoE层的时候效果最好（40%~50%的层数）。  
+
+5、Initialization of experts  
+
+对比了使用dense模型的MLP层初始化专家，和随机初始化专家，结果如下  
+
+{% asset_img upcycling_a5.png 实验 %}  
+
+结果上看，使用dense模型的参数初始化专家效果更好。  
+
+6、Number of experts  
+
+如前面提到的，增加专家数并不会增大计算量，下图实验了2~128个专家下的效果  
+
+{% asset_img upcycling_a6.png 实验 %}  
+
+结果上来看，效果是随着专家的增加而提升的，虽然最后表现出了收益递减的情况。  
+
+### 其他  
+
+1、optimizer  
+
+在vision模型上，还尝试了使用dense模型的optimizer状态来训练MoE模型，但是并没有带来任何收益。  
+
+2、router normalization  
+
+另外，为了减少从dense到MoE初始化的performace drop，尝试了对router的输出进行normalization，以保持每个token得到的weight总和是1。
+
+这个做法直觉上应该是有益的，不过会有一个小问题，那就是对于只被一个expert选中的token，会有vanishing routing gradients。  
+
+实践上，router normalization在视觉模型上基本和不进行normalization的效果差不多，但是在语言模型上，会使得MoE模型效果变差。这二者的表现差异可能是因为语言模型上部分router使用了token choice routing。  
+
+实际上目前大部分最新的MoE模型都没有开router normalization，但这里的原因感觉还有待深入验证。  
+
+### Qwen2MoE  
+
+Qwen2技术报告中的做法：MoE层通过部分复制MLP层的参数，再加上随机的shuffle，可以打破多个专家的对称性，从未增加专家的多样性，提升效果。  
+
+## AquilaMoE  
+
+论文：《AquilaMoE: Efficient Training for MoE Models with Scale-Up and Scale-Out Strategies》  
+
+收益：训练了8*16B的MoE模型，相比随机初始化节省了75.8%的训练时间    
+
+实验模型：GPT  
+
+### 简介  
+
+AquilaMoE介绍了一种名为EfficientScale的高效MoE训练方法，能以较小的数据成本获得较好的结果。  
+
+EfficientScale则是一个two-stage的过程，包括Scale-Up和Scale-Out两个步骤。AquilaMoE就是用EfficientScale训练出来的一个8*16B MoE模型。  
+
+在开始进行Scale-Up和Scale-Out的知识迁移前，还有一个准备阶段。准备阶段要干3个事情：  
+- 训练小规模dense模型：从零训练一个dense模型，或者找一个已经训练好的模型都可以；这个小规模的dense模型需要已经学习了一定的知识，它将作为后续工作的起点  
+- 数据准备：准备预训练数据和validation数据  
+- validation setup：构建验证流程，用于跟踪后续的phase在起始模型基础上的收益  
+
+### Scale-Up Phase  
+
+Scale-Up包含两步：  
+- 用准备阶段获得的小模型初始化大模型（dense）  
+- 对大模型进行基于预训练  
+
+初始化的方法，论文初始实验FPI、AKI，还改进了AKI，提出了AKI-Pro。  
+
+1、AKI-Pro  
+
+（1）Depth Growing Method  
+
+深度扩展上，这里参考《Preparing lessons for progressive training on language models》，选择interpolation的方法扩展模型层数。  
+
+{% asset_img aquilamoe_depth_growth.png LLM高效训练 %}  
+
+（2）GQA  
+
+原来的AKI方法是不支持GQA的，这里模型使用了GQA，因此需要稍微作一些改动来支持。  
+
+通过AKI-Pro初始化的模型会先进行少量的继续预训练。  
+
+2、验证  
+
+为了验证scale-up的效果，做了实验：用Aquila2-1.3B的dense模型（表示为M(24, 2048)），扩展到Aquila2-7B（表示为M(32, 4096)）。此外还有一个值扩展了宽度的中间模型，M(24, 4096)。  
+
+不同方法下，扩展的dense模型validation loss如下（没有进行训练）：  
+
+{% asset_img aquilamoe_scaleup_loss.png LLM高效训练 %}  
+
+对于FPI和AKI，interpolation都比stacking的效果更好。  
+
+scale-up phase继续预训练的loss如下，FPI和AKI相比从零预训练都快很多，而AKI相比FPI，loss下降更快。  
+
+{% asset_img aquilamoe_scaleup_train.png LLM高效训练 %}  
+
+### Scale-Out Phase  
+
+这一阶段的目的是把大的dense模型升级为MoE模型。  
+
+扩展到MoE模型的方法参考Sparse Upcycling。MoE层通过复制dense模型的MLP层得到，router的参数随机初始化，随机初始化的采样分布设置为variance=0.02，mean=0。   
+
+继续预训练时，除了常规的负载均衡函数之外，还加上了max z-loss。  
+
+为了验证scale-out的效果，论文里先用3.6T的数据训练一个1.8B的dense模型，然后通过scale-out的方法，把dense模型扩展为8*1.8B的MoE模型，再进行400B的训练。  
+
+训练过程的loss如下：  
+
+{% asset_img aquilamoe_scale_out.png LLM高效训练 %}  
+
+### 实验  
+
+通过上面的实验，确定了主模型AquilaMoE的训练规划：  
+- 先使用3.6T token，从零训练一个7B的dense模型（AquilaDense-7B）  
+- 只用把7B模型scale up到16B（AquilaDense-16B），用1.2T的数据进行继续预训练  
+- 把训练好的16B模型scale up到8*16B的MoE模型，再训练545B，最终获得AquilaMoE  
+
+前面实验中用到模型，以及训练AquilaMoE的所有模型结构如下  
+
+{% asset_img aquilamoe_models.png LLM高效训练 %}  
+
+论文给出了AquilaDense-7B、AquilaDense-16B和AquilaMoE三个阶段预训练模型的评测效果，各个任务效果逐步提升（但是没有给出和其他模型的效果对比，emmm这不太合理）：  
+
+{% asset_img aquilamoe_perf.png LLM高效训练 %}  
+
+相比直接从零训练一个8*16B的MoE模型，scale up + scale out节省了不少计算成本和时间。不同阶段下，资源的使用情况如下表：  
+
+{% asset_img aquilamoe_cost_detail.png LLM高效训练 %}  
+
+从训练时间上看：  
+
+$$\text{Time Savings Factor}=\frac{\frac{\sum_{i=1}^nN_{\text{tokens, }i}}{R_{\text{tokens/day, from scratch}}}}{\sum_{i=1}^n\frac{N_{\text{tokens, }i}}{R_{\text{tokens/day, }i}}}$$  
+
+$$=\frac{\frac{3600+1200+545}{25}}{\frac{3600}{279}+\frac{1200}{70}+\frac{545}{25}}=\frac{213.80}{51.84}\approx4.12$$  
+
+大约节省了75.8%的训练时间。  
+
+***  
+
+博客：[http://www.linsight.cn/](http://www.linsight.cn/)  
+知乎：[Linsight](https://www.zhihu.com/people/us4ever)  
+微信公众号：Linsight  
+![](/images/qrcode.jpg)  
+
+***  
+
+【推荐文章】  
+- MoE：  
+[MoE模型的前世今生](http://www.linsight.cn/44e38c1b.html)  
+[DeepSeek-V2和MLA](https://www.linsight.cn/83c49df0.html)  
+[昆仑万维-SkyworkMoE](https://www.linsight.cn/1d5bcd45.html)  
+[成本10w刀的JetMoE](https://www.linsight.cn/f3acf042.html)  
+[MoE的top-p routing](https://www.linsight.cn/224c42da.html)  
+[对MoE模型的一些观察](https://www.linsight.cn/5e1d14b3.html)  
+[从dense到MoE -- sparse upcycling](https://www.linsight.cn/a0824e29.html)  
+[MoE路由--expert choice routing](https://www.linsight.cn/2c8bbc7.html)  
+- 端侧模型：  
+[苹果智能系统模型--AFM](https://www.linsight.cn/1e34e252.html)  
+[MiniCPM](https://www.linsight.cn/376db710.html)  
+[适合移动设备的语言模型--MobileLLM](https://www.linsight.cn/5ac36d34.html)  
+[phi系列模型](https://www.linsight.cn/fe13b56f.html)  
+[Gemma2](https://www.linsight.cn/cf3f1f81.html)  
+[苹果的OpenELM](https://www.linsight.cn/f845f3e4.html)  
+[bilibili的index-1.9B](https://www.linsight.cn/770b63e1.html)  
+- 预训练：  
+[Llama3.1--预训练要点一览](https://www.linsight.cn/7d7294cb.html)  
+[Qwen2技术报告](https://www.linsight.cn/a8f8b641.html)  
+[Yi技术报告-划重点看细节](http://www.linsight.cn/41b6a819.html)  
+[InternLM系列模型](https://www.linsight.cn/7f3d361.html)  
+[GLM4报告的一些技术点](https://www.linsight.cn/a5206abd.html)  
+[从Yuan2.0到Yuan2.0-M32](https://www.linsight.cn/3df0cd42.html)  
+[从loss视角理解大模型涌现能力](https://www.linsight.cn/f5fb75e4.html)  
+- 数据：  
+[预训练数据处理--长度分解](https://www.linsight.cn/210dbccd.html)  
+- 长上下文：  
+[LLM长上下文的问题](http://www.linsight.cn/c4da56c0.html)  
+[解锁大模型长上下文能力](http://www.linsight.cn/cc852861.html)  
+[大模型推理窗口-从有限到无限大](http://www.linsight.cn/45ee1a6d.html)  
+- 推理加速：  
+[大模型推理加速-投机解码](http://www.linsight.cn/f5c015c.html)  
+[大模型推理加速-MEDUSA](https://www.linsight.cn/7bbe2df6.html)  
+- 对齐：  
+[Llama3.1--post-training要点一览](https://www.linsight.cn/93328a2a.html)  
+[模型平均 -- model soup](https://www.linsight.cn/bb8fcf21.html)  
+[大模型偏好对齐-DPO](http://www.linsight.cn/473f2b43.html)  
+[大模型偏好对齐-ODPO](http://www.linsight.cn/da871ebe.html)  
+[大模型偏好对齐-simPO](http://www.linsight.cn/280fa97a.html)  
+[大模型偏好对齐-IPO](http://www.linsight.cn/4fe7b810.html)  
+- Transformer：  
+[理解Attention:从起源到MHA,MQA和GQA](http://www.linsight.cn/3dc22f96.html)  
+[LLM的重复生成和ICL](https://www.linsight.cn/7381cae3.html)  
+[transformer中normalization的二三事](http://www.linsight.cn/6a40bfa5.html)  
+[从代码实现看normalization-到底做了什么](http://www.linsight.cn/b70b4a2d.html)  
+[稀疏注意力计算:sliding window attention](http://www.linsight.cn/c61d17e3.html)  
+[理解LLM位置编码:RoPE](http://www.linsight.cn/a051710f.html)  
+[RoPE的远距离衰减](https://www.linsight.cn/f0902f1a.html)  
+- 项目应用：  
+[一个模型支持智能助手系统](https://www.linsight.cn/9c593ccd.html)  
+- 大模型算法题：  
+[(1)](http://www.linsight.cn/3345028a.html)、
+[(2)](http://www.linsight.cn/ad0bba9d.html)、
+[(3)](http://www.linsight.cn/1736008.html)、
+[(4)](http://www.linsight.cn/1736008.html)、
+[(5)](http://www.linsight.cn/336f2f3e.html)、
+[(6)](http://www.linsight.cn/7c04944d.html)、
+[(7)](https://www.linsight.cn/dd614e12.html)、
+[(8)](https://www.linsight.cn/e287b9c3.html)、
+[(9)](https://www.linsight.cn/fb9c8882.html)  
+
+# Reference  
+
+【1】AquilaMoE: Efficient Training for MoE Models with Scale-Up and Scale-Out Strategies
+ https://www.arxiv.org/abs/2408.06567  
+【2】Net2Net: Accelerating Learning via Knowledge Transfer
+ https://arxiv.org/abs/1511.05641  
+【3】Efficient Training of BERT by Progressively Stacking https://proceedings.mlr.press/v97/gong19a/gong19a.pdf  
+【4】Progressively Stacking 2.0: A Multi-stage Layerwise Training Method for BERT Training Speedup
+ https://arxiv.org/abs/2011.13635  
+【5】bert2BERT: Towards Reusable Pretrained Language Models https://arxiv.org/abs/2110.07143  
+【6】Preparing Lessons for Progressive Training on Language Models https://arxiv.org/abs/2401.09192  
+【7】https://zhuanlan.zhihu.com/p/678392914  
+【8】https://medium.com/smash-those-papers/net2net-explained-7d0321f03594  
+【9】Learning to Grow Pretrained Models for Efficient Transformer Training https://arxiv.org/abs/2303.00980  
+【10】Masked Structural Growth for 2x Faster Language Model Pre-training https://arxiv.org/abs/2305.02869  
+【11】https://zhuanlan.zhihu.com/p/664383073  
+【12】FLM-101B: An Open LLM and How to Train It with $100K Budget https://arxiv.org/abs/2309.03852  
+【13】52B to 1T: Lessons Learned via Tele-FLM Series https://arxiv.org/abs/2407.02783  
+【14】Pre-training Small Base LMs with Fewer Tokens https://arxiv.org/abs/2404.08634  
+【15】Sheared LLaMA: Accelerating Language Model Pre-training via Structured Pruning https://arxiv.org/abs/2310.06694  
+【16】Learning sparse neural networks through
+l_0 regularization https://arxiv.org/abs/1712.01312  
+【17】LLAMA PRO: Progressive LLaMA with Block Expansion https://arxiv.org/abs/2401.02415  
+【18】Weight Subcloning: Direct Initialization of Transformers Using Larger Pretrained Ones https://arxiv.org/abs/2312.09299  
+【19】Sparse Upcycling: Training Mixture-of-Experts from Dense Checkpoints https://arxiv.org/abs/2212.05055  
+
