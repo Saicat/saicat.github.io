@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  Transformer在自然语言的应用很成功，而在CV领域的崛起相对来说就比较慢，毕竟Transformer最初是为自然语言设计的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CV入门--关于Vision Transformer">
+<meta property="og:url" content="https://saicat.github.io/a11e2633.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  Transformer在自然语言的应用很成功，而在CV领域的崛起相对来说就比较慢，毕竟Transformer最初是为自然语言设计的。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/igpt_intro.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/igpt_layer.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/igpt_pretrain_loss.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/igpt_perf1.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/igpt_perf2.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/igpt_ft.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/igpt_bert.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/vit_intro.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/vit_pos.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/vit_model.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/vit_perf.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/deit_intro.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/deit_framework.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/deit_model.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/deit_teacher.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/deit_distill.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/deit_perf.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/swin_model.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/swin_hierachical.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/swin_window.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/swin_perf1.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/swin_perf2.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/swin_perf3.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/att_conv.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/att_attention.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/att_pos.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/rel_1.png">
+<meta property="og:image" content="https://saicat.github.io/a11e2633/rel_2.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2024-09-13T12:19:45.000Z">
+<meta property="article:modified_time" content="2024-09-14T12:29:56.263Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="CV">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="CNN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/a11e2633/igpt_intro.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/a11e2633.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/a11e2633.html","path":"a11e2633.html","title":"CV入门--关于Vision Transformer"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>CV入门--关于Vision Transformer | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#igpt"><span class="nav-number">1.</span> <span class="nav-text">iGPT</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83%E6%96%B9%E5%BC%8F"><span class="nav-number">1.1.</span> <span class="nav-text">预训练方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B%E6%96%B9%E5%BC%8F"><span class="nav-number">1.2.</span> <span class="nav-text">评测方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">1.3.</span> <span class="nav-text">实验</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#vit"><span class="nav-number">2.</span> <span class="nav-text">ViT</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%8Atransformer%E5%BA%94%E7%94%A8%E5%9C%A8%E5%9B%BE%E5%83%8F"><span class="nav-number">2.1.</span> <span class="nav-text">把transformer应用在图像</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C-1"><span class="nav-number">2.2.</span> <span class="nav-text">实验</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#deitdata-efficient-image-transformers"><span class="nav-number">3.</span> <span class="nav-text">DeiT（Data-efficient
+image Transformers）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#tldr"><span class="nav-number">3.1.</span> <span class="nav-text">TL;DR</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%92%B8%E9%A6%8F"><span class="nav-number">3.2.</span> <span class="nav-text">蒸馏</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C-2"><span class="nav-number">3.3.</span> <span class="nav-text">实验</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">3.4.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#swin-transformer"><span class="nav-number">4.</span> <span class="nav-text">Swin Transformer</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E7%BB%93%E6%9E%84"><span class="nav-number">4.1.</span> <span class="nav-text">模型结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#shifted-window-attention"><span class="nav-number">4.2.</span> <span class="nav-text">Shifted Window Attention</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C-3"><span class="nav-number">4.3.</span> <span class="nav-text">实验</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93-1"><span class="nav-number">4.4.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">5.</span> <span class="nav-text">其他</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#stand-alone-self-attention-in-vision-models"><span class="nav-number">5.1.</span> <span class="nav-text">Stand-Alone
+Self-Attention in Vision Models</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#on-the-relationship-between-self-attention-and-convolutional-layers"><span class="nav-number">5.2.</span> <span class="nav-text">On
+the Relationship between Self-Attention and Convolutional Layers</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">55</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/a11e2633.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="CV入门--关于Vision Transformer | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          CV入门--关于Vision Transformer
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-13 20:19:45" itemprop="dateCreated datePublished" datetime="2024-09-13T20:19:45+08:00">2024-09-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-09-14 20:29:56" itemprop="dateModified" datetime="2024-09-14T20:29:56+08:00">2024-09-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/CV/" itemprop="url" rel="index"><span itemprop="name">CV</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>11k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>20 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>Transformer在自然语言的应用很成功，而在CV领域的崛起相对来说就比较慢，毕竟Transformer最初是为自然语言设计的。</p>
+<p>图片相比自然语言，多了2D的结构信息，因此从输入开始就需要对数据做一些处理。</p>
+<p>一个最直接的处理方法就是把每个pixel当成一个token，并把二维的图片序列化成一维的序列。比如原来的图像可以看做一个二维数组：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>],</span><br><span class="line"> [<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>],</span><br><span class="line"> [<span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>]]</span><br></pre></td></tr></table></figure>
+<p>flatten之后就成了1D的序列：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>]]</span><br></pre></td></tr></table></figure>
+<p>这样224×224的图片变成一个包含50176个pixel（token）的输入序列。不过这样做输入长度明显太长了。50k的长度放在今天的LLM依然是颇有挑战性的一个长度，而这还只是一张224×224的小图片，如果是更大的图片处理起来就更困难了。</p>
+<p>因此要处理图像信息，还需要做一些改动。有几个工作的效果不错，包括iGPT、ViT、Swin
+Transformer等，下面简单梳理一下这几个方法的思路和重要内容。</p>
+<p>（以下内容需要读者具备基本的Transformer、CNN、GPT、Bert以及图像数据的相关知识）</p>
+<h1 id="igpt">iGPT</h1>
+<p>论文：《Generative Pretraining from Pixels》</p>
+<p>时间：2020年</p>
+<p>机构：OpenAI</p>
+<p>这是Ilya参与的一个工作，不仅把Transformer应用到CV上，并且还是用无监督的方式进行训练。</p>
+<h2 id="预训练方式">预训练方式</h2>
+<p>论文主要是用GPT-2模型做的实验，顺带着把Bert也对比了一下。</p>
+<p>下图给出了怎么用GPT和Bert进行图像预训练：</p>
+<img src="/a11e2633/igpt_intro.png" class title="vision transformer">
+<p>第一步是要对图像数据进行处理。如前面所说，直接用原图的一个pixel作为一个token，会导致输入长度太长，那么iGPT的做法就是对图像进行下采样，降低分辨率。</p>
+<p>一开始，所有数据都会被resize到224×224（对于使用data
+augmentation的情况，则是先resize到一个更大的size，然后random
+crop一个224×224的image，不过总之结果都是给出一个224×224大小的图像）。</p>
+<p>不要忘了RGB图像还有三个channel，所以实际的图像数据点是224×224×3。iGPT会在这个基础上进行下采样，下采样的目标分辨率称之为input
+resolution（IR），论文里用了三种IR做实验：32×32×3、48×48×3、64×64×3。</p>
+<p>关于为什么不进一步降低大小：因为参考《80 Million Tiny Images: A Large
+Data Set for Nonparametric Object and Scene
+Recognition》的研究，人类在32以下的分辨率，图像分类的准确率就会快速下降，说明再继续减小分辨率可能会损失很多重要信息。</p>
+<p>32×32×3虽然已经很小，这些像素点拉直成序列之后，仍然有3072的长度，计算量仍然不小。为了进一步减少计算量，iGPT用9-bit
+color
+palette（也就是有512个cluster）对（R,G,B）像素点进行聚类，这样就把3个channel的数据合成为1个数据，并且在颜色上没有明显的损失。这样一来长度就减小到三分之一，这个长度（32×32/48×48/64×64）称之为model
+resolution（MR）。</p>
+<p>之后把得到的二位图像进行序列化，就得到了GPT/Bert的输入数据了。</p>
+<p>而在训练目标上，和自然语言的情况一样，对于GPT模型，要求模型根据前面的输入pixel，预测下一个pixel：</p>
+<p><span class="math display">\[L_{AR}=\mathbb{E}_{x\sim X}[-\log
+p(x)]\]</span></p>
+<p>类似地，对于Bert模型，mask掉部分pixel，并要求模型预测被mask的pixel。</p>
+<p><span class="math display">\[L_{BERT}=\underset{x\sim
+X}{\mathbb{E}}\underset{M}{\operatorname*{\mathbb{E}}}\sum_{i\in
+M}\left[-\log p\left(x_i|x_{[1,n]\setminus M}\right)\right]\]</span></p>
+<h2 id="评测方式">评测方式</h2>
+<p>验证预训练模型效果好不好，有两个方法：finetune和linear probing。</p>
+<p>finetune的时候会用最后一层输出的average
+pooling，加上一个projection得到class logits。loss的计算上，除了使用cross
+entropy之外，还会额外加上预训练损失L_GEN：</p>
+<p><span class="math display">\[L_{FT}=L_{GEN}+L_{CLF}\]</span></p>
+<p><span class="math display">\[L_{GEN}\in\{L_{AR},L_{BERT}\}\]</span></p>
+<p>linear
+probing则是仅用预训练模型给出的特征和projection进行图像分类，并且不会训练预训练模型的参数。还有一点不同就是linear
+probing用的不一定是最后一层的特征，因为最后一层的特征未必是最好的。</p>
+<h2 id="实验">实验</h2>
+<p>实验用的模型如下：</p>
+<center>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;">模型</th>
+<th style="text-align: center;">层数</th>
+<th style="text-align: center;">参数量</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">iGPT-XL</td>
+<td style="text-align: center;">60</td>
+<td style="text-align: center;">6.8B</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">iGPT-L</td>
+<td style="text-align: center;">48</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">iGPT-M</td>
+<td style="text-align: center;">36</td>
+<td style="text-align: center;">455M</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">iGPT-S</td>
+<td style="text-align: center;">24</td>
+<td style="text-align: center;">76M</td>
+</tr>
+</tbody>
+</table>
+</center>
+<p>1、对于linear probe，哪层的效果最好</p>
+<p>如上面所说，实验中发现，对于linear
+probe，最后一层的表征往往不是最好的。对于iGPT-L，在不同任务上用不同层的特征做线性分类的效果如下</p>
+<img src="/a11e2633/igpt_layer.png" class title="vision transformer">
+<p>基本上都是在20层左右效果最好，往前或者往后的层效果都下降了。</p>
+<p>2、是不是预训练模型越好，下游任务效果越好</p>
+<p>答案是yes。下图给出预训练的validation loss和linear
+probe效果的关系：</p>
+<img src="/a11e2633/igpt_pretrain_loss.png" class title="vision transformer">
+<p>注意横轴的值往右是减小的。</p>
+<p>3、iGPT和其他模型效果对比</p>
+<p>用linear
+probe任务评测，在CIFAT-10和CIFAT-100上，iGPT-L效果比SimCLR和ResNet-152都更好一些。</p>
+<img src="/a11e2633/igpt_perf1.png" class title="vision transformer">
+<p>而在ImageNet上测试时，iGPT则遇到问题。由于不能在标准 ImageNet
+输入分辨率上进行高效训练，在model
+resolution为32×32时效果并不好，只有把MR提升到64×64，并且使用iGPT-XL时，才达到还不错的效果。但是计算量远超其他方法了。</p>
+<img src="/a11e2633/igpt_perf2.png" class title="vision transformer">
+<p>4、微调效果</p>
+<p>经过微调之后，iGPT的效果有所提升，不过还达不到其他最佳模型的效果。</p>
+<img src="/a11e2633/igpt_ft.png" class title="vision transformer">
+<p>5、对比GPT和Bert</p>
+<p>在linear
+probe上，Bert模型的效果比GPT差很多，而微调之后Bert能够赶上GPT的效果。</p>
+<img src="/a11e2633/igpt_bert.png" class title="vision transformer">
+<h1 id="vit">ViT</h1>
+<p>论文：《An Image is Worth 16x16 Words: Transformers for Image
+Recognition at Scale》</p>
+<p>时间：2020年10月</p>
+<p>机构：Google</p>
+<h2 id="把transformer应用在图像">把transformer应用在图像</h2>
+<p>这是来自Google的工作，也是把transformer成功应用到图像领域的经典工作。</p>
+<p>所用的模型主体是transformer encoder：</p>
+<img src="/a11e2633/vit_intro.png" class title="vision transformer">
+<p>整体上和Bert和相似，最大的不同就是输入部分的处理。</p>
+<p>对于文本来说，输入数据是一个1D序列，但是图像是2D的，需要把2D的图像适配到transformer的输入格式。一个简单的办法就是flatten。这样就能把图像信息输入到transformer里了。当然这样会有一个问题，就是flatten之后的图像丢失了部分pixel之间的结构化位置信息。一个折中的办法就是不以pixel为单位，而是以一个patch为单位来flatten，这样可以减少丢失的结构信息。</p>
+<p>具体来说，对于一张图像 <span class="math inline">\(\mathbf{x}\in\mathbb{R}^{H\times W\times
+C}\)</span>，在H和W维度切成大小为P×P的patch，这样图像数据就变成 <span class="math inline">\(\mathrm{x}_p\in\mathbb{R}^{N\times(P^2\cdot
+C)}\)</span>，而 <span class="math inline">\(N=HW/P^2\)</span>。</p>
+<p>每个patch再经过一个trainable linear projection之后，就是patch
+embedding。patch embedding相当于文本模型里的token
+embedding，图像模型patch进行线性变换的操作对应文本模型里从vocab取对应token
+embedding的操作，而图像切分patch则相当于文本的tokenization。</p>
+<p>不要忘记还有位置编码。论文里对下面集中情况做了实验：<br>
+- 不使用位置编码，输入相当于是bag of patches（就像bag of words）<br>
+- 使用1D的位置编码，和文本transformer一样<br>
+-
+使用2D的位置编码，embedding的前一半维度加上的是X-embedding，后一半维度加上的是Y-embedding<br>
+- 1D的相对位置编码</p>
+<p>各个方法的效果对比如下：</p>
+<img src="/a11e2633/vit_pos.png" class title="vision transformer">
+<p>基本上只要加了位置编码效果就差不多，都比不加要好，因此这里选择了传统的可学习式的1D位置编码，这样实现最简单。</p>
+<p>由于transformer本身理论上是可以接受任意长度的输入的，所以预训练好的ViT也可以用于higher
+resolution的场景，不过这个时候需要对位置编码做一下处理。对于可训练的绝对位置编码，一个方法是进行插值。</p>
+<p>此外，ViT参考Bert的做法，在最开始加入一个[class]token，作为整个图像的表征。</p>
+<p>最终ViT的输入就是：</p>
+<p><span class="math display">\[\mathrm{z}_0=[\mathrm{x}_{\mathrm{class}};\mathrm{~x}_p^1\mathrm{E};\mathrm{~x}_p^2\mathrm{E};\cdots;\mathrm{~x}_p^N\mathrm{E}]+\mathrm{E}_{pos},\quad\mathrm{E}\in\mathbb{R}^{(P^2\cdot
+C)\times D},\mathrm{~E}_{pos}\in\mathbb{R}^{(N+1)\times D}\]</span></p>
+<p>后面的计算就和Bert一样了。</p>
+<p>和自然语言以及iGPT的情况不同，ViT预训练使用的是有监督的数据。</p>
+<h2 id="实验-1">实验</h2>
+<p>在Google之前也有不少人尝试把transformer应用到CV上，但是效果没有那么显著，原因就是预训练数据量不够大。</p>
+<p>实验用到的3个transformer模型如下：</p>
+<img src="/a11e2633/vit_model.png" class title="vision transformer">
+<p>作为对比，还有几个CNN：<br>
+- ResNet<br>
+- hybrids：把ResNet的中间feature map作为ViT的输入</p>
+<p>还有3个不同规模的预训练数据集：<br>
+- 1.3M张图片的ILSVRC-2012 ImageNet dataset<br>
+- 14M张图片的ImageNet-21k<br>
+- 303M张图片的JFT</p>
+<p>实验发现，随着预训练的数据量增大，ViT相对ResNet的优势逐渐明显：</p>
+<img src="/a11e2633/vit_perf.png" class title="vision transformer">
+<h1 id="deitdata-efficient-image-transformers">DeiT（Data-efficient
+image Transformers）</h1>
+<p>论文：《Training data-efficient image transformers &amp; distillation
+through attention》</p>
+<p>时间：2020年12月</p>
+<p>机构：Facebook AI</p>
+<h2 id="tldr">TL;DR</h2>
+<p>ViT里提到需要比较多的预训练数据，模型的效果才能比较好。而DeiT通过使用蒸馏，仅在ImageNet上训练，获得了综合throughput
+&amp; 任务效果更佳的模型。</p>
+<img src="/a11e2633/deit_intro.png" class title="vision transformer">
+<h2 id="蒸馏">蒸馏</h2>
+<p>DeiT主要内容是提出一种使用图像transformer学习的蒸馏策略。student模型和ViT一样，而teacher模型可以是任意模型。</p>
+<p>通常使用的蒸馏，soft distillation，是在学习true
+label之余，增加一个KL散度损失来学习teacher model的知识：</p>
+<p><span class="math display">\[\mathcal{L}_\mathrm{global}=(1-\lambda)\mathcal{L}_\mathrm{CE}(\psi(Z_\mathrm{s}),y)+\lambda\tau^2\mathrm{KL}(\psi(Z_\mathrm{s}/\tau),\psi(Z_\mathrm{t}/\tau))\]</span></p>
+<p>Z_t是teacher model的logits，Z_s是student
+model的logits，τ是蒸馏的温度，而λ控制两项损失的比重。</p>
+<p>相对soft distillation，DeiT提出hard-label distillation：不学习teacher
+model的logits了，直接学习teacher model的最终label：</p>
+<p><span class="math display">\[\mathcal{L}_{\mathrm{global}}^{\mathrm{hardDistill}}=\frac{1}{2}\mathcal{L}_{\mathrm{CE}}(\psi(Z_{s}),y)+\frac{1}{2}\mathcal{L}_{\mathrm{CE}}(\psi(Z_{s}),y_{\mathrm{t}})\]</span></p>
+<p><span class="math display">\[y_\mathrm{t} =
+\mathrm{argmax}_cZ_\mathrm{t}(c)\]</span></p>
+<p>hard-label distillation也可以通过label smoothing手动转成soft
+label：固定把 $1-$ 的概率给true
+label，而剩余的概率就分给其他所有类别。DeiT使用了 $ $。</p>
+<p>通常来说，来自true label和teacher model的信息都可以由class token（ +
+classifier）来学。而DeiT的做法是增加一个distillation
+token专门用来学习蒸馏的知识。</p>
+<img src="/a11e2633/deit_framework.png" class title="vision transformer">
+<p>实验中发现class token embedding和distillation token
+embedding收敛到完全不同的表达，二者之间的cos相似度只有0.06；而随着层数增加，到输出层，二者的cos相似度提高到了0.93。作为对比，实验了使用2个class
+token的情况，结果两个class
+token在输出和输出层都收敛到几乎完全一样的vector。论文认为这说明使用distillation
+token引入了新的信息。（感觉此处有点存疑）</p>
+<h2 id="实验-2">实验</h2>
+<p>DeiT所用实验所用模型如下：</p>
+<img src="/a11e2633/deit_model.png" class title="vision transformer">
+<p>1、不同teacher model</p>
+<p>实验发现，使用卷积模型作为teacher
+model比transformer更好，原因可能是相比transformer，卷积模型提供了一些inductive
+bias，让student模型可以学到一些图像的结构化信息（《Transferring
+inductive biases through knowledge distillation》）。</p>
+<img src="/a11e2633/deit_teacher.png" class title="vision transformer">
+<p>2、不同的蒸馏方法</p>
+<p>下图是各种蒸馏方法的效果对比：</p>
+<img src="/a11e2633/deit_distill.png" class title="vision transformer">
+<ul>
+<li>DeiT– no distillation：没有蒸馏，作为baseline对比<br>
+</li>
+<li>DeiT– usual distillation：使用soft label，没有distillation
+token<br>
+</li>
+<li>DeiT– hard distillation：使用hard label，没有distillation
+token<br>
+</li>
+<li>DeiT⚗: class embedding：使用hard label，仅使用class token<br>
+</li>
+<li>DeiT⚗: distil. embedding：使用hard label，仅使用distillation
+token<br>
+</li>
+<li>DeiT⚗: class+distillation：使用hard label，使用class
+token和distillation token</li>
+</ul>
+<p>结论是使用hard label和distillation token有提升。</p>
+<h2 id="小结">小结</h2>
+<p>和其他模型的整体对比如下：</p>
+<img src="/a11e2633/deit_perf.png" class title="vision transformer">
+<p>DeiT的效果略略比EfficientNet差一点。而相比ViT，DeiT的优势是训练的量比较少。</p>
+<h1 id="swin-transformer">Swin Transformer</h1>
+<p>论文：《Swin Transformer: Hierarchical Vision Transformer using
+ShiftedWindows》</p>
+<p>时间：2021年3月</p>
+<p>机构：MSRA</p>
+<p>Swin来自Shifted WINdow。</p>
+<h2 id="模型结构">模型结构</h2>
+<p>Swin
+Transformer主要的改造是在模型设计上。下图是Swin-T（T是Tiny）模型的结构图，后面结合这个图来一步步看看Swin
+Transformer是怎么做的。</p>
+<img src="/a11e2633/swin_model.png" class title="vision transformer">
+<p>首先是输入部分。Swin Transformer跟ViT一样，把多个pixel
+group在一起作为一个patch，也相当于输入给模型的一个token。只是这里使用的patch
+size比较小，是4×4的。再乘上RGB三个channel，那么每个patch就维度就是4×4×3=48。</p>
+<p>同ViT类似，这里也会用一个linear
+layer把每个patch的48维数据映射成一个C维的embedding。这时输入图片就变成H/4×W/4×C的大小。</p>
+<p>linear embedding后面跟着两个Swin Transformer
+Block，这两个block的attention部分和一般的transformer
+block有所不同，后面详说。</p>
+<p>linear embedding和两个Swin Transformer Block合一起成为stage 1，stage
+1的输出特征维度是H/4×W/4×C。</p>
+<p>为了得到hierarchical representation，stage 1的输出会经过一个patch
+merging layer进行维度的转换。具体来说，patch merging
+layer会把上一阶段输出中的2×2的相邻patch
+concat在一起，得到H/8×W/8×4C的feature map，再经过一个linear层，把feature
+map维度降为H/8×W/8×2C。</p>
+<p>和stage 1类似，patch merging layer后会跟两个Swin Transformer
+Block。它们合在一起就是stage 2。</p>
+<p>后面是stage 3、stage 4就是重复stage
+2的操作，输出的大小分别为H/16×W/16×4C和H/32×W/32×8C。</p>
+<h2 id="shifted-window-attention">Shifted Window Attention</h2>
+<p>现在回过头来看Swin Transformer Block具体是怎么做的。</p>
+<p>首先，我们知道使用pixel直接作为token，或者用小的patch
+size会使得输入给transformer模型的数据长度很长，导致计算成本不可控。那么Swin
+Transformer为了限制计算量，就把attention计算限制在一个local的范围内，而不是全局attention。</p>
+<p>限制attention计算的范围就是window
+size。如下图（a），每个红框就是一个window，每个window包含4×4个patch。每个patch只和同window内的patch进行attention计算，而不和其他window的内容进行交互。</p>
+<img src="/a11e2633/swin_hierachical.png" class title="vision transformer">
+<p>这样一来只要保持window
+size比较小，那么模型的计算复杂度就小了。具体来说，对于一张包含h×w个patch的图像，假设window
+size=M×M个patch，那么传统的attention计算量和hw的平方成正比，而window
+attention的计算量则是和hw成线性关系：</p>
+<p><span class="math display">\[\Omega(\text{MSA})=4hwC^2+2(hw)^2C\]</span></p>
+<p><span class="math display">\[\Omega(\text{W-MSA})=4hwC^2+2M^2hwC\]</span></p>
+<p>这也是Swin Transformer能够使用2×2的小patch的原因。</p>
+<p>Swin-T模型中每个stage的第一个Swin Transformer Block就是使用window
+attention计算的。</p>
+<p>但是window
+attention也有缺点，那就是window之间的信息无法交互，这样就会大大限制了模型的学习能力。为了解决这个问题，Swin-T模型中每个stage的第二个Swin
+Transformer Block使用的是shifted window attention。</p>
+<p>shifted window attention，顾名思义就是把window shift一下，如下图</p>
+<img src="/a11e2633/swin_window.png" class title="vision transformer">
+<p>对于window size为M×M的情况，会把所有window往左上shift
+M/2个patch。这样把window attention和shifted window
+attention交错使用，就能让信息在不同window之间进行传递。</p>
+<h2 id="实验-3">实验</h2>
+<p>Swin Transformer的各个规模模型如下：<br>
+- Swin-T: C = 96, layer numbers = {2; 2; 6; 2}<br>
+- Swin-S: C = 96, layer numbers = {2; 2; 18; 2}<br>
+- Swin-B: C = 128, layer numbers = {2; 2; 18; 2}<br>
+- Swin-L: C = 192, layer numbers = {2; 2; 18; 2}</p>
+<p>window size M = 7。</p>
+<p>1、Image Classification</p>
+<p>直接在ImageNet-1K上训练，和在ImageNet-22K预训练后再在ImageNet-1K上微调，Swin
+Transformer和其他模型效果对比如下：</p>
+<img src="/a11e2633/swin_perf1.png" class title="vision transformer">
+<p>Swin Transformer的top-1
+acc基本上达到了最好的一档，而计算量相比之前最好的CNN的增加也在可接受范围内。</p>
+<p>2、Object Detection on COCO</p>
+<p>最佳模型在 COCO 测试集上的性能超过了之前的最佳结果。</p>
+<img src="/a11e2633/swin_perf2.png" class title="vision transformer">
+<p>3、Semantic Segmentation on ADE20K</p>
+<p>Swin-S 比 DeiT-S 和 ResNet-101 等模型性能更优，Swin-L 模型在
+ImageNet-22K 预训练后在验证集上的 mIoU 达到
+53.5，超过之前的最佳模型（SETR 的 50.3 mIoU）。</p>
+<img src="/a11e2633/swin_perf3.png" class title="vision transformer">
+<h2 id="小结-1">小结</h2>
+<ul>
+<li>Swin
+Transformer的计算量不再随着图像大小平方增加，使得可以使用更小的patch
+size，这是效果提升的一个要点<br>
+</li>
+<li>在效果到达/超过第一梯队CNN水平的同事，Swin
+Transformer没有大幅提升<br>
+</li>
+<li>相比ViT，Swin Transformer的hierarchical结构使得它的特征在object
+detection和semantic segmentation都好用</li>
+</ul>
+<h1 id="其他">其他</h1>
+<p>其他一些Transformer/Attention相关做法，也简单梳理下。</p>
+<h2 id="stand-alone-self-attention-in-vision-models">Stand-Alone
+Self-Attention in Vision Models</h2>
+<p>时间：2019年6月</p>
+<p>机构：Google Brain</p>
+<p>在CNN中，原本卷积计算是这样的：</p>
+<img src="/a11e2633/att_conv.png" class title="vision transformer">
+<p>这里把卷积替换成一个local attention：</p>
+<img src="/a11e2633/att_attention.png" class title="vision transformer">
+<p>相当于把卷积的内部计算替换成self-attention计算了。跟CNN一样，每层的attention会扫描当前输入feature
+map的所有位置，给出所有输出值，构成输出feature map。</p>
+<p>此外，论文认为位置信息在attention的缺失会带来permutation
+equivariant，因此还引入了2D的相对位置编码：</p>
+<img src="/a11e2633/att_pos.png" class title="vision transformer">
+<p>这些相对位置编码加到每个attention计算内部的各个pixel的key上。</p>
+<h2 id="on-the-relationship-between-self-attention-and-convolutional-layers">On
+the Relationship between Self-Attention and Convolutional Layers</h2>
+<p>时间：2019年11月</p>
+<p>这个工作里，作者通过理论证明和实验验证来表明attention架构的前几层学会了关注每个query像素周围的网格状模式，类似于卷积层的行为。</p>
+<p>attention模型训练时每个层有九个注意力头，与ResNet架构中使用的3×3内核相对应。训练后，观察到注意力头在query
+pixel周围形成网格，如下图所示，前几层的头倾向于关注局部模式，而更深层的头关注更大的模式，这表明self-attention应用于图像时确实学会了在query
+pixel周围形成类似于convolution filter的模式。</p>
+<img src="/a11e2633/rel_1.png" class title="vision transformer">
+<img src="/a11e2633/rel_2.png" class title="vision transformer">
+<p>实际训练的时候，为了减少计算量，使用了2×2 pixel的patch。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">长文详解--LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Generative Pretraining from Pixels
+https://cdn.openai.com/papers/Generative_Pretraining_from_Pixels_V2.pdf<br>
+【2】An Image is Worth 16x16 Words: Transformers for Image Recognition
+at Scale https://arxiv.org/abs/2010.11929<br>
+【3】Swin Transformer: Hierarchical Vision Transformer using
+ShiftedWindows https://arxiv.org/abs/2103.14030<br>
+【4】Training data-efficient image transformers &amp; distillation
+through attention https://arxiv.org/abs/2012.12877<br>
+【5】How Do Vision Transformers work?
+https://arxiv.org/abs/2202.06709<br>
+【6】Stand-Alone Self-Attention in Vision Models
+https://arxiv.org/abs/1906.05909<br>
+【7】On the Relationship between Self-Attention and Convolutional Layers
+https://arxiv.org/abs/1911.03584</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/a11e2633.html" title="CV入门--关于Vision Transformer">https://saicat.github.io/a11e2633.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/CV/" rel="tag"><i class="fa fa-tag"></i> CV</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/CNN/" rel="tag"><i class="fa fa-tag"></i> CNN</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2c2cdc34.html" rel="prev" title="LLM预训练数据策略(一)">
+                  <i class="fa fa-angle-left"></i> LLM预训练数据策略(一)
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">406k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">12:18</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

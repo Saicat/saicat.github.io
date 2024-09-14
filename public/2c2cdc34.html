@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  Code-Based English Models Surprising Performance on Chinese QA Pair Extraction Task">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LLM预训练数据策略(一)">
+<meta property="og:url" content="https://saicat.github.io/2c2cdc34.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  Code-Based English Models Surprising Performance on Chinese QA Pair Extraction Task">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/codebased_intro.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/codebased_perf.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/codebased_codemodel.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/codebased_emb_figure.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/codebased_emb_result.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/codebased_scaling.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_intro.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_noise.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_types.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_text_1.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_slm.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_math_perf.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_tool_perf.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_general_perf.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_self_ref.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_ratio.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_text_2.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/rho_text_3.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/reuse_phase1_data.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/reuse_qa_data.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/reuse_blend.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/reuse_datamix.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/reuse_task_perf.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/reuse_qa_version.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/reuse_qa_perf.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/reuse_qa_lr.png">
+<meta property="og:image" content="https://saicat.github.io/2c2cdc34/reuse_time.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-09-04T13:36:27.000Z">
+<meta property="article:modified_time" content="2024-09-04T14:30:28.775Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="数据">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/2c2cdc34/codebased_intro.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/2c2cdc34.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/2c2cdc34.html","path":"2c2cdc34.html","title":"LLM预训练数据策略(一)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>LLM预训练数据策略(一) | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#code-based-english-models-surprising-performance-on-chinese-qa-pair-extraction-task"><span class="nav-number">1.</span> <span class="nav-text">Code-Based
+English Models Surprising Performance on Chinese QA Pair Extraction
+Task</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#tldr"><span class="nav-number">1.1.</span> <span class="nav-text">TL;DR</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1-%E6%95%B0%E6%8D%AE"><span class="nav-number">1.2.</span> <span class="nav-text">任务 &amp; 数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%87%E6%A0%87-%E5%AE%9E%E9%AA%8C"><span class="nav-number">1.3.</span> <span class="nav-text">指标 &amp; 实验</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">1.4.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#rho-1-not-all-tokens-are-what-you-need"><span class="nav-number">2.</span> <span class="nav-text">RHO-1: Not All Tokens
+Are What You Need</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#tldr-1"><span class="nav-number">2.1.</span> <span class="nav-text">TL;DR</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.2.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#selective-language-modeling-slm"><span class="nav-number">2.3.</span> <span class="nav-text">Selective Language Modeling
+(SLM)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">2.4.</span> <span class="nav-text">实验</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.4.1.</span> <span class="nav-text">设置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%88%E6%9E%9C%E5%AF%B9%E6%AF%94"><span class="nav-number">2.4.2.</span> <span class="nav-text">效果对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#self-reference"><span class="nav-number">2.4.3.</span> <span class="nav-text">Self-Reference</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">2.4.4.</span> <span class="nav-text">其他</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93-1"><span class="nav-number">2.5.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reuse-dont-retrain-a-recipe-for-continued-pretraining-of-language-models"><span class="nav-number">3.</span> <span class="nav-text">Reuse,
+Don’t Retrain: A Recipe for Continued Pretraining of Language
+Models</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#tldr-2"><span class="nav-number">3.1.</span> <span class="nav-text">TL;DR</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C%E8%AE%BE%E7%BD%AE"><span class="nav-number">3.2.</span> <span class="nav-text">实验设置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">3.2.1.</span> <span class="nav-text">预训练</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%A7%E7%BB%AD%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">3.2.2.</span> <span class="nav-text">继续预训练</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">3.2.3.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B"><span class="nav-number">3.2.4.</span> <span class="nav-text">评测</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%A7%E7%BB%AD%E9%A2%84%E8%AE%AD%E7%BB%83recipe"><span class="nav-number">3.3.</span> <span class="nav-text">继续预训练Recipe</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C-1"><span class="nav-number">3.4.</span> <span class="nav-text">实验</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%88%86%E5%B8%83"><span class="nav-number">3.4.1.</span> <span class="nav-text">数据分布</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#lr-schedule"><span class="nav-number">3.4.2.</span> <span class="nav-text">lr schedule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%87%E6%8D%A2%E5%88%86%E5%B8%83%E7%9A%84%E6%97%B6%E9%97%B4"><span class="nav-number">3.4.3.</span> <span class="nav-text">切换分布的时间</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93-2"><span class="nav-number">3.5.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">55</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/2c2cdc34.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="LLM预训练数据策略(一) | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          LLM预训练数据策略(一)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-09-04 21:36:27 / 修改时间：22:30:28" itemprop="dateCreated datePublished" datetime="2024-09-04T21:36:27+08:00">2024-09-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>18 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<h1 id="code-based-english-models-surprising-performance-on-chinese-qa-pair-extraction-task">Code-Based
+English Models Surprising Performance on Chinese QA Pair Extraction
+Task</h1>
+<p>时间：2024年1月</p>
+<h2 id="tldr">TL;DR</h2>
+<p>在“基于中文文档生成QA”的生成任务上，使用多个规模相同/相近的LLM进行实验。结果发现，代码模型效果比通用模型更好，并且英文模型表现出了优异性能。</p>
+<h2 id="任务-数据">任务 &amp; 数据</h2>
+<p>1、任务</p>
+<p>基于中文的文档，给出中文QA数据。下面是一个样例：</p>
+<img src="/2c2cdc34/codebased_intro.png" class title="LLM数据策略">
+<p>2、数据</p>
+<p>（1）训练数据</p>
+<p>从wiki和新闻文章中获取的 143,846 个文档，每个文档有相应的问答对。</p>
+<p>这些数据来自开放的人工标注数据集。</p>
+<p>（2）评测数据</p>
+<p>测试集由 300 个internet
+technology相关的private文档组成。来自于实际业务中收集的hard case。</p>
+<p>训练数据和评测数据的domain很不同，这就要求模型有比较强的泛化能力。</p>
+<h2 id="指标-实验">指标 &amp; 实验</h2>
+<p>1、指标</p>
+<p>文中使用了5个细粒度的指标：<br>
+- Coverage Analysis：使用 ROUGE - L
+来评估summary在多大程度上涵盖了源文本中呈现的信息。ROUGE - L
+值越高，表示模型输出的覆盖率越好。<br>
+- Hallucination Analysis of Answers：定义了content creation
+rate（CCR）（不过文中没有给出具体定义），代表模型产生幻觉的倾向。CCR
+分数越高，表明幻觉越严重。<br>
+- Completeness Analysis of Answers：定义了average text coverage
+ratio（COV）（同样没有给出具体定义）。COV
+指的是在所有结果中，输出文本与输入文本的最长公共子串的平均比值。这个比值反映了输出文本对输入文本内容的平均使用程度。COV
+分数越高，表示输出文本对输入文本的复制保真度越高。<br>
+- Reject Capability Analysis：定义了模型的reject
+capability（REJ）（同样没有给出具体定义），它表明模型是否知道何时拒绝完成任务（训练和测试数据中包含一些无法用于生成有效QA的文档，需要模型拒绝）。REJ
+分数越高，表明模型更好地辨别哪些材料更值得进行知识生成任务。<br>
+- Summarize Capability Analysis：定义了text extraction aggregation
+count（TEAC）（同样没有给出具体定义），用来代表模型的总结能力。TEAC分数越高表示模型从内容整体中多个地方提取信息的能力越强，即提取的信息更复杂。同时还定义了longest
+increasing subsequence ratio（LISR），表示模型保持一致性的能力，LISR
+分数越高，表明知识提取行为更有序。</p>
+<p>还有一个EXPERTS指标，是用其他LLM对生成结果进行打分。</p>
+<p>2、实验</p>
+<p>论文具体做了以下四个实验。实验用的基模型都是预训练模型，没有经过对齐。</p>
+<p>（1）Code-based LLMs better than other LLMs</p>
+<p>比较了code model与非code
+model在QA数据微调后各种指标上的性能差异，发现code model在 EXPERTS
+等方面通常优于其他LLM，而在幻觉、泛化和拒绝等方面也有显著增强，如下表所示：</p>
+<img src="/2c2cdc34/codebased_perf.png" class title="LLM数据策略">
+<p>（2）Less Domain Knowledge, Better Performance</p>
+<p>把 DeepSeek-code-6.7B 和 Code Llama-7B 拉出来看，发现Code
+Llama-7B整体上更好一些。而根据二者透露的信息，DeepSeek-code-6.7B所用的中文数据比例应该是远高于Code
+Llama-7B的。</p>
+<img src="/2c2cdc34/codebased_codemodel.png" class title="LLM数据策略">
+<p>DeepSeek-code-6.7B
+的主要问题是容易出现幻觉。这可能说明，在预训练数据中包含大量的中文通用数据，更容易导致模型出现幻觉问题。</p>
+<p>（3）A Moderate Amount of Chinese is Better</p>
+<p>Code
+Llama的词表中，中文的token很少。如果加入8076个中文token，并使用词表中其他相关token的平均值初始化这些新加入的token，那么在一些维度上有一些提升，比如TEAC和CCR。如果是对这些新加入的token进行随机初始化，效果则差很多。</p>
+<img src="/2c2cdc34/codebased_emb_figure.png" class title="LLM数据策略">
+<img src="/2c2cdc34/codebased_emb_result.png" class title="LLM数据策略">
+<p>文中认为加入一定量的中文知识能够提升效果。不过个人认为这里也有可能是训练量太少，随机初始化没有能够收敛。利用平均值初始化新token可以加速收敛。</p>
+<p>（4）QLoRA fails to replicate the effects</p>
+<p>使用 QLoRA 对 Code Llama-7B 模型进行两种方法（scaling 和
+noscaling）的训练，发现无论哪种 QLoRA
+方法，在该任务下都无法获得与全参数微调相同的效果。</p>
+<img src="/2c2cdc34/codebased_scaling.png" class title="LLM数据策略">
+<p>EXPERTS得分的差距非常大。</p>
+<h2 id="小结">小结</h2>
+<p>感觉整个实验应该说indicate了一个事情：训练语言（中文、英文）之间的差距，比训练任务的的差距更小。如果一个模型在英文上具备了很好的摘要能力，那么这个摘要能力比较容易迁移到中文上；而如果一个中文模型在预训练中没有得到任何摘要相关能力的训练，那么想要这个模型获得摘要能力，那么难度会比前面语言上的迁移更大。</p>
+<p>因此，想要在复杂任务上获得好效果，就应该拆解复杂任务所需的基本能力，然后在训练数据中加入支持相应能力的数据。比如agent能力，需要调用接口，总结多方信息，那么上游的代码数据、长文总结、阅读理解应该都对agent能力有帮助。</p>
+<h1 id="rho-1-not-all-tokens-are-what-you-need">RHO-1: Not All Tokens
+Are What You Need</h1>
+<p>时间：2024年4月</p>
+<h2 id="tldr-1">TL;DR</h2>
+<p>论文的主要思想是“Not all tokens in a corpus are equally important for
+language model training”。文中提出Selective Language Modeling
+(SLM)的方法，通过仅选择部分有效的token参与继续预训练，能够在提升收敛速度（5x-10x）的同时，获得更好的效果。</p>
+<img src="/2c2cdc34/rho_intro.png" class title="LLM数据策略">
+<p>左边是常规的Causal Language Modeling (CLM)，右边是这里改进的Selective
+Language Modeling (SLM)。</p>
+<h2 id="分析">分析</h2>
+<p>1、token粒度脏数据</p>
+<p>预训练数据中存在着像下图这种，包含部分低质量token的数据。这些数据难以通过文档级别的过滤来处理，因为如果把过滤阈值卡得太严的话，可能会误伤很多正常数据。而如果直接移除这些token，又可能影响正常的训练。</p>
+<img src="/2c2cdc34/rho_noise.png" class title="LLM数据策略">
+<p>2、数据分布不一致</p>
+<p>预训练的数据分布通常和下游的任务的数据分布不一致，直接把所有token一视同仁进行预训练，可能会有很多对下游无效的训练。</p>
+<h2 id="selective-language-modeling-slm">Selective Language Modeling
+(SLM)</h2>
+<p>首先看下训练过程中token的loss变化情况。从OpenWebMath数据集中抽15B的数据，训练Tinyllama-1B，然后每训练1B
+token保存一次checkpoint。然后用一个包含约320,000个token的validation
+set，跑出所有checkpoint的token-level
+loss。发现这些token根据训练过程loss的变化可以分成4类：<br>
+- persistent high loss (H→H)，约11%<br>
+- increasing loss (L→H)，12%<br>
+- decreasing loss (H→L)，26%<br>
+- consistent low loss (L→L)，51%</p>
+<p>各个类型的loss变化如下图（a）</p>
+<img src="/2c2cdc34/rho_types.png" class title="LLM数据策略">
+<p>和我们设想的不同，随着训练进行，loss减小的token占比只占全量数据的1/4。L→L和H→H类型的token在训练过程中都呈现强烈的震荡状态。实际上，部分H→L类型的token的loss下降过程也并不平滑。</p>
+<p>下图把这些震荡的token用橙色标记出来</p>
+<img src="/2c2cdc34/rho_text_1.png" class title="LLM数据策略">
+<p>发现有相当部分其实可以算是噪音，这和前面分析的一致：存在token粒度脏数据，会影响训练。</p>
+<p>那么基于上面的这些分析和实验：</p>
+<blockquote>
+<p>If we can select the appropriate tokens for the model to focus on
+during training, we may be able to stabilize the trajectory of the
+model’s training and enhance its efficiency.</p>
+</blockquote>
+<p>受document-level filtering中使用reference mode的启发，文中提出
+token-level data selection的pipeline，也就是Selective Language Modeling
+(SLM)。</p>
+<p>SLM有3个step：</p>
+<img src="/2c2cdc34/rho_slm.png" class title="LLM数据策略">
+<ul>
+<li>step 1：在高质量数据集上训练reference
+model；这个高质量数据集的分布反映我们想要的下游任务分布<br>
+</li>
+<li>step 2：用reference model获得将要使用的预训练数据集上的token-level
+loss<br>
+</li>
+<li>step 3：正式的训练中，只使用LM和RM间excess
+loss较大的token进行学习</li>
+</ul>
+<p>RM模型的训练使用标准的cross-entropy
+loss。训练好的RM对预训练数据进行打分，按如下计算：</p>
+<p><span class="math display">\[\mathcal{L}_{\mathrm{RM}}(x_i)=-\log
+P(x_i|x_{&lt;i})\]</span><br>
+excess loss则是当前训练的模型，和RM之间的打分差：</p>
+<p><span class="math display">\[\mathcal{L}_\Delta(x_i)=\mathcal{L}_\theta(x_i)-\mathcal{L}_\mathrm{RM}(x_i)\]</span></p>
+<p>正常的causal模型训练是对所有token的loss取平均训练的：</p>
+<p><span class="math display">\[\mathcal{L}_{\mathrm{CLM}}(\theta)=-\frac1N\sum_{i=1}^N\log
+P(x_i|x_{&lt;i};\theta)\]</span></p>
+<p>SLM的训练则是基于excess loss，只选择每个训练batch中，excess
+loss处于top k%（token selection ratio）的token进行训练：</p>
+<p><span class="math display">\[\mathcal{L}_{\mathrm{SLM}}(\theta)=-\frac1{N*k\%}\sum_{i=1}^NI_{k\%}(x_i)\cdot\log
+P(x_i|x_{&lt;i};\theta)\]</span></p>
+<p><span class="math display">\[\begin{aligned}&amp;I_{k\%}(x_i)=\begin{cases}1&amp;\text{if
+}x_i\text{ ranks in the top }k\%\text{ by
+}\mathcal{L}_\Delta(x_i)\\0&amp;\text{otherwise}\end{cases}\end{aligned}\]</span></p>
+<h2 id="实验">实验</h2>
+<h3 id="设置">设置</h3>
+<p>在数学领域和通用领域进行继续预训练，实验SLM的效果。</p>
+<p>1、RM Training</p>
+<ul>
+<li>mathematical
+RM：使用0.5B的高质量数学数据，这些数据包括来自GPT-4的生成数据和人工处理获得的数据（《Metamath:
+Bootstrap your own mathematical questions for large language
+models》，《Key-pointdriven data synthesis with its enhancement on
+mathematical reasoning》；《Mammoth: Building math generalist models
+through hybrid instruction tuning》，《Exploring the mystery of
+influential data for mathematical reasoning》）<br>
+</li>
+<li>general RM：使用1.9B开源训练数据<br>
+</li>
+<li>训练3个epoch<br>
+</li>
+<li>1B模型和7B模型的lr分别是5e-5和1e-5<br>
+</li>
+<li>cosine decay schedule<br>
+</li>
+<li>1B模型和7B模型的max length分别为2048和4096<br>
+</li>
+<li>RM模型和继续预训练的模型使用相同的初始化</li>
+</ul>
+<p>2、Pretraining Corpus</p>
+<p>在数学领域，使用包含14B token的OpenWebMath (OWM)
+数据集；而在通用领域，则是把SlimPajama、StarCoderData和OpenWebMath按6:3:1混合得到80B的训练数据集。</p>
+<p>3、Pretraining Setting</p>
+<p>数学领域：<br>
+- 基于Tinyllama-1.1B和Mistral-7B继续预训练<br>
+- lr分别为8e-5和2e-5<br>
+- batch size = 1M</p>
+<p>通用领域：<br>
+- 基于Tinyllama-1.1B继续预训练<br>
+- lr = 1e-4<br>
+- batch size = 1M</p>
+<p>token selection ratio：<br>
+- Tinyllama-1.1B：60%<br>
+- Mistral-7B：70%</p>
+<p>4、Baseline Setting</p>
+<p>和SLM作为对比，分别用同样的数据进行常规的继续预训练，作为baseline：<br>
+- Tinyllama-CT<br>
+- Mistral-CT</p>
+<p>还有其他一些效果比较好的同规模预训练模型，包括Gemma、Qwen1.5、Phi-1.5
+、DeepSeekLLM、DeepSeekMath、CodeLlama、Mistral、Minerva、Tinyllama、
+InternLM2-Math和LLemma等。还有几个SFT模型：MAmmoTH和ToRA。</p>
+<h3 id="效果对比">效果对比</h3>
+<p>各个预训练模型在Few-shot CoT reasoning的效果如下：</p>
+<img src="/2c2cdc34/rho_math_perf.png" class title="LLM数据策略">
+<p>RHO-1-Math-1B相比Tinyllama-CT有16.5%的提升，而7B模型则有10.4%的提升。1B模型在训练多几个epoch之后还能进一步提升。</p>
+<p>而相比其他业界知名的模型，RHO-1基本上也能达到同一水准，但是训练所用的数据量相比这些模型则减少许多。</p>
+<p>Tool-Integrated Reasoning的效果也做了对比：</p>
+<img src="/2c2cdc34/rho_tool_perf.png" class title="LLM数据策略">
+<p>相比预训练，SFT后RHO-1的收益没有那么大，但还是有提升。</p>
+<p>而在通用数据上训练的模型，在各个benchmark的对比如下：</p>
+<img src="/2c2cdc34/rho_general_perf.png" class title="LLM数据策略">
+<p>也都有稳定的提升，其中代码和数学类提升最大。</p>
+<h3 id="self-reference">Self-Reference</h3>
+<p>前面的实验有一个前提，就是RM模型是用和下游任务比较分布相关的数据训练的。那么如果没有和下游任务分布相关的数据，是否还可以使用SLM来获得提升呢？</p>
+<p>论文认为RM模型打分的关键并不是和下游任务的分布对齐，而是要把noisy数据过滤掉，因此尝试用两个不同的scoring
+function来打分：一个就是上面用的reference loss score function（<span class="math inline">\(\mathcal{L}_\Delta(x_i)\)</span>），另一个是information
+entropy score function：</p>
+<p><span class="math display">\[\mathcal{H}_{\mathbf{RM}}(x_i)=-\sum_{k=1}^VP(t_k|x_{&lt;i})\log
+P(t_k|x_{&lt;i})\]</span></p>
+<p>V是词表大小。</p>
+<p>如果一个token的information entropy
+score越大，那么说明在这个context下它的不确定性越大。</p>
+<p>不使用下游任务分布相关的数据，而仅用预训练数据，采用不同的score
+function，用SLM方法训练，结果如下：</p>
+<img src="/2c2cdc34/rho_self_ref.png" class title="LLM数据策略">
+<p>无论用哪个score
+function，仅用预训练数据训练RM也可以获得提升。如果选择使用reference loss
+score function和information entropy score
+function的交集token进行训练，效果更好。</p>
+<h3 id="其他">其他</h3>
+<p>1、Token Select Ratio</p>
+<p>在1B模型上实验不同的token select ratio：</p>
+<img src="/2c2cdc34/rho_ratio.png" class title="LLM数据策略">
+<p>结果表明在60%~70%的效果最好。</p>
+<p>2、训练了什么token</p>
+<p>RM模型在一段文本上选择的token如下：</p>
+<img src="/2c2cdc34/rho_text_2.png" class title="LLM数据策略">
+<p>而在训练过程中选择的token有什么变化呢？4个checkpoint，分别是训练0%、33%、66%和100%时，这4个阶段在同一段文本下，选择用于训练的token如下，token选择的preference从高到低分别用深蓝、浅蓝、黑色橙色和深橙色标记出来：</p>
+<img src="/2c2cdc34/rho_text_3.png" class title="LLM数据策略">
+<h2 id="小结-1">小结</h2>
+<p>仅选择重要度高的token进行训练，在成本上来说比较高，可以尝试用于预训练的第二甚至第三阶段。</p>
+<h1 id="reuse-dont-retrain-a-recipe-for-continued-pretraining-of-language-models">Reuse,
+Don’t Retrain: A Recipe for Continued Pretraining of Language
+Models</h1>
+<p>时间：2024年7月</p>
+<h2 id="tldr-2">TL;DR</h2>
+<p>一套针对general
+abilities的LLM继续预训练的指南，包括数据分布的设计，和lr
+schedule的设置。在一个15B（先经过8T数据的预训练）验证，在下游benchmark平均有9%的提升。实验结果适用于100B~1T数据量的继续训练。</p>
+<p>以往的一些工作主要是垂域的：<br>
+- 《Simple and scalable strategies to continually pre-train large
+language models》<br>
+- 《 Investigating continual pretraining in large language models:
+Insights and implications》<br>
+- 《Continual pre-training of language models》<br>
+- 《Towards continual knowledge learning of language models》</p>
+<h2 id="实验设置">实验设置</h2>
+<h3 id="预训练">预训练</h3>
+<p>现在的模型很多都在万亿（1T）/十万亿（10T）级数据量上训练。为了得到一个使用可靠的效果，论文先用一个15B参数模型，在8T的数据上进行实验。8T的预训练数据分布如下：</p>
+<img src="/2c2cdc34/reuse_phase1_data.png" class title="LLM数据策略">
+<h3 id="继续预训练">继续预训练</h3>
+<p>在实际场景中，我们通常没有太多的新数据用于继续预训练，因此继续预训练绝大部分所用数据就是来自上面的8T数据集。在这个基础上，加入了2.8B的QA数据集。</p>
+<p>QA数据有助于模型更好地抽取已经学到的知识（《Physics of language
+models: Part 3.1, knowledge storage and extraction》）。</p>
+<p>QA数据集的分布如下：</p>
+<img src="/2c2cdc34/reuse_qa_data.png" class title="LLM数据策略">
+<h3 id="模型">模型</h3>
+<ul>
+<li>15B参数：3.2B embedding参数，12.5B非 embedding参数<br>
+</li>
+<li>32层<br>
+</li>
+<li>hidden size = 6144<br>
+</li>
+<li>48个注意力头<br>
+</li>
+<li>RoPE<br>
+</li>
+<li>quared ReLU activations<br>
+</li>
+<li>vocabulary size = 256k<br>
+</li>
+<li>no bias terms<br>
+</li>
+<li>tied embedding weight<br>
+</li>
+<li>GQA，8个KV头<br>
+</li>
+<li>pretrain sequence length = 4096<br>
+</li>
+<li>在训练的前5%token，batch size逐渐从384增大到1152<br>
+</li>
+<li>cosine learning rate schedule<br>
+</li>
+<li>warmup = 16B token<br>
+</li>
+<li>lr = 4.5e-4 --&gt; 4.5e-5<br>
+</li>
+<li>AdamW，beta_1 = 0.9，beta_2 = 0.95，weight decay = 0.1<br>
+在继续预训练中，只有lr会改变，其他都不变。</li>
+</ul>
+<h3 id="评测">评测</h3>
+<p>评测数据集包括：<br>
+- MMLU<br>
+- Hellaswag<br>
+- MGSM（Multilingual Grade School
+Mathematics）：用于多语言评估，具体报告西班牙语、日语和泰语这三种分别代表高、中、低资源语言的子集的平均准确率。<br>
+- HumanEval的 Python 代码生成任务：在 pass@1
+设置下评估模型的编码能力。</p>
+<h2 id="继续预训练recipe">继续预训练Recipe</h2>
+<p>1、先在原预训练数据分布的基础上，提升高质量数据的比重进行训练，之后再切换到包含QA数据的数据集</p>
+<p>2、lr从预训练阶段的min_lr开始，按cosine annealing decay到min_lr /
+100</p>
+<p>3、数据分布的切换要在min_lr / 5的时候进行</p>
+<h2 id="实验-1">实验</h2>
+<p>这里提到一点：发现在继续预训练时，是否加载预训练阶段的optimizer参数影响并不大。</p>
+<p>预训练模型在评测数据集上的平均accuracy为48.9。</p>
+<h3 id="数据分布">数据分布</h3>
+<p>1、QA数据</p>
+<p>如果把想要学习的新知识放在继续预训练的前面，模型会更容易学到（lr更大），但是同时也可能因此带来训练的不稳定性。为此使用了三种数据进行实验：<br>
+- 纯使用预训练数据<br>
+- 纯使用QA数据<br>
+- 先使用预训练数据，然后混入10%的QA数据</p>
+<p>三种策略的效果如下：</p>
+<img src="/2c2cdc34/reuse_blend.png" class title="LLM数据策略">
+<p>使用第三种策略效果有比较大的提升。</p>
+<p>2、general blend实验</p>
+<p>把initial blend称之为general
+blend（GB），把后面包含QA的数据分布成为QA
+blend（QB）。那么GB用什么分布最好呢？</p>
+<p>假设最优的GB是注重高质量数据和模型薄弱的领域的数据，且不会大幅偏离预训练分布。实验不同GB分布下的效果：<br>
+- Reweight Domains：对预训练数据中的不同领域进行重新加权。<br>
+- Pretraining w/ High Quality Web：在预训练数据中使用高质量的 Web
+数据。<br>
+- No Web：去除预训练数据中的 Web 数据。<br>
+- Upweight Non Web w/ High Quality Web：提高非 Web
+数据的权重，并使用高质量的 Web 数据。</p>
+<p>每种分布都训练300B数据，然后对比效果：</p>
+<img src="/2c2cdc34/reuse_datamix.png" class title="LLM数据策略">
+<p>Upweight Non Web with High
+Quality虽然没有达到最高平均准确率，但在所有任务中最稳定地取得了较高分数，因此被选为后续实验的
+GB。</p>
+<img src="/2c2cdc34/reuse_task_perf.png" class title="LLM数据策略">
+<p>3、QA blend实验</p>
+<p>使用三种QA分布：</p>
+<img src="/2c2cdc34/reuse_qa_version.png" class title="LLM数据策略">
+<p>在训练250B的GB数据后，进行QB的训练：</p>
+<img src="/2c2cdc34/reuse_qa_perf.png" class title="LLM数据策略">
+<p>同时强调STEM和Chat数据的分布效果最好。</p>
+<p>最终的训练方案是，先训练权重修改后的GB数据，然后把QB数据混合到GB数据中。</p>
+<h3 id="lr-schedule">lr schedule</h3>
+<p>对比3个lr的decay设置，结果是decay到1%的继续预训练的lr时是最好的：</p>
+<img src="/2c2cdc34/reuse_qa_lr.png" class title="LLM数据策略">
+<h3 id="切换分布的时间">切换分布的时间</h3>
+<p>从GB切换到QB分布，应该在什么时候进行？结果如下：</p>
+<img src="/2c2cdc34/reuse_time.png" class title="LLM数据策略">
+<p>可以看到切换的时间点选择对结果的影响还是比较大的。</p>
+<h2 id="小结-2">小结</h2>
+<p>算是一次实验记录，不过不是很够完善，解释得也不够清楚。可以作为实验参考吧。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">长文详解--LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Code-Based English Models Surprising Performance on Chinese QA
+Pair Extraction Task https://arxiv.org/abs/2401.10286<br>
+【2】RHO-1: Not All Tokens Are What You Need
+https://arxiv.org/abs/2404.07965<br>
+【3】Reuse, Don’t Retrain: A Recipe for Continued Pretraining of
+Language Models https://arxiv.org/abs/2407.07263</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/2c2cdc34.html" title="LLM预训练数据策略(一)">https://saicat.github.io/2c2cdc34.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE/" rel="tag"><i class="fa fa-tag"></i> 数据</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/dcb57672.html" rel="prev" title="长文详解--LLM高效预训练(一)">
+                  <i class="fa fa-angle-left"></i> 长文详解--LLM高效预训练(一)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/a11e2633.html" rel="next" title="CV入门--关于Vision Transformer">
+                  CV入门--关于Vision Transformer <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">406k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">12:18</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
