@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  标注数据总是缺乏的，特别是对于大规模预训练。因此无监督学习在大模型时代就更加重要了。相比有监督的训练，无监督学习不需要把最终结果都reduce到一个单一的label，因此模型也能学到更丰富的数据特征。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CV入门--无监督学习">
+<meta property="og:url" content="https://saicat.github.io/ae81a87b.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  标注数据总是缺乏的，特别是对于大规模预训练。因此无监督学习在大模型时代就更加重要了。相比有监督的训练，无监督学习不需要把最终结果都reduce到一个单一的label，因此模型也能学到更丰富的数据特征。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/moco_a.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/moco_b.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/moco_c.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/moco_algo.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_intro.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_framework.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_algo.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_aug.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_aug_exp.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_unsup.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_eval.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_proj.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_proj_head.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/simclr_bs.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/byol_intro.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/byol_framework.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/dino_intro.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/dino_framework.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/dino_algo.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/dino_module.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/dino_patch_size.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/beit_intro.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/beit_blockmask.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/mae_intro.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/mae_mask_ratio.png">
+<meta property="og:image" content="https://saicat.github.io/ae81a87b/mae_ablation.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2024-09-14T13:08:07.000Z">
+<meta property="article:modified_time" content="2024-09-14T13:40:42.152Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="CV">
+<meta property="article:tag" content="CNN">
+<meta property="article:tag" content="无监督学习">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/ae81a87b/moco_a.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/ae81a87b.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/ae81a87b.html","path":"ae81a87b.html","title":"CV入门--无监督学习"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>CV入门--无监督学习 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#moco"><span class="nav-number">1.</span> <span class="nav-text">MoCo</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#tldr"><span class="nav-number">1.1.</span> <span class="nav-text">TL;DR</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%97%A0%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0"><span class="nav-number">1.2.</span> <span class="nav-text">无监督学习</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0"><span class="nav-number">1.3.</span> <span class="nav-text">对比学习</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#momentum-contrast"><span class="nav-number">1.4.</span> <span class="nav-text">Momentum Contrast</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#simclr"><span class="nav-number">2.</span> <span class="nav-text">SimCLR</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#data-augmentation"><span class="nav-number">2.1.</span> <span class="nav-text">data augmentation</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#encoder"><span class="nav-number">2.2.</span> <span class="nav-text">encoder</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#nonlinear-projection-head"><span class="nav-number">2.3.</span> <span class="nav-text">nonlinear projection head</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#loss-batch-size"><span class="nav-number">2.4.</span> <span class="nav-text">loss &amp; batch size</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#byolbootstrap-your-own-latent"><span class="nav-number">3.</span> <span class="nav-text">BYOL（Bootstrap your own
+latent）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#dinoself-distillation-with-no-labels"><span class="nav-number">4.</span> <span class="nav-text">DINO（self-DIstillation
+with NO labels）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#tldr-1"><span class="nav-number">4.1.</span> <span class="nav-text">TL;DR</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%B9%E6%B3%95"><span class="nav-number">4.2.</span> <span class="nav-text">方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B6%88%E8%9E%8D%E5%AE%9E%E9%AA%8C"><span class="nav-number">4.3.</span> <span class="nav-text">消融实验</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#beit"><span class="nav-number">5.</span> <span class="nav-text">BEiT</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#mae"><span class="nav-number">6.</span> <span class="nav-text">MAE</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">56</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">64</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/ae81a87b.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="CV入门--无监督学习 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          CV入门--无监督学习
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-09-14 21:08:07 / 修改时间：21:40:42" itemprop="dateCreated datePublished" datetime="2024-09-14T21:08:07+08:00">2024-09-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/CV/" itemprop="url" rel="index"><span itemprop="name">CV</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>10k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>18 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>标注数据总是缺乏的，特别是对于大规模预训练。因此无监督学习在大模型时代就更加重要了。相比有监督的训练，无监督学习不需要把最终结果都reduce到一个单一的label，因此模型也能学到更丰富的数据特征。</p>
+<p>本篇整理图像领域一些无监督学习的方法，涉及的论文如下：</p>
+<center>
+<table>
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">模型/方法</th>
+<th style="text-align: center;">时间</th>
+<th style="text-align: center;">论文</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">Memory Bank</td>
+<td style="text-align: center;">2018年5月</td>
+<td style="text-align: center;">Unsupervised Feature Learning via
+Non-Parametric Instance-level Discrimination</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MoCo</td>
+<td style="text-align: center;">2019年11月</td>
+<td style="text-align: center;">Momentum Contrast for Unsupervised
+Visual Representation Learning</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SimCLR</td>
+<td style="text-align: center;">2020年2月</td>
+<td style="text-align: center;">A Simple Framework for Contrastive
+Learning of Visual Representations</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">BYOL</td>
+<td style="text-align: center;">2020年6月</td>
+<td style="text-align: center;">Bootstrap Your Own Latent：A New
+Approach to Self-Supervised Learning</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">DINO</td>
+<td style="text-align: center;">2021年4月</td>
+<td style="text-align: center;">Emerging Properties in Self-Supervised
+Vision Transformers</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">BEiT</td>
+<td style="text-align: center;">2021年6月</td>
+<td style="text-align: center;">BEiT: BERT Pre-Training of Image
+Transformers</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MAE</td>
+<td style="text-align: center;">2021年11月</td>
+<td style="text-align: center;">Masked Autoencoders Are Scalable Vision
+Learners</td>
+</tr>
+</tbody>
+</table>
+</center>
+<h1 id="moco">MoCo</h1>
+<p>论文：《Momentum Contrast for Unsupervised Visual Representation
+Learning》</p>
+<p>时间：2019年11月</p>
+<p>机构：FAIR</p>
+<h2 id="tldr">TL;DR</h2>
+<p>基于对比学习，MoCo通过动量更新的方法，改进图像的无监督学习，可以在多个下游任务获得接近/匹配有监督预训练的效果。</p>
+<h2 id="无监督学习">无监督学习</h2>
+<p>无监督学习在文本数据上效果很好，而在图像上则相对没那么突出。原因可能是二者在信号空间上的差异：文本数据天然有离散的自监督信号，而图像数据的信号在连续的高维空间中，相比之下没有那么有结构化。</p>
+<p>无监督学习框架的设计一般包括两个主要方面：<br>
+- pretext
+task：这类任务本身的能力并不是我们想要的，只是通过这类任务让模型学到泛化性好的数据表征；“The
+term “pretext” implies that the task being solved is not of genuine
+interest, but is solved only for the true purpose of learning a good
+data representation.”<br>
+- loss function：决定了模型如何学习，往往也和pretext task密切相关</p>
+<p>在此之前的一些无监督方法：<br>
+- auto-encoder：任务是重建输入的图像，使用L1或者L2 loss衡量误差<br>
+- GAN：包含生成网络和判别网络，衡量的是概率分布的差异</p>
+<h2 id="对比学习">对比学习</h2>
+<p>除了auto-encoder和GAN，使用对比学习也是一个自监督学习的思路。对比损失衡量一对数据在表示空间中的相似度，它们在表示空间中的具体值在训练过程中是会变化的，而不是固定的。</p>
+<p>使用对比学习，可以看作是训练一个执行dictionary
+look-up任务的encoder。</p>
+<p>假设现在有一个输入query q，以及一系列由encoder编码过的样本 <span class="math inline">\(\{k_0,k_1,k_2,...\}\)</span>，其中只有一个样本
+<span class="math inline">\(k_{+}\)</span>
+和q是匹配的，即正样本（正样本最常用的来源就是对同一张图片使用不同的增强方法），其他样本都是负样本，那么contrastive
+loss如下计算</p>
+<p><span class="math display">\[\mathcal{L}_q=-\log\frac{\exp(q\cdot
+k_+/\tau)}{\sum_{i=0}^K\exp(q\cdot k_i/\tau)}\]</span></p>
+<p><span class="math display">\[q=f_{\mathbf{q}}(x^q)\]</span></p>
+<p><span class="math display">\[k=f_{\mathbf{k}}(x^k)\]</span></p>
+<p>其中τ是温度（实验中设为0.07），K是负样本数量。对比损失理论上会提升q和正样本的相似度，同时降低q和其他所有负样本的相似度。</p>
+<p>fq和fk是query和key的encoder，通常来说这两个encoder可以一样，也可以不一样，取决于具体的pretext
+task。而xq和xk可以是图片，图片的patch，或者一组patch的组合。</p>
+<p>前面提到，训练的encoder的任务是做dictionary
+look-up，类比到文本数据的预训练，可以认为这里的（K +
+1）个表征就是dictionary的大小，正样本就是true
+label，负样本则是其他的token。</p>
+<p>那么这些负样本从哪里来呢？最简单的做法就是在一个mini-batch里，除了正样本以外的其他数据都看作是负样本：</p>
+<img src="/ae81a87b/moco_a.png" class title="CV无监督学习">
+<p>正样本的表征和负样本的表征同时通过bp进行训练。</p>
+<p>这样的做法会把负样本数量和batch
+size耦合了起来。而直观上来说，更大的负样本数量效果会更好。由于batch
+size受制于显存大小（每个负样本都要通过bp更新），没法设得特别大，因此负样本的数量也就受到了限制。并且使用超大batch
+size进行训练，对效果也会有影响（《Accurate, large minibatch SGD:
+Training ImageNet in 1 hour》）。</p>
+<p>为了增大负样本的数量，《Unsupervised feature learning via
+non-parametric instance discrimination》中使用了memory bank的方法：</p>
+<img src="/ae81a87b/moco_b.png" class title="CV无监督学习">
+<p>memory bank中包含了训练数据集所有样本的编码表示。每次训练会从memory
+bank中随机抽取一批作为负样本。这里memory
+bank里的负样本不会随着query更新，因此能够在相同的显存下使用更大的batch
+size。</p>
+<p>但是memory
+bank里的数据存在过时的数据（比如部分特征向量分别是由1000/2000/3000步前的encoder给出的结果），因此存在特征不一致的问题：q是最新的encoder编码的，k是不同时间的旧的encoder编码的。这种不一致的情况会对效果有影响。</p>
+<h2 id="momentum-contrast">Momentum Contrast</h2>
+<p>从上面的做法我们可以看到，构建好的dictionary需要满足两个条件：（1）dictionary要大（2）负样本的表征需要尽量保持编码的一致性。</p>
+<p>MoCo在memory
+bank的基础上，为了低成本地更新key的表示，不直接用bp更新，而是通过momentum更新key的encoder。</p>
+<p>MoCo维护一个固定大小queue，每一步会把最新的一个mini-batch的表征放到这个queue里，并移除最旧的一个mini-batch。</p>
+<p>假设fk的参数是θk，而fq的参数是θq，每一步θq还是正常按bp更新，而θk更新则通过momentum增量更新：</p>
+<p><span class="math display">\[\theta_\mathbf{k}\leftarrow
+m\theta_\mathbf{k}+(1-m)\theta_\mathbf{q}\]</span></p>
+<p>其中m是momentum。在实际使用中，m的值比较大时（0.999）比较小值（0.9）效果更好，这也说明保持负样本的一致性的重要性。</p>
+<p>MoCo的方案示意图如下：</p>
+<img src="/ae81a87b/moco_c.png" class title="CV无监督学习">
+<p>MoCo完整算法如下：</p>
+<img src="/ae81a87b/moco_algo.png" class title="CV无监督学习">
+<p>和memory
+bank相比，MoCo对queue中的表征更新更加平缓，queue中的样本表示的一致性更好。</p>
+<h1 id="simclr">SimCLR</h1>
+<p>论文：《A Simple Framework for Contrastive Learning of Visual
+Representations》</p>
+<p>时间：2020年2月</p>
+<p>机构：Google Brain</p>
+<p>Hinton参与的一个工作。把无监督训练的模型在ImageNet上的效果做到和监督学习一样。</p>
+<img src="/ae81a87b/simclr_intro.png" class title="CV无监督学习">
+<p>SimCLR依然是基于对比学习的框架。为什么选择对比学习做无监督学习？生成式的方法包括encoder和decoder，一般会把重建图片作为任务，而这样复杂精细的任务其实对于对月学习representation并不是必须的，复杂的计算很多其实对下游没有什么帮助（decoder部分的学习）。而有些discriminative的方法会借用真实label或者生成的label，使用类似有监督的方式进行预训练。这种方式某种程度上是限制了模型学习的representation的泛化性。相比之下对比学习的框架在效率和效果上有更好的平衡。</p>
+<p>SimCLR的训练框架如论文标题所说的，确实比较简单：</p>
+<img src="/ae81a87b/simclr_framework.png" class title="CV无监督学习">
+<p>其中有4个重要的组件：<br>
+- data augmentation<br>
+- encoder f(·)<br>
+- projection head g(·)<br>
+- contrastive loss function</p>
+<p>整体来看，SimCLR更多是精细工程带来的成功。</p>
+<img src="/ae81a87b/simclr_algo.png" class title="CV无监督学习">
+<h2 id="data-augmentation">data augmentation</h2>
+<p>论文对不同的图像增强方法和它们的组合进行实验：</p>
+<img src="/ae81a87b/simclr_aug.png" class title="CV无监督学习">
+<p>下图是在SimCLR其中一个branch不增强，而在另一个branch采用不同的数据增强方式下训练出来的模型在ImageNet上的效果。对角线的实验只用了一种增强，其他位置则是对应行和列的增强方式的组合。</p>
+<img src="/ae81a87b/simclr_aug_exp.png" class title="CV无监督学习">
+<p>发现crop和color distort这两个的组合效果特别好。</p>
+<p>另外对比数据增强强度在监督学习和无监督学习的效果，发现无监督学习需要更强的增强强度来获取更好的效果：</p>
+<img src="/ae81a87b/simclr_unsup.png" class title="CV无监督学习">
+<h2 id="encoder">encoder</h2>
+<p>SimCLR中的encoder理论上可以是任意模型。简单起见，论文中选择了ResNet。对比有监督学习，和使用不同大小的ResNet的SimCLR，发现随着模型规模的增大，无监督学习的效果和有监督学习的gap在减小。</p>
+<img src="/ae81a87b/simclr_eval.png" class title="CV无监督学习">
+<p>这说明无监督训练相比有监督，benefit more from更大的模型。</p>
+<h2 id="nonlinear-projection-head">nonlinear projection head</h2>
+<p>使用的projection head是一个MLP层</p>
+<p><span class="math display">\[z_i=g(h_i)=W^{(2)}\sigma(W^{(1)}h_i)\]</span></p>
+<p>对比三种projection的效果：（1）identity mapping（2）linear
+projection（3）nonlinear projection</p>
+<p>发现（3）比（2）提升3%，而比（1）提升则&gt;10%：</p>
+<img src="/ae81a87b/simclr_proj.png" class title="CV无监督学习">
+<p>在不同输出维度下，都有相同结果。</p>
+<p>为什么projection head重要？论文认为，z = g (h)
+被训练为对数据增强具有不变性，会去除可能对下游任务有用的信息（而在对比学习中不需要），如对象的颜色或方向，这样这些去除的操作可以在g，也就是projection
+head中完成，从而使得encoder的输出h本身可以保留更多对下游任务有用的信息。</p>
+<p>针对这个想法，用g(h)和h作为特征，用来预测数据变换的任务，发现h的效果更好，说明h相比g(h)确实保留了更多和数据变换相关的信息。</p>
+<img src="/ae81a87b/simclr_proj_head.png" class title="CV无监督学习">
+<h2 id="loss-batch-size">loss &amp; batch size</h2>
+<p>SimCLR的loss：</p>
+<p><span class="math display">\[\ell_{i,j}=-\log\frac{\exp(\sin(z_i,z_j)/\tau)}{\sum_{k=1}^{2N}\mathbb{I}_{[k\neq
+i]}\exp(\sin(z_i,z_k)/\tau)}\]</span></p>
+<p>SimCLR不使用memory
+bank之类的方法，而只把同batch中的除了正样本之外的2（N-1）个样本全部作为负样本（batch
+size = N）。</p>
+<p>这么一来batch size应该就是越大越好了，实验结果也是如此：</p>
+<img src="/ae81a87b/simclr_bs.png" class title="CV无监督学习">
+<p>为了保证在大batch size下的训练稳定，SimCLR使用LARS optimizer。</p>
+<h1 id="byolbootstrap-your-own-latent">BYOL（Bootstrap your own
+latent）</h1>
+<p>论文：《Bootstrap Your Own Latent：A New Approach to Self-Supervised
+Learning》</p>
+<p>时间：2020年6月</p>
+<p>机构：DeepMind</p>
+<img src="/ae81a87b/byol_intro.png" class title="CV无监督学习">
+<p>之前的对比学习都需要使用正样本和负样本，并且会增大负样本的数量以提升效果。为什么要使用负样本，因为如果只使用正样本，那么模型的训练可能会collapse：只使用正样本，那么模型只需要对所有输入都输出相同的结果，比如全是0，也可以符合任务要求。</p>
+<p>而BYOL则是设计了一个不使用负样本也不会collapse的框架：</p>
+<img src="/ae81a87b/byol_framework.png" class title="CV无监督学习">
+<p>框架中包含target和online两个模型，其中online模型是正常bp训练的，而target模型则是通过momentum进行更新：</p>
+<p><span class="math display">\[\theta\leftarrow\mathrm{optimizer}(\theta,\nabla_\theta\mathcal{L}_{\theta,\xi}^{\mathbf{BYOL}},\eta)\]</span></p>
+<p><span class="math display">\[\xi\leftarrow\tau\xi+(1-\tau)\theta
+\]</span></p>
+<p>输入部分则和其他对比学习一样，是对输入图片的数据增强，具体是参考了SimCLR的实现。</p>
+<h1 id="dinoself-distillation-with-no-labels">DINO（self-DIstillation
+with NO labels）</h1>
+<p>论文：《Emerging Properties in Self-Supervised Vision
+Transformers》</p>
+<p>时间：2021年4月</p>
+<p>机构：FAIR</p>
+<h2 id="tldr-1">TL;DR</h2>
+<p>ViT的效果不错，但是也存在缺点：计算量大训练量大，监督试的预训练任务信号丰富程度不如Bert或者GPT这种自监督的信号丰富，图片信息最后都被reduce到某一个类别上。</p>
+<p>DINO通过蒸馏的形式实现了图像的无监督学习，并且发现无监督学习得到的ViT展现出一些在监督ViT或者CNN上没有的特性：<br>
+- feature能给出物体的layout和边界（下图）<br>
+- 自监督ViT的特征用来K-NN分类效果很好</p>
+<img src="/ae81a87b/dino_intro.png" class title="CV无监督学习">
+<p>并且强调了无监督学习过程中几个重要的组件：<br>
+- momentum encoder<br>
+- multi-crop training<br>
+- ViT small patches</p>
+<h2 id="方法">方法</h2>
+<p>DINO的训练方法使用了知识蒸馏的框架，但是进行了一些改动。DINO训练示意图如下：</p>
+<img src="/ae81a87b/dino_framework.png" class title="CV无监督学习">
+<p>1、蒸馏</p>
+<p>在知识蒸馏中，于student network <span class="math inline">\(g_{\theta_{s}}\)</span> 学习预测teacher network
+<span class="math inline">\(g_{\theta_t}\)</span>
+的输出。对于输入x，两个模型的输出分别是特征向量 <span class="math inline">\(P_{s}\)</span> 和 <span class="math inline">\(P_{t}\)</span>：</p>
+<p><span class="math display">\[P_s(x)^{(i)}=\frac{\exp(g_{\theta_s}(x)^{(i)}/\tau_s)}{\sum_{k=1}^K\exp(g_{\theta_s}(x)^{(k)}/\tau_s)}\]</span></p>
+<p>温度τ控制输出分布的sharpness。然后通过cross entropy让student
+network学习teacher network的输出：</p>
+<p><span class="math display">\[\min_{\theta_s}H(P_t(x),P_s(x))\]</span></p>
+<p><span class="math display">\[H(a,b)=-a\log b\]</span></p>
+<p>另外上图中，teacher的输出还会经过一个centering的操作。centering操作类似BN，对数据进行归一化，稳定训练的过程。具体的centering可以有多种实现方式：<br>
+- 均值移动<br>
+- Sinkhorn-Knopp<br>
+- Softmax</p>
+<p>2、teacher network</p>
+<p>通常的蒸馏，会使用已经训练好的模型作为teacher
+network。但是在DINO这样的无监督学习中，并没有一个已经训练好的模型。那teacher
+network从哪来呢？</p>
+<p>DINO中，teacher network会在训练中和student
+network一定逐渐学习。具体来说，teacher network是student
+network的exponential moving average (EMA)版本：</p>
+<p><span class="math display">\[\theta_t\leftarrow\lambda\theta_t+(1-\lambda)\theta_s\]</span></p>
+<p>λ会按cosine schedule从0.996逐渐增加到1。</p>
+<p>这里的teacher network和MoCo中的momentum
+encoder很类似，不过二者在各自框架中的角色有所不同。</p>
+<p>3、multi-crop strategy</p>
+<p>由于student network和teacher network都是随机初始化的，输入给student
+network和teacher network并不是简单的两张相同的image，否则就student
+network就无法学习到图像特征，而只需要模仿随机参数模型的输出就行了。</p>
+<p>《Unsupervised learning of visual features by contrasting cluster
+assignments》中的multi-crop是一个提升学习任务难度的方法。</p>
+<p>具体来说，对于每个输入图片x，会通过数据增强，获得两个global view
+xg1和xg2，以及一系列local view。global
+view有较大的size，一般来说可以覆盖原图超过50%的内容（如224×224），而local
+view的size则小一些（如96×96）。</p>
+<p>所有的view都会输入给student network，而teacher network只会接收global
+view的版本。这样能够鼓励模型学习到“local-to-global”的依赖关系：</p>
+<p><span class="math display">\[\min_{\theta_s}\sum_{x\in\{x_1^g,x_2^g\}}\sum_{x^{\prime}\neq
+x}H(P_t(x),P_s(x^{\prime}))\]</span></p>
+<p>DINO的算法具体描述如下：</p>
+<img src="/ae81a87b/dino_algo.png" class title="CV无监督学习">
+<h2 id="消融实验">消融实验</h2>
+<p>1、不同组件对效果的影响</p>
+<img src="/ae81a87b/dino_module.png" class title="CV无监督学习">
+<p>发现如果没有momentum更新teacher
+network，整个框架就无法训练了。此外影响最大就是loss
+function，把CE改成MSE之后效果也有极大的下降。</p>
+<p>2、patch size的影响</p>
+<p>patch
+size越小效果越好，不过throughtput也越低，这是一个成本和效果的tradeoff：</p>
+<img src="/ae81a87b/dino_patch_size.png" class title="CV无监督学习">
+<h1 id="beit">BEiT</h1>
+<p>论文：《BEiT: BERT Pre-Training of Image Transformers》</p>
+<p>时间 2021年6月</p>
+<p>机构：微软</p>
+<p>BEiT的做法和之前在学习ViT的时候讲过的iGPT类似：</p>
+<img src="/ae81a87b/beit_intro.png" class title="CV无监督学习">
+<ul>
+<li>相对输入图像进行patch（16×16）切分，然后获得各个patch的linear
+embedding<br>
+</li>
+<li>使用类似MLM的MIM任务（masked image modeling），把部分patch
+mask掉，要求模型从corrupted image预测这些被mask的patch</li>
+</ul>
+<p>不同的是，BEiT使用dVAE训练了image
+tokenizer，用于把patch变成离散的token，这样Bert模型就可以和MLM训练一样，预测离散的token了。其中image
+tokenizer的vocabulary size设置成了8192。</p>
+<p>另外在选择mask的patch的时候，采用类似whole word
+mask的方式，使用blockwise
+masking。一个block包含多个patch（最小为16个）。对整个block进行mask可以提高训练的难度。总的mask比例设置为0.4。</p>
+<img src="/ae81a87b/beit_blockmask.png" class title="CV无监督学习">
+<h1 id="mae">MAE</h1>
+<p>论文：《Masked Autoencoders Are Scalable Vision Learners》</p>
+<p>时间：2021年11月</p>
+<p>机构：FAIR</p>
+<p>Kaiming参与的一个工作。</p>
+<p>大致的框架还是follow auto-encoder的结构：</p>
+<img src="/ae81a87b/mae_intro.png" class title="CV无监督学习">
+<p>在这个基础上，做了一些优化。</p>
+<p>1、masking</p>
+<p>和ViT一样，图像会被分成多个patch，然后经过linear
+transformation，再加上位置编码，获得patch
+embedding。然后会随机选择一部分patch进行mask。</p>
+<p>不一样的地方是，这些被mask掉的patch并不会用mask
+token代替，而是直接被移除，因此encoder处理的时候只会见到没有被mask的部分。</p>
+<p>实验中发现mask的比例在75%的时候，decoder仍然具备恢复原图的能力：</p>
+<img src="/ae81a87b/mae_mask_ratio.png" class title="CV无监督学习">
+<p>高mask率的好处是encoder的计算量少了，因此可以使用更强大的模型。此外高mask率带来的难度提升也使得训练效率更高了。</p>
+<p>2、encoder</p>
+<p>encoder使用的模型跟ViT类似。</p>
+<p>3、decoder</p>
+<p>虽然encoder的输入之后没有mask部分的patch，但是在把encoder的输出给到decoder之前，会添加上mask
+token，这样decoder才能获取缺失部分的位置信息，并恢复图像。</p>
+<p>decoder只会在预训练的时候使用，因此可以使用一个很小的decoder，从而把有用的训练更多放在encoder上。同时较弱的decoder会迫使encoder学习到更好的图像表征。</p>
+<p>4、reconstruction target</p>
+<p>decoder的训练目标是直接给出被mask掉的patch的pixel value，loss
+function直接是预测的pixel value和真实pixel value之间的MSE误差。</p>
+<p>针对各个组件，MAE做了消融实验：</p>
+<img src="/ae81a87b/mae_ablation.png" class title="CV无监督学习">
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">长文详解--LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Momentum Contrast for Unsupervised Visual Representation
+Learning https://arxiv.org/abs/1911.05722<br>
+【2】A Simple Framework for Contrastive Learning of Visual
+Representations https://arxiv.org/abs/2002.05709<br>
+【3】Bootstrap Your Own Latent：A New Approach to Self-Supervised
+Learning https://arxiv.org/abs/2006.07733<br>
+【4】Emerging Properties in Self-Supervised Vision Transformers
+https://arxiv.org/abs/2104.14294<br>
+【5】BEiT: BERT Pre-Training of Image Transformers
+https://arxiv.org/abs/2106.08254<br>
+【6】Masked Autoencoders Are Scalable Vision Learners
+https://arxiv.org/abs/2111.06377<br>
+【7】Unsupervised Feature Learning via Non-Parametric Instance-level
+Discrimination https://arxiv.org/abs/1805.01978</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/ae81a87b.html" title="CV入门--无监督学习">https://saicat.github.io/ae81a87b.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/CV/" rel="tag"><i class="fa fa-tag"></i> CV</a>
+              <a href="/tags/CNN/" rel="tag"><i class="fa fa-tag"></i> CNN</a>
+              <a href="/tags/%E6%97%A0%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" rel="tag"><i class="fa fa-tag"></i> 无监督学习</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/a11e2633.html" rel="prev" title="CV入门--关于Vision Transformer">
+                  <i class="fa fa-angle-left"></i> CV入门--关于Vision Transformer
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">416k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">12:36</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
