@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  从目前的实践结果来看，从大模型通过裁剪、蒸馏等手段获取小模型，效果是比较好的，同时成本也相比直接从零预训练要低廉得多，而且也免去了大量收集数据和清洗数据的工作。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LLM高效预训练(二)">
+<meta property="og:url" content="https://saicat.github.io/1e2e35a7.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  从目前的实践结果来看，从大模型通过裁剪、蒸馏等手段获取小模型，效果是比较好的，同时成本也相比直接从零预训练要低廉得多，而且也免去了大量收集数据和清洗数据的工作。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_perf_8b.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_perf_4b.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_framework.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_tc.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_aggregation.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_search.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_train_rank.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_iteration.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_depth_width.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_distill.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/nvidia_phase.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/L0.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/shortedllama_metrics.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/shortedllama_fine_grain.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/shortedllama_perf.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/laco_algo.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/laco.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/shortgpt_intro.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/shortgpt_rm_layer.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/shortgpt_bi.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/shortgpt_head.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/wanda.png">
+<meta property="og:image" content="https://saicat.github.io/1e2e35a7/sleb.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2024-09-29T14:07:43.000Z">
+<meta property="article:modified_time" content="2024-09-29T14:41:38.382Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="高效训练">
+<meta property="article:tag" content="参数复用">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/1e2e35a7/nvidia_perf_8b.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/1e2e35a7.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/1e2e35a7.html","path":"1e2e35a7.html","title":"LLM高效预训练(二)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>LLM高效预训练(二) | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%A3%81%E5%89%AA-%E8%92%B8%E9%A6%8F"><span class="nav-number">1.</span> <span class="nav-text">裁剪 + 蒸馏</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#teacher-correction"><span class="nav-number">1.1.</span> <span class="nav-text">Teacher Correction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E8%A3%81%E5%89%AA"><span class="nav-number">1.2.</span> <span class="nav-text">参数裁剪</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#retrain"><span class="nav-number">1.3.</span> <span class="nav-text">retrain</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">1.4.</span> <span class="nav-text">实验</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%88%90%E6%9C%AC%E7%9A%84%E8%8A%82%E7%BA%A6"><span class="nav-number">1.5.</span> <span class="nav-text">成本的节约</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9F%BA%E4%BA%8El0%E5%89%AA%E6%9E%9D"><span class="nav-number">2.</span> <span class="nav-text">基于L0剪枝</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#tldr"><span class="nav-number">2.1.</span> <span class="nav-text">TL;DR</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%B9%E6%B3%95"><span class="nav-number">2.2.</span> <span class="nav-text">方法</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#shortened-llama"><span class="nav-number">3.</span> <span class="nav-text">Shortened LLaMA</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B1%82%E9%87%8D%E8%A6%81%E6%80%A7"><span class="nav-number">3.1.</span> <span class="nav-text">层重要性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">3.2.</span> <span class="nav-text">训练</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#laco"><span class="nav-number">4.</span> <span class="nav-text">LaCo</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#rdsc-layer-merge"><span class="nav-number">4.1.</span> <span class="nav-text">RDSC Layer Merge</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E5%B1%82%E6%95%B0%E8%A3%81%E5%89%AA"><span class="nav-number">4.2.</span> <span class="nav-text">模型层数裁剪</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#shortgpt"><span class="nav-number">5.</span> <span class="nav-text">ShortGPT</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#wanda"><span class="nav-number">6.</span> <span class="nav-text">Wanda</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#sleb"><span class="nav-number">7.</span> <span class="nav-text">SLEB</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">8.</span> <span class="nav-text">其他</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">9.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">57</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">64</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/1e2e35a7.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="LLM高效预训练(二) | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          LLM高效预训练(二)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-09-29 22:07:43 / 修改时间：22:41:38" itemprop="dateCreated datePublished" datetime="2024-09-29T22:07:43+08:00">2024-09-29</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>13k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>23 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>从目前的实践结果来看，从大模型通过裁剪、蒸馏等手段获取小模型，效果是比较好的，同时成本也相比直接从零预训练要低廉得多，而且也免去了大量收集数据和清洗数据的工作。</p>
+<p>今天就集中讲一下模型裁剪的工作。</p>
+<h1 id="裁剪-蒸馏">裁剪 + 蒸馏</h1>
+<p>论文：《Compact Language Models via Pruning and Knowledge
+Distillation》 &amp; 《LLM Pruning and Distillation in Practice: The
+Minitron Approach》</p>
+<p>时间：2024年7月 &amp; 2024年8月</p>
+<p>机构：NVIDIA</p>
+<p>这两篇实际上是一个内容，后一篇是前一篇的整合和完整版，增加了基于Llama-3.1和Mistral的实验。《Compact》更像是比较混杂的实验报告。</p>
+<p>英伟达提出的方法简单来说就是通过对已有的大模型进行裁剪，并对裁剪后的小模型使用蒸馏训练进行效果恢复（效果恢复的训练称之为retrian）。这么做可以以&lt;3%的retrain训练量，获得比从零训练的小模型更好的效果。</p>
+<p>Nemotron-4 15B裁剪到MINITRON 8B和4B的效果如下：</p>
+<img src="/1e2e35a7/nvidia_perf_8b.png" class title="LLM高效预训练">
+<img src="/1e2e35a7/nvidia_perf_4b.png" class title="LLM高效预训练">
+<p>整体的方案示意图如下：</p>
+<img src="/1e2e35a7/nvidia_framework.png" class title="LLM高效预训练">
+<p>接下来看下每个步骤具体怎么做。</p>
+<h2 id="teacher-correction">Teacher Correction</h2>
+<p>很多情况下我们会使用开源的模型作为裁剪的teacher模型，因为选择比较多，效果更好。但是如果使用开源模型会有一个问题，那就是我们没有开源模型的训练数据。这样在后面使用自己的数据进行蒸馏的步骤中，就有可能出现因为数据分布的偏移，影响了teacher模型的效果，导致蒸馏训练效果不好的情况。</p>
+<p>那么缓解这个问题的一个方法，就是在裁剪和蒸馏之前先用部分自有的训练数据对teacher模型进行微调。这个过程就叫teacher
+correction。</p>
+<p>下图对比了使用和不使用teacher correction的情况下，把Mistral NeMo
+12B裁剪到8B后，8B模型的训练loss下降情况：</p>
+<img src="/1e2e35a7/nvidia_tc.png" class title="LLM高效预训练">
+<p>在对12B模型使用了teacher
+correction的情况下，8B模型的loss保持相对较低。</p>
+<p>实验中，teacher correction阶段使用了~127B的token。</p>
+<h2 id="参数裁剪">参数裁剪</h2>
+<p>和我们在上一篇讲到的weight
+subcloning类似，NVIDIA也通过计算neuron的重要性来决定裁剪/保留哪些参数。而NVIDIA仅使用了1024个sample作为裁剪的calibration
+dataset，用于获得各个参数的activation。</p>
+<p>参数裁剪分为深度裁剪和宽度裁剪。</p>
+<p>1、宽度裁剪</p>
+<p>宽度的裁剪包括几个部分：neuron裁剪、attention
+head裁剪和embedding裁剪。这几个部分的重要性计算方法如下：</p>
+<ul>
+<li>注意力部分的裁剪以头为单位，计算每个头输出的L2 norm：</li>
+</ul>
+<p><span class="math display">\[F_{\mathrm{head}}^{(i)}=\sum_{\mathrm{B,S}}\|\operatorname{Attn}(\mathbf{X}\boldsymbol{W}^{Q,i},\mathbf{X}\boldsymbol{W}^{K,i},\mathbf{X}\boldsymbol{W}^{V,i})\|_2\]</span></p>
+<ul>
+<li>对于MLP层，有 <span class="math inline">\(\mathrm{MLP}(\mathbf{X})=\delta\left(\mathbf{X}\cdot
+W_1^T\right)\cdot
+W_2\)</span>，以投影后的输出值作为neuron的重要性：</li>
+</ul>
+<p><span class="math display">\[F_{\mathrm{neuron}}^{(i)}=\sum_{\mathrm{B,s}}\mathrm{X}(W_1^i)^T\]</span></p>
+<p>而embedding层则是以LN后的值作为重要性衡量：</p>
+<p><span class="math display">\[F_{\mathrm{emb}}^{(i)}=\sum_{\mathrm{B,S}}LN(\mathrm{X})_i\]</span></p>
+<p>注意这里在batch和sequence维度上都是直接求和。实际上论文中验证了三种不同的方法：mean、L2
+norm和variance。在batch和sequence维度上分别使用这三种不同的aggregation方法，效果对比如下：</p>
+<img src="/1e2e35a7/nvidia_aggregation.png" class title="LLM高效预训练">
+<p>使用（L2，mean）和（mean，mean）的效果最好。</p>
+<p>NVIDIA这里在宽度裁剪的时候，并没有特别关注使用残差连接的层，而是直接把它们当成独立的参数进行裁剪，这里稍微有点奇怪。</p>
+<p>2、深度裁剪</p>
+<p>论文使用了2种模型深度裁剪的方法：<br>
+-
+PPL：通过移除一层或多层的模型，对比移除前后同样输入的PPL变化，就可以得出被移除的层对模型输出的影响程度，这个影响程度就可以作为这一层或者多层的重要度衡量<br>
+- Block Importance（BI）：对某一层或连续多层的输入输出按如下cosine
+distance计算获得层重要度：</p>
+<p><span class="math display">\[\mathrm{BI}_i=1-\mathbb{E}_{X,t}\frac{\mathrm{X}_{i,t}^T\mathrm{X}_{i+1,t}}{\|\mathrm{X}_{i,t}\|_2\|\mathrm{X}_{i+1,t}\|_2}\]</span></p>
+<p>BI的计算用的就是ShortGPT的方法。</p>
+<p>3、获取student模型</p>
+<p>获得各个维度的重要度之后，就要决定各个维度分别保留多少参数。</p>
+<p>一般来说，我们会有一个target
+size，以及一系列的常用模型结构配置。可以把这些配置组合起来，保留那些总参数量符合我们要求的：</p>
+<img src="/1e2e35a7/nvidia_search.png" class title="LLM高效预训练">
+<p>按上图这些组合，最终有十几二十个符合总参数量要求的configuration，还算在可以接受的范围内。</p>
+<p>然后对比所有裁剪出来的candidate的效果，保留效果最好的。由于裁剪会让模型的输出变差很多，所以并不直接对比裁剪后的candidate，而是会进行轻量级的训练。论文中是使用了~1.8B的参数对各个候选模型进行了训练：</p>
+<img src="/1e2e35a7/nvidia_train_rank.png" class title="LLM高效预训练">
+<p>轻量级的训练结果表明只需几百步的训练就能得到这些candidate效果的rank，并且比较稳定。</p>
+<h2 id="retrain">retrain</h2>
+<p>retrain阶段以蒸馏的方式进行训练，实验中总的训练量只有不到100B。</p>
+<p>对于一个LM，一个token xi的输出分布是：</p>
+<p><span class="math display">\[p(x_i,\tau)=\frac{\exp\left(\frac{x_i}\tau\right)}{\sum_{j=1}^{|V|}\exp\left(\frac{x_j}\tau\right)}\]</span></p>
+<p>其中 <span class="math inline">\(\tau\)</span>
+是温度。那么整个sequence的logit-based KD loss就是：</p>
+<p><span class="math display">\[L_{\mathrm{logits}}=\frac1l\sum_{k=1}^l\mathrm{Loss}(p_t^k(x,\tau),p_s^k(x,\tau))\]</span></p>
+<p>这是经典的蒸馏loss。也可以增加intermediate state-based KD
+loss，也就是用中间层的hidden state计算loss：</p>
+<p><span class="math display">\[L_{is}=\frac1l\sum_{k\in
+H}\sum_{i=1}^lLoss_k(h_t^{ki},h_s^{ki})\]</span></p>
+<p>那么最终的训练损失是：</p>
+<p><span class="math display">\[L=L_{\mathbf{CLM}}+L_{logits}+\alpha\times
+L_{is}\]</span></p>
+<h2 id="实验">实验</h2>
+<p>论文中给出的一些实践经验，挑了一些有用的放这。</p>
+<p>1、iterative or not？</p>
+<p>对于给定的student
+model的总参数量，我们有各种不同大小的模型可以作为teacher
+model。那么一个自然的想法就是，如果teacher模型和studnet模型的参数规模差得很多，那增加一些中间量级的操作（iteration）是不是效果能更好？比如teacher模型的大小是15B，目标的student模型大小为4B，那我先把15B裁剪成8B，训练好之后再把8B裁剪成4B效果会不会比直接把15B裁剪成4B更好？</p>
+<p>答案是no。下图是实验的数据，T是iteration的次数，T=1是直接一步到位，T=2则是增加1个中间量级。</p>
+<img src="/1e2e35a7/nvidia_iteration.png" class title="LLM高效预训练">
+<p>虽然iteration的操作使得目标student模型裁剪后的初始loss较小，但是经过训练之后所有模型都收敛到相同的水平，因此没有必要浪费算力去做中间规模的模型，直接一步到位就行了。</p>
+<p>2、宽度裁剪和深度裁剪的对比</p>
+<p>用Nemotron-15B裁剪成8B，不同维度的裁剪结果如下：</p>
+<img src="/1e2e35a7/nvidia_depth_width.png" class title="LLM高效预训练">
+<p>结果上看，宽度裁剪的损失更少。这和我们已有的认知是符合的：相同参数的情况下，更深的模型一般会有更好的效果。深度裁剪保留了teacher模型的深度，使得student模型的实际容量更大。</p>
+<p>3、蒸馏损失</p>
+<p>前面提到使用KLD作为蒸馏损失，实际上还有很多其他变体可以选择：MSE、cosine
+similarity、reverse KLD等。最终还是KLD最好：</p>
+<img src="/1e2e35a7/nvidia_distill.png" class title="LLM高效预训练">
+<p>4、Single vs Multi-Phase Retraining</p>
+<p>这一点还是蛮重要的。现在的预训练模型基本都是包含两阶段的做法：<br>
+- phase1：大量的通用数据<br>
+- phase2：相比phase1量级较少，但是质量更高，和下游任务更紧密的数据</p>
+<p>那么用哪个阶段的模型裁剪更好的呢？方案（1）是用phase1的teacher
+checkpoint进行裁剪，然后对student进行phase1和phase2的训练；方案（2）是用teacher模型的phase2
+checkpoint进行裁剪，然后对student模型进行phase2数据的训练。</p>
+<p>两种方案的对比如下：</p>
+<img src="/1e2e35a7/nvidia_phase.png" class title="LLM高效预训练">
+<p>结果上看，第二种方案，也就是仅使用phase2的checkpoint和数据，效果更好。</p>
+<h2 id="成本的节约">成本的节约</h2>
+<p>假设我们原来的方案是从零训练Nemotron-4的15B、8B和4B三个规模的模型，三个模型每一个step的训练计算量分别是4.4e17,
+2.5e17 and 1.2e17，那么总的训练量就是(4.4e17+2.5e17+1.2e17)×steps。</p>
+<p>现在我们先训练了15B模型，然后从15B模型裁剪+蒸馏得到8B和4B模型，而蒸馏所需的数据很少，总的计算量只有从0训练的1/40，那么总的计算量为
+(4.4e17 + 2.5e17/40 + 1.2e17/40) × steps。</p>
+<p>结论是通过裁剪+蒸馏的方案，可以节省接近一半的总计算量，而两个小规模模型的效果甚至更好。</p>
+<h1 id="基于l0剪枝">基于L0剪枝</h1>
+<p>论文：《Learning Sparse Neural Networks through L0
+Regularization》</p>
+<p>时间：2017年12月</p>
+<h2 id="tldr">TL;DR</h2>
+<p>提出hard concrete distribution，把基于L0
+norm的参数裁剪变得可以直接训练学习。</p>
+<h2 id="方法">方法</h2>
+<p>模型一般都是过参数化的（overparametrized），所以可以在裁剪掉部分参数的情况下，保持效果基本不变。</p>
+<p>L0 regularization会对所有非0参数施加固定的惩罚：</p>
+<p><span class="math display">\[\mathcal{R}(\boldsymbol{\theta})=\frac1N\bigg(\sum_{i=1}^N\mathcal{L}\big(h(\mathbf{x}_i;\boldsymbol{\theta}),\mathbf{y}_i\big)\bigg)+\lambda\|\boldsymbol{\theta}\|_0\]</span></p>
+<p><span class="math display">\[\|\theta\|_0=\sum_{j=1}^{|\theta|}\mathbb{I}[\theta_j\neq0]\]</span></p>
+<p>h是模型，L(·)是原模型的loss function，N是数据集的size。</p>
+<p>通过最小化</p>
+<p><span class="math display">\[\boldsymbol{\theta}^*=\arg\min_{\boldsymbol{\theta}}\{\mathcal{R}(\boldsymbol{\theta})\}\]</span></p>
+<p>我们就能得到最佳的稀疏参数组合。</p>
+<p>但是这里需要遍历所有可能的参数组合，也就是说最多需要验证 <span class="math inline">\(2^{|\theta|}\)</span>
+次损失。这对于参数量巨大的模型显然是不可行的。</p>
+<p>需要手动遍历所有可能是因为上面的这个计算是离散的，因此需要想办法把这个loss变得平滑可导。</p>
+<p>考虑 <span class="math inline">\(\theta\)</span> 重参数化下的L0
+norm：</p>
+<p><span class="math display">\[\theta_j=\tilde{\theta}_jz_j,\quad
+z_j\in\{0,1\},\quad\tilde{\theta}_j\neq0,\quad\|\boldsymbol{\theta}\|_0=\sum_{j=1}^{|\theta|}z_j\]</span></p>
+<p>z就是一个控制是否保留对应参数的binary gate，而L0
+norm则表示打开的gate的数量。</p>
+<p>既然z是二值的（0/1），我们可以让z来自伯努利分布：</p>
+<p><span class="math display">\[q(z_{j}|\pi_{j})=\mathrm{Bern}(\pi_{j})\]</span></p>
+<p>基于此，可以把R改写一下：</p>
+<p><span class="math display">\[\mathcal{R}(\tilde{\boldsymbol{\theta}},\boldsymbol{\pi})=\mathbb{E}_{q(\mathbf{z}|\boldsymbol{\pi})}\left[\frac1N\left(\sum_{i=1}^N\mathcal{L}\left(h(\mathbf{x}_i;\tilde{\boldsymbol{\theta}}\odot\mathbf{z}),\mathbf{y}_i\right)\right)\right]+\lambda\sum_{j=1}^{|\theta|}\pi_j\]</span></p>
+<p><span class="math display">\[\tilde{\boldsymbol{\theta}}^*,\boldsymbol{\pi}^*=\arg\min\{\mathcal{R}(\tilde{\boldsymbol{\theta}},\boldsymbol{\pi})\}\]</span></p>
+<p>$$ 是elementwise product。</p>
+<p>这里第二项是连续可导的了，但是第一项里的离散z依然让第一项难以用梯度训练。</p>
+<p>那就需要把z给变成连续的。</p>
+<p>考虑一个来自分布q的s：</p>
+<p><span class="math display">\[\mathrm{s}\sim
+q(\mathrm{s}|\phi)\]</span></p>
+<p>用hard-sigmoid把它转成0~1的值</p>
+<p><span class="math display">\[\mathbf{z=min(1,max(0,s))}\]</span></p>
+<p>那么就有</p>
+<p><span class="math display">\[q(\mathbf{z}\neq0|\phi)=1-Q(\mathbf{s}\leq0|\phi)\]</span></p>
+<p>Q是cumulative distribution function (CDF)。</p>
+<p>基于这个分布，可以进一步把上面的R进行平滑：</p>
+<p><span class="math display">\[\mathcal{R}(\tilde{\boldsymbol{\theta}},\phi)=\mathbb{E}_{q(\mathbf{s}|\boldsymbol{\phi})}\left[\frac1N\left(\sum_{i=1}^N\mathcal{L}\big(h(\mathbf{x}_i;\tilde{\boldsymbol{\theta}}\odot
+g(\mathbf{s})),\mathbf{y}_i\big)\right)\right]+\lambda\sum_{j=1}^{|\theta|}\left(1-Q(s_j\leq0|\phi_j)\right)\]</span></p>
+<p><span class="math display">\[\tilde{\boldsymbol{\theta}}^*,\phi*=\arg\min_{\tilde{\boldsymbol{\theta}},\boldsymbol{\phi}}\{\mathcal{R}(\tilde{\boldsymbol{\theta}},\phi)\},\quad
+g(\cdot)=\min(1,\max(0,\cdot))\]</span></p>
+<p>那么s具体一个用什么分布呢？</p>
+<p>论文提出了hard concrete distribution。简单来说是这样一个分布：</p>
+<img src="/1e2e35a7/L0.png" class title="LLM高效预训练">
+<p>大部分的概率集中在靠近0和靠近1的两端，能够在保持平滑的同时，指出每个参数是否要保留。</p>
+<h1 id="shortened-llama">Shortened LLaMA</h1>
+<p>论文：《Shortened LLaMA: Depth Pruning for Large Language Models with
+Comparison of Retraining Methods》</p>
+<p>时间：2024年2月</p>
+<p>Shortened
+LLaMA的做法是仅对模型层数进行裁剪。为什么要仅对深度进行裁剪呢，论文的说法是可以提升裁剪后模型的推理速度，减少推理显存的需求。下面看看论文的一些细节，摘取一些可以参考的地方。</p>
+<h2 id="层重要性">层重要性</h2>
+<p>裁剪模型核心问题就是找到那些参数更重要。既然是对层进行裁剪，那么要做的就是计算整个transformer
+block的重要性。</p>
+<p>对于一个linear weight matrix，其参数是一个size为 <span class="math inline">\((d_\mathrm{out},d_\mathrm{in})\)</span>
+的矩阵：</p>
+<p><span class="math display">\[\mathrm{W}^{k,n}=\begin{bmatrix}W_{i,j}^{k,n}\end{bmatrix}\]</span></p>
+<p>n是层index，k是这个矩阵的operation
+type，比如是query的投影矩阵，或者是MLP层的up matrix。</p>
+<p>文中提出了几种计算方法。</p>
+<p>1、Magnitude (Mag)</p>
+<p>参考《Pruning filters for efficient
+convnets》中提出的计算方式，“weights with smaller norms are less
+informative”，因此直接对所有参数的绝对值求和：</p>
+<p><span class="math display">\[I_{\mathrm{Magnitude}}^{n}=\sum_{k}\sum_{i}\sum_{j}\left|W_{i,j}^{k,n}\right|\]</span></p>
+<p>2、Taylor</p>
+<p>移除一个transformer
+block之后，如果模型的输出误差增大，那么说明这个层有影响。误差增大越多，层的重要性越大。</p>
+<p>按泰勒展开，在忽略二阶导的情况下，这个误差可以表达为</p>
+<p><span class="math display">\[\left|\mathcal{L}(W_{i,j}^{k,n};D)-\mathcal{L}(W_{i,j}^{k,n}=0;D)\right|\approx
+\left|\frac{\partial\mathcal{L}(D)}{\partial
+W_{i,j}^{k,n}}W_{i,j}^{k,n}\right|\]</span></p>
+<p>L是training loss。因此整个层的重要性就是</p>
+<p><span class="math display">\[I_{\mathrm{Taylor}}^n=\sum_k\sum_i\sum_j\left|\frac{\partial\mathcal{L}(D)}{\partial
+W_{i,j}^{k,n}}W_{i,j}^{k,n}\right|\]</span></p>
+<p>3、Mag+ and Taylor+</p>
+<p>用Mag或者Taylor计算层重要性的时候，会把early
+blocks判定为不重要。但是我们现在知道其实前几层和后基层对模型的整体结果影响都很大（《The
+state of sparsity in deep neural networks》、《Layer-adaptive sparsity
+for the magnitude-based
+pruning》），因此需要结合这个经验，把前4层和后2层保留下来，不纳入裁剪候选层中。这个也和《Llm-pruner:
+On the structural pruning of large language models》的做法一致。</p>
+<p>4、PPL</p>
+<p>除了可以使用training
+loss，也可以通过计算PPL看移除一个层之后的影响。</p>
+<p>以上各种方法的实验效果对比如下：</p>
+<img src="/1e2e35a7/shortedllama_metrics.png" class title="LLM高效预训练">
+<p>Taylor+ 和 PPL 的效果相对较好。</p>
+<h2 id="训练">训练</h2>
+<p>1、one-shot or iteration</p>
+<p>对于裁剪应该是一步到位，还是一步一步迭代进行，文中给出的答案是one-shot就足够了。一方面，多次迭代会引入更多的成本，另一方面，多次迭代对结果的影响并不显著，相比之下，retrain阶段才是对结果影响更大的一步。</p>
+<p>2、更细粒度的裁剪</p>
+<p>前面的裁剪是以整个transformer
+block为单位进行的，那么如果把粒度变小，对attention层和MLP层分开裁剪效果怎么样呢？结果是，还是以transformer
+block整体进行裁剪效果更好：</p>
+<img src="/1e2e35a7/shortedllama_fine_grain.png" class title="LLM高效预训练">
+<p>3、效果</p>
+<p>分别对LLaMA-7B和Vicuna-13B-v1.3进行不同程度的裁剪和训练，效果如下：</p>
+<img src="/1e2e35a7/shortedllama_perf.png" class title="LLM高效预训练">
+<h1 id="laco">LaCo</h1>
+<p>论文：《Laco: Large language model pruning via layer collapse》</p>
+<p>时间：2024年2月</p>
+<p>LaCo = Layer Collapse</p>
+<p>LaCo也是对模型的层数进行裁剪，不过被裁剪掉的层并不是直接抛弃，而是会通过参数合并的方式，尽量把效果保留下来。</p>
+<h2 id="rdsc-layer-merge">RDSC Layer Merge</h2>
+<p>RDSC = Reserving-Differences-while-Seeking-Common</p>
+<p>对于模型中的某一层参数 <span class="math inline">\(\theta_{l}\)</span>，以及跟在其后面的m层的参数，可以通过下面的方式把它们合并起来：</p>
+<p><span class="math display">\[\begin{aligned}\theta_{l}^{*}&amp;=\theta_l+(\theta_{l+1}-\theta_l)+\cdots+(\theta_{i+m}-\theta_l)\\&amp;=\theta_l+\sum_{k=1}^m(\theta_{l+k}-\theta_l)\end{aligned}\]</span></p>
+<h2 id="模型层数裁剪">模型层数裁剪</h2>
+<p>裁剪的算法如下：</p>
+<img src="/1e2e35a7/laco_algo.png" class title="LLM高效预训练">
+<p>解释一下：</p>
+<ul>
+<li>（1-6行）首先，在准备阶段，需要定义几个参数：①每次合并操作要合并的层数C；②合并操作的层范围[L,H]；③相邻合并层之间的最小间隔I；④模型输出相似性阈值T；此外还要准备calibration数据集D。<br>
+</li>
+<li>（10-11行）RDSC Layer
+Merge：每次迭代，尝试将层l后面的K层合并到层l中，获得临时模型M_tmp。<br>
+</li>
+<li>（12行）Calculate
+Similarity：前向计算获得M_tmp和原始模型M在D上的句子表示，并计算两个表示之间的cosine
+similarity，得到平均相似度s。<br>
+</li>
+<li>（13-21行）Merge Evaluation and
+Adjustment：如果s&gt;T，则合并成功，将M_tmp用于下一次迭代，否则l=l-1，进入下一次迭代。</li>
+</ul>
+<img src="/1e2e35a7/laco.png" class title="LLM高效预训练">
+<h1 id="shortgpt">ShortGPT</h1>
+<p>论文：《ShortGPT: Layers in Large Language Models are More Redundant
+Than You Expect》</p>
+<p>时间：2024年3月</p>
+<p>ShortGPT也是仅对模型层数进行的裁剪。</p>
+<img src="/1e2e35a7/shortgpt_intro.png" class title="LLM高效预训练">
+<p>对于transformer模型，由于每一层的结构都一样，因此功能也类似，导致更容易出现层参数冗余的情况。对Llama2-7B-Base和Baichuan2-7B-Base移除某个层厚，看PPL和模型在MMLU上的变化，发现很多层其实对效果没有明显影响：</p>
+<img src="/1e2e35a7/shortgpt_rm_layer.png" class title="LLM高效预训练">
+<p>ShortGPT提出用下图的Block Influence计算每个层的重要性：</p>
+<img src="/1e2e35a7/shortgpt_bi.png" class title="LLM高效预训练">
+<p>文中还对模型宽度的冗余情况也做了一下分析，发现和层的冗余一样，注意力头之间也有类似的冗余情况：</p>
+<img src="/1e2e35a7/shortgpt_head.png" class title="LLM高效预训练">
+<p>不过注意力头的冗余相比层数的冗余来说，没有那么明显的规律，不同的模型之间冗余模式有所不同。</p>
+<h1 id="wanda">Wanda</h1>
+<p>论文：《A Simple and Effective Pruning Approach for Large Language
+Models》</p>
+<p>时间：2023年6月</p>
+<p>Wanda = Weights and activations，Pruning by Weights and
+activations的意思。</p>
+<p>Wanda其实并不算是模型裁剪的方法，因为在得到低重要性的参数之后，并没有将这些参数抛弃，而是保留稀疏化的参数矩阵/向量。不过因此Wanda也有一个好处，就是不需要重新训练模型，而通过稀疏化也能获得一定的推理加速效果。</p>
+<p>简单来说，Wanda就是通过下图的方法计算参数重要性：</p>
+<img src="/1e2e35a7/wanda.png" class title="LLM高效预训练">
+<p>而稀疏度是作为超参输入的，实验中使用两种稀疏度设置：<br>
+- 4:8，对于每 8 个连续的权重，最多允许有 4
+个非零权重。也就是说，在一个长度为 8 的连续权重块中，要剪掉至少 4
+个权重，使得剩下的非零权重数量不超过 4 个。<br>
+- 2:4，意义和4:8类似。</p>
+<p>PyTorch code for Wanda：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># W: weight matrix (C_out, C_in);</span></span><br><span class="line"><span class="comment"># X: input matrix (N * L, C_in);</span></span><br><span class="line"><span class="comment"># s: desired sparsity, between 0 and 1;</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">prune</span>(<span class="params">W, X, s</span>):</span><br><span class="line">  metric = W.<span class="built_in">abs</span>() * X.norm(p=<span class="number">2</span>, dim=<span class="number">0</span>)</span><br><span class="line">  _, sorted_idx = torch.sort(metric, dim=<span class="number">1</span>)</span><br><span class="line">  pruned_idx = sorted_idx[:,:<span class="built_in">int</span>(C_in * s)]</span><br><span class="line">  W.scatter_(dim=<span class="number">1</span>, index=pruned_idx, src=<span class="number">0</span>)</span><br><span class="line">  <span class="keyword">return</span> W</span><br></pre></td></tr></table></figure>
+<h1 id="sleb">SLEB</h1>
+<p>论文：《SLEB: Streamlining LLMs through Redundancy Verification and
+Elimination of Transformer Blocks》</p>
+<p>时间：2024年2月</p>
+<p>SLEB尝试用三种metric对模型中transformer
+block的redundancy进行验证。</p>
+<p>第一种metric是计算block的输入和输出之间的相似度。相似度越高，说明block的影响越小：</p>
+<p><span class="math display">\[Metric_j^1=1-similarity(A_j,B_j)\]</span></p>
+<p><span class="math display">\[similarity(x_i,x_j)=\frac{x_i\cdot
+x_j}{||x_i||||x_j||}\]</span></p>
+<p>但是按这种方法移除block会导致PPL显著增加。原因是虽然一个block的影响可能很小，但是在inference的过程中，这个影响很可能被放大。</p>
+<p>第二种metric则把要验证的transformer
+block移除，获取对输出结果的影响：</p>
+<p><span class="math display">\[Metric_j^2=-\frac{1}{K}\sum_{k=0}^Klogp_{M_j}(w_k|w_{&lt;k})\]</span></p>
+<p>这种方法在PPL上的表现比第一种好，但是随着移除的层数增多，也会上升。</p>
+<p>第三种metric其实和第二种一样，只是第三种metric是迭代移除block的。每次移除一层，并用移除后的模型作为base模型，用于下次的层重要性计算。</p>
+<p><span class="math display">\[Metric_j^3(M&#39;)=-\frac{1}{K}\sum_{k=0}^Klogp_{M_j^{&#39;}}(w_k|w_{&lt;k})\]</span></p>
+<p>M'就是上一次移除之后的result model。</p>
+<p>第三种方法一定程度上避免了移除连续的层，从而更大程度保留模型的效果。</p>
+<img src="/1e2e35a7/sleb.png" class title="LLM高效预训练">
+<h1 id="其他">其他</h1>
+<p>一些文献： - 关于模型neuron、attention head、层重要性的论文：《A
+survey on deep neural network compression: Challenges, overview, and
+solutions》、《An survey of neural network compression》、《A
+comprehensive survey of compression algorithms for language models》</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">长文详解--LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Learning Sparse Neural Networks through L0 Regularization
+https://arxiv.org/abs/1712.01312<br>
+【2】Compact Language Models via Pruning and Knowledge Distillation
+https://www.arxiv.org/abs/2407.14679<br>
+【3】LLM Pruning and Distillation in Practice: The Minitron Approach
+https://arxiv.org/abs/2408.11796<br>
+【4】Shortened LLaMA: Depth Pruning for Large Language Models with
+Comparison of Retraining Methods https://arxiv.org/abs/2402.02834<br>
+【5】ShortGPT: Layers in Large Language Models are More Redundant Than
+You Expect https://arxiv.org/abs/2403.03853<br>
+【6】Laco: Large language model pruning via layer collapse
+https://arxiv.org/abs/2402.11187<br>
+【7】A Simple and Effective Pruning Approach for Large Language Models
+https://arxiv.org/abs/2306.11695<br>
+【8】SLEB: Streamlining LLMs through Redundancy Verification and
+Elimination of Transformer Blocks https://arxiv.org/abs/2402.09025</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/1e2e35a7.html" title="LLM高效预训练(二)">https://saicat.github.io/1e2e35a7.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/%E9%AB%98%E6%95%88%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 高效训练</a>
+              <a href="/tags/%E5%8F%82%E6%95%B0%E5%A4%8D%E7%94%A8/" rel="tag"><i class="fa fa-tag"></i> 参数复用</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/ae81a87b.html" rel="prev" title="CV入门--无监督学习">
+                  <i class="fa fa-angle-left"></i> CV入门--无监督学习
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">428k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">12:59</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
