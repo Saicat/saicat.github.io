@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  借助代码大模型进行开发几乎已经是每个开发人员的日常了。代码模型是如何具备强大的代码能力的呢？今天来学习下业界几个比较热门的代码模型。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="代码大模型(一)--业界现状">
+<meta property="og:url" content="https://saicat.github.io/a0b50049.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  借助代码大模型进行开发几乎已经是每个开发人员的日常了。代码模型是如何具备强大的代码能力的呢？今天来学习下业界几个比较热门的代码模型。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/fim_l2r_ppl.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/fim_example.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/fim_infill_loss.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/fim_psm_spm.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/fim_rate.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/fim_split_level.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/codellama_pipeline.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/codellama_eval.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/codellama_train.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/codellama_fim.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/codellama_scratch.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/starcoder2_train_data.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/starcoder2_special_token.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/starcoder2_train.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/dscoderv2_perf.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/dscoderv2_data_perf.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/dscoderv2_train_setting.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/qwen2.5coder_model.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/qwen2.5coder_perf.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/qwen2.5coder_data_mix.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/qwen2.5coder_train_pipeline.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/qwen2.5coder_fim_file.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/qwen2.5coder_fim_token.png">
+<meta property="og:image" content="https://saicat.github.io/a0b50049/qwen2.5coder_fim_token.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="article:published_time" content="2024-10-25T13:36:49.000Z">
+<meta property="article:modified_time" content="2024-10-25T14:09:02.415Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="对齐">
+<meta property="article:tag" content="数据">
+<meta property="article:tag" content="代码能力">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/a0b50049/fim_l2r_ppl.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/a0b50049.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/a0b50049.html","path":"a0b50049.html","title":"代码大模型(一)--业界现状"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>代码大模型(一)--业界现状 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B%E6%8C%87%E6%A0%87"><span class="nav-number">1.</span> <span class="nav-text">评测指标</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#humaneval"><span class="nav-number">1.1.</span> <span class="nav-text">HumanEval</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mbpp"><span class="nav-number">1.2.</span> <span class="nav-text">MBPP</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E8%AF%84%E6%B5%8B"><span class="nav-number">1.3.</span> <span class="nav-text">其他评测</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#fim"><span class="nav-number">2.</span> <span class="nav-text">FIM</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#fim%E6%95%88%E6%9E%9C"><span class="nav-number">2.1.</span> <span class="nav-text">FIM效果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">2.2.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fim-rate"><span class="nav-number">2.3.</span> <span class="nav-text">FIM rate</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%88%87%E5%88%86"><span class="nav-number">2.4.</span> <span class="nav-text">数据切分</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#code-llama"><span class="nav-number">3.</span> <span class="nav-text">Code Llama</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">3.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#long-context-fine-tuning"><span class="nav-number">3.2.</span> <span class="nav-text">Long Context Fine-Tuning</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fim%E8%AE%AD%E7%BB%83"><span class="nav-number">3.3.</span> <span class="nav-text">FIM训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%B8%E6%AF%94from-scratch"><span class="nav-number">3.4.</span> <span class="nav-text">相比from scratch</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#starcoder-2"><span class="nav-number">4.</span> <span class="nav-text">StarCoder 2</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE-1"><span class="nav-number">4.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83-1"><span class="nav-number">4.2.</span> <span class="nav-text">训练</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#deepseek-coder-v2"><span class="nav-number">5.</span> <span class="nav-text">DeepSeek-Coder-V2</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE-2"><span class="nav-number">5.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83-2"><span class="nav-number">5.2.</span> <span class="nav-text">训练</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#qwen2.5-coder"><span class="nav-number">6.</span> <span class="nav-text">Qwen2.5-Coder</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE-3"><span class="nav-number">6.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">6.2.</span> <span class="nav-text">预训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#post-training"><span class="nav-number">6.3.</span> <span class="nav-text">post-training</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">8.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">65</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/a0b50049.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="代码大模型(一)--业界现状 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          代码大模型(一)--业界现状
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-10-25 21:36:49 / 修改时间：22:09:02" itemprop="dateCreated datePublished" datetime="2024-10-25T21:36:49+08:00">2024-10-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>17k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>31 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>借助代码大模型进行开发几乎已经是每个开发人员的日常了。代码模型是如何具备强大的代码能力的呢？今天来学习下业界几个比较热门的代码模型。</p>
+<h1 id="评测指标">评测指标</h1>
+<p>在了解代码模型的训练之前，先了解下目前常用的一些评测指标。</p>
+<h2 id="humaneval">HumanEval</h2>
+<p>HumanEval由OpenAI在《Evaluating Large Language Models Trained on
+Code》提出，共包含164个python编程问题。为了尽量避免和模型的训练数据重复（目前代码模型的训练数据几乎包含了网络上能找到的所有代码数据），这些编程问题是人工专门编写的。</p>
+<p>HumanEval原始数据中，每个问题包含以下字段：<br>
+- task_id：每个问题的id，如“HumanEval/0”<br>
+- prompt：编程问题的主体，形如</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> has_close_elements(numbers: List[<span class="bu">float</span>], threshold: <span class="bu">float</span>) <span class="op">-&gt;</span> <span class="bu">bool</span>:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot; Check if in given list of numbers, are any two numbers closer to each other than</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">    given threshold.</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">    &gt;&gt;&gt; has_close_elements([1.0, 2.0, 3.0], 0.5)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">    False</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">    &gt;&gt;&gt; has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">    True</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">    &quot;&quot;&quot;</span>    </span></code></pre></div>
+<ul>
+<li>canonical_solution：参考答案，形如</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> idx, elem <span class="kw">in</span> <span class="bu">enumerate</span>(numbers):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> idx2, elem2 <span class="kw">in</span> <span class="bu">enumerate</span>(numbers):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> idx <span class="op">!=</span> idx2:</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>                distance <span class="op">=</span> <span class="bu">abs</span>(elem <span class="op">-</span> elem2)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> distance <span class="op">&lt;</span> threshold:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">return</span> <span class="va">True</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">False</span></span></code></pre></div>
+<ul>
+<li>test：单元测试的样例，HumanEval平均每个问题有 7.7 个测试样例</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>METADATA <span class="op">=</span> &#123;</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;author&#39;</span>: <span class="st">&#39;jt&#39;</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;dataset&#39;</span>: <span class="st">&#39;test&#39;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>&#125;</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> check(candidate):</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> candidate([<span class="fl">1.0</span>, <span class="fl">2.0</span>, <span class="fl">3.9</span>, <span class="fl">4.0</span>, <span class="fl">5.0</span>, <span class="fl">2.2</span>], <span class="fl">0.3</span>) <span class="op">==</span> <span class="va">True</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> candidate([<span class="fl">1.0</span>, <span class="fl">2.0</span>, <span class="fl">3.9</span>, <span class="fl">4.0</span>, <span class="fl">5.0</span>, <span class="fl">2.2</span>], <span class="fl">0.05</span>) <span class="op">==</span> <span class="va">False</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> candidate([<span class="fl">1.0</span>, <span class="fl">2.0</span>, <span class="fl">5.9</span>, <span class="fl">4.0</span>, <span class="fl">5.0</span>], <span class="fl">0.95</span>) <span class="op">==</span> <span class="va">True</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> candidate([<span class="fl">1.0</span>, <span class="fl">2.0</span>, <span class="fl">5.9</span>, <span class="fl">4.0</span>, <span class="fl">5.0</span>], <span class="fl">0.8</span>) <span class="op">==</span> <span class="va">False</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> candidate([<span class="fl">1.0</span>, <span class="fl">2.0</span>, <span class="fl">3.0</span>, <span class="fl">4.0</span>, <span class="fl">5.0</span>, <span class="fl">2.0</span>], <span class="fl">0.1</span>) <span class="op">==</span> <span class="va">True</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> candidate([<span class="fl">1.1</span>, <span class="fl">2.2</span>, <span class="fl">3.1</span>, <span class="fl">4.1</span>, <span class="fl">5.1</span>], <span class="fl">1.0</span>) <span class="op">==</span> <span class="va">True</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> candidate([<span class="fl">1.1</span>, <span class="fl">2.2</span>, <span class="fl">3.1</span>, <span class="fl">4.1</span>, <span class="fl">5.1</span>], <span class="fl">0.5</span>) <span class="op">==</span> <span class="va">False</span></span></code></pre></div>
+<ul>
+<li>entry_point：代码运行的入口，用于评测</li>
+</ul>
+<p>论文中，使用的是pass@k的评测指标，即模型会多次进行生成采样，计算通过评测的期望值。而在OpenCompass中，默认是使用pass@1，即只生成一次，并在对应的评测样例上进行测试。</p>
+<p>OpenCompass在生成的时候，默认会加上个prompt：“Complete the following
+python code:”，即模型的输入是</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Complete the following python code:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> has_close_elements(numbers: List[<span class="bu">float</span>], threshold: <span class="bu">float</span>) <span class="op">-&gt;</span> <span class="bu">bool</span>:</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot; Check if in given list of numbers, are any two numbers closer to each other than</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">    given threshold.</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">    &gt;&gt;&gt; has_close_elements([1.0, 2.0, 3.0], 0.5)</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">    False</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">    &gt;&gt;&gt; has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">    True</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">    &quot;&quot;&quot;</span></span></code></pre></div>
+<p>OpenCompass调用的是OpenAI的evaluate_functional_correctness接口进行评测的，输入就是模型生成的代码以及测试样例。</p>
+<h2 id="mbpp">MBPP</h2>
+<p>MBPP = Mostly Basic Programming
+Problems，而OpenCompass上最常用就是MBPP-python。</p>
+<p>MBPP由谷歌在《Program Synthesis with Large Language
+Models》中引入。每个问题也是由人工编写的，每个问题包含3个测试用例。</p>
+<p>MBPP中，有 58% 的问题是数学相关的（如计算球体体积），43%
+涉及列表处理，19% 需要字符串处理，9% 涉及整数序列，2%
+涉及其他数据结构。参考解决方案的代码行数平均为 6.8 行，中位数为 5
+行，最多为 50 行，自然语言描述通常简短，一般为一句话。</p>
+<p>原始数据中，每个问题包含以下字段： - task_id：每个问题的id<br>
+- text：问题的文字描述，如：“Write a function to find the maximum
+difference between available pairs in the given tuple list.”<br>
+- code：参考答案，如</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>R <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>C <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> min_cost(cost, m, n): </span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    tc <span class="op">=</span> [[<span class="dv">0</span> <span class="cf">for</span> x <span class="kw">in</span> <span class="bu">range</span>(C)] <span class="cf">for</span> x <span class="kw">in</span> <span class="bu">range</span>(R)] </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    tc[<span class="dv">0</span>][<span class="dv">0</span>] <span class="op">=</span> cost[<span class="dv">0</span>][<span class="dv">0</span>] </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, m<span class="op">+</span><span class="dv">1</span>): </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        tc[i][<span class="dv">0</span>] <span class="op">=</span> tc[i<span class="op">-</span><span class="dv">1</span>][<span class="dv">0</span>] <span class="op">+</span> cost[i][<span class="dv">0</span>] </span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, n<span class="op">+</span><span class="dv">1</span>): </span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        tc[<span class="dv">0</span>][j] <span class="op">=</span> tc[<span class="dv">0</span>][j<span class="op">-</span><span class="dv">1</span>] <span class="op">+</span> cost[<span class="dv">0</span>][j] </span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, m<span class="op">+</span><span class="dv">1</span>): </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, n<span class="op">+</span><span class="dv">1</span>): </span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>            tc[i][j] <span class="op">=</span> <span class="bu">min</span>(tc[i<span class="op">-</span><span class="dv">1</span>][j<span class="op">-</span><span class="dv">1</span>], tc[i<span class="op">-</span><span class="dv">1</span>][j], tc[i][j<span class="op">-</span><span class="dv">1</span>]) <span class="op">+</span> cost[i][j] </span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> tc[m][n]</span></code></pre></div>
+<ul>
+<li>test_list：测试样例，如</li>
+</ul>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>[<span class="st">&#39;assert min_cost([[1, 2, 3], [4, 8, 2], [1, 5, 3]], 2, 2) == 8&#39;</span>, <span class="st">&#39;assert min_cost([[2, 3, 4], [5, 9, 3], [2, 6, 4]], 2, 2) == 12&#39;</span>, <span class="st">&#39;assert min_cost([[3, 4, 5], [6, 10, 4], [3, 7, 5]], 2, 2) == 16&#39;</span>]</span></code></pre></div>
+<ul>
+<li>challenge_test_list：比较难的测试样例，只有部分问题有，如</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>[<span class="st">&#39;assert remove_Occ(&quot;hellolloll&quot;,&quot;l&quot;) == &quot;helollol&quot;&#39;</span>, <span class="st">&#39;assert remove_Occ(&quot;&quot;,&quot;l&quot;) == &quot;&quot;&#39;</span>]</span></code></pre></div>
+<p>test_setup_code：关于评测条件的一些设置，只有极少量问题有，如</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>root <span class="op">=</span> Node(<span class="dv">1</span>) </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>root.left <span class="op">=</span> Node(<span class="dv">2</span>) </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>root.right <span class="op">=</span> Node(<span class="dv">3</span>) </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>root.left.left <span class="op">=</span> Node(<span class="dv">4</span>) </span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>root.left.right <span class="op">=</span> Node(<span class="dv">5</span>) </span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>root.left.left.left <span class="op">=</span> Node(<span class="dv">8</span>) </span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>root1 <span class="op">=</span> Node(<span class="dv">1</span>) </span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>root1.left <span class="op">=</span> Node(<span class="dv">2</span>) </span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>root1.right <span class="op">=</span> Node(<span class="dv">3</span>) </span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>root1.left.left <span class="op">=</span> Node(<span class="dv">4</span>) </span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>root1.left.right <span class="op">=</span> Node(<span class="dv">5</span>) </span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>root1.right.left <span class="op">=</span> Node(<span class="dv">6</span>) </span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>root1.left.left.left <span class="op">=</span> Node(<span class="dv">7</span>)</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>root2 <span class="op">=</span> Node(<span class="dv">1</span>) </span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>root2.left <span class="op">=</span> Node(<span class="dv">2</span>) </span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>root2.right <span class="op">=</span> Node(<span class="dv">3</span>) </span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>root2.left.left <span class="op">=</span> Node(<span class="dv">4</span>) </span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>root2.left.right <span class="op">=</span> Node(<span class="dv">5</span>)</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>root2.left.left.left <span class="op">=</span> Node(<span class="dv">7</span>)</span></code></pre></div>
+<p>OpenCompass在评测时，会使用其中500条，并加上few-shot样本，这些样本是固定的，也是来自MBPP数据集。prompt如下：</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>You are an expert Python programmer, <span class="kw">and</span> here <span class="kw">is</span> your task: Write a function to find the similar elements <span class="im">from</span> the given two <span class="bu">tuple</span> lists. Your code should <span class="cf">pass</span> these tests:</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a> <span class="cf">assert</span> similar_elements((<span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>),(<span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">4</span>, <span class="dv">10</span>)) <span class="op">==</span> (<span class="dv">4</span>, <span class="dv">5</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a> <span class="cf">assert</span> similar_elements((<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),(<span class="dv">5</span>, <span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">7</span>)) <span class="op">==</span> (<span class="dv">3</span>, <span class="dv">4</span>) </span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a> <span class="cf">assert</span> similar_elements((<span class="dv">11</span>, <span class="dv">12</span>, <span class="dv">14</span>, <span class="dv">13</span>),(<span class="dv">17</span>, <span class="dv">15</span>, <span class="dv">14</span>, <span class="dv">13</span>)) <span class="op">==</span> (<span class="dv">13</span>, <span class="dv">14</span>) </span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>[BEGIN]</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a> <span class="co">&#39;def similar_elements(test_tup1, test_tup2):</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="er">  res = tuple</span>(<span class="bu">set</span>(test_tup1) <span class="op">&amp;</span> <span class="bu">set</span>(test_tup2))</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> (res)<span class="st">&#39; </span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="er">[DONE] </span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="er"> </span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="er">You are an expert Python programmer, and here is your task: Write a python function to identify non-prime numbers. Your code should pass these tests:</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a> <span class="cf">assert</span> is_not_prime(<span class="dv">2</span>) <span class="op">==</span> <span class="va">False</span> </span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a> <span class="cf">assert</span> is_not_prime(<span class="dv">10</span>) <span class="op">==</span> <span class="va">True</span> </span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a> <span class="cf">assert</span> is_not_prime(<span class="dv">35</span>) <span class="op">==</span> <span class="va">True</span> </span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>[BEGIN]</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a> <span class="co">&#39;import math</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="er">def is_not_prime</span>(n):</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">2</span>,<span class="bu">int</span>(math.sqrt(n)) <span class="op">+</span> <span class="dv">1</span>):</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> n <span class="op">%</span> i <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>            result <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result<span class="st">&#39; </span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="er">[DONE] </span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a><span class="er"> </span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="er">You are an expert Python programmer, and here is your task: Write a function to find the largest integers from a given list of numbers using heap queue algorithm. Your code should pass these tests:</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> heap_queue_largest( [<span class="dv">25</span>, <span class="dv">35</span>, <span class="dv">22</span>, <span class="dv">85</span>, <span class="dv">14</span>, <span class="dv">65</span>, <span class="dv">75</span>, <span class="dv">22</span>, <span class="dv">58</span>],<span class="dv">3</span>)<span class="op">==</span>[<span class="dv">85</span>, <span class="dv">75</span>, <span class="dv">65</span>] </span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> heap_queue_largest( [<span class="dv">25</span>, <span class="dv">35</span>, <span class="dv">22</span>, <span class="dv">85</span>, <span class="dv">14</span>, <span class="dv">65</span>, <span class="dv">75</span>, <span class="dv">22</span>, <span class="dv">58</span>],<span class="dv">2</span>)<span class="op">==</span>[<span class="dv">85</span>, <span class="dv">75</span>] </span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> heap_queue_largest( [<span class="dv">25</span>, <span class="dv">35</span>, <span class="dv">22</span>, <span class="dv">85</span>, <span class="dv">14</span>, <span class="dv">65</span>, <span class="dv">75</span>, <span class="dv">22</span>, <span class="dv">58</span>],<span class="dv">5</span>)<span class="op">==</span>[<span class="dv">85</span>, <span class="dv">75</span>, <span class="dv">65</span>, <span class="dv">58</span>, <span class="dv">35</span>] </span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>[BEGIN]</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a> <span class="co">&#39;import heapq as hq</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a><span class="er">def heap_queue_largest</span>(nums,n):</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>  largest_nums <span class="op">=</span> hq.nlargest(n, nums)</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> largest_nums<span class="st">&#39; </span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="er">[DONE] </span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a><span class="er"> </span></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a><span class="er">You are an expert Python programmer, and here is your task: Write a python function to remove first and last occurrence of a given character from the string. Your code should pass these tests:</span></span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> remove_Occ(<span class="st">&quot;hello&quot;</span>,<span class="st">&quot;l&quot;</span>) <span class="op">==</span> <span class="st">&quot;heo&quot;</span></span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> remove_Occ(<span class="st">&quot;abcda&quot;</span>,<span class="st">&quot;a&quot;</span>) <span class="op">==</span> <span class="st">&quot;bcd&quot;</span></span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> remove_Occ(<span class="st">&quot;PHP&quot;</span>,<span class="st">&quot;P&quot;</span>) <span class="op">==</span> <span class="st">&quot;H&quot;</span>  </span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>[BEGIN]</span></code></pre></div>
+<p>最后一个[DONE]后面的才是需要模型解决的问题，前面都是固定的prompt样本。</p>
+<p>和HumanEval略有不同，MBPP评测的时候模型可以看到将用于评测的case。</p>
+<h2 id="其他评测">其他评测</h2>
+<p>HumanEval和MBPP都属于代码生成评测的数据集，并且都是python的。除了这两个，代码生成的评测最近比较常见的还有BigCodeBench（BigCodeBench-Instruct），HumanEval的增强版本EvalPlus等。</p>
+<p>另外还有评测代码补全的如RepoBench，以及在FIM（待会讲）中提出的各种Infilling
+benchmark。</p>
+<p>Code Fixing也有SWE-bench和Aider等评测数据。</p>
+<p>不过最近优先关注HumanEval和MBPP的评测得分，所以其他能力以后再展开。</p>
+<h1 id="fim">FIM</h1>
+<p>FIM =
+fill-in-the-middle，是一种模型训练方式，这里参考OpenAI的《Efficient
+Training of Language Models to Fill in the Middle》来介绍一下。</p>
+<p>首先需要了解为什么需要FIM的训练方式。目前我们知道GPT模型相比Bert类模型，有更高的训练效率；而从左到右自由生成的方式也使得GPT模型能够应用在更多场景，上限更高。但是传统的left-to-right的训练方式也有限制：如在代码补全的场景，需要模型同时兼顾上文和下文，对中间部分的内容进行补全，这种情况下left-to-right的训练方式就无法提供有效的信息，因为看不见下文。</p>
+<p>为了解决这个问题，可以对模型的输入数据做一个transformation：把原本顺序正常的文档，切分成三部分，即prefix、middle和suffix，并把middle部分放到最后面。</p>
+<p>document -&gt; (prefix; middle; suffix)  -&gt; (prefix; suffix;
+middle)</p>
+<p>训练的时候，模型需要根据给定的上文prefix和下文suffix，来生成中间的部分。</p>
+<h2 id="fim效果">FIM效果</h2>
+<p>为了让模型同时具备正常的从左到右的生成能力，需要使用left-to-right和FIM两个方式混合的数据，FIM数据的比例成为FIM
+rate。</p>
+<p>在实际训练模型中，OpenAI使用FIM rate =
+0.5，即训练数据中一半进行了这种切分和转换，另一半保持正常的从左到右顺序。</p>
+<p>实验中发现，混入FIM数据之后，模型在正常left-to-right的能力上基本上没有收到任何损害，如下图</p>
+<img src="/a0b50049/fim_l2r_ppl.png" class title="代码模型">
+<p>相当于模型没有付出任何代价就多学到了FIM的能力，OpenAI称之为FIM-for-free
+property。</p>
+<p>通常的PPL测试不能看出FIM带来的收益，为了评测模型FIM，OpenAI专门构建一个infilling
+benchmark。infilling
+benchmark中的数据来源于HumanEval，通过删除中间的部分代码，要求模型补全来检验FIM能力。下面是一个例子，绿色部分就是要模型补全的中间代码：</p>
+<img src="/a0b50049/fim_example.png" class title="代码模型">
+<p>有无使用FIM数据的模型，在FIM测试上的对比如下：</p>
+<img src="/a0b50049/fim_infill_loss.png" class title="代码模型">
+<p>加入FIM明显地提升模型的infilling能力。</p>
+<h2 id="训练">训练</h2>
+<p>前面简单介绍了FIM的做法，就是把数据切成前中后三部分，然后把中间部分挪到后面，要求模型补全。</p>
+<p>更具体来说，为了让模型知道哪部分是prefix，哪部分是suffix，哪部分是middle，需要加入一些特殊token：</p>
+<p>&lt; PRE &gt; ○ Enc(prefix) ○ &lt; SUF &gt; ○ Enc(suffix) ○ &lt; MID
+&gt; ○ Enc(middle)</p>
+<p>○ 表示concat。&lt; PRE &gt;、&lt; SUF &gt;和&lt; MID
+&gt;就是用于标识数据位置的特殊token。</p>
+<p>训练的时候，不止有middle部分的loss会bp，prefix和suffix也和left-to-right的数据一样会进行训练，这样FIM相比left-to-right并不会损失loss信号的量。</p>
+<p>另外在每条训练数据最后还要记得加上&lt; EOT &gt;符号。</p>
+<p>上面这种拼接方式，数据的顺序是Prefix、Suffix、Middle，简称为PSM。PSM是最符合直觉的一种拼接方式。而除了PSM，还可以使用SPM的拼接顺序。文中提到，SPM相比PSM有一个好处，那就是在推理的时候前面已经计算过的KV
+cache可以复用。（不过这里感觉有点奇怪，只要不把新生成的token拼接到Prefix部分，其实PSM的KV
+cache也是可以服用的）</p>
+<p>那么PSM和SPM的效果如何？实验了SPM、PSM和二者一起训练，效果如下：</p>
+<img src="/a0b50049/fim_psm_spm.png" class title="代码模型">
+<p>从结果上看，二者都用的效果是最好的。</p>
+<h2 id="fim-rate">FIM rate</h2>
+<p>FIM rate应该设置为多少合适？文中做了消融实验，对比FIM rate = (0,
+0.25, 0.5, 0.75, 0.9, 1.0)的效果。结果如下：</p>
+<img src="/a0b50049/fim_rate.png" class title="代码模型">
+<p>不同的FIM rate对left-to-right几乎没有什么影响（除了FIM rate =
+1.0），而FIM loss则是只要使用FIM数据，就有明显提升。FIM rate =
+0.5和0.9的效果差不多，最终使用的是0.5。</p>
+<h2 id="数据切分">数据切分</h2>
+<p>前面说了数据要被切成三部分，那么具体怎么切？论文提供了三种粒度的对比，Line-level
+random span、Token-level random span、Character-level random
+span。三种粒度的切分都保证prefix、suffix、middle的期望长度都是总长度的1/3。结果如下：</p>
+<img src="/a0b50049/fim_split_level.png" class title="代码模型">
+<p>character level的整体效果最好。</p>
+<h1 id="code-llama">Code Llama</h1>
+<p>接着来看下Code Llama的一些内容。</p>
+<p>Code Llama是基于Llama 2开发的。Code Llama系列和Llama
+2一样有4个规模，7B, 13B, 34B, 和
+70B。各种规模都有3个版本（值得一提的是，Meta还专门做了个针对Python的版本）：<br>
+- Code Llama: a foundational model for code generation tasks<br>
+- Code Llama - Python: specialized for Python<br>
+- Code Llama - Instruct: fine-tuned with human instructions and
+self-instruct code synthesis data</p>
+<p>各个版本的训练流程如下：</p>
+<img src="/a0b50049/codellama_pipeline.png" class title="代码模型">
+<p>Code Llama效果也是不错，和其他模型的对比：</p>
+<img src="/a0b50049/codellama_eval.png" class title="代码模型">
+<h2 id="数据">数据</h2>
+<p>Code
+Llama收集大约500B的训练数据，其中大部分是代码，另有少量从general数据集中抽取的代码相关数据，以及少量代码无关的数据：</p>
+<img src="/a0b50049/codellama_train.png" class title="代码模型">
+<p>代码的数据都是训练了多个epoch。</p>
+<p>而在微调的时候，则是使用了Llama 2 70B生成interview-style programming
+questions。所使用的prompt如下：</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>Prompt: [INST] Write <span class="dv">50</span> programming interview questions of easy <span class="kw">and</span> medium complexity. Provide questions on a</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>diverse <span class="bu">range</span> of subjects, <span class="kw">and</span> make sure no two questions are alike. Make sure the problems can be solved <span class="cf">with</span> a</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>single standalone Python function using standard libraries. [<span class="op">/</span>INST]</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="fl">1.</span> Write a function that finds the maximum depth of <span class="bu">list</span> nesting <span class="kw">in</span> a given <span class="bu">list</span>.</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fl">2.</span> Given an integer array nums, rotate the array to the right by k steps, where k <span class="kw">is</span> non<span class="op">-</span>negative.</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="fl">3.</span> Write a function that gets the musical pitch that <span class="kw">is</span> closest to a given frequency <span class="kw">in</span> Hz. A pitch should consist of a</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>letter, possibly a <span class="co"># sign, and an octave number.</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="fl">1.</span> Write a function that removes <span class="bu">any</span> sequences of whitespace that are between numbers <span class="kw">in</span> an <span class="bu">input</span> string.</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="fl">2.</span> Write a function that counts the number of words <span class="kw">in</span> a string that have length n, where n <span class="kw">is</span> an <span class="bu">input</span>. The function</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>should ignore characters that aren’t letters, numbers, <span class="kw">or</span> spaces.</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="fl">1.</span> Write a function that returns the longest palindromic substring <span class="kw">in</span> a given string.</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="fl">2.</span> Create a function that will find the length of the longest substring without repeating characters <span class="kw">in</span> a given string.</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="fl">3.</span> Write a function that reverses the diagits <span class="kw">in</span> a number.</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="fl">4.</span> Write a function that finds the valleys <span class="kw">in</span> a <span class="bu">list</span> of integers.</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="fl">5.</span>  Write a python function that reverses every group of k words <span class="kw">in</span> a sentence.</span></code></pre></div>
+<p>去重之后得到了~52,000条问题。再把这些问题输入给Code Llama
+7B生成单元测试样例和solution，prompt分别是：</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>Prompt:</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>[INST] Your task <span class="kw">is</span> to write <span class="dv">5</span> tests to check the correctness of a function that solves a programming</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>problem.</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>The tests must be between [TESTS] <span class="kw">and</span> [<span class="op">/</span>TESTS] tags.</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>You must write the comment <span class="st">&quot;#Test case n:&quot;</span> on a separate line directly above each <span class="cf">assert</span> statement,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>where n represents the test case number, starting <span class="im">from</span> <span class="dv">1</span> <span class="kw">and</span> increasing by one <span class="cf">for</span> each subsequent</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>test case.</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>Problem: Write a Python function to get the unique elements of a <span class="bu">list</span>.</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>[<span class="op">/</span>INST]</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>[TESTS]</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Test case 1:</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> get_unique_elements([]) <span class="op">==</span> []</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Test case 2:</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> get_unique_elements([<span class="dv">1</span>]) <span class="op">==</span> [<span class="dv">1</span>]</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Test case 3:</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> get_unique_elements([<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>]) <span class="op">==</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>[<span class="op">/</span>TESTS]</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>[INST] Problem: <span class="op">%%%</span>question<span class="op">%%%</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>[<span class="op">/</span>INST]</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>Prompt:</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>[INST] Your task <span class="kw">is</span> to write a Python function to solve a programming problem.</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>The Python code must be between [PYTHON] <span class="kw">and</span> [<span class="op">/</span>PYTHON] tags.</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>You are given one example test <span class="im">from</span> which you can infere the function signature.</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>Problem: Write a Python function to get the unique elements of a <span class="bu">list</span>.</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>Test: <span class="cf">assert</span> get_unique_elements([<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>]) <span class="op">==</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>[<span class="op">/</span>INST]</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>[PYTHON]</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_unique_elements(my_list):</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> <span class="bu">list</span>(<span class="bu">set</span>(my_list))</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>[<span class="op">/</span>PYTHON]</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>[INST] Problem: <span class="op">%%%</span>question<span class="op">%%%</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>Test: <span class="op">%%%</span>test<span class="op">%%%</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>[<span class="op">/</span>INST]</span></code></pre></div>
+<p>最后把题目、单元测试样例和答案通过执行反馈的方式验证正确性。</p>
+<h2 id="long-context-fine-tuning">Long Context Fine-Tuning</h2>
+<p>为了让模型具备长上下文的能力，应用了Long Context
+Fine-Tuning（LCFT）：<br>
+- 把RoPE的base frequency从10,000增大到1,000,000<br>
+- 把训练的最大长度从4k增大到100k</p>
+<h2 id="fim训练">FIM训练</h2>
+<p>Code
+Llama训练的时候用到FIM的训练方式，同OpenAI的做法一样，FIM数据中一半使用PSM格式，另一半使用SPM格式，都是character
+level的split。不过这里使用各大的FIM rate：0.9。</p>
+<p>FIM的评测效果：</p>
+<img src="/a0b50049/codellama_fim.png" class title="代码模型">
+<h2 id="相比from-scratch">相比from scratch</h2>
+<p>Code Llama是以LLama
+2为基础训练的，相比从零开始，使用代码数据进行训练的效果更好。如下图（b），sratch
+model相比Code Llama的loss明显更高：</p>
+<img src="/a0b50049/codellama_scratch.png" class title="代码模型">
+<h1 id="starcoder-2">StarCoder 2</h1>
+<p>之前BigCode开源了StarCoder和Stack v1，几年继续打来StarCoder 2和Stack
+v2。v2版本的数据集是v1的4倍大，在这些数据集上，训练出了3B, 7B, 和 15B
+的StarCoder 2。</p>
+<h2 id="数据-1">数据</h2>
+<p>1、代码数据</p>
+<p>基于Software
+Heritage的数据，涵盖619种语言。这些代码数据经过过滤（过滤网页自动生成的内容，恶意内容等）、去重、语言识别等处理。</p>
+<p>2、Github Issues</p>
+<p>包括issue的操作和内容。这些内容大都和代码的内容和开发相关，虽然不一定是代码数据，但是和代码有很大的相关性。</p>
+<p>3、Pull Requests</p>
+<p>这些不同分支的merge内容也能提供重要度high level信息。</p>
+<p>4、Notebooks</p>
+<p>包括Jupyter Notebooks，和Kaggle
+Notebooks，这些数据以外可能比较容易被忽略。</p>
+<p>5、Documentation</p>
+<p>来自各个包管理平台的文档，还有pdf文件，以及各种官方/教程网站。</p>
+<p>6、其他高质量数据集</p>
+<p>包含用于数学和编程的多个小数据集，如：<br>
+- GSM8K<br>
+- APPS<br>
+- Proofsteps<br>
+等</p>
+<p>除了代码数据，还有必要加入一些自然语言的数据让模型学习，如 Stack
+Overflow、ArXiv、Wikipedia 和 OpenWebMath。</p>
+<p>上面这些所有数据都会经过以下处理：<br>
+- simhash去重<br>
+- 个人信息Personally Identifiable Information (PII)删除<br>
+- Decontamination移除和评测集相关内容<br>
+- 恶意检测Malware Removal（有0.009%的数据在这步被移除）</p>
+<p>最终各个规模模型的训练数据组成如下：</p>
+<img src="/a0b50049/starcoder2_train_data.png" class title="代码模型">
+<h2 id="训练-1">训练</h2>
+<p>收集的数据里有不同类型的数据，包括源码、notebook、issue、pull
+request，每种数据都有单独的拼接处理方式。比如源码会拼接成：</p>
+<p><repo_name>reponame<file_sep>filepath1<file_sep>filepath2 ...
+&lt;|endoftext|&gt;</file_sep></file_sep></repo_name></p>
+<p>在没有meta data的情况下则是：</p>
+<p><file_sep>code1<file_sep>code2 ... &lt;|endoftext|&gt;</file_sep></file_sep></p>
+<p>而pull request数据则是：</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr<span class="op">&gt;</span>Title: title\nusername_0: description</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_status<span class="op">&gt;</span>opened</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>repo_name<span class="op">&gt;</span>reponame</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_base<span class="op">&gt;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_file<span class="op">&gt;</span>filepath_1</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_base_code<span class="op">&gt;</span>file_content<span class="op">/</span>changes_1</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_file<span class="op">&gt;</span>filepath_N</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_base_code<span class="op">&gt;</span>file_content<span class="op">/</span>changes_N</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_diff<span class="op">&gt;</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_file<span class="op">&gt;</span>filepath_1</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_diff_hunk<span class="op">&gt;</span>diff_hunk_1</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_diff_hunk<span class="op">&gt;</span>diff_hunk_K</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_file<span class="op">&gt;</span>filepath_M</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_diff_hunk<span class="op">&gt;</span>diff_hunk_1</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>pr_diff_hunk<span class="op">&gt;</span>diff_hunk_J</span></code></pre></div>
+<p>因此增加了很多特殊token用于标识不同的内容：</p>
+<img src="/a0b50049/starcoder2_special_token.png" class title="代码模型">
+<p>模型结构和在各自数据上的训练配置如下：</p>
+<img src="/a0b50049/starcoder2_train.png" class title="代码模型">
+<p>可以看到各个模型都在代码数据上训练的多个epoch。</p>
+<h1 id="deepseek-coder-v2">DeepSeek-Coder-V2</h1>
+<p>DeepSeek-Coder-V2是在DeepSeek-V2（MoE模型）基础上训练的，对应DeepSeek-V2的两个规模：16B和236B，激活参数量分别为2.4B和21B。千亿模型的效果自然是很不错的：</p>
+<img src="/a0b50049/dscoderv2_perf.png" class title="代码模型">
+<h2 id="数据-2">数据</h2>
+<p>DeepSeek-V2训练的4.2T的通用数据，DeepSeek-Coder-V2则是在这个基础，进一步训练6T
+token的数据。这6T数据里，有60%的source
+code，30%的数学语料，还有10%的自然语言数据，而重点自然就是代码数据和数学数据。</p>
+<p>1、代码数据</p>
+<p>原始代码数据来自2023年11月前的github数据。</p>
+<p>文中给出了一些代码数据的筛选处理逻辑：<br>
+- 筛掉平均行长度 &gt; 100 character或者最大行长度 &gt; 1000
+character的file<br>
+- 筛掉包含的alphabetic character比例 &lt; 25%的file<br>
+- 除了XSLT语言，其他在开头100个character包含“&lt; ?xml
+version=”的文件会被删掉<br>
+- 对于HTML文件，要求visible
+text的占比要大于20%，切至少100character<br>
+-
+对于JSON和YAML这种通常是数据文件的类型，只保留长度为50到5000character的文件</p>
+<p>这样清洗过后得到了821B包含338种语言的代码数据和185B的code-related数据（如markdown和issue）。</p>
+<p>2、数学数据</p>
+<p>对于code-related 和 math-related，follow the same pipeline as
+DeepSeekMath。</p>
+<p>首先从一些相关网页，比如StackOverflow，PyTorch
+documentation或者StackExchange爬取数据。之后训练一个fasttext模型用于从网页数据里recall
+code-related 和 math-related 数据。</p>
+<p>最终共收集到70B code-related数据和221B math-related数据。</p>
+<p>为了检验这些数据的质量，用一个1B的模型在这些数据上进行训练。首先，使用
+1T tokens 在新代码语料库上对 1B 模型进行预训练。然后，观察其在 HumanEval
+和 MBPP 基准测试中的准确率变化。结果显示，在 HumanEval
+基准测试中，准确率从 30.5% 提高到 36.0%，提高了 5.5%；在 MBPP
+基准测试中，准确率从 44.6% 提高到 49.0%，提高了 4.4%。接着，进一步使用
+2T tokens 对 1B 模型进行训练。再次观察在两个基准测试中的准确率，发现
+HumanEval 和 MBPP 的分数分别上升到 37.2% 和 54.0%。</p>
+<img src="/a0b50049/dscoderv2_data_perf.png" class title="代码模型">
+<p>通过这些实验结果可以看出，新代码语料库在提高模型准确率方面表现更好，因此新代码语料库优于用于训练
+DeepSeek-Coder-V1 的语料库。</p>
+<h2 id="训练-2">训练</h2>
+<p>对于16B模型，使用了left-to-right和FIM两种训练方式，而对于236B模型，则没有使用FIM。</p>
+<img src="/a0b50049/dscoderv2_train_setting.png" class title="代码模型">
+<p>另外，为了保持模型的长文本能力，进行了长窗口的训练。用32k长度的数据，以batch
+size = 1152训练了1000个step，然后把长度扩展到128k，用288的batch
+size再训练1000个step。之后再通过YARN进行长度扩展：s=40，alpha=1，beta=32。</p>
+<p>而在alignment阶段，使用了20k条代码相关，30k条数学相关的instruction数据，同时从DeepSeek-V2中也采样了一些通用instruction数据，构成300M
+token的训练数据集。</p>
+<p>除了instruction
+tuning，DeepSeek-Coder-V2还进行RL。虽然代码数据可以通过执行反馈作为feedback，不过仍然可能出现部分测试case覆盖不全的情况，因此还是训练了一个reward
+model对生成的结果进行打分。</p>
+<h1 id="qwen2.5-coder">Qwen2.5-Coder</h1>
+<p>Qwen2.5-Coder有两个规模，1.5B和7B。</p>
+<img src="/a0b50049/qwen2.5coder_model.png" class title="代码模型">
+<img src="/a0b50049/qwen2.5coder_perf.png" class title="代码模型">
+<h2 id="数据-3">数据</h2>
+<p>Qwen2.5-Coder在Qwen2.5的基础上，又进行了5.5T数据的训练。</p>
+<p>这些数据主要有5种：<br>
+- Source Code Data<br>
+- Text-Code Grounding Data<br>
+- Synthetic Data<br>
+- Math Data<br>
+- Text Data</p>
+<p>1、Source Code Data</p>
+<p>来自github
+2024年2月前的数据，包括92种语言。和StarCoder2类似，也会进行一系列的rule-based处理。处理源码之外，还有Pull
+Requests, Commits, Jupyter Notebooks, 和 Kaggle datasets等。</p>
+<p>2、Text-Code Grounding Data</p>
+<p>包括代码相关的documentation, tutorials, blogs等。</p>
+<p>这些数据使用小规模的模型（如fasttext）进行了清洗和过滤。发现更大的模型并不能带来更好的清洗效果，可能是因为小模型更加能够关注在surface-level的feature。</p>
+<p>3、Synthetic Data</p>
+<p>基于CodeQwen1.5生成了大量的合成数据，并通过执行反馈筛选。</p>
+<p>4、Math Data</p>
+<p>使用了Qwen2.5-Math的数据。</p>
+<p>5、Text Data</p>
+<p>从Qwen2.5的数据中抽取。会把代码相关的数据从这里面删除掉。</p>
+<p>数据混合比例上，文中做了3中配比的实验：</p>
+<img src="/a0b50049/qwen2.5coder_data_mix.png" class title="代码模型">
+<p>Code：Text：Math =
+7：2：1的效果是最好的，比其他代码比例更高的配比效果更好。</p>
+<h2 id="预训练">预训练</h2>
+<p>Qwen2.5-Coder的训练流程如下：</p>
+<img src="/a0b50049/qwen2.5coder_train_pipeline.png" class title="代码模型">
+<p>1、File-Level Pretraining</p>
+<p>这一阶段的训练长度为8192，使用了left-to-right和FIM两个训练目标。</p>
+<p>tokenizer中特意增加了一些token用于标识FIM的中各个部分的位置。</p>
+<img src="/a0b50049/qwen2.5coder_fim_file.png" class title="代码模型">
+<img src="/a0b50049/qwen2.5coder_fim_token.png" class title="代码模型">
+<p>2、Repo-Level Pretraining</p>
+<p>第二阶段是针对repo-level数据的训练。repo-level数据的一个特点就是文件多，样本长。因此需要模型具备长窗口的能力。这一阶段把RoPE的base
+frequency从10,000提升到1,000,000，进行了32k长度的训练，在推理时再通过YARN把窗口扩展到132k。</p>
+<p>这个阶段训练了大约300B
+token的数据。FIM也从file-level改为repo-level的格式：</p>
+<img src="/a0b50049/qwen2.5coder_fim_token.png" class title="代码模型">
+<h2 id="post-training">post-training</h2>
+<p>在post-training阶段，有以下关键action。</p>
+<p>1、Multilingual Programming Code Identification</p>
+<p>微调 CodeBERT
+进行语言识别，保留主流编程语言的指令数据，随机丢弃部分长尾语言部分指令数据。对于被识别为“无编程语言”的部分数据，则大部分都会被去掉，以免影响模型的代码生成能力。</p>
+<p>2、代码指令合成</p>
+<p>针对 GitHub
+等网上大量存在的无监督数据（代码片段），构建监督指令数据集。</p>
+<p>具体做法是使用 LLM 根据代码片段生成指令（长度在 1024
+个标记内），然后再用代码 LLM 生成响应，最后使用 LLM
+评分器过滤低质量的指令和响应对，以获得最终的配对。通过这种方式，可以从不同编程语言的代码片段中构建指令数据集。</p>
+<p>为了增加指令数据集的多样性，也可以先生成答案，然后用 LLM
+评分器过滤获得最终的三元组，从而构建出具有通用代码的指令数据集。此外，还将开源指令数据集纳入到种子指令数据集中。</p>
+<p>3、Multilingual Code Instruction Data</p>
+<p>提出了一个multilingual
+multi-agent协作框架，来合成多语言指令语料库。</p>
+<p>具体过程如下： -
+创建一组特定于语言的agent，每个agent专门负责一种特定的编程语言，这些agent使用从有限的多语言指令语料库中提取的特定语言指令数据进行初始化；<br>
+-
+多个语言特定的agent通过结构化对话来制定新的指令和解决方案，这个过程可以增强现有语言的能力或为新编程语言生成指令；<br>
+-
+每个agent维护一个动态存储库来存储其生成历史，以避免生成相似的样本；<br>
+-
+开发了一种知识蒸馏方法，使各个agent能够跨越语言边界共享内容，促进对编程概念的更全面理解；</p>
+<h1 id="小结">小结</h1>
+<p>纵观几个最新的代码模型，有几点关键发现：<br>
+- FIM训练对于代码补全能力至关重要<br>
+- 代码能力和数学能力几乎总是成对出现的，这二者有很强的关联性<br>
+-
+代码数据量的需求很大，需要收集尽量多的数据，而且不止需要源码，和代码相关的文档、issue、教程等都很重要</p>
+<p>在关于代码具体怎么清洗、组织和生成上，基本上依然是各家秘而不宣的核心，而这也是我们要探索的关键点。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门--CLIP</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Evaluating Large Language Models Trained on Code
+https://arxiv.org/abs/2107.03374<br>
+【2】Program Synthesis with Large Language Models
+https://arxiv.org/abs/2108.07732<br>
+【3】Efficient Training of Language Models to Fill in the Middle
+https://arxiv.org/abs/2207.14255<br>
+【4】Code Llama: Open Foundation Models for Code
+https://arxiv.org/abs/2308.12950<br>
+【5】StarCoder 2 and The Stack v2: The Next Generation
+https://arxiv.org/abs/2402.19173<br>
+【6】DeepSeek-Coder-V2: Breaking the Barrier of Closed-Source Models in
+Code Intelligence https://arxiv.org/abs/2406.11931<br>
+【7】Qwen2.5-Coder Technical Report https://arxiv.org/abs/2409.12186</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/a0b50049.html" title="代码大模型(一)--业界现状">https://saicat.github.io/a0b50049.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/%E5%AF%B9%E9%BD%90/" rel="tag"><i class="fa fa-tag"></i> 对齐</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE/" rel="tag"><i class="fa fa-tag"></i> 数据</a>
+              <a href="/tags/%E4%BB%A3%E7%A0%81%E8%83%BD%E5%8A%9B/" rel="tag"><i class="fa fa-tag"></i> 代码能力</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/3069051d.html" rel="prev" title="多模态入门--CLIP">
+                  <i class="fa fa-angle-left"></i> 多模态入门--CLIP
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">448k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">13:35</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
