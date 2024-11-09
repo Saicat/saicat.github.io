@@ -415,7 +415,8 @@ Language Models https://arxiv.org/pdf/2309.00071.pdf
 【6】浅谈LLM的长度外推 https://zhuanlan.zhihu.com/p/645770522
 【7】想让大模型在prompt中学习更多示例，这种方法能让你输入更多字符 https://cloud.tencent.com/developer/article/2330611  
 【8】Transformer升级之路：8、长度外推性与位置鲁棒性 https://spaces.ac.cn/archives/9444  
-【9】RoPE外推优化——支持192K上下文长度 https://zhuanlan.zhihu.com/p/678755776
+【9】RoPE外推优化——支持192K上下文长度 https://zhuanlan.zhihu.com/p/678755776  
+
 ***
 
 博客：[http://www.linsight.cn/](http://www.linsight.cn/)  

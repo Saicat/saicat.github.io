@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  现在大模型的训练方法大部分都比较固定了，那么最重要的问题就是搞数据。真实世界的高质量数据虽然好用，但是成本高数量少，于是合成数据就成了一条很重要的路子。较新的专门模型如数学模型、代码模型或者阅读理解模型，基本上都已经使用上了大量的合成数据。这些领域的合成数据和训练的模型经过多次迭代，又会反哺下一代通用模型，左脚踩右">
+<meta property="og:type" content="article">
+<meta property="og:title" content="训练数据合成(一)">
+<meta property="og:url" content="https://saicat.github.io/85132189.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  现在大模型的训练方法大部分都比较固定了，那么最重要的问题就是搞数据。真实世界的高质量数据虽然好用，但是成本高数量少，于是合成数据就成了一条很重要的路子。较新的专门模型如数学模型、代码模型或者阅读理解模型，基本上都已经使用上了大量的合成数据。这些领域的合成数据和训练的模型经过多次迭代，又会反哺下一代通用模型，左脚踩右">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/85132189/survey_timeline.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/survey_all.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/survey_data_prepare.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/survey_pretrain.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/personahub_intro.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/personahub_t2p.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/personahub_t2p_fine.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/personahub_p2p.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/personahub_prompt.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/personahub_math_1.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/personahub_math_2.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/personahub_reasoning.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/personahub_instruction.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/oss_intro.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/oss_prompt.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/oss_case1.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/oss_case2.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/oss_case3.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/case2code_intro.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/case2code_framework.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/case2code_diverse_prompt.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/case2code_prompt.png">
+<meta property="og:image" content="https://saicat.github.io/85132189/case2code_perf.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2024-11-09T13:28:44.000Z">
+<meta property="article:modified_time" content="2024-11-09T13:55:58.579Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="数据合成">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/85132189/survey_timeline.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/85132189.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/85132189.html","path":"85132189.html","title":"训练数据合成(一)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>训练数据合成(一) | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#big-picture"><span class="nav-number">1.</span> <span class="nav-text">big picture</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#persona-hub"><span class="nav-number">2.</span> <span class="nav-text">Persona Hub</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%92%E8%89%B2%E7%9A%84%E8%8E%B7%E5%8F%96"><span class="nav-number">2.1.</span> <span class="nav-text">角色的获取</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%92%E8%89%B2%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="nav-number">2.2.</span> <span class="nav-text">角色的使用</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#oss-instruct"><span class="nav-number">3.</span> <span class="nav-text">OSS-Instruct</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#case2code"><span class="nav-number">4.</span> <span class="nav-text">Case2Code</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#tinystories"><span class="nav-number">5.</span> <span class="nav-text">TinyStories</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">66</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/85132189.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="训练数据合成(一) | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          训练数据合成(一)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-11-09 21:28:44 / 修改时间：21:55:58" itemprop="dateCreated datePublished" datetime="2024-11-09T21:28:44+08:00">2024-11-09</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>10k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>18 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>现在大模型的训练方法大部分都比较固定了，那么最重要的问题就是搞数据。真实世界的高质量数据虽然好用，但是成本高数量少，于是合成数据就成了一条很重要的路子。较新的专门模型如数学模型、代码模型或者阅读理解模型，基本上都已经使用上了大量的合成数据。这些领域的合成数据和训练的模型经过多次迭代，又会反哺下一代通用模型，左脚踩右脚直接起飞。Llama-3就是这么干的。</p>
+<p>最近在搞代码能力的提升，很有必要学习一下(代码)数据合成的方法。</p>
+<h1 id="big-picture">big picture</h1>
+<p>正好找到一篇新出的综述，《A Survey on Data Synthesis and Augmentation
+for Large Language
+Models》，梳理了“面向LLM的数据生成”相关的250篇文献，做了一些分类和总结。参考这篇综述先看下有那些思路。</p>
+<p>首先，文中把数据的生成分成两大类：data augmentation和data
+synthesis。</p>
+<p>data
+augmentation是一种“数据-&gt;类似数据”的做法，并在这个过程中保持原始数据的显著特征。最典型的做法就是CV领域中对图像数据做的各种畸变，如旋转翻转调整histogram等，但是并不破坏原图的重要内容；除此之外，借助较强的大模型，通过CoT等方式对无标签数据进行打标也是一种数据增强的方式，这个过程中还可以通过和人类标注结合进一步提升效果和效率。</p>
+<p>data synthesis是创造全新数据的方法，文中把它分成三大类：<br>
+- general model
+distillation：借助强大的通用模型如GPT-4，生成可增强较弱模型的数据，典型的例子就是Phi系列<br>
+- domain model
+distillation：在一些领域如数学或者代码领域，通用模型的效果可能不够好，就需要借助专门模型来生成数据<br>
+- model
+self-improvment：比如基于现有文本数据，生成不同难度或者不同风格的文本数据</p>
+<p>按时间线整理，上面各类方法对应的工作：</p>
+<img src="/85132189/survey_timeline.png" class title="数据合成">
+<p>data augmentation和data
+synthesis在LM生命周期又有不同的做法。文中把LM的生命周期分为6段：（1）data
+preparation（2）pretraining（3）finetuning（4）instruction-tuning（5）preference
+alignment（6）application。（这里个人感觉（1）和（2）可以放一起，（3）和（4）可以放一起）</p>
+<p>各个生命周期下，各种方法的整理和分类如下图：</p>
+<img src="/85132189/survey_all.png" class title="数据合成">
+<p>这里我个人主要关注在文本预训练阶段，以及和code相关的内容。</p>
+<p>文中给出了数据准备和预训练阶段的相关工作：</p>
+<img src="/85132189/survey_data_prepare.png" class title="数据合成">
+<img src="/85132189/survey_pretrain.png" class title="数据合成">
+<p>从中pick一些重要的/较新的工作：<br>
+- OSS-Instruct<br>
+- Case2Code<br>
+- TinyStories<br>
+- *Iterative Question Composing<br>
+- Generator prompts<br>
+- MathInstruct<br>
+- SciLitLLM<br>
+- TRAIT<br>
+- Persona Hub<br>
+- AceCoder<br>
+- Repocoder<br>
+- Evol-Instruct</p>
+<h1 id="persona-hub">Persona Hub</h1>
+<p>论文：《Scaling Synthetic Data Creation with 1,000,000,000
+Personas》</p>
+<p>时间：2024年06月</p>
+<p>机构：腾讯</p>
+<p>数据合成要解决的几个问题可以总结为3个：<br>
+-
+多样性：真实的数据来自现实世界不同场景和不同人物，具有很强的多样性，而合成数据往往受限于prompt和model的特性，多样性有限<br>
+-
+一致性：合成的数据分布要和真实数据分布一致，否则在推理的时候遇到了不同分布的输入，效果就会大打折扣<br>
+-
+高质量：合成数据在多样化、拟合真实分布的情况下，还应尽量具有高质量的内容（毕竟真实数据中也有很多低质量内容，但这些内容已经被证实价值不高）</p>
+<p>腾讯这篇论文主要就是要解决多样性的问题。通常来说，不考虑使用抽样的情况下，一个固定的prompt在固定的LLM只能获得固定的一条输出样例。而LLM不可能大规模地变换，因此要获得多样化的输出，就需要改变prompt。</p>
+<p>现有在合成数据中提升多样化的方法基本上可以分成两种paradigm：<br>
+-
+instance-driven：使用种子语料库帮获得多样化的prompt，代表性的工作有《Self-instruct:
+Aligning language models with self-generated instructions》和《Metamath:
+Bootstrap your own mathematical questions for large language
+models》。这种方法prompt的多样性受限于种子语料库的规模。<br>
+-
+key-point-driven：通过在关键维度的排列组合，提升prompt的多样性，代表性的工作有《Synthetic
+data (almost) from scratch: Generalized instruction tuning for language
+models》和《Key-point-driven data synthesis with its enhancement on
+mathematical
+reasoning》。但是对于通用数据，关键维度可以很多，这就需要投入大量的人力，因此这种方法更适合于特定领域的数据合成，比如数学。</p>
+<p>无论哪种方法，其实就是给模型输入一个“随机数”，但是这个随机数并不是一个数字，而可以认为是“字符串化”后的随机数。</p>
+<p>那么腾讯就提出了一种角色驱动的数据合成方法（来提供这样一种字符串化的随机数）。角色描述可以是这样的：<br>
+- a moving company driver<br>
+- a chemical kinetics researcher</p>
+<p>然后让模型为给定的角色创造符合要求的数据：“create {data} with
+{persona}”：</p>
+<img src="/85132189/personahub_intro.png" class title="数据合成">
+<p>这种方法的好处是，角色这个维度不影响原来prompt的设定，因此几乎可以和任意的数据合成方法相结合。那么只要合成足够多的角色，理论上就可以获取和真实世界完全一样的多样性了。</p>
+<h2 id="角色的获取">角色的获取</h2>
+<p>第一个问题就是怎么获取足够多样的角色。文中给出了两种获取角色的方法：<br>
+- text-to-persona<br>
+- persona-to-persona</p>
+<p>1、text-to-persona</p>
+<p>利用海量网络数据构建角色：首先找一篇任意文档，然后让模型按“谁可能读/写/喜欢/不喜欢这段文字”的prompt输出，并给出对应角色的描述：</p>
+<img src="/85132189/personahub_t2p.png" class title="数据合成">
+<p>实践上来说，让模型给出详细一些的粒度效果更好。当然模型给出的角色描述粒度和类型和输入文本也有很大的关系，比如当输入文本是数学或者物理相关的文档时，给出的角色描述就比较细。</p>
+<p>输出的角色描述可以是自然语言，也可以是结构化的文本，这个可以根据需求选择。</p>
+<img src="/85132189/personahub_t2p_fine.png" class title="数据合成">
+<p>2、persona-to-persona</p>
+<p>虽然使用网上多样化的文本可以生成很多样的角色，但是依然有可能存在一些遗漏。因此除了使用text生成角色外，还可以通过已有的角色泛化更多的角色。比如关于“儿童”的角色可以从儿童医院护士的角色（患者-照顾者关系）中推断出来。
+类似地，“乞丐”可以从避难所工作人员（援助关系）的角色衍生出来，“幕后电影工作人员”可以衍生出来来自电影主角的角色（同事关系）。</p>
+<img src="/85132189/personahub_p2p.png" class title="数据合成">
+<p>根据六度分离理论，文中对通过text-to-persona获得的每个角色进行六次persona-to-persona关系扩展迭代，从而进一步丰富角色多样性。</p>
+<p>获得大量角色之后还需要去重。论文中使用了两种方法进行去重。</p>
+<p>1、minhash</p>
+<p>角色的描述一般都比较短，因此简单地使用 1-gram 和 128 的签名大小来进行
+MinHash 重复数据删除，阈值设置为0.9。</p>
+<p>2、embedding</p>
+<p>使用embedding模型，比如OpenAI 的 text-embedding-3-small
+模型来计算不同角色描述之间的相似度，然后按阈值过滤，这里的相似度阈值设置为0.9。</p>
+<p>过滤时相似度阈值可以根据需求设置，比如当所需的量不大，而多样性要求更高时，可以选择更高的阈值，以保留少量差异更大的角色。</p>
+<h2 id="角色的使用">角色的使用</h2>
+<p>获得角色之后，就是怎么使用的问题。角色可以插入在0-shot、few-shot
+prompt里：</p>
+<img src="/85132189/personahub_prompt.png" class title="数据合成">
+<p>角色信息可以使用在不同数据的合成上。</p>
+<p>1、数学</p>
+<img src="/85132189/personahub_math_1.png" class title="数据合成">
+<img src="/85132189/personahub_math_2.png" class title="数据合成">
+<p>可以看到对于不同的角色，模型会给出难度不同，类型不同的数据。</p>
+<p>2、逻辑推理</p>
+<img src="/85132189/personahub_reasoning.png" class title="数据合成">
+<p>3、instruction</p>
+<img src="/85132189/personahub_instruction.png" class title="数据合成">
+<h1 id="oss-instruct">OSS-Instruct</h1>
+<p>论文：《Magicoder: Empowering Code Generation with OSS-Instruct》</p>
+<p>时间：2023年12月</p>
+<p>Magicoder利用OSS-INSTRUCT的方法（OSS=open-source code
+snippets），合成了75k的指令数据，并获得了不错的效果。</p>
+<p>OSS-INSTRUCT的流程如下：</p>
+<img src="/85132189/oss_intro.png" class title="数据合成">
+<ul>
+<li><p>首先，从开源代码数据中，获取种子代码片段</p></li>
+<li><p>对于每个代码文档，随机提取1-15行连续行作为种子片段</p></li>
+<li><p>每个代码片段用下面这个prompt模板获取coding
+problem和solution</p></li>
+</ul>
+<img src="/85132189/oss_prompt.png" class title="数据合成">
+<p>文字版：</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>You are exceptionally skilled at crafting high<span class="op">-</span>quality programming problems <span class="kw">and</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>offering precise solutions.</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>Please gain inspiration <span class="im">from</span> the following random code snippet to create a</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>high<span class="op">-</span>quality programming problem. Present your output <span class="kw">in</span> two distinct sections:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>[Problem Description] <span class="kw">and</span> [Solution].</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>Code snippet <span class="cf">for</span> inspiration:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>``</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>&#123;code&#125;</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>``</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>Guidelines <span class="cf">for</span> each section:</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fl">1.</span> [Problem Description]: This should be <span class="op">**</span>completely <span class="va">self</span><span class="op">-</span>contained<span class="op">**</span>, providing</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="bu">all</span> the contextual information one needs to understand <span class="kw">and</span> solve the problem.</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>Assume common programming knowledge, but ensure that <span class="bu">any</span> specific context,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>variables, <span class="kw">or</span> code snippets pertinent to this problem are explicitly included.</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fl">1.</span> [Solution]: Offer a comprehensive, <span class="op">**</span>correct<span class="op">**</span> solution that accurately</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>addresses the [Problem Description] you provided.</span></code></pre></div>
+<p>一些生成的样例如下：</p>
+<img src="/85132189/oss_case1.png" class title="数据合成">
+<img src="/85132189/oss_case2.png" class title="数据合成">
+<img src="/85132189/oss_case3.png" class title="数据合成">
+<h1 id="case2code">Case2Code</h1>
+<p>论文：《Case2Code: Learning Inductive Reasoning with Synthetic
+Data》</p>
+<p>时间：2024年7月</p>
+<p>这篇论文发现在代码领域，deductive
+reasoning的数据比较常见，而inductive
+reasoning的数据就比较少见，这也导致模型在归纳推理能力上较弱。</p>
+<img src="/85132189/case2code_intro.png" class title="数据合成">
+<p>因此提出case2code，和LLM归纳推理能力相关的一个任务。</p>
+<p>case2code要求受测模型根据给定的代码输入和输出，归纳出代码的执行逻辑。</p>
+<p>case2code的数据是合成得到的，合成框架如下图：</p>
+<img src="/85132189/case2code_framework.png" class title="数据合成">
+<p>首先使用基于规则的filter收集program，然后利用LLM对这些program编写示例输入，用代码解释器获取这些输入的输出结果。最后根据输出过滤掉低质量的program，获得高质量的（program，input，output）三元组数据。</p>
+<p>1、program的获取</p>
+<p>从The
+Stack数据集中用解析工具获取python函数，保留满足以下规则的函数：<br>
+- 通过语法检查<br>
+- 具有一个或多个输入参数和有返回值<br>
+- 不依赖第三方或者外部IO操作</p>
+<p>符合这些规则的函数可以轻易地使用代码解释器运行。</p>
+<p>2、生成输入</p>
+<p>利用LLM给收集到的python函数编写输入，这里发现这一步可以使用较小的LLM，以提高效率降低成本。</p>
+<p>生成输入的prompt：</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Given the function, first analyze the types of the function arguments, then write</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dv">10</span> different example inputs <span class="cf">for</span> the function, each example should be a <span class="bu">dict</span> <span class="cf">with</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>function arguments<span class="st">&#39; names and their values.</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="er">Output format:</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>``python</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>examples <span class="op">=</span> [</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(argname<span class="op">=</span>argvalue),</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>....</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>``</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>Function:</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>``python</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_func(a: <span class="bu">int</span>, b: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> <span class="bu">str</span>(a) <span class="op">+</span> b</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>``</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>Examples:</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>``python</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>examples <span class="op">=</span> [</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">1</span>, b<span class="op">=</span><span class="st">&#39;a&#39;</span>),</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">2</span>, b<span class="op">=</span><span class="st">&#39;b&#39;</span>),</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">3</span>, b<span class="op">=</span><span class="st">&#39;c&#39;</span>),</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">4</span>, b<span class="op">=</span><span class="st">&#39;d&#39;</span>),</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">5</span>, b<span class="op">=</span><span class="st">&#39;e&#39;</span>),</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">6</span>, b<span class="op">=</span><span class="st">&#39;f&#39;</span>),</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">7</span>, b<span class="op">=</span><span class="st">&#39;g&#39;</span>),</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">8</span>, b<span class="op">=</span><span class="st">&#39;h&#39;</span>),</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">9</span>, b<span class="op">=</span><span class="st">&#39;i&#39;</span>),</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="bu">dict</span>(a<span class="op">=</span><span class="dv">10</span>, b<span class="op">=</span><span class="st">&#39;j&#39;</span>),</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>``</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>Function:</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>``python</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>&#123;code&#125;</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>``</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>Examples:</span></code></pre></div>
+<p>3、获取输出</p>
+<p>获取输出之后，会引入一些过滤规则筛选掉无效的输入或者函数。比如如果一个函数的输出在输入变化时保持不变，那么这个函数可能就是有问题的，就会被筛掉。</p>
+<p>此外，还会过滤掉输出值很长的函数，确保case2code的数据不会超过LLM的窗口范围（不过目前LLM的窗口都很长，这种情况应该不多）。</p>
+<p>4、post-processing</p>
+<p>最后会把函数和输入输出构建成prompt。对于有n个输入输出对的case，会抽取m&lt;=n个输入输出对作为观察集。</p>
+<p>另外还发现prompt的多样性会极大地影响模型推理性能的泛化能力，因此构建了10个不同风格的prompt模板。使用多样化prompt训练效果更好：</p>
+<img src="/85132189/case2code_diverse_prompt.png" class title="数据合成">
+<p>拼接的prompt样例：</p>
+<img src="/85132189/case2code_prompt.png" class title="数据合成">
+<p>在预训练或者微调阶段加入case2code数据训练，对模型的代码能力都有提升：</p>
+<img src="/85132189/case2code_perf.png" class title="数据合成">
+<h1 id="tinystories">TinyStories</h1>
+<p>论文：《TinyStories: How Small Can Language Models Be and Still Speak
+Coherent English?》</p>
+<p>时间：2023年5月</p>
+<p>机构：微软</p>
+<p>这篇文章时间比较久了。首先，观察到对于比较小（比如1.25B参数）的LLM的生成效果一般，会出现无法生成连贯且一致内容的情况。为了研究这个问题，就利用GPT-3.5和GPT-4合成了TinyStories数据集，这个数据集只包含典型3到4岁儿童通常理解的词语。在这个数据集下训练的模型，即使参数只有一千万，也能够生成流畅且一致的故事。</p>
+<p>TinyStories数据的合成方式大致是这样的：首先收集一个包含1500个基本单词的vocabulary，其中的单词分为名词、动词和形容词。每次从这个vocabulary中挑选3个单词（一个名词，一个动词，一个形容词），让模型根据这三个词生成一个故事。这种生成方式使得故事具有多样性，并包含了大量将不同的概念结合起来的方式。</p>
+<p>下面是一个prompt的例子：</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Write a short story (<span class="dv">3</span><span class="op">-</span><span class="dv">5</span> paragraphs) which only uses very simple words that a <span class="dv">3</span> year old child would likely understand.</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>The story should use the verb ”decorate”, the noun ”thunder” <span class="kw">and</span> the adjective ”ancient”. The story</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>should have the following features: the story should contain at least one dialogue, the story has a bad ending.</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>Remember to only use simple words<span class="op">!</span></span></code></pre></div>
+<p>利用这个prompt，GPT-3.5给出的结果如下：</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Once upon a time, <span class="kw">in</span> an ancient house, there lived a girl named Lily. She loved to decorate her room <span class="cf">with</span> pretty things. One</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>day, she found a big box <span class="kw">in</span> the attic. She opened it <span class="kw">and</span> saw many shiny decorations. Lily was very happy <span class="kw">and</span> decided to use</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>them <span class="kw">in</span> her room.</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>As Lily was decorating her room, the sky outside became dark. There was a loud thunder sound, <span class="kw">and</span> Lily got scared. She ran</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>to her mom <span class="kw">and</span> said, ”Mommy, the thunder <span class="kw">is</span> so loud<span class="op">!</span>” Her mom hugged her <span class="kw">and</span> said, ”Don’t worry, it will <span class="cf">pass</span> soon.”</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>But the thunder did <span class="kw">not</span> stop. It got louder <span class="kw">and</span> louder, <span class="kw">and</span> the ancient house started to shake. Suddenly, the roof fell down</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>on the pretty decorations. Lily was sad because her room was <span class="kw">not</span> pretty anymore. The end.</span></code></pre></div>
+<p>除了生成连贯的语言，指令的遵循能力也是LLM的一个重点。为此构建了TinyStories-Instruct数据集。数据集里每个故事都以一组指令开头，指令分为四种类型：
+- 故事中要包含的词语列表。<br>
+- 故事中应该出现的句子。<br>
+- 特征，比如对话、冲突、转折、bad ending等<br>
+- 故事的简短摘要（1-2行）</p>
+<p>一个例子如下：</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Summary: Lily <span class="kw">and</span> Timmy build a sandcastle together <span class="kw">and</span> learn to compromise, but it gets knocked over by a gust of wind.</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>They find beauty <span class="kw">in</span> the broken sandcastle <span class="kw">and</span> play happily <span class="cf">with</span> a butterfly.</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>Features: Dialogue, Foreshadowing, Twist</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>Sentence: One day, she went to the park <span class="kw">and</span> saw a beautiful butterfly.</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>Words: disagree, network, beautiful</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>Story: Once upon a time, there was a little girl named Lily. She loved to play <span class="cf">with</span> her toys <span class="kw">and</span> her friends. One day, she went to the park <span class="kw">and</span> saw a beautiful butterfly. She tried to catch it, but it flew away. Lily’s friend, Timmy, came to play <span class="cf">with</span> her.</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>They decided to build a sandcastle, but they disagreed on how to build it. Lily wanted to make it tall, <span class="cf">while</span> Timmy wanted to</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>make it wide. They argued <span class="cf">for</span> a <span class="cf">while</span>, but <span class="cf">finally</span> agreed to make it both tall <span class="kw">and</span> wide. As they were building the sandcastle,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>they noticed a group of ants working together. They realized that the ants were building a network of tunnels. Suddenly, a gust</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>of wind came <span class="kw">and</span> knocked over their sandcastle. They were sad, but then they saw the butterfly again. It landed on the remains</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>of their sandcastle <span class="kw">and</span> they realized that it was still beautiful, even <span class="kw">in</span> its broken state. They smiled <span class="kw">and</span> played together happily.</span></code></pre></div>
+<h1 id="小结">小结</h1>
+<p>数据的合成最终就是要解决这几个问题： -
+多样性：真实的数据来自现实世界不同场景和不同人物，具有很强的多样性，而合成数据往往受限于prompt和model的特性，多样性有限<br>
+-
+一致性：合成的数据分布要和真实数据分布一致，否则在推理的时候遇到了不同分布的输入，效果就会大打折扣<br>
+-
+高质量：合成数据在多样化、拟合真实分布的情况下，还应尽量具有高质量的内容（毕竟真实数据中也有很多低质量内容，但这些内容已经被证实价值不高）</p>
+<p>其中一致性来自于prompt的编写，和用于合成数据的LLM的理解能力；质量提升通常使用后筛选模型来做，或者如执行反馈这样的方法；而多样性则是最考验数据合成设计的一个环节，这个环节在数据量大的情况下也是最重要的。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门--CLIP</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】A Survey on Data Synthesis and Augmentation for Large Language
+Models https://arxiv.org/abs/2410.12896<br>
+【2】Scaling Synthetic Data Creation with 1,000,000,000 Personas
+https://arxiv.org/abs/2406.20094<br>
+【3】Magicoder: Empowering Code Generation with OSS-Instruct
+https://arxiv.org/abs/2312.02120<br>
+【4】Case2Code: Learning Inductive Reasoning with Synthetic Data
+https://arxiv.org/pdf/2407.12504<br>
+【5】TinyStories: How Small Can Language Models Be and Still Speak
+Coherent English? https://arxiv.org/abs/2305.07759</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/85132189.html" title="训练数据合成(一)">https://saicat.github.io/85132189.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%90%88%E6%88%90/" rel="tag"><i class="fa fa-tag"></i> 数据合成</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/a0b50049.html" rel="prev" title="代码大模型(一)--业界现状">
+                  <i class="fa fa-angle-left"></i> 代码大模型(一)--业界现状
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">459k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">13:54</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
