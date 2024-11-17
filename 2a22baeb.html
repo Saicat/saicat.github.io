@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  继续看一些重要的数据合成工作。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="训练数据合成(二)">
+<meta property="og:url" content="https://saicat.github.io/2a22baeb.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  继续看一些重要的数据合成工作。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/2a22baeb/selfinstr_intro.png">
+<meta property="og:image" content="https://saicat.github.io/2a22baeb/evolinstr_intro.png">
+<meta property="og:image" content="https://saicat.github.io/2a22baeb/evolinstr_example.png">
+<meta property="og:image" content="https://saicat.github.io/2a22baeb/mammoth2_intro.png">
+<meta property="og:image" content="https://saicat.github.io/2a22baeb/orca_path_example.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2024-11-16T03:22:44.000Z">
+<meta property="article:modified_time" content="2024-11-16T04:13:13.608Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="数据合成">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/2a22baeb/selfinstr_intro.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/2a22baeb.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/2a22baeb.html","path":"2a22baeb.html","title":"训练数据合成(二)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>训练数据合成(二) | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#self-instruct"><span class="nav-number">1.</span> <span class="nav-text">self-instruct</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#evol-instruct"><span class="nav-number">2.</span> <span class="nav-text">evol-instruct</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#mammoth2"><span class="nav-number">3.</span> <span class="nav-text">MAmmoTH2</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#genie"><span class="nav-number">4.</span> <span class="nav-text">GENIE</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#orca-math"><span class="nav-number">5.</span> <span class="nav-text">Orca-Math</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">62</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">66</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/2a22baeb.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="训练数据合成(二) | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          训练数据合成(二)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-11-16 11:22:44 / 修改时间：12:13:13" itemprop="dateCreated datePublished" datetime="2024-11-16T11:22:44+08:00">2024-11-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>16k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>30 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>继续看一些重要的数据合成工作。</p>
+<h1 id="self-instruct">self-instruct</h1>
+<p>self-instruct算是大模型数据合成的经典工作了，它的目的主要是为了低成本获得大量用于大模型微调的指令数据。self-instruct的整体流程如下：</p>
+<img src="/2a22baeb/selfinstr_intro.png" class title="数据合成">
+<p>文中首先定义一下什么“指令数据”。一个“指令”是一个用自然语言描述的任务，用I表示，一个任务下可以有多组input-output的实例。比如<br>
+指令I = “写一篇关于以下主题的文章”<br>
+输入X = “学校安全”<br>
+输出Y就是对应话题的一篇文章。</p>
+<p>不过在很多情况下，“指令”和“实例”并没有很明确的区分界限，“指令”本身就可以是一个实例。比如这样一个指令“写一篇关于学校安全的文章”就即是指令又是实例，它作为指令时输入X就为空了。</p>
+<p>回到self-instruct指令数据合成的流程上来，共分四步。</p>
+<p>1、Instruction Generation</p>
+<p>一开始，先收集175个人类编写的指令数据来作为task
+pool的初始化。每步生成时，从这个池子里随机采样8个instruction作为in-context
+example，这8个example会混合人工数据和之前轮次的合成数据，prompt如下：</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Come up <span class="cf">with</span> a series of tasks:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Task <span class="dv">1</span>: &#123;instruction <span class="cf">for</span> existing task <span class="dv">1</span>&#125;</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>Task <span class="dv">2</span>: &#123;instruction <span class="cf">for</span> existing task <span class="dv">2</span>&#125;</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>Task <span class="dv">3</span>: &#123;instruction <span class="cf">for</span> existing task <span class="dv">3</span>&#125;</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>Task <span class="dv">4</span>: &#123;instruction <span class="cf">for</span> existing task <span class="dv">4</span>&#125;</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>Task <span class="dv">5</span>: &#123;instruction <span class="cf">for</span> existing task <span class="dv">5</span>&#125;</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>Task <span class="dv">6</span>: &#123;instruction <span class="cf">for</span> existing task <span class="dv">6</span>&#125;</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>Task <span class="dv">7</span>: &#123;instruction <span class="cf">for</span> existing task <span class="dv">7</span>&#125;</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>Task <span class="dv">8</span>: &#123;instruction <span class="cf">for</span> existing task <span class="dv">8</span>&#125;</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>Task <span class="dv">9</span>:</span></code></pre></div>
+<p>这个开放式的prompt允许模型一次生成多个结果，实验设置上以达到最大长度，或者生成到“Task
+16”的时候为止。</p>
+<p>2、Classification Task Identification</p>
+<p>这里把任务分成了两类，分类任务和非分类任务。这里需要先判断任务属于哪一类。不过在目前阶段，似乎不太需要再区分这样的任务了，而且分类任务在大模型应用中应该也越来越少了，而复杂任务则是更多了。</p>
+<p>这里用few-shot prompt的方式让大模型做判断：</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Can the following task be regarded <span class="im">as</span> a classification task <span class="cf">with</span> finite output labels?</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>Task: Given my personality <span class="kw">and</span> the job, tell me <span class="cf">if</span> I would be suitable.</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Is it classification? Yes</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>Task: Give me an example of a time when you had to use your sense of humor.</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>Is it classification? No</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>Task: Replace the placeholders <span class="kw">in</span> the given text <span class="cf">with</span> appropriate named entities.</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Is it classification? No</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>Task: Fact checking <span class="op">-</span> tell me <span class="cf">if</span> the statement <span class="kw">is</span> true, false, <span class="kw">or</span> unknown, based on your</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>knowledge <span class="kw">and</span> common sense.</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>Is it classification? Yes</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>Task: Return the SSN number <span class="cf">for</span> the person.</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>Is it classification? No</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>Task: &#123;instruction <span class="cf">for</span> the target task&#125;</span></code></pre></div>
+<p>3、Instance Generation</p>
+<p>给定指令和任务类型（分类任务还是非分类任务），让模型生成具体的instance，包括输入和输出。这里有几点经验：<br>
+- 所使用的few-shot
+example不要和要生成的指令属于同一类任务效果更好，这里这样做可以增加生成的多样性<br>
+-
+生成的时候，一般来说是让模型先生成输入再生成输出，但是发现总是使用这个顺序的话，模型会倾向于在分类任务中总是生成某一个标签的实例，所以也可以调整顺序，让模型先生成输出再生成输入，以打破这种有偏的行为。</p>
+<p>4、Filtering and Postprocessing</p>
+<p>生成的数据难免会和数据库里的存在相似的情况，为了增加数据多样性，只保留和所有已有数据的ROUGE-L相似度低于0.7的数据，并添加到task
+pool中。也可以用其他相似度计算方式。</p>
+<p>另外有时模型生成的任务可能要求一些LLM无法完成的事情，比如和多媒体相关的任务，这些指令就需要通过关键词过滤掉了。</p>
+<h1 id="evol-instruct">evol-instruct</h1>
+<p>evol-instruct是提升现有指令数据多样性和难度的方法，重点在数据质量而不在数据数量。evol-instruct的整体流程如下：</p>
+<img src="/2a22baeb/evolinstr_intro.png" class title="数据合成">
+<p>从最开始的原始数据集D_0开始，每轮指令进化会把D_t（第t轮的数据）中所有指令数据都进化，得到新的数据集D_t+1，那么在进化M次之后，就会得到{D_0,
+D_1, D_2,...,D_M}这个多个数据集。<br>
+evol-instruct主要包含三个步骤：(1) instruction evolving, (2) response
+generation, 以及 (3) elimination evolving。</p>
+<p>1、Instruction Evolution</p>
+<p>每一轮进化中，会使用LLM在现有指令的基础上提高难度，或者增加多样性。指令进化成功就会把新指令加入到新数据池中，如果失败就会把原指令放回，在下一轮的时候重新处理。</p>
+<p>Instruction Evolution分成两种类型，in-depth evolving和in-breadth
+evolving。</p>
+<p>（1）in-depth evolving 深度进化</p>
+<p>深度进化的目的是提升指令的难度，共有5种类型的prompt，代表着5个不同的具体方向：add
+constraints, deepening, concretizing, increased reasoning steps, 以及
+complicating input。</p>
+<p>深度进化要求每次进化的难度“困难一点点”，并限制最多增加10~20个单词，不能一下子变得太困难，导致出现大部分人类无法理解的内容。</p>
+<p>各种prompt具体如下：</p>
+<p>a.add constraints</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>I want you act <span class="im">as</span> a Prompt Rewriter.</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>Your objective <span class="kw">is</span> to rewrite a given prompt into a more <span class="bu">complex</span> version to make those famous AI systems (e.g., ChatGPT <span class="kw">and</span> GPT4) a bit harder to handle.</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>But the rewritten prompt must be reasonable <span class="kw">and</span> must be understood <span class="kw">and</span> responded by humans.</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>Your rewriting cannot omit the non<span class="op">-</span>text parts such <span class="im">as</span> the table <span class="kw">and</span> code <span class="kw">in</span> <span class="co">#Given Prompt#:. Also, please do not omit the input in #Given Prompt#.</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>You SHOULD complicate the given prompt using the following method:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>Please add one more constraints<span class="op">/</span>requirements into <span class="co">#Given Prompt#</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>You should <span class="cf">try</span> your best <span class="kw">not</span> to make the <span class="co">#Rewritten Prompt# become verbose, #Rewritten Prompt# can only add 10 to 20 words into #Given Prompt#.</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>‘<span class="co">#Given Prompt#’, ‘#Rewritten Prompt#’, ‘given prompt’ and ‘rewritten prompt’ are not allowed to appear in #Rewritten Prompt#</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">#Given Prompt#:</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>Here <span class="kw">is</span> instruction.<span class="op">&gt;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">#Rewritten Prompt#:</span></span></code></pre></div>
+<p>b.deepening</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>I want you act <span class="im">as</span> a Prompt Rewriter.</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>Your objective <span class="kw">is</span> to rewrite a given prompt into a more <span class="bu">complex</span> version to make those famous AI systems (e.g., ChatGPT <span class="kw">and</span> GPT4) a bit harder to handle.</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>But the rewritten prompt must be reasonable <span class="kw">and</span> must be understood <span class="kw">and</span> responded by humans.</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>Your rewriting cannot omit the non<span class="op">-</span>text parts such <span class="im">as</span> the table <span class="kw">and</span> code <span class="kw">in</span> <span class="co">#Given Prompt#:. Also, please do not omit the input in #Given Prompt#.</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>You SHOULD complicate the given prompt using the following method:</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>If <span class="co">#Given Prompt# contains inquiries about certain issues, the depth and breadth of the inquiry can be increased. or You should try your best not to make the #Rewritten Prompt# become verbose, #Rewritten Prompt# can only</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>add <span class="dv">10</span> to <span class="dv">20</span> words into <span class="co">#Given Prompt#.</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>‘<span class="co">#Given Prompt#’, ‘#Rewritten Prompt#’, ‘given prompt’ and ‘rewritten prompt’ are not allowed to appear in #Rewritten Prompt#</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">#Given Prompt#:</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>Here <span class="kw">is</span> instruction.<span class="op">&gt;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">#Rewritten Prompt#:</span></span></code></pre></div>
+<p>c.concretizing</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>I want you act <span class="im">as</span> a Prompt Rewriter.</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>Your objective <span class="kw">is</span> to rewrite a given prompt into a more <span class="bu">complex</span> version to make those famous AI systems (e.g., ChatGPT <span class="kw">and</span> GPT4) a bit harder to handle.</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>But the rewritten prompt must be reasonable <span class="kw">and</span> must be understood <span class="kw">and</span> responded by humans.</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>Your rewriting cannot omit the non<span class="op">-</span>text parts such <span class="im">as</span> the table <span class="kw">and</span> code <span class="kw">in</span> <span class="co">#Given Prompt#:. Also, please do not omit the input in #Given Prompt#.</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>You SHOULD complicate the given prompt using the following method:</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>Please replace general concepts <span class="cf">with</span> more specific concepts. <span class="kw">or</span> You should <span class="cf">try</span> your best <span class="kw">not</span> to make the <span class="co">#Rewritten Prompt# become verbose, #Rewritten Prompt# can only add 10 to 20 words into #Given Prompt#.</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>‘<span class="co">#Given Prompt#’, ‘#Rewritten Prompt#’, ‘given prompt’ and ‘rewritten prompt’ are not allowed to appear in #Rewritten Prompt#</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">#Given Prompt#:</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>Here <span class="kw">is</span> instruction.<span class="op">&gt;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">#Rewritten Prompt#:</span></span></code></pre></div>
+<p>d.increased reasoning steps</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>I want you act <span class="im">as</span> a Prompt Rewriter.</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>Your objective <span class="kw">is</span> to rewrite a given prompt into a more <span class="bu">complex</span> version to make those famous AI systems (e.g., ChatGPT <span class="kw">and</span> GPT4) a bit harder to handle.</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>But the rewritten prompt must be reasonable <span class="kw">and</span> must be understood <span class="kw">and</span> responded by humans.</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>Your rewriting cannot omit the non<span class="op">-</span>text parts such <span class="im">as</span> the table <span class="kw">and</span> code <span class="kw">in</span> <span class="co">#Given Prompt#:. Also, please do not omit the input in #Given Prompt#.</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>You SHOULD complicate the given prompt using the following method:</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>If <span class="co">#Given Prompt# can be solved with just a few simple thinking processes, you can rewrite it to explicitly request multiple-step reasoning.</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>You should <span class="cf">try</span> your best <span class="kw">not</span> to make the <span class="co">#Rewritten Prompt# become verbose, #Rewritten Prompt# can only add 10 to 20 words into #Given Prompt#.</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>‘<span class="co">#Given Prompt#’, ‘#Rewritten Prompt#’, ‘given prompt’ and ‘rewritten prompt’ are not allowed to appear in #Rewritten Prompt#</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co">#Given Prompt#:</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>Here <span class="kw">is</span> instruction.<span class="op">&gt;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co">#Rewritten Prompt#:</span></span></code></pre></div>
+<p>e.complicating input</p>
+<p>和前面几种prompt有所不同，complicating input需要使用few-shot
+prompt。</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>I want you act <span class="im">as</span> a Prompt Rewriter.</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>Your objective <span class="kw">is</span> to rewrite a given prompt into a more <span class="bu">complex</span> version to make those famous AI systems (e.g., ChatGPT <span class="kw">and</span> GPT4) a bit harder to handle.</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>But the rewritten prompt must be reasonable <span class="kw">and</span> must be understood <span class="kw">and</span> responded by humans.</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>You must add [XML data] <span class="bu">format</span> data <span class="im">as</span> <span class="bu">input</span> data <span class="kw">in</span> [Rewritten Prompt]</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">#Given Prompt#:</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>Here <span class="kw">is</span> Demonstration instruction <span class="fl">1.</span><span class="op">&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Rewritten Prompt#:</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>Here <span class="kw">is</span> Demonstration Example <span class="fl">1.</span><span class="op">&gt;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>... N <span class="op">-</span><span class="dv">1</span> Examples ...</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>I want you act <span class="im">as</span> a Prompt Rewriter.</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>Your objective <span class="kw">is</span> to rewrite a given prompt into a more <span class="bu">complex</span> version to make those famous AI systems (e.g., ChatGPT <span class="kw">and</span> GPT4) a bit harder to handle.</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>But the rewritten prompt must be reasonable <span class="kw">and</span> must be understood <span class="kw">and</span> responded by humans.</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>You must add [<span class="co">#Given Dataformat#] format data as input data, add [#Given Dataformat#] code as input code in [Rewritten Prompt]</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>Rewrite prompt must be a question style instruction</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co">#Given Prompt#:</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>Here <span class="kw">is</span> instruction.<span class="op">&gt;</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="co">#Rewrite prompt must be a question style instruction Rewritten Prompt(MUST contain a specific JSON data as input#:</span></span></code></pre></div>
+<p>（2）in-breadth evolving 广度进化</p>
+<p>广度进化目的是增加topic的覆盖，提升数据集的多样性。prompt如下：</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>I want you act <span class="im">as</span> a Prompt Creator.</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>Your goal <span class="kw">is</span> to draw inspiration <span class="im">from</span> the <span class="co">#Given Prompt# to create a brand new prompt.</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>This new prompt should belong to the same domain <span class="im">as</span> the <span class="co">#Given Prompt# but be even more rare.</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>The LENGTH <span class="kw">and</span> difficulty level of the <span class="co">#Created Prompt# should be similar to that of the #Given Prompt#.</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>The <span class="co">#Created Prompt# must be reasonable and must be understood and responded by humans.</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>‘<span class="co">#Given Prompt#’, ‘#Created Prompt#’, ‘given prompt’ and ‘created prompt’ are not allowed to appear in #Created Prompt#.</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Given Prompt#:</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>Here <span class="kw">is</span> instruction.<span class="op">&gt;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co">#Created Prompt#:</span></span></code></pre></div>
+<p>下面是一个各种方向进化的例子：</p>
+<img src="/2a22baeb/evolinstr_example.png" class title="数据合成">
+<p>2.Response Generation</p>
+<p>response的生成就比较常规了，把前面进化出来的prompt输入给LLM即可。</p>
+<p>3.Elimination Evolving</p>
+<p>有了进化好的prompt和response还不算完。有时候进化会出现失败的情况。进化失败的case会放弃进化的结果，而把原数据用于下次进化。</p>
+<p>什么样的情况算是进化失败呢？主要有下面四种。</p>
+<p>（1）进化后的指令相比原指令没有任何information
+gain，这个可以通过prompt让ChatGPT进行判断：</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>Here are two Instructions to ChatGPT AI, do you think they are equal to each other, which meet the following requirements:</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fl">1.</span> They have same constraints <span class="kw">and</span> requirments.</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fl">2.</span> They have same depth <span class="kw">and</span> breadth of the inquiry.</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>The First Prompt: <span class="op">&lt;</span>Here <span class="kw">is</span> first instruction.<span class="op">&gt;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>The Second Prompt: <span class="op">&lt;</span>Here <span class="kw">is</span> second instruction.<span class="op">&gt;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>Your Judgement (Just answer: Equal <span class="kw">or</span> Not Equal. No need to explain the reason.):</span></code></pre></div>
+<p>（2）进化后的指令让LLM给不出response，比如生成的包含“抱歉”，且长度较短。</p>
+<p>（3）response的生成异常的，比如只有标点符号，内容为空等。</p>
+<p>（4）进化后的指令质量不好，复制了进化prompt中的一些内容，比如“#Rewritten
+Prompt#”等。</p>
+<h1 id="mammoth2">MAmmoTH2</h1>
+<p>《MAmmoTH2: Scaling Instructions from the
+Web》里介绍了从web数据构建instruction数据的做法，获得了用于微调LLM的WebInstruct数据集。不过与其说是数据合成，这里的做法更多的是和数据抽取相关。</p>
+<p>构建WebInstruct主要包括三步：</p>
+<img src="/2a22baeb/mammoth2_intro.png" class title="数据合成">
+<p>1、文档抽取</p>
+<p>使用涵盖想要的领域的种子数据（比如数学），以及从web数据中随机抽取的100k负样本，训练一个fasttext分类器。这个分类器用于从web数据中recall想要的领域数据。召回的文档会根据url（domain）做分组，一个domain如果最终文档量少于1000个，则不会被保留。</p>
+<p>最终从common crawl里recall了大约100B的数据。</p>
+<p>2、Q-A Pair Extraction</p>
+<p>web数据里有很多QA数据，但是会和其他内容混杂在一起，比如广告、网页模板等，因此先用规则进行简单清洗之后，再用Qwen-72B从这些文档里提取相对干净的QA内容。</p>
+<p>3、Q-A Pair Refinement</p>
+<p>第二步里抽取的QA质量不一定好（其实很多是不好的），因此需要对这些QA进行改写。比如如果Answer里没有包含完整的solution，就用LLM对这些内容进行补全。</p>
+<h1 id="genie">GENIE</h1>
+<p>GENIE = Generate information &amp;
+elucidate，主要是合成content-grounded generation
+task相关的数据，比如长文本问答LFQA、摘要和信息提取等任务。</p>
+<p>GENIE合成数据的流程其实相当简单，就是（1）准备content数据（2）生成任务相关内容（3）检查过滤，这里主要看一下细节。</p>
+<p>1、准备content数据</p>
+<p>这一步是从网页抽取文档的过程，会保留文档结构，比如列表、表格、章节信息等，文档用markdown格式保存。实验中使用的是NQ
+passages数据集。</p>
+<p>2、生成任务相关内容</p>
+<p>根据文档，使用few-shot
+prompt获得问答QA、摘要等任务数据。prompt如下：</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>Instruction: Given the <span class="bu">next</span> [document], create a [question] <span class="kw">and</span> [answer] pair that are grounded <span class="kw">in</span> the main point of the document, don<span class="st">&#39;t add any additional information that is not in the document. The [question] is by an information-seeking user and the [answer] is provided by a helping AI Agent.</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="er">[document]: Scrumptious Sweet Co. factory ..</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="er">### Response:</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>[question]: Where was the movie Chitty Chitty Bang Bang filmed?</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>[answer]: Chitty Chitty Bang Bang was filmed <span class="kw">in</span> a variety of locations <span class="kw">in</span> England <span class="kw">and</span> Germany. Some ..</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>[document]: The series stars Eugene Levy <span class="im">as</span> Johnny Rose …</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co">### Response:</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>[question]: What <span class="kw">is</span> the plot of the show Schitt<span class="st">&#39;s Creek?</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="er">[answer]: The show Schitt&#39;s Creek is about a wealthy family who loses their fortune and is forced to rebuild their lives in a small town. The show follows the family as they adjust to their new life in the town and learn to appreciate the simple things in life.</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="er">[document]: 2016&#39;s countdown broke several Hottest 100 records…</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="er">### Response:</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>[question]: What was the most popular song on the <span class="dv">2016</span> Hottest <span class="dv">100</span>?</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>[answer]: The most popular song on the <span class="dv">2016</span> Hottest <span class="dv">100</span> was <span class="st">&quot;Never Be Like You&quot;</span> by Flume. This was the first time that an electronic dance music producer topped the countdown.</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>[document]: In Greek mythology, Persephone ..</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co">### Response:</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>[question]: Who <span class="kw">is</span> Persephone <span class="kw">in</span> Greek mythology <span class="kw">and</span> what <span class="kw">is</span> her significance?</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>[answer]: In Greek mythology, Persephone, also known <span class="im">as</span> Kore, <span class="kw">is</span> the daughter of Zeus <span class="kw">and</span> Demeter. She ..</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>[document]: Terry, the dog that played Toto <span class="kw">in</span> the <span class="dv">1939</span> screen …</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="co">### Response:</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>[question]: What breed of dog was Toto <span class="kw">in</span> the Wizard of Oz?</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>[answer]: Terry, the dog that played Toto <span class="kw">in</span> the <span class="dv">1939</span> screen adaptation of The Wizard of Oz, was a brindle Cairn terrier.</span></code></pre></div>
+<p>3、检查过滤</p>
+<p>（1）格式</p>
+<p>对于生成的结果太短，或者太长（摘要不能比原文还长吧）的结果进行过滤。</p>
+<p>（2）Faithfulness</p>
+<p>使用NLI模型，把原文档和问答、摘要内容进行评测，确定二者是否有逻辑关系。</p>
+<p>（3）Quality</p>
+<p>使用reward模型对数据进行打分，所用的模型是reward-model-deberta-v3-large-v2。</p>
+<h1 id="orca-math">Orca-Math</h1>
+<p>Orca-Math里合成了包含20w个数学问题的Orca-Math-dataset，把SLM的GSM8k
+pass@1做到了81.50%。</p>
+<p>Orca-Math合成数据的目的是获得一批多样化的小学数学应用题，包括简单和困难的问题。为了合成数据，首先参照《Lila:
+A unified benchmark for mathematical
+reasoning》的基准从各种开源的数据集收集了36,217个问题。</p>
+<p>1、Ask Me Anything agent</p>
+<p>这个种子问题集通过下面的prompt扩展更多的问题，论文中把使用这个prompt专门用于生成问题的模型称为“Ask
+Me Anything” agent：</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>Your goal <span class="kw">is</span> to create multiple word problems <span class="im">from</span> a given word problem <span class="kw">and</span> its answer. First convert the question of the word problem into a statement.</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>Then <span class="cf">for</span> each number <span class="kw">in</span> the converted problem create a new word problem.</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>Here are some examples:</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>Example <span class="dv">1</span>: Q: Natalia sold clips to <span class="dv">48</span> of her friends <span class="kw">in</span> April, <span class="kw">and</span> then she sold half <span class="im">as</span> many clips <span class="kw">in</span> May. How many clips did Natalia sell altogether <span class="kw">in</span> April <span class="kw">and</span> May?</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>Answer: <span class="dv">72</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>Replacing question <span class="cf">with</span> statement: Natalia sold clips to <span class="dv">48</span> of her friends <span class="kw">in</span> April, <span class="kw">and</span> then she sold half <span class="im">as</span> many clips <span class="kw">in</span> May. Natalia sold altogether <span class="dv">72</span> clips <span class="kw">in</span> April <span class="kw">and</span> May.</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>All questions:</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> <span class="dv">48</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Natalia sold clips to some of her friends <span class="kw">in</span> April, <span class="kw">and</span> then she sold half <span class="im">as</span> many clips <span class="kw">in</span> May. Natalia sold altogether <span class="dv">72</span> clips <span class="kw">in</span> April <span class="kw">and</span> May. How many clips did she sell <span class="kw">in</span> April?</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> half</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Natalia sold clips to <span class="dv">48</span> of her friends <span class="kw">in</span> April, <span class="kw">and</span> then she sold some clips <span class="kw">in</span> May. Natalia sold altogether <span class="dv">72</span> clips <span class="kw">in</span> April <span class="kw">and</span> May. What <span class="kw">is</span> the ratio of the number clips sold <span class="kw">in</span> April to number clips sold <span class="kw">in</span> May?</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> <span class="dv">72</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Natalia sold clips to <span class="dv">48</span> of her friends <span class="kw">in</span> April, <span class="kw">and</span> then she sold half <span class="im">as</span> many clips <span class="kw">in</span> May. How many clips did Natalia sell altogether <span class="kw">in</span> April <span class="kw">and</span> May?</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>Example <span class="dv">2</span>: Q: Weng earns $<span class="dv">12</span> an hour <span class="cf">for</span> babysitting. Yesterday, she just did <span class="dv">50</span> minutes of babysitting. How much did she earn?</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>Answer: <span class="dv">10</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>Replacing question <span class="cf">with</span> statement: Weng earns $<span class="dv">12</span> an hour <span class="cf">for</span> babysitting. Yesterday, she just did <span class="dv">50</span> minutes of babysitting. She earned $<span class="fl">10.</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>All questions:</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> <span class="dv">12</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Weng earns a certain amount per hour <span class="cf">for</span> babysitting. Yesterday, she just did <span class="dv">50</span> minutes of babysitting <span class="kw">and</span> earned <span class="fl">10.</span> How much does she earn per hour?</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> <span class="dv">50</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Weng earns <span class="dv">12</span> an hour <span class="cf">for</span> babysitting. Yesterday, she just did some babysitting <span class="kw">and</span> earned <span class="fl">10.</span> How much time did she spend on babysitting?</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> <span class="dv">10</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Weng earns <span class="dv">12</span> an hour <span class="cf">for</span> babysitting. Yesterday, she just did <span class="dv">50</span> minutes of babysitting. How much did she earn?</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>Example <span class="dv">3</span>: Q: Betty <span class="kw">is</span> saving money <span class="cf">for</span> a new wallet which costs <span class="fl">100.</span> Betty has only half of the money she needs. Her parents decided to give her <span class="dv">15</span> <span class="cf">for</span> that purpose, <span class="kw">and</span> her grandparents twice <span class="im">as</span> much <span class="im">as</span> her parents. How much more money does Betty need to buy the wallet?</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>Answer: <span class="dv">5</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>Replacing question <span class="cf">with</span> statement: Betty <span class="kw">is</span> saving money <span class="cf">for</span> a new wallet which costs <span class="fl">100.</span> Betty has only half of the money she needs. Her parents decided to give her <span class="dv">15</span> <span class="cf">for</span> that purpose, <span class="kw">and</span> her grandparents gave her twice <span class="im">as</span> much <span class="im">as</span> her parents. She needs <span class="dv">5</span> more to buy the wallet.</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>All questions:</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> <span class="dv">100</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Betty <span class="kw">is</span> saving money <span class="cf">for</span> a new wallet. Betty has only half of the money she needs. Her parents decided to give her <span class="dv">15</span> <span class="cf">for</span> that purpose, <span class="kw">and</span> her grandparents twice <span class="im">as</span> much <span class="im">as</span> her parents. She needs <span class="dv">5</span> more to buy the wallet. What <span class="kw">is</span> the cost of the wallet?</span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> half</span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Betty <span class="kw">is</span> saving money <span class="cf">for</span> a new wallet which costs <span class="fl">100.</span> She has some money saved, her parents decided to give her <span class="dv">15</span>, <span class="kw">and</span> her grandparents gave her twice <span class="im">as</span> much <span class="im">as</span> her parents. Now, Betty needs <span class="dv">5</span> more to buy the wallet. What <span class="kw">is</span> the ratio of the money Betty have saved initially to the cost of wallet?</span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> <span class="dv">15</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Betty <span class="kw">is</span> saving money <span class="cf">for</span> a new wallet which costs <span class="fl">100.</span> She has half of the money she needs, her parents decided to give her some money, <span class="kw">and</span> her grandparents gave her twice <span class="im">as</span> much <span class="im">as</span> her parents. Now, Betty needs <span class="dv">5</span> more to buy the wallet. How much money did her parents give her?</span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> twice</span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Betty <span class="kw">is</span> saving money <span class="cf">for</span> a new wallet which costs <span class="fl">100.</span> Betty has only half of the money she needs. Her parents decided to give her <span class="dv">15</span> <span class="cf">for</span> that purpose, <span class="kw">and</span> her grandparents also chipped <span class="kw">in</span>. Now, Betty needs <span class="dv">5</span> more to buy the wallet. What <span class="kw">is</span> the ratio of the amount given by her grandparents to the amount given by her parents?</span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>target<span class="op">&gt;</span> <span class="dv">5</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>question<span class="op">&gt;</span> Betty <span class="kw">is</span> saving money <span class="cf">for</span> a new wallet which costs <span class="fl">100.</span> Betty has only half of the money she needs. Her parents decided to give her <span class="dv">15</span> <span class="cf">for</span> that purpose, <span class="kw">and</span> her grandparents twice <span class="im">as</span> much <span class="im">as</span> her parents. How much more money does Betty need to buy the wallet?</span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>Now solve this:</span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>Example <span class="dv">4</span>: Q: Your teacher <span class="kw">is</span> giving a test worth <span class="dv">200</span> points. There <span class="kw">is</span> a total of <span class="dv">30</span> <span class="dv">5</span><span class="op">-</span>point <span class="kw">and</span> <span class="dv">10</span><span class="op">-</span>point questions. How many <span class="dv">5</span><span class="op">-</span>point questions are on the test? Answer: <span class="dv">20</span></span></code></pre></div>
+<p>“Ask Me Anything” agent最终从种子数据生成了120,445个问题。</p>
+<p>2、Suggester &amp; Editor</p>
+<p>为了增加问题的难度，引入了Suggester &amp; Editor。</p>
+<p>Suggester提出一些抽象、high
+level的建议，而Editor就根据现有的问题和Suggester的建议来修改问题。一个示例如下：</p>
+<img src="/2a22baeb/orca_path_example.png" class title="数据合成">
+<h1 id="小结">小结</h1>
+<ul>
+<li>其实很多数据合成的工作在prompt的设计上，需要根据所用的模型多次迭代<br>
+</li>
+<li>多样性是数据合成不变的核心，无论是使用多样的种子、检索的few-shot
+prompt还是多次采样都是为了得到更加拟合真实世界的多样化的数据<br>
+</li>
+<li>后续有一些更加自动化的做法，下一篇来讲</li>
+</ul>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门--CLIP</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】SELF-INSTRUCT: Aligning Language Models with Self-Generated
+Instructions https://arxiv.org/abs/2212.10560<br>
+【2】Alpaca: A Strong, Replicable Instruction-Following Model
+https://crfm.stanford.edu/2023/03/13/alpaca.html<br>
+【3】WizardLM: Empowering Large Language Models to Follow Complex
+Instructions https://arxiv.org/abs/2304.12244<br>
+【4】MAmmoTH2: Scaling Instructions from the Web
+https://arxiv.org/abs/2405.03548<br>
+【5】Genie: Achieving Human Parity in Content-Grounded Datasets
+Generation https://arxiv.org/abs/2401.14367<br>
+【6】Orca-Math: Unlocking the potential of SLMs in Grade School Math
+https://arxiv.org/abs/2402.14830</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/2a22baeb.html" title="训练数据合成(二)">https://saicat.github.io/2a22baeb.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%90%88%E6%88%90/" rel="tag"><i class="fa fa-tag"></i> 数据合成</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/7856bcc1.html" rel="prev" title="代码大模型(二)--OpenCoder">
+                  <i class="fa fa-angle-left"></i> 代码大模型(二)--OpenCoder
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">486k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">14:44</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
