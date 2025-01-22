@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  这篇主要包括BLIP系列、LLaVA系列和Flamingo，大致上按时间顺序排列。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="多模态入门(二)--Flamingo,LLaVA系列和BLIP系列">
+<meta property="og:url" content="https://saicat.github.io/569d722c.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  这篇主要包括BLIP系列、LLaVA系列和Flamingo，大致上按时间顺序排列。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/569d722c/blip_archi.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/blip_share_sa.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/blip_train_framework.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/blip_share_filter.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/flam_example.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/flam_archi.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/flam_resampler.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/flam_xattn.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/flam_inter_data.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/flam_ablation.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/blip2_intro.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/blip2_qformer.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/blip2_stage2.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/llava_example.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/llava_instr_list.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/llava_syn_example.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/llava_archi.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/instructblip_data.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/instructblip_model.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/instructblip_template.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/llava1.5_intro.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/llava1.5_hd.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/llava1.5_example.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/llava1.5_scaling.png">
+<meta property="og:image" content="https://saicat.github.io/569d722c/llava1.5_compare.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2024-11-28T04:29:52.000Z">
+<meta property="article:modified_time" content="2024-11-28T14:00:31.932Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="多模态">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="CV">
+<meta property="article:tag" content="CNN">
+<meta property="article:tag" content="无监督学习">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/569d722c/blip_archi.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/569d722c.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/569d722c.html","path":"569d722c.html","title":"多模态入门(二)--Flamingo,LLaVA系列和BLIP系列"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>多模态入门(二)--Flamingo,LLaVA系列和BLIP系列 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#blip"><span class="nav-number">1.</span> <span class="nav-text">BLIP</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#med%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.1.</span> <span class="nav-text">MED模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#capfilt-captioning-and-filtering"><span class="nav-number">1.2.</span> <span class="nav-text">CapFilt (Captioning and
+Filtering)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#flamingo"><span class="nav-number">2.</span> <span class="nav-text">Flamingo</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#architecture"><span class="nav-number">2.1.</span> <span class="nav-text">architecture</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">2.2.</span> <span class="nav-text">训练</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#blip-2"><span class="nav-number">3.</span> <span class="nav-text">BLIP-2</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#querying-transformer-q-former"><span class="nav-number">3.1.</span> <span class="nav-text">Querying Transformer
+(Q-Former)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83-1"><span class="nav-number">3.2.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">3.3.</span> <span class="nav-text">使用</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#llava"><span class="nav-number">4.</span> <span class="nav-text">LLaVA</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">4.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">4.2.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83-2"><span class="nav-number">4.3.</span> <span class="nav-text">训练</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#instructblip"><span class="nav-number">5.</span> <span class="nav-text">InstructBLIP</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#llava-1.5"><span class="nav-number">6.</span> <span class="nav-text">LLaVA-1.5</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B-1"><span class="nav-number">6.1.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE-1"><span class="nav-number">6.2.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">6.3.</span> <span class="nav-text">实验</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">67</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">66</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/569d722c.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="多模态入门(二)--Flamingo,LLaVA系列和BLIP系列 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          多模态入门(二)--Flamingo,LLaVA系列和BLIP系列
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2024-11-28 12:29:52 / 修改时间：22:00:31" itemprop="dateCreated datePublished" datetime="2024-11-28T12:29:52+08:00">2024-11-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/%E5%A4%9A%E6%A8%A1%E6%80%81/" itemprop="url" rel="index"><span itemprop="name">多模态</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>11k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>19 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>这篇主要包括BLIP系列、LLaVA系列和Flamingo，大致上按时间顺序排列。</p>
+<h1 id="blip">BLIP</h1>
+<p>论文：《BLIP: Bootstrapping Language-Image Pre-training for Unified
+Vision-Language Understanding and Generation》</p>
+<p>时间：2022年1月</p>
+<p>机构：Salesforce</p>
+<p>在这个时间点，大多数多模态模型只在理解任务或者生成任务中的一个能做得比较好。BLIP的目的是训练一个同时具备理解和生成能力的模型，提出了一个unified
+VLP（Vision-Language
+Pre-Training）framework。BLIP主要的工作在于模型架构的设计，以及多模态数据集的优化。</p>
+<h2 id="med模型">MED模型</h2>
+<p>BLIP提出了一个MED模型，MED = Multimodal mixture of
+Encoder-Decoder。MED模型的设计如下：</p>
+<img src="/569d722c/blip_archi.png" class title="多模态入门">
+<p>可以看到MED包含好几个模块，这是一个multi-task模型。左边两个模块分别是image
+encoder和text encoder，和CLIP中使用的类似。这里使用的image
+encoder是在ImageNet预训练好的ViT，而text
+encoder是预训练好的Bert-base模型。右边两个是混合图文模态的encoder和decoder。</p>
+<p>MED有三种功能：</p>
+<ul>
+<li>Unimodal encoder：分别对图像和文本进行编码<br>
+</li>
+<li>Image-grounded text
+encoder：用一个位于text-encoder的FFN层与注意力层之间的cross-attention模块，注入视觉信息<br>
+</li>
+<li>Image-grounded text decoder：和Image-grounded text
+encoder类似，只是decoder里的注意力层是causal
+attention而不是双向注意力</li>
+</ul>
+<p>预训练的时候，针对不同的功能，有不同的loss：</p>
+<ul>
+<li>Image-Text Contrastive Loss (ITC)：和Unimodal
+encoder相关，类似CLIP，使用对比学习，目标是对齐vision encoder和text
+encoder；这里参考《Align before fuse: Vision and language representation
+learning with momentum distillation》，使用了ITC损失，其中应用了momentum
+encoder来获得feature<br>
+</li>
+<li>Image-Text Matching Loss
+(ITM)：ITM是一个二分类任务，任务是让Image-grounded text
+encoder判断图像和文本是不是匹配的<br>
+</li>
+<li>Language Modeling Loss (LM)：要求Image-grounded text
+decoder在给定图像特征的情况下，给出文字描述的预测</li>
+</ul>
+<p>在实际训练中，为了提升训练效率，text encoder和text
+decoder共享除了注意力层以外的参数。这里做了消融实验，共享参数比不共享参数效果更好，而且效率更高：</p>
+<img src="/569d722c/blip_share_sa.png" class title="多模态入门">
+<h2 id="capfilt-captioning-and-filtering">CapFilt (Captioning and
+Filtering)</h2>
+<p>多模态的标注数据成本是比较高的，因此很多工作都会使用从网上自动获取的大规模图文数据对作为训练数据。但是这样又引入了一个问题，那就是网络图文数据本身是带有很多噪音的，比如解析的时候图文错配，或者图文数据本身无关等。</p>
+<p>BLIP用来提升图文数据质量的方法称为CapFilt，大致流程如下：</p>
+<img src="/569d722c/blip_train_framework.png" class title="多模态入门">
+<p>CapFilt包含两个模块：captioner和filter。这两个模块都由同一个预训练好的MED模型初始化而来。</p>
+<p>captioner是image-grounded text
+decoder，用来给图片生成caption。而filter是image-grounded text
+encoder，基于ITC和ITM目标进行了学习，用来判别数据集中的图文是否匹配，不匹配的数据将会被删除。</p>
+<p>文中强调了captioner生成的时候多样性很重要，这点和其他数据合成方法一样。</p>
+<p>消融实验对比了captioner和filter共享参数与否的效果，结果上看不共享参数更好：</p>
+<img src="/569d722c/blip_share_filter.png" class title="多模态入门">
+<h1 id="flamingo">Flamingo</h1>
+<p>论文：《Flamingo: a Visual Language Model for Few-Shot Learning》</p>
+<p>时间：2022年4月</p>
+<p>机构：DeepMind</p>
+<p>之前我们讲了CLIP。CLIP的训练方式结合了图文对，使得图像特征能够在一定程度上和文本特征对齐。不过CLIP也有限制，一方面在形式上使用的是固定的图文对，另一方面训练出来的模型主要是image
+encoder，应用场景主要是表征、分类、检索等，比较有限。</p>
+<p>而Flamingo的目的是能够处理sequences of arbitrarily interleaved visual
+and textual data，这样就能完成更多复杂场景下的任务了。</p>
+<p>Flamingo-80B处理的一些example如下：</p>
+<img src="/569d722c/flam_example.png" class title="多模态入门">
+<p>这种few-shot / in-context learning的能力在NLP已经显现出重要性。</p>
+<p>LLaVA论文中提到，Flamingo的工作可以被称之为多模态领域的GPT-3
+moment，可见这个工作的重要性。</p>
+<h2 id="architecture">architecture</h2>
+<p>Flamingo整体的架构如下：</p>
+<img src="/569d722c/flam_archi.png" class title="多模态入门">
+<p>Flamingo的输入是任意图文交织的序列，输出是text序列。</p>
+<p>1、Vision Encoder</p>
+<p>首先是模型中的Vision Encoder。使用的是预训练好的Normalizer-Free
+ResNet (NFNet)，具体使用的是F6
+model；其中的模型参数都是冻结的，不会再训练。这里的Vision
+Encoder采用了CLIP的训练方式进行了预训练。</p>
+<p>对于视频数据，以1FPS进行采样并独立编码。</p>
+<p>2、Perceiver Resampler</p>
+<p>Perceiver Resampler是Flamingo结构的一个重要部件。Vision
+Encoder把像素数据变成feature，而Perceiver Resampler把不同size的feature
+map映射到固定的少量visual token（64个），从而降低vision-text
+cross-attention的计算量。</p>
+<p>那Perceiver Resampler具体是怎么做的？</p>
+<blockquote>
+<p>Similar to《Perceiver: General perception with iterative
+attention》and《End-to-end object detection with transformers》, we
+learn a predefined number of latent input queries which are fed to a
+Transformer and cross-attend to the visual features.</p>
+</blockquote>
+<p>结构上，Perceiver Resampler如下图：</p>
+<img src="/569d722c/flam_resampler.png" class title="多模态入门">
+<p>Vision
+Encoder获得的图像token序列，再加上时间（类似Bert中的位置编码，比如对于视频就是第1帧、第2帧...）embedding，得到一个变长的序列，然后加上固定个数的learned
+latent
+queries，一起放进模型中。模型中的每一层包含attention和FFN模块，attention中把图像输入特征作为K和V，而把learned
+latent queries作为Q进行计算。</p>
+<p>最后获取learned latent
+queries的输出表征，就作为这些输入图像的表示。</p>
+<p>3、GATED XATTN-DENSE layers</p>
+<p>下一步是利用固定长度的图像特征，让语言模型进行文本生成。把图像特征注入到语言模型就用到GATED
+XATTN-DENSE的结构：</p>
+<img src="/569d722c/flam_xattn.png" class title="多模态入门">
+<p>如上图，这些层其实就是cross-attention加上一个FFN层，再加上一个门控。在最开始的时候，这些门控会让GATED
+XATTN-DENSE layers的输出为0，从而保持在初始化的时候语言模型的效果。</p>
+<p>GATED XATTN-DENSE layers插入到预训练好的语言模型的层中，用vision
+feature作为K和V，而用语言模型的输入作为Q。</p>
+<h2 id="训练">训练</h2>
+<p>数据上，共使用3种数据训练Flamingo：</p>
+<ul>
+<li>专门收集MultiModal MassiveWeb (M3W)
+数据集，这里面都是交错的图像和文本数据，来自于4300万个网页；在这些网页中，会随机采样256个token长度的数据，每条最多包含5个图片<br>
+</li>
+<li>成对的图像/视频和文本数据，大约有1.8B对数据</li>
+</ul>
+<p>这里有个细节，训练的时候，一段文本在注意力上只能看到前一张图片，而看不到更早的图片，更早的图片信息都被mask掉了。</p>
+<img src="/569d722c/flam_inter_data.png" class title="多模态入门">
+<p>论文对很多设计都做了消融实验，包括所用的数据、门控机制、attention机制、xattn的frequency等：</p>
+<img src="/569d722c/flam_ablation.png" class title="多模态入门">
+<h1 id="blip-2">BLIP-2</h1>
+<p>论文：《BLIP-2: Bootstrapping Language-Image Pre-training with Frozen
+Image Encoders and Large Language Models》</p>
+<p>时间：2023年1月</p>
+<p>机构：Salesforce</p>
+<p>目前多模态模型的训练需要同时用到语言和图像模型，这两部分参数的训练成本随着模型和数据规模的提升也越来越高。BLIP-2一个出发点就是用比较低的训练成本获得好的效果。这里只使用了Flamingo的1/54的训练参数，就获得了超过Flamingo的效果。</p>
+<p>一个方法就是使用已经训练好的单模态模型，为了避免灾难性遗忘，在训练过程中冻结单模态模型的参数，而把主要工作放在两个模态的对齐上。</p>
+<p>在模态对齐这个方向，已经有一些工作，比如Frozen（《Multimodal few-shot
+learning with frozen language models》）和Flamingo（《Flamingo: a visual
+language model for fewshot learning》）。这两个工作主要使用image-to-text
+generation loss来对齐，但是这并不足够。</p>
+<p>因此BLIP-2提出一个两阶段的方案，在第一个阶段从冻结的image
+encoder学习vision-language
+representation，在第二个阶段从冻结的LLM学习image-to-text
+generation：</p>
+<img src="/569d722c/blip2_intro.png" class title="多模态入门">
+<p>BLIP-2的模型包含三个部分：</p>
+<ul>
+<li>image encoder：预训练好的ViT<br>
+</li>
+<li>LLM：预训练好的语言模型<br>
+</li>
+<li>Q-Former：用于对齐图像和文本特征的模型</li>
+</ul>
+<h2 id="querying-transformer-q-former">Querying Transformer
+(Q-Former)</h2>
+<p>Q-Former的结构和一阶段的使用如下图：</p>
+<img src="/569d722c/blip2_qformer.png" class title="多模态入门">
+<p>Q-Former包含两个部分，image transformer和text
+transformer，二者共享self-attention部分的参数。</p>
+<p>在image transformer中：</p>
+<ul>
+<li>使用了一组learnable query
+embeddings作为输入，这组query的长度固定为32个，这组query的参数可以认为属于模型参数；这组query的目的是学习抽取图像特征中最重要的部分<br>
+</li>
+<li>冻结的image encoder抽取的图像特征，会在image
+transformer里和这组query通过cross-attention进行交互<br>
+</li>
+<li>每两个层transformer层插入一个cross-attention<br>
+</li>
+<li>corss-attention的参数随机初始化，而其他参数则是使用Bert-base初始化的</li>
+</ul>
+<p>而text-transformer：</p>
+<ul>
+<li>根据训练任务，选择不同的attention mask以及训练目标<br>
+</li>
+<li>即是encoder也是decoder</li>
+</ul>
+<h2 id="训练-1">训练</h2>
+<p>1、阶段一</p>
+<p>阶段一是representation learning
+stage。这个阶段的目标是训练Q-Former，使得那组输入query可以提取能表达最多信息的visual
+representation。</p>
+<p>这里集成BLIP的做法，联合使用3个优化目标：</p>
+<ul>
+<li>Image-Text Contrastive Learning (ITC) ：image
+transformer给出图像的representation，记为Z，text
+transformer则给出文本的representation，记为t；这里Z有多个，因此使用Z中和t相似度最大的作为图文对representation的相似度；为了避免信息泄露，这里使用unimodal
+self-attention mask（见Q-Former图）<br>
+</li>
+<li>Image-grounded Text Generation (ITG)
+：以输入图像为条件，生成文本；对于LLM，使用[DEC] token替换了[CLS]
+token，以指示解码任务<br>
+</li>
+<li>Image-Text Matching (ITM)：二分类任务，这时使用bi-directional
+self-attention mask</li>
+</ul>
+<p>2、阶段二</p>
+<p>阶段二是generative pre-training stage。这一阶段的训练如下图：</p>
+<img src="/569d722c/blip2_stage2.png" class title="多模态入门">
+<p>先把Q-Former的输出query
+embedding转化为和LLM相同大小的维度，然后LLM进行解码。</p>
+<p>这里尝试了decoder-based LLM和encoder-decoder-based
+LLM。对于纯decoder的模型，直接进行生成就行；而对于encoder-decoder模型，使用prefix
+language modeling loss，即把文本切成两段，前一段和visual
+representation拼在一起输入encoder，后一段就是生成的目标。</p>
+<h2 id="使用">使用</h2>
+<p>BLIP-2首先可以做Zero-shot
+VQA，只需使用简单的prompt即可让LLM生成答案，比如“Question: {}
+Answer:”。</p>
+<p>另外论文中微调了BLIP-2来做image
+captioning（期间保持LLM的参数固定，训练Q-Former和image
+encoder），效果也比较好。</p>
+<p>而在图像检索任务上，因为不涉及LLM，可以直接使用第一阶段的模型进行微调。</p>
+<h1 id="llava">LLaVA</h1>
+<p>论文：《Visual Instruction Tuning》</p>
+<p>时间：2023年4月</p>
+<p>机构：微软</p>
+<p>LLaVA = Large Language and Vision Assistant。</p>
+<p>如论文标题，LLaVA做的事情主要就是多模态空间的指令微调。微调后的模型能够进行多模态问答：</p>
+<img src="/569d722c/llava_example.png" class title="多模态入门">
+<h2 id="数据">数据</h2>
+<p>要做微调，首先就要有数据。multimodal instruction-following
+data在这个时间点还是很缺的，受到NLP领域的启发，这里也使用ChatGPT/GPT-4，基于已有的图文数据来构建多模态指令数据。</p>
+<p>怎么做呢？对于图像Xv和它的caption
+Xc，很自然地想到可以创建一系列的问题Xq，目的是instruct the assistant to
+describe the image content。而GPT-4就可以用来生成这一系列的问题。</p>
+<p>那么，一个原有的图文数据对就可以这样来扩展成它的instruction-following
+version：</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Human:XqXv<span class="op">&lt;</span>STOP<span class="op">&gt;</span>Assistant:Xc<span class="op">&lt;</span>STOP<span class="op">&gt;</span>  </span></code></pre></div>
+<p>不过这种方式虽然简便，但是获得的数据在多样性和难度上都比较欠缺。为了缓解这些问题，需要用ChatGPT/GPT-4创建包含视觉内容的指令数据。但是ChatGPT只能接收文字信息，因此需要一个把图像信息装换成文字信息的工具，而object
+detection给出的bounding box就是这样一个工具。</p>
+<p>有了一张图片的caption，以及其中物体的bounding
+box信息之后，就可以要求ChatGPT生成数据，LLaVA设计了三类数据：</p>
+<ul>
+<li>Conversation：提问题提问关于图片的问题，而assistant“看着”图片回答问题；问题包括图片中的物体类型、计数、动作、位置、位置关系等<br>
+</li>
+<li>Detailed
+description：人工构造了一系列prompt（下图），每次随机抽取一条生成包含详细图片信息的描述<br>
+</li>
+<li>Complex
+reasoning：前面两种都属于直接的视觉信息，而推理任务则包含一些遵循严谨和复杂逻辑推理的过程</li>
+</ul>
+<img src="/569d722c/llava_instr_list.png" class title="多模态入门">
+<p>下图是数据合成的一个例子，上半部分是图片的caption以及物体bounding
+box的信息，下半部分是根据三种任务合成的指令数据：</p>
+<img src="/569d722c/llava_syn_example.png" class title="多模态入门">
+<p>基于COCO数据集，共获得了158k条多模态指令数据，其中对话数据58k，详细描述23k，复杂推理77k。</p>
+<h2 id="模型">模型</h2>
+<p>LLaVA的多模态模型架构如下：</p>
+<img src="/569d722c/llava_archi.png" class title="多模态入门">
+<p>主模型是一个LLM，这里选用的Vicuna。</p>
+<p>对于输入的图像X，会使用CLIP训练的ViT-L/14作为vision
+encoder获得图像的representation
+Z，之后通过一个投影矩阵W把Z转换到LLM空间。</p>
+<h2 id="训练-2">训练</h2>
+<p>在训练的时候，会随机地把第一轮的输入中，图像和文本问题的顺序进行交换，以提升模型在多模态生成能力中的泛化性。</p>
+<p>LLaVA的多模态微调使用两阶段的训练。</p>
+<p>1、Pre-training for Feature Alignment</p>
+<p>使用CC3M的595k条数据。这一阶段的训练过程中，vision
+encoder和LLM的参数保持冻结不训练，只训练对齐的投影矩阵W。</p>
+<p>2、Fine-tuning End-to-End</p>
+<p>这一阶段，依然保持vision
+encoder的冻结，而训练W和LLM的参数。微调模型主要针对两个场景：</p>
+<ul>
+<li>多模态聊天机器人：使用前面从COCO中获得的158k数据<br>
+</li>
+<li>science QA：在ScienceQA上开发，这里把数据组织成一个单轮对话</li>
+</ul>
+<h1 id="instructblip">InstructBLIP</h1>
+<p>论文：《InstructBLIP: Towards General-purpose Vision-Language Models
+with Instruction Tuning》</p>
+<p>时间：2023年5月</p>
+<p>机构：Salesforce，HKUST，NTU</p>
+<p>在BLIP-2上进行instruction
+tuning，就获得InstructBLIP了。为什么要进行指令微调？因为指令微调之后模型在没见的任务上的泛化能力能够大大提升。</p>
+<p>论文中收集了11个任务，共26个数据集，训练的时候使用其中的13个数据集，保留另外13个作为评测数据。</p>
+<img src="/569d722c/instructblip_data.png" class title="多模态入门">
+<p>在BLIP-2的基础上，InstructBLIP使用instruction-aware
+Q-former。instruction-aware
+Q-former将指令文本token作为额外的输入，以提取和任务更加相关的图像特征。</p>
+<img src="/569d722c/instructblip_model.png" class title="多模态入门">
+<p>在指令微调的时候，由于每个数据集的大小不同，差异很大，直接混合随机采样有可能导致较小的数据集学习不足，而大数据集的任务则容易过拟合。因此文中提出根据数据集大小的平方根进行采样，再加上一些手动调整，防止过拟合。</p>
+<p>对于每个任务，设计了多个prompt：</p>
+<img src="/569d722c/instructblip_template.png" class title="多模态入门">
+<p>这里有个细节：对于回复都比较短的数据集，在prompt里加入了“short”或者“briefly”这样的指令，“假装”回复短时应为prompt要求的，从而避免在使用模型的时候总是生成太短的结果。</p>
+<h1 id="llava-1.5">LLaVA-1.5</h1>
+<p>论文：《Improved Baselines with Visual Instruction Tuning》</p>
+<p>时间：2023年10月</p>
+<p>机构：微软</p>
+<p>LLaVA-1.5是LLaVA的升级版，包括数据和模型。</p>
+<img src="/569d722c/llava1.5_intro.png" class title="多模态入门">
+<h2 id="模型-1">模型</h2>
+<ul>
+<li>首先是LLM的升级，增加了Vicuna-13B的版本，获得更强的理解和生成能力。</li>
+</ul>
+<blockquote>
+<p>Results on MM-Vet shows the most significant improvement when scaling
+the LLM to 13B, suggesting the importance of the base LLM’s capability
+for visual conversations.</p>
+</blockquote>
+<ul>
+<li><p>另外就是对齐文本和图像的模块由简单的dense层升级为两层的MLP层。</p></li>
+<li><p>此外就是把vision
+encoder从ViT-L/14-224px升级为ViT-L/14-336px。</p></li>
+</ul>
+<p>虽然使用更强的ViT模型可以提供更高的分辨率，获得更好的效果，但是这种替换模型的方法总有个头，因为预训练模型就那么大，从base到large，顶多就到xxl。以往的一些提升分辨率的做法是使用positional
+embedding
+interpolation，并且在微调的时候让模型适应到新的分辨率，这往往需要很大量的数据，效率不高。</p>
+<p>为了解决分辨率的问题，LLaVA-1.5的做法如下：</p>
+<img src="/569d722c/llava1.5_hd.png" class title="多模态入门">
+<p>把大图像分割成适配vision
+encoder的大小（比如224/336）的块，然后独立对这些小块进行编码，获得各个块的representation，最后再合并成target
+resolution 的feature
+map。这种分割难免会引入一些artifact，因此在这之外还加了一路操作，对原图做resize，以提供全局的信息。</p>
+<p>这种做法让LLaVA-1.5理论上可以处理resolution的数据，同时也保证了数据效率（不用重训）。</p>
+<h2 id="数据-1">数据</h2>
+<p>1、增加Academic task oriented data</p>
+<p>数据上，首先纳入了更多的数据集，包括VQA、OCR，region-level
+perception的数据：OKVQA、A-OKVQA、OCRVQA、TextCaps等。</p>
+<p>实验上，发现加入region-level
+perception数据能提升模型处理fine-grained视觉信息的能力。</p>
+<p>2、数据格式 &amp; prompt</p>
+<p>LLaVA在回答短问题的时候，效果没那么好，因为训练的过程中缺乏相关的数据。而InstructBLIP引入了相关数据，但是却没法在长回答和短回答的VQA任务上很好地平和，即在需要长回答的情况下，可能也会给出短的答案，如下图：</p>
+<img src="/569d722c/llava1.5_example.png" class title="多模态入门">
+<p>造成InstructBLIP这个问题的原因：（1）没有微调LLM（2）prompt不够明确。</p>
+<p>因此LLaVA-1.5优化了prompt的设计，使用一个统一的能够指示输出格式的prompt。当需要简短答案是，会在prompt加上“Answer
+the question using a single word or
+phrase.”，如上图。在这样的prompt下，</p>
+<h2 id="实验">实验</h2>
+<p>各种改进的效果如下表，蓝色是数据的部分，粉色是模型部分，而黄色是分辨率的变化：</p>
+<img src="/569d722c/llava1.5_scaling.png" class title="多模态入门">
+<p>而和其他模型在各个指标上的对比如下：</p>
+<img src="/569d722c/llava1.5_compare.png" class title="多模态入门">
+<p>LLaVA-1.5整体的训练成本大约是20小时 ×
+8卡A100机器，相比LLM来说并不大。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】BLIP: Bootstrapping Language-Image Pre-training for Unified
+Vision-Language Understanding and Generation
+https://arxiv.org/abs/2201.12086<br>
+【2】BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image
+Encoders and Large Language Models
+https://arxiv.org/abs/2301.12597<br>
+【3】InstructBLIP: Towards General-purpose Vision-Language Models with
+Instruction Tuning https://arxiv.org/abs/2305.06500<br>
+【4】https://zhuanlan.zhihu.com/p/685233706<br>
+【5】Flamingo: a Visual Language Model for Few-Shot Learning
+https://arxiv.org/abs/2204.14198<br>
+【6】Visual Instruction Tuning https://arxiv.org/abs/2304.08485<br>
+【7】Improved Baselines with Visual Instruction Tuning
+https://arxiv.org/abs/2310.03744<br>
+【8】https://zhuanlan.zhihu.com/p/721428034</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/569d722c.html" title="多模态入门(二)--Flamingo,LLaVA系列和BLIP系列">https://saicat.github.io/569d722c.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E5%A4%9A%E6%A8%A1%E6%80%81/" rel="tag"><i class="fa fa-tag"></i> 多模态</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/CV/" rel="tag"><i class="fa fa-tag"></i> CV</a>
+              <a href="/tags/CNN/" rel="tag"><i class="fa fa-tag"></i> CNN</a>
+              <a href="/tags/%E6%97%A0%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" rel="tag"><i class="fa fa-tag"></i> 无监督学习</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/e259c7b2.html" rel="prev" title="训练数据合成(三)">
+                  <i class="fa fa-angle-left"></i> 训练数据合成(三)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/f16505b3.html" rel="next" title="多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列">
+                  多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">545k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">16:31</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

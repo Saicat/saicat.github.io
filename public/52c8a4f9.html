@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  最近InternVL2.5和Mini-InternVL-2相继发布。看了下，发现Intern模型在MLLM领域的相关工作还挺多的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="多模态入门(五)--InternVL系列">
+<meta property="og:url" content="https://saicat.github.io/52c8a4f9.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  最近InternVL2.5和Mini-InternVL-2相继发布。看了下，发现Intern模型在MLLM领域的相关工作还挺多的。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ixc_train.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ixc_freeze_ablation.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ixc_ptm_data.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ixc_sft_data.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ixc_inter_gen.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ixc2_plora.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ixc2.5_framework.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/internvl2_model.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_archi.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_vits.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_models.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_datatype.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_trainconfig.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_train_pipeline.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_data_config.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_samples.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_filter.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_ptm_data.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/ivl2.5_sft_data.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/miniivl_perf.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/miniivl_archi.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/miniivl_format.png">
+<meta property="og:image" content="https://saicat.github.io/52c8a4f9/miniivl2_model.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-01-22T11:50:10.000Z">
+<meta property="article:modified_time" content="2025-01-22T12:50:07.991Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="多模态">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="SFT">
+<meta property="article:tag" content="CV">
+<meta property="article:tag" content="无监督学习">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/52c8a4f9/ixc_train.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/52c8a4f9.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/52c8a4f9.html","path":"52c8a4f9.html","title":"多模态入门(五)--InternVL系列"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>多模态入门(五)--InternVL系列 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#internlm-xcomposer"><span class="nav-number">1.</span> <span class="nav-text">InternLM-XComposer</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">1.1.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#interleaved-image-text-composition"><span class="nav-number">1.2.</span> <span class="nav-text">Interleaved Image-Text
+Composition</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#internlm-xcomposer-2"><span class="nav-number">2.</span> <span class="nav-text">InternLM-XComposer-2</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.1.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83-1"><span class="nav-number">2.2.</span> <span class="nav-text">训练</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#internlm-xcomposer-2.5"><span class="nav-number">3.</span> <span class="nav-text">InternLM-XComposer-2.5</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#internvl-2"><span class="nav-number">4.</span> <span class="nav-text">InternVL-2</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#internvl-2.5"><span class="nav-number">5.</span> <span class="nav-text">InternVL-2.5</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#architecture"><span class="nav-number">5.1.</span> <span class="nav-text">Architecture</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83-2"><span class="nav-number">5.2.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">5.3.</span> <span class="nav-text">数据</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#mini-internvl"><span class="nav-number">6.</span> <span class="nav-text">Mini-InternVL</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#mini-internvl-2"><span class="nav-number">7.</span> <span class="nav-text">Mini-InternVL-2</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">8.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">67</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">66</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/52c8a4f9.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="多模态入门(五)--InternVL系列 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          多模态入门(五)--InternVL系列
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2025-01-22 19:50:10 / 修改时间：20:50:07" itemprop="dateCreated datePublished" datetime="2025-01-22T19:50:10+08:00">2025-01-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/%E5%A4%9A%E6%A8%A1%E6%80%81/" itemprop="url" rel="index"><span itemprop="name">多模态</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>17 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>最近InternVL2.5和Mini-InternVL-2相继发布。看了下，发现Intern模型在MLLM领域的相关工作还挺多的。</p>
+<p>前面的文章已经讲解过InternLM-1/2/2.5，而在多模态入门(三)中，也学习了InternVL-1/1.5，这里就再继续学习下InternLM-XComposer系列、Mini-InternVL系列以及InternVL-2/2.5。</p>
+<p>重点的内容应该是在InternVL-2.5部分，披露的细节比较多，模型的效果也最好。</p>
+<h1 id="internlm-xcomposer">InternLM-XComposer</h1>
+<p>论文：《InternLM-XComposer: A Vision-Language Large Model for
+Advanced Text-image Comprehension and Composition》</p>
+<p>时间：2023年9月</p>
+<p>机构：上海AI Lab</p>
+<p>InternLM-XComposer是基于InternLM开发的一个多模态模型。它的一个特点就是不仅能生成纯文本的结果，还能在这个基础上（通过搜索）配图，给出图文交错的文章。</p>
+<h2 id="训练">训练</h2>
+<p>1、模型结构</p>
+<p>模型结构上，依然是包含三大常规部分：<br>
+- vision encoder：使用EVA-CLIP，标准CLIP ViT的一个变体<br>
+- perceive
+sampler：用于把原始的257个token减少到64个，来和LLM对齐；初始化参数来自BLIP2；所有输入都会resize到224×224，patch
+size=14<br>
+- LLM：用InternLM初始化</p>
+<p>2、训练</p>
+<p>基于这个参数初始化后，训练包括预训练和SFT两个阶段。两个阶段的冻结和训练参数情况如下：</p>
+<img src="/52c8a4f9/ixc_train.png" class title="多模态入门">
+<p>可以看到整个过程中vision encoder都是保持冻结的，而perceive
+sampler则是全程保持可训练。</p>
+<p>文中对冻结哪部分参数做了消融实验：</p>
+<img src="/52c8a4f9/ixc_freeze_ablation.png" class title="多模态入门">
+<p>从实验结果看，冻结perceive
+sampler会对最终模型的效果带来比较大的损失，因此最终选择在预训练和微调都保持perceive
+sampler参数可训练。</p>
+<p>3、数据</p>
+<p>预训练数据如下，总共有1.1B张图片（相当于70.4B
+token），77B文本token的数据：</p>
+<img src="/52c8a4f9/ixc_ptm_data.png" class title="多模态入门">
+<ul>
+<li>包含了训练InternLM所用的文本数据，帮助模型在多模态训练过程中保持语言能力<br>
+</li>
+<li>in-house concept
+data：这部分私有数据是从web数据中挖掘的，包含了大量visual
+concept的优质数据，以及相关的detail explanation</li>
+</ul>
+<p>而SFT阶段包含了两大类数据，multi-task
+training和instruction-tuning：</p>
+<img src="/52c8a4f9/ixc_sft_data.png" class title="多模态入门">
+<p>multi-task
+training的数据都构造成多轮对话的格式。训练这些数据时，有一个特别的点是使用LoRA来微调，这样可以帮助模型保持原LLM的语言能力。</p>
+<h2 id="interleaved-image-text-composition">Interleaved Image-Text
+Composition</h2>
+<p>前面说到InternLM-XComposer可以生成图文交错的文章，其方法主要分成三步：<br>
+- （1）生成纯文本结果<br>
+- （2）找到文本结果中可以/需要插入图像的位置，并生成对应的caption<br>
+-
+（3）用上一步的caption进行图像检索，获得候选，并选择最符合的图像，获得最终结果</p>
+<img src="/52c8a4f9/ixc_inter_gen.png" class title="多模态入门">
+<p>第（2）步中，训练数据使用真实的图文交错文章，并利用GPT-4获取caption；第（3）步中，图像的检索使用CLIP。</p>
+<h1 id="internlm-xcomposer-2">InternLM-XComposer-2</h1>
+<p>论文：《InternLM-XComposer2: Mastering Free-form Text-Image
+Composition and Comprehension in Vision-Language Large Models》</p>
+<p>时间：2024年1月</p>
+<p>InternLM-XComposer2
+7B模型下载：https://github.com/InternLM/InternLM-XComposer</p>
+<h2 id="模型">模型</h2>
+<p>InternLM-XComposer2认为，之前的多模态对齐方法主要有两大类：<br>
+-
+把图像token和文本token视为完全同等的存在，一视同仁地处理；这种方法忽视了各个模态之间的固有区别<br>
+-
+把图像tokne和文本tokne视为完全不同的存在，分别进行处理；这种方法导致对齐的成本大大增加</p>
+<p>InternLM-XComposer2里则是提出了另外一种方法，partial
+LoRA，来进行LLM和vision encoder的对齐：</p>
+<img src="/52c8a4f9/ixc2_plora.png" class title="多模态入门">
+<p>训练时模型的设置：</p>
+<ul>
+<li>LLM：基于InternLM-2-7B-ChatSFT初始化<br>
+</li>
+<li>Vision encoder：基于OpenAI CLIP
+ViT-L-14-336初始化，并把分辨率提升到490x490以提升效果<br>
+</li>
+<li>Partial LoRA：rank256</li>
+</ul>
+<p>另外预训练中还使用了layer-wise LR，LR随层数递减，衰减系数为0.9。</p>
+<h2 id="训练-1">训练</h2>
+<p>1、预训练</p>
+<p>预训练中，LLM的参数保持冻结，训练vision encoder和p-lora。</p>
+<p>预训练的数据包含三个层级的目标：<br>
+- general semantic
+alignment：一般的通用对齐，让模型学习理解图像的基本内容，比如能知道一张爱因斯坦的照片包含“人类”这个概念；所用数据包括各种caption数据<br>
+- world knowledge
+alignment：包含知识，比如能够知道图像上的人是爱因斯坦，是物理学家；这里使用InternLM-XComposer中构建的概念数据集<br>
+- vision capability
+enhancement：高级的能力，比如OCR、grounding以及结构化信息的识别（图表）等</p>
+<p>2、SFT</p>
+<p>和InternLM-XComposer类似，几个细节是：<br>
+- 也使用decay factor=0.9的layer-wise LR策略<br>
+- 学习率是预训练的20%</p>
+<h1 id="internlm-xcomposer-2.5">InternLM-XComposer-2.5</h1>
+<p>论文：《InternLM-XComposer-2.5: A Versatile Large Vision Language
+Model Supporting Long-Contextual Input and Output》</p>
+<p>时间：2024年7月</p>
+<p>InternLM-XComposer-2.5，简称IXC-2.5，相比上一代，效果上主要有三个升级：<br>
+- 更高分辨率：复用IXC-2的ViT，分辨率从490x490提升到560x560<br>
+- 细粒度视频理解：把视频视为由几十帧到几百帧构成的超大图像<br>
+- 多轮多图像对话</p>
+<p>IXC-2.5整体framework如下：</p>
+<img src="/52c8a4f9/ixc2.5_framework.png" class title="多模态入门">
+<p>预训练和微调的大致流程和IXC-2是差不多的，只是数据上进行了一些更新。</p>
+<p>在IXC-2.5的基础上，研究人员构建了两个应用：网页生成和文章撰写。</p>
+<p>网页生成就是根据输入的网页图片和命令，自动构建网页。训练这个能力最重要的任务就是搞数据。这里的数据来自于Stack
+v2，进行了一些清洗之后获得了250k的网页数据，然后用这些数据进行LoRA训练。</p>
+<p>而文章撰写能力则是在SFT的基础上，增加了DPO，以提升生成的效果。</p>
+<h1 id="internvl-2">InternVL-2</h1>
+<p>时间：2024年7月</p>
+<p>InternVL2没有技术报告，只有一篇blog，https://internvl.github.io/blog/2024-07-02-InternVL-2.0/。</p>
+<p>InternVL-2是在InternVL-1.5上的优化版本，主要有3点优化：<br>
+- 多阶段的训练策略<br>
+- 更精细的训练数据<br>
+- 支持多模态的输出</p>
+<img src="/52c8a4f9/internvl2_model.png" class title="多模态入门">
+<h1 id="internvl-2.5">InternVL-2.5</h1>
+<p>论文：《Expanding Performance Boundaries of Open-Source Multimodal
+Models with Model, Data, and Test-Time Scaling》</p>
+<p>时间：2024年12月</p>
+<p>InternVL-2.5相比InternVL-1.5和InternVL-2在效果上有了比较大的提升。</p>
+<h2 id="architecture">Architecture</h2>
+<p>大的架构上，InternVL-2.5依然保持和InternVL-1.5相同的设计，使用“ViT-MLP-LLM”的范式：</p>
+<img src="/52c8a4f9/ivl2.5_archi.png" class title="多模态入门">
+<p>1、vision encoder</p>
+<p>InternVL-2.5中使用了两个版本的vision
+encoder，大小分别为6B和0.3B。</p>
+<p>在InternVL-1中首次使用了6B的ViT模型，InternViT-6B-224px；不过那时候的效果还没有那么好，为了提升vision
+encoder的效果，这里进一步对这个6B模型进行训练，优化点包括：<br>
+- 使用更大的分辨率（224--&gt;448）/动态分辨率<br>
+- 进行增量预训练（连接LLM后）</p>
+<p>获得了InternViT-6B之后，通过蒸馏得到InternViT-300M-448px-Distill。和6B模型不同，300M模型使用standard
+layernorm，并且没有使用QK-Norm。</p>
+<p>为了降低蒸馏成本，300M模型并不是从零初始化，而是借用了CLIP-ViT-Large-336px的参数。虽然二者的架构并不完全相同，不过效果总比随机初始化要好。</p>
+<p>蒸馏之后，还做了一个增量预训练，在更多样化的数据上训练300M模型，得到
+InternViT-300M-448px-V2.5。</p>
+<p>还有一个细节是，InternVL-2.5使用pixel unshuffle
+operation降低了输入token的数量，因此448x448的输入图像最后会表达成256个token。</p>
+<p>前面这些操作中间产生了好几个版本的模型，都在下面的表格里：</p>
+<img src="/52c8a4f9/ivl2.5_vits.png" class title="多模态入门">
+<p>2、LLM</p>
+<p>InternVL早期版本使用的LLM有很多来源，而InternVL-2.5中主要是使用InternLM-2.5和Qwen-2.5，这两个更新的LLM：</p>
+<img src="/52c8a4f9/ivl2.5_models.png" class title="多模态入门">
+<h2 id="训练-2">训练</h2>
+<p>1、Dynamic High-Resolution</p>
+<p>动态分辨率在InternVL-1.5的基础上进一步优化了。主要有这几个步骤：<br>
+-
+首先计算输入图像的原始宽高比，并从一系列预定义的宽高比中选择最接近的一个；这一步的目的是要把图像切分成多个448x448的子图，子图的数量被预定义在n_min和n_max之间，那么预定的宽高比其实就由预定义的子图的样式决定；输入图像的宽高比和预定义的宽高比的差异计算为W/H的绝对值差<br>
+- 如果出现多个相同的候选宽高比，优先选择图像大小差异小的<br>
+- 按照选择预定宽高，resize原图，并把图像切分成448x448的子图</p>
+<p>如果原始图像被切分了（如果原始图像太小就不需要切分），那么还会生成一张缩略图，贴在子图列表后面。这样的动态分辨率方法也可以扩展到多图或者视频输入：</p>
+<img src="/52c8a4f9/ivl2.5_datatype.png" class title="多模态入门">
+<ul>
+<li>多图：把子图的数量按比例分配给各张图片<br>
+</li>
+<li>视频：每帧图片都直接resize到448x448</li>
+</ul>
+<p>实际使用中，对于多图数据集、高分辨率数据集以及图表信息数据等，n_max设得比较大，比如24/36；而对于低分辨率的数据集，则设得比较低，比如6/12。</p>
+<p>2、training pipeline</p>
+<p>训练分成3个stage：<br>
+-
+stage1（对齐）：只训练MLP，使用的LR也比较大，能够让MLP快速学习对齐；另外这个阶段就开始使用动态分辨率了<br>
+-
+stage1.5（预训练）：这个阶段训练MLP和ViT；所使用的LR相对低一些，防止灾难性遗忘<br>
+-
+stage2（SFT）：全部参数进行训练，这一阶段的数据质量最为重要，即使是少量的异常样本比如几千条不好的数据，都已经足以影响模型的生成效果了；这个阶段超参策略相对简单，对所有参数都保持相同的LR</p>
+<p>各个阶段的训练设置：</p>
+<img src="/52c8a4f9/ivl2.5_trainconfig.png" class title="多模态入门">
+<p>那么其中的stage1.5是需要拿出来说一下的。研究人员实验发现，使用较小的LLM在stage1.5训练了ViT之后，把ViT连接到更大的LLM上，就可以保持比较好的效果了，因此也就引出一个被称为progressive
+scaling
+strategy的方法：在小LLM上训练好ViT，再连接大的LLM，就可以直接只使用stage1（对齐）
++ stage2（SFT）的训练，从而减少很多训练量，降低成本。</p>
+<img src="/52c8a4f9/ivl2.5_train_pipeline.png" class title="多模态入门">
+<p>3、训练优化</p>
+<p>训练中，额外还使用了两个优化策略。</p>
+<p>（1）JPEG compression</p>
+<p>为了避免过拟合，随机使用quality
+level在75到100之间的设置进行JPEG图像压缩。</p>
+<p>需要注意的是，这个方法不用在视频数据中，因为要保持每帧都有相同的质量。</p>
+<p>（2）Loss reweighting</p>
+<p>一般来说NTP的训练是对整个训练batch中的token进行平均，这样每个训练token对最终loss的贡献和影响是一样大的。这种情况下可能会导致训练结果受长度较长的数据影响更大。而如果以样本为单位进行平均，那么每条训练样本对loss的贡献是一样的，这又会导致短的样本在loss中的权重更大。两种情况的公式表达如下，x为样本的token数量：</p>
+<p><span class="math display">\[\mathcal{L}=\frac{w_i}{\sum_jw_j}\cdot\mathcal{L}_i,\quad
+w_i=\begin{cases}\frac{1}{x^0},&amp;\text{for token
+averaging}\\\frac{1}{x^1},&amp;\text{for sample
+averaging},&amp;\end{cases}\]</span></p>
+<p>为了平衡这两种方案，InternVL-2.5的做法是使用</p>
+<p><span class="math display">\[w_{i}=\frac{1}{x^{0.5}}\]</span></p>
+<h2 id="数据">数据</h2>
+<p>首先，不同类型的数据（单图、多图、视频、文本）有不同的增强、采样设置：</p>
+<img src="/52c8a4f9/ivl2.5_data_config.png" class title="多模态入门">
+<p>此外，还有以下几个操作。</p>
+<p>1、data packing</p>
+<p>data
+packing是大模型训练的常规做法了，这样可以减少padding，提升训练效率。对于多模态数据的packing，有两个要考虑的因素：（a）sequence长度（b）image
+tile number for ViT。</p>
+<p>考虑到这两个因素，整个packing策略分为四步：</p>
+<p>（1）select：这一步不用还不用考虑packing的事，而从数据池采样一些单条的数据；对于过长的单条数据，会把它们切分成更小的item；“过长”有两个指标，只要命中一个就是过长：要么总的token数据量超过L_max，或者image
+tile的数量超过T_max；切分后的item保证长度≤L_max，image
+tile数量≤T_max；切分后的item都会被视作independent的样本</p>
+<p>（2）search：这一步从buffer中搜索一个sample，和当前已有的sample拼接在一起；这里要保证拼接后的结果依然满足不过长的标准，也就是总token数和image
+tile数都不超过最大值；如果buffer中有多条sample都符合要求，那么选择最长、image
+tile最多的那个；出于这个考虑，维护buffer的时候可以按长度和image
+tile从大到小排序，方便使用二分检索快速搜索</p>
+<p>（3）pack：从上一步搜索的sample拼接到一起，注意每个独立sample在attention中只能看到自己的token，不能看到其他拼接样本的token；基于此，一条独立样本中的多个item的positional
+index也独立计数的</p>
+<p>（4）maintain：如果当前的packed sample达到长度或者image
+tile上限，那么就会输出用于训练；否则就会把他放回到buffer
+list中；为了避免buffer耗费太多空间，buffer有一个最大size，如果buffer已经达到最大size，那么就把当前最长的样本输出用于训练，释放空间</p>
+<p>2、数据过滤</p>
+<p>有一个观察，LLM对噪音数据的敏感程度明显高于vision
+encoder，即使只有少量几千个异常样本也会影响最终模型的效果。这些噪音数据中，影响最大的就是具有重复模式的数据，这些数据可能会让模型输出陷入重复循环的样式，严重影响用户体验，并且也使得test-time
+scaling的策略没法进行。</p>
+<img src="/52c8a4f9/ivl2.5_samples.png" class title="多模态入门">
+<p>那么一个最直接的方法就是进行数据过滤，pipeline如下图：</p>
+<img src="/52c8a4f9/ivl2.5_filter.png" class title="多模态入门">
+<p>对于纯文本数据，有三个策略：<br>
+-
+LLM-Based质量打分：首先把数据分成不同的领域，包括code、math、general、stem等，然后用LLM加上各个领域对应的prompt给每个样本打分，分数从0~10，然后删除低于阈值（e.g.
+7）的数据<br>
+- 重复检测：也是利用LLM +
+prompt检测重复样本，然后后面会有人工review，决定阈值再删除对应数据<br>
+- 规则：包括长度异常、过长的zero sequence、重复行过多的样本</p>
+<p>对于多模态数据，鉴于现有的MLLM在打分方面的能力还不是很行，因此专注在重复检测和规则两种策略来过滤。几个细节：<br>
+- 重复检测的时候略过了高质量的学术数据集<br>
+- 规则检验找出来的异常数据会人工review再确认是否合理</p>
+<p>3、data mixture</p>
+<p>（1）预训练</p>
+<p>在预训练阶段所包含的数据还是很多的：</p>
+<img src="/52c8a4f9/ivl2.5_ptm_data.png" class title="多模态入门">
+<p>值得注意的是，所有数据都被构建成对话格式，对于那些本身不是对话格式的数据，会构建问题把它们转成对话格式。这个阶段的数据尽可能多地包含各种内容，提高模型的泛化能力，而没有特别考虑数据的质量，高低质量的数据都会用（因为只有MLP和ViT会被训练）。</p>
+<p>研究人员认为，理想的状况是在预训练阶段把SFT(stage
+2)要用的数据都包含进去，即SFT数据应该是预训练数据的子集，这样让模型能够充分学习。不过实践中，由于stage1.5的成本比较高，所以往往只能包含部分stage
+2的数据，那些持续新增的SFT数据就没法放进预训练中了。</p>
+<p>（2）SFT</p>
+<p>从InternVL-1.5的5.1M，InternVL-2的7.3M，到InternVL-2.5的16.3M，SFT数据量有了比较大的提升。InternVL-2.5所包含的SFT数据如下：</p>
+<img src="/52c8a4f9/ivl2.5_sft_data.png" class title="多模态入门">
+<h1 id="mini-internvl">Mini-InternVL</h1>
+<p>论文：《Mini-InternVL: A Flexible-Transfer Pocket Multimodal Model
+with 5% Parameters and 90% Performance》</p>
+<p>时间：2024年10月</p>
+<p>Mini-InternVL相比前面InternVL各个版本，在技术上没有太多改变，可以认为是一次小型化的实践。Mini-InternVL系列有1B、2B、4B三个规模。如文章标题，Mini-InternVL用5%的参数量实现了大模型90%的效果。（至于10%的损失作为小型化的代价是否是可以接受的就见仁见智了）</p>
+<p>Mini-InternVL的效果：</p>
+<img src="/52c8a4f9/miniivl_perf.png" class title="多模态入门">
+<p>1、框架和训练</p>
+<p>Mini-InternVL使用CLIP-ViT-L-336px初始化一个300M的ViT，并用6B的ViT做teacher进行蒸馏，获得InternViT-300M。</p>
+<p>Mini-InternVL的训练分成两个阶段：<br>
+- 对齐：对齐阶段只训练MLP<br>
+- instruction tuning：全参微调</p>
+<p>这里有点意外的是在对齐阶段之后，没有对ViT或LLM进行大规模的预训练。整体框架和训练如下图所示：</p>
+<img src="/52c8a4f9/miniivl_archi.png" class title="多模态入门">
+<p>2、数据</p>
+<p>数据上，Mini-InternVL对各种任务都设计了对话数据格式，各个任务有特殊的token用于标识重要内容，比如bounding
+box、类别候选等，如下图：</p>
+<img src="/52c8a4f9/miniivl_format.png" class title="多模态入门">
+<h1 id="mini-internvl-2">Mini-InternVL-2</h1>
+<p>时间：2024年12月</p>
+<p>Mini-InternVL2没有技术报告，有一篇blog，https://internvl.github.io/blog/2024-10-21-Mini-InternVL-2.0/。从blog看，只有两个训练阶段不冻结的可参数参数多了些：</p>
+<img src="/52c8a4f9/miniivl2_model.png" class title="多模态入门">
+<p>但是blog里report的结果又和一代是相同的，这就有点奇怪了。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】InternLM-XComposer2: Mastering Free-form Text-Image Composition
+and Comprehension in Vision-Language Large Models<br>
+【2】InternVL2博客：https://internvl.github.io/blog/2024-07-02-InternVL-2.0/<br>
+【3】Mini-InternVL: A Flexible-Transfer Pocket Multimodal Model with 5%
+Parameters and 90% Performance<br>
+【4】Expanding Performance Boundaries of Open-Source Multimodal Models
+with Model, Data, and Test-Time Scaling<br>
+【5】Mini-InternVL2博客：https://internvl.github.io/blog/2024-10-21-Mini-InternVL-2.0/<br>
+【6】InternLM-XComposer: A Vision-Language Large Model for Advanced
+Text-image Comprehension and Composition<br>
+【7】InternLM-XComposer-2.5: A Versatile Large Vision Language Model
+Supporting Long-Contextual Input and Output</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/52c8a4f9.html" title="多模态入门(五)--InternVL系列">https://saicat.github.io/52c8a4f9.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E5%A4%9A%E6%A8%A1%E6%80%81/" rel="tag"><i class="fa fa-tag"></i> 多模态</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/SFT/" rel="tag"><i class="fa fa-tag"></i> SFT</a>
+              <a href="/tags/CV/" rel="tag"><i class="fa fa-tag"></i> CV</a>
+              <a href="/tags/%E6%97%A0%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0/" rel="tag"><i class="fa fa-tag"></i> 无监督学习</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/e00debee.html" rel="prev" title="多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B">
+                  <i class="fa fa-angle-left"></i> 多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">545k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">16:31</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

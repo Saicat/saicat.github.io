@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  书接上回，训练数据合成(二)，继续看一些数据合成相关工作，这次很多都是和代码相关的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="训练数据合成(三)">
+<meta property="og:url" content="https://saicat.github.io/e259c7b2.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  书接上回，训练数据合成(二)，继续看一些数据合成相关工作，这次很多都是和代码相关的。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/survey_classes.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/survey_pipeline.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/instructionpt_intro.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/instructionpt_tune.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/instructionpt_data.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/instructionpt_syn.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/instructionpt_template.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/instructionpt_hyperparam.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/instructionpt_perf.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/instructionpt_perf_2.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/instructionpt_domain_perf.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/auto_evol_intro.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/auto_evol_example.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/auto_evol_fail.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/wavecoder_intro.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/wavecoder_task.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/wavecoder_lang.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/wavecoder_framework.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/wavecoder_example.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/semcoder_intro.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/semcoder_compare.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/autocder_intro.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/autocoder_compare.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/format_intro.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/distill_intro.png">
+<meta property="og:image" content="https://saicat.github.io/e259c7b2/distill_example.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2024-11-17T13:46:36.000Z">
+<meta property="article:modified_time" content="2024-11-20T13:54:57.260Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="数据合成">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/e259c7b2/survey_classes.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/e259c7b2.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/e259c7b2.html","path":"e259c7b2.html","title":"训练数据合成(三)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>训练数据合成(三) | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#codellms%E7%9A%84%E6%95%B0%E6%8D%AE%E5%90%88%E6%88%90%E7%BB%BC%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">CodeLLMs的数据合成综述</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#preliminaries"><span class="nav-number">1.1.</span> <span class="nav-text">Preliminaries</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#data-synthesis-techniques"><span class="nav-number">1.2.</span> <span class="nav-text">Data Synthesis Techniques</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#model-building-phases-%E7%BB%B4%E5%BA%A6"><span class="nav-number">1.2.1.</span> <span class="nav-text">Model Building Phases 维度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#core-objectives-%E7%BB%B4%E5%BA%A6"><span class="nav-number">1.2.2.</span> <span class="nav-text">Core Objectives 维度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E7%89%B9%E5%88%AB%E4%BB%BB%E5%8A%A1"><span class="nav-number">1.2.3.</span> <span class="nav-text">其他特别任务</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#data-filtering-techniques"><span class="nav-number">1.3.</span> <span class="nav-text">Data Filtering Techniques</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#instruction-pre-training"><span class="nav-number">2.</span> <span class="nav-text">Instruction Pre-Training</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#instruction-synthesizer"><span class="nav-number">2.1.</span> <span class="nav-text">Instruction Synthesizer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#lm-pre-training"><span class="nav-number">2.2.</span> <span class="nav-text">LM Pre-Training</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">2.3.</span> <span class="nav-text">效果</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#auto-evol-instruct"><span class="nav-number">3.</span> <span class="nav-text">Auto Evol-Instruct</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#wavecoder"><span class="nav-number">4.</span> <span class="nav-text">WaveCoder</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%90%88%E6%88%90"><span class="nav-number">4.1.</span> <span class="nav-text">数据合成</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#semcoder"><span class="nav-number">5.</span> <span class="nav-text">Semcoder</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#autocoder"><span class="nav-number">6.</span> <span class="nav-text">Autocoder</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E6%A0%BC%E5%BC%8F%E4%BC%98%E5%8C%96"><span class="nav-number">7.</span> <span class="nav-text">代码格式优化</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#personalised-distillation"><span class="nav-number">8.</span> <span class="nav-text">Personalised Distillation</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E6%95%B0%E6%8D%AE%E8%BF%87%E6%BB%A4"><span class="nav-number">9.</span> <span class="nav-text">关于数据过滤</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#superfiltering"><span class="nav-number">9.1.</span> <span class="nav-text">Superfiltering</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#codebertscore"><span class="nav-number">9.2.</span> <span class="nav-text">CodeBERTScore</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">10.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">11.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">67</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">66</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/e259c7b2.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="训练数据合成(三) | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          训练数据合成(三)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-11-17 21:46:36" itemprop="dateCreated datePublished" datetime="2024-11-17T21:46:36+08:00">2024-11-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-11-20 21:54:57" itemprop="dateModified" datetime="2024-11-20T21:54:57+08:00">2024-11-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>17k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>31 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>书接上回，<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(二)</a>，继续看一些数据合成相关工作，这次很多都是和代码相关的。</p>
+<h1 id="codellms的数据合成综述">CodeLLMs的数据合成综述</h1>
+<p>论文：《Mastering the Craft of Data Synthesis for CodeLLMs》</p>
+<p>时间：2024年10月</p>
+<p>这是一篇关于代码模型中所使用的数据合成方法的综述。根据不同的分类维度，各个代码数据合成相关工作被分类成以下这样：</p>
+<img src="/e259c7b2/survey_classes.png" class title="数据合成">
+<h2 id="preliminaries">Preliminaries</h2>
+<p>先科普一下CodeLLMs通常的data curation
+pipeline。一般有这么四个step：<br>
+- Seed Input Collection：收集原始启动数据，用于指导、启发数据合成<br>
+- Data Synthesis：合成新数据的过程<br>
+- Data
+Filtering：过滤掉低质量、不符合要求的合成数据，避免引入幻觉等问题<br>
+- Data Evaluation：验证得到的数据的效果，通常需要训练模型验证</p>
+<img src="/e259c7b2/survey_pipeline.png" class title="数据合成">
+<h2 id="data-synthesis-techniques">Data Synthesis Techniques</h2>
+<p>如图1，综述从三个维度来划分代码数据合成的方法，从里面提取了一些工作出来看看。</p>
+<h3 id="model-building-phases-维度">Model Building Phases 维度</h3>
+<p>首先是按模型训练阶段划分。</p>
+<p>1、预训练</p>
+<ul>
+<li>Phi系列工作（《Textbooks Are All You
+Need》），通过合成的教科书进行预训练，用少量的数据就能到比较好的效果<br>
+</li>
+<li>CodeLlama提出代码执行反馈的方法，提高数据质量<br>
+</li>
+<li>《Instruction pretraining: Language models are supervised multitask
+learners》用instruction synthesizer从无监督数据获取instruction-response
+pair，使用量级更小的instruction数据进行预训练就能获得比同量级下无监督数据更好的效果</li>
+</ul>
+<p>2、SFT</p>
+<ul>
+<li>经典工作Self-Instruct &amp; Evol-Instruct<br>
+</li>
+<li>Magicoder利用OSS-INSTRUCT的方法（OSS=open-source code
+snippets），合成了75k的指令数据，并获得了不错的效果。<br>
+</li>
+<li>Auto Evol-Instruct：《Automatic instruction evolving for large
+language models》，可以自动端到端进行指令进化<br>
+</li>
+<li>WaveCoder：《WaveCoder: Widespread and versatile enhancement for
+code large language models by instruction
+tuning》，合成CodeSeaXDataset，涵盖了代码摘要、生成、翻译和修复等任务。<br>
+</li>
+<li>Semcoder：《Semcoder: Training code language models with
+comprehensive semantics》，合成PyX数据集<br>
+</li>
+<li>Autocoder：《Autocoder: Enhancing code large language model with
+AIEV-INSTRUCT》，引入了AIEV-INSTRUCT，一个 two-stage agent interaction
+framework</li>
+</ul>
+<p>3、Preference alignment</p>
+<ul>
+<li>CodeUltraFeedback：偏好数据集<br>
+</li>
+<li>PLUM：用于训练 CodeLLM 的偏好学习框架</li>
+</ul>
+<h3 id="core-objectives-维度">Core Objectives 维度</h3>
+<p>1、Quality</p>
+<ul>
+<li>《LLM-assisted code cleaning for training accurate code
+generators》通过增强代码结构和可读性来提高质量<br>
+</li>
+<li>《Personalized distillation: Empowering opensourced LLMs with
+adaptive learning for code generation》<br>
+</li>
+<li>《Language models can teach themselves to program
+better》使用self-play来增强CodeLLM<br>
+</li>
+<li>Autocoder通过模拟人类编写代码 +
+单元测试执行反馈来获得高质量数据</li>
+</ul>
+<p>2、Diversity</p>
+<p>《What makes good data for alignment? a comprehensive study of
+automatic data selection in instruction tuning》和《#instag: Instruction
+tagging for analyzing supervised fine-tuning of large language
+models》都指出数据多样性对模型alignment的影响很大。</p>
+<ul>
+<li>MagicCoder从真实数据里采样来提升多样性<br>
+</li>
+<li>《Automatic instruction evolving for large language
+models》用LLM自主设计计划规则<br>
+</li>
+<li>WaveCoder用KCenterGreedy算法选择多样化样本<br>
+</li>
+<li>《Training language models on synthetic edit sequences improves code
+synthesis》</li>
+</ul>
+<p>3、Reasoning</p>
+<ul>
+<li>《LLM-assisted code cleaning for training accurate code
+generators》对function进行summarization，并加到注释里<br>
+</li>
+<li>Semcoder模仿“小黄鸭调试法”逐步解释代码<br>
+</li>
+<li>《Enhancing code generation performance of smaller models by
+distilling the reasoning ability of
+LLMs》从已有代码生成plan，用plan和代码在微调代码生成模型<br>
+</li>
+<li>《Beyond code: Evaluate thought steps for complex code
+generation》利用ChatGPT获得为复杂代码生成的复杂步骤<br>
+</li>
+<li>Case2code帮助模型提高归纳推理能力</li>
+</ul>
+<p>4、Iterative programming</p>
+<p>有些情况下单步无法获得正确代码，需要迭代修改。</p>
+<ul>
+<li>《OpenCodeInterpreter: Integrating code generation with execution
+and
+refinement》给出Code-Feedback数据集，包含68,000次交互，反复迭代修改代码。<br>
+</li>
+<li>《Semcoder》引入了 PyX-R
+调试数据集，其中包含描述、错误代码、跟踪和reasoning，用于训练 LLM
+进行调试和自我改进。<br>
+</li>
+<li>《Cycle: Learning to self-refine the code
+generation》通过整合问题描述、已有代码和执行反馈来改进有缺陷的代码。<br>
+</li>
+<li>《LETI: Learning to generate from textual
+interactions》使用自然语言指令、生成的代码和来自error的文本反馈来微调模型。<br>
+</li>
+<li>《Reflexion: language agents with verbal reinforcement
+learning》使用口头和启发式反馈来强化language agents。</li>
+</ul>
+<h3 id="其他特别任务">其他特别任务</h3>
+<p>包括</p>
+<ul>
+<li>NL2SQL<br>
+</li>
+<li>代码修复<br>
+</li>
+<li>代码翻译<br>
+</li>
+<li>代码重构</li>
+</ul>
+<p>等特别任务，都分别有一些数据相关工作。</p>
+<h2 id="data-filtering-techniques">Data Filtering Techniques</h2>
+<p>合成的数据往往混杂着badcase，因此数据过滤就很重要。</p>
+<p>1、基于规则</p>
+<p>比如太长的行、太长的文件、字母字符太少等过滤规则。</p>
+<p>另外还是有SimHash + LSH的去重。</p>
+<p>2、基于interpreter</p>
+<p>通过代码解释器执行反馈。</p>
+<p>3、基于SLM</p>
+<p>使用小模型进行数据过滤，效果可以超过规则或者代码解释器的方法。</p>
+<ul>
+<li>《Superfiltering: Weak-to-strong data filtering for fast
+instruction-tuning》评估了弱模型和强模型之间的一致性，以确定指令调优样本的难度，证明指令遵循难度
+(IFD) 分数在捕捉样本复杂性方面优于困惑度。<br>
+</li>
+<li>《Instruction mining: Instruction data selection for tuning large
+language models》利用自然语言指标来预测推理损失，这比微调 LLM
+提供了更有效的评估数据的方法。<br>
+</li>
+<li>《CodeBERTScore: Evaluating code generation with pretrained models
+of code》用bert计算相似度。<br>
+</li>
+<li>《WaveCoder》利用 KCenterGreedy
+算法来选择近似于完整分布的数据子集。<br>
+</li>
+<li>Llama-3则是利用fasttext、Roberta等来识别高质量的token。</li>
+</ul>
+<p>4、基于LLM</p>
+<ul>
+<li>《Alpagasus: Training a better alpaca with fewer data》利用 ChatGPT
+作为评分器。<br>
+</li>
+<li>《ICE-score: Instructing large language models to evaluate
+code》通过 LLM 评估代码有用性和功能正确性。<br>
+</li>
+<li>《WaveCoder》使用 GPT-4 作为鉴别器来分析和过滤指令数据，利用 CoT
+推理逐步评估每个实例，将它们分类为有效或无效。<br>
+</li>
+<li>Llama-3用早期的Llama版本对代码的正确定和风格进行打分。</li>
+</ul>
+<h1 id="instruction-pre-training">Instruction Pre-Training</h1>
+<p>论文：《Instruction Pre-Training: Language Models are Supervised
+Multitask Learners》</p>
+<p>时间：2024年6月</p>
+<p>机构：清华，微软</p>
+<p>模型、代码、数据都在https://github.com/microsoft/LMOps/tree/main/instruction_pretrain可找，instruction-synthesizer也在https://huggingface.co/instruction-pretrain/instruction-synthesizer了，可以直接下下来使用。</p>
+<p>近些年来大模型的成功主要得益于大规模的无监督预训练，但是一些工作如《Scaling
+instruction-finetuned language
+models》证明了有监督多任务学习还是有价值的。Instruction
+Pre-Training这篇论文就通过使用instruction-synthesizer把无监督数据增强为instruction-response
+pair，再进行有监督多任务训练，来获得不错的效果。</p>
+<img src="/e259c7b2/instructionpt_intro.png" class title="数据合成">
+<h2 id="instruction-synthesizer">Instruction Synthesizer</h2>
+<p>《Skill-it! A Data-Driven Skills Framework for Understanding and
+Training Language Models》的分析表明，raw corpora里包含很多intrinsic
+task，这也是能够从无监督数据中获取instruction数据的前提。</p>
+<p>用于从无监督数据合成instruction数据的模型叫instruction
+synthesizer，它是从通用LLM进行multi-task fine-tuning得到的：</p>
+<img src="/e259c7b2/instructionpt_tune.png" class title="数据合成">
+<p>微调synthesizer的数据保证了多样性，使得instruction
+synthesizer有比较好的泛化性。收集的数据和任务包括以下这些：</p>
+<img src="/e259c7b2/instructionpt_data.png" class title="数据合成">
+<p>微调instruction synthesizer的时候训练数据被组织成few-shot
+examples的样式，多个example都来自同一个数据集，这样能保证任务格式和任务类别的一致性。计算loss的时候只算了instruction-response
+pairs部分token的loss。</p>
+<p>推理的时候也是用类似的方式，通过把多轮的结果concat起来能够得到few-shot
+example的prompt。</p>
+<img src="/e259c7b2/instructionpt_syn.png" class title="数据合成">
+<p>为了方便提取合成的数据，实验中给各个任务设计了不同的模板，用一些特殊的token帮助区分各个成分：</p>
+<img src="/e259c7b2/instructionpt_template.png" class title="数据合成">
+<p>实验上使用的synthesizer模型是Mistral-7B-v0.1。在数据合成中，平均每段无监督文本能创建大约5对数据，每对数据的长度52个token。训练的参数如下：</p>
+<img src="/e259c7b2/instructionpt_hyperparam.png" class title="数据合成">
+<h2 id="lm-pre-training">LM Pre-Training</h2>
+<p>获得instruction-response数据后，参考《The flan collection: Designing
+data and methods for effective instruction
+tuning》的模板来提升指令格式的多样化。另外还采用《Adapting large
+language models via reading
+comprehension》里的模板把原始文本和instruction-response数据合到一起训练。按上图inference的得到的结果，同样的M-shot
+prompt也用来训练。</p>
+<p>instruction
+pre-training除了数据不同外，其他训练配置保持和无监督训练一样。实验中文章使用了两种方式：从零预训练和（domain-adaptive）继续预训练。</p>
+<p>由于instruction数据在数据量上相对还是比无监督数据少很多，所以从零预训练的时候采用两种数据混合的方式。实验上无监督数据的数据量是100B
+token，而指令数据约0.8B token。</p>
+<p>而继续预训练也不只使用这里生成的指令数据，而会和通用的指令数据混在一起，混合的比例参考《Adapting
+large language models via reading comprehension》。</p>
+<h2 id="效果">效果</h2>
+<p>在通用领域上，不同训练方式下的效果：</p>
+<img src="/e259c7b2/instructionpt_perf.png" class title="数据合成">
+<p>和外部模型对比：</p>
+<img src="/e259c7b2/instructionpt_perf_2.png" class title="数据合成">
+<p>看起来在某些任务略有提升吧，似乎不太明显。</p>
+<p>而domain-specific的task上，提升可能更明显一点：</p>
+<img src="/e259c7b2/instructionpt_domain_perf.png" class title="数据合成">
+<p>毕竟合成的数据量相对来说还是比较少，专注在少量方向效果更好。</p>
+<h1 id="auto-evol-instruct">Auto Evol-Instruct</h1>
+<p>auto evol-instruct可以说是evol-instruct的升级版、自动版，不过auto
+evol-instruct主要目的是提升instruct的复杂性，多样性上可能没有特别关注。</p>
+<p>原本evol-instruct需要人为设计进化的具体方向，这样在数据/领域变更的时候就不太方便（比如“提高空间复杂度/时间复杂度要求”的限制在code领域很合理，但是在情感分析领域就没什么意义）。而auto
+evol-instruct提出的方法可以自动适配到不同的数据，而不需要人工修改。</p>
+<p>大致的方法如下：</p>
+<img src="/e259c7b2/auto_evol_intro.png" class title="数据合成">
+<p>首先，会有一个initial进化方法，进化所使用的prompt如下：</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>You are an Instruction Rewriter that rewrites the given <span class="co">#Instruction# into a more complex version.</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Please follow the steps below to rewrite the given <span class="st">&quot;#Instruction#&quot;</span> into a more <span class="bu">complex</span> version.</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>Step <span class="dv">1</span>: Please read the <span class="st">&quot;#Instruction#&quot;</span> carefully <span class="kw">and</span> <span class="bu">list</span> <span class="bu">all</span> the possible methods to make this instruction more <span class="bu">complex</span> (to make it a bit harder <span class="cf">for</span> well<span class="op">-</span>known AI assistants such <span class="im">as</span> ChatGPT <span class="kw">and</span> GPT4 to handle). Please do <span class="kw">not</span> provide methods to change the language of the instruction<span class="op">!</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>Step <span class="dv">2</span>: Please create a comprehensive plan based on the <span class="co">#Methods List# generated in Step 1 to make the #Instruction# more complex. The plan should include several methods from the #Methods List#.</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>Step <span class="dv">3</span>: Please execute the plan step by step <span class="kw">and</span> provide the <span class="co">#Rewritten Instruction#. #Rewritten Instruction# can only add 10 to</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="dv">20</span> words into the <span class="st">&quot;#Instruction#&quot;</span>.</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>Step <span class="dv">4</span>: Please carefully review the <span class="co">#Rewritten Instruction# and identify any unreasonable parts. Ensure that the #Rewritten Instruction# is only a more complex version of the #Instruction#. Just provide the #Finally Rewritten Instruction# without any</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>explanation.</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>Please reply strictly <span class="kw">in</span> the following <span class="bu">format</span>:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>Step <span class="dv">1</span> <span class="co">#Methods List#:</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>Step <span class="dv">2</span> <span class="co">#Plan#:</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>Step <span class="dv">3</span> <span class="co">#Rewritten Instruction#:</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>Step <span class="dv">4</span> <span class="co">#Finally Rewritten Instruction#:</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">#Instruction#:</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>&#123;Instruction&#125;</span></code></pre></div>
+<p>auto
+evol-instruct会迭代多轮来优化进化方法（也就是上面这个prompt）。在每一轮中，会从前一轮数据集中随机抽样一小批指令，并对每个指令类进行l次进化，这l次进化就构成Evol
+Trajectory。</p>
+<p>对于被进化后的指令，用optimizer
+LLM进行分析，找到本次进化中这些指令中存在的问题。optimizer
+LLM所用的prompt如下：</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>The following <span class="bu">list</span> shows cases where an Instruction evolves into a more <span class="bu">complex</span> version of an Instruction.</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>For each case, stage <span class="dv">0</span> represents the Instruction <span class="kw">in</span> its initial state, <span class="kw">and</span> each subsequent stage requires an increase <span class="kw">in</span> complexity based on the previous stage.</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Please identify cases that failed to evolve, <span class="kw">and</span> provide their case ID <span class="kw">and</span> reasons.</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>&#123;Evolutionary Trajectory&#125;</span></code></pre></div>
+<p>下面是一些进化结果分析样例：</p>
+<img src="/e259c7b2/auto_evol_example.png" class title="数据合成">
+<p>收集到分析结果之后，会要求optimizer
+LLM来改进现有的进化方法，prompt如下：</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&#123;Feedback&#125;</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>I will provide you <span class="cf">with</span> the method <span class="cf">for</span> evolving the above instructions.</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>You need to optimize this method based on the feedback <span class="im">from</span> the evolution failure case, without harming the performance on other cases, <span class="kw">and</span> ensure that the complexity increase brought by the optimized method <span class="kw">is</span> <span class="kw">not</span> lower than the previous method.</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>Please provide the optimized method <span class="kw">in</span> the following <span class="bu">format</span>.</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">&#39;&#39;&#39;Optimized Method</span><span class="ch">\n</span><span class="co">&lt;Optimized Method Here&gt;</span><span class="ch">\n</span><span class="co">&#39;&#39;&#39;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>&#123;Evol Prompt&#125;</span></code></pre></div>
+<p>在改进进化方法的时候，optimizer
+LLM并不能保证总是能给出好的结果，因此这里会使用采样解码（而非贪婪解码之类的）的方式获得m个结果，这样就有m个候选的改进方案。</p>
+<p>这m个改进方案会分别进行验证：在特意保留的dev数据集上进化指令，并获得response。利用设计的一系列规则来判断进化是否失败，然后选择这m个候选改进中失败率最低的方案，进入下一轮优化。</p>
+<p>判断是否失败的规则如下：</p>
+<img src="/e259c7b2/auto_evol_fail.png" class title="数据合成">
+<p>多轮迭代之后，迭代数达到设置的上限，或者指令的复杂度难以进一步进化之后，就得到了最终的进化方法。这个最终方法就会应用在所有数据上。</p>
+<h1 id="wavecoder">WaveCoder</h1>
+<p>论文：《WaveCoder: Widespread And Versatile Enhancement For Code
+Large Language Models By Instruction Tuning》</p>
+<p>时间：2023年12月</p>
+<p>机构：清华，微软</p>
+<p>按照《Lima》《Instruction tuned models are quick
+learners》的研究结果，SFT阶段的数据质量和多样性影响很大。WaveCoder优化代码模型的工作主要就在于合成了高质量的instruction数据，数量也并不是很多，总共有19,915条。整体的流程如下：</p>
+<img src="/e259c7b2/wavecoder_intro.png" class title="数据合成">
+<p>这一万多条数据主要涵盖四类代码相关任务（参考《Codexglue: A machine
+learning benchmark dataset for code understanding and
+generation》的分类）：<br>
+- Code Generation：从文本到代码，或者从代码到代码，生成solution<br>
+- Code Summarization：给定代码，写文本摘要<br>
+- Code Repair：修改给定代码中的潜在问题<br>
+- Code Translation：将一种变成语言转换成另一种</p>
+<p>生成的数据分布如下：</p>
+<img src="/e259c7b2/wavecoder_task.png" class title="数据合成">
+<h2 id="数据合成">数据合成</h2>
+<p>1、raw data 收集</p>
+<p>要合成数据，首先需要一些raw
+data。这里选择的是CodeSearchNet，它包含github上的200万个 (comment, code)
+pair。在这些数据里，首先过滤掉了太长或者太短的代码，然后参考《Code
+alpaca: An instruction-following llama model for code
+generation》的分析，排除掉在blacklist中的关键词，因为包含这些关键词可能会影响训练模型的效果。</p>
+<p>在这个基础上，为了保证原始代码数据的多样性，使用KCenterGreedy算法获取一批core
+samples。这样原始数据天然具有多样性，因此对后续用于合成数据的LLM和prompt的随机性和能力的要求就没那么高了。KCenterGreedy获得的数据的语言分布如下：</p>
+<img src="/e259c7b2/wavecoder_lang.png" class title="数据合成">
+<p>2、Generator-Discriminator框架</p>
+<p>数据合成分为两个阶段：（1）Generation Phase（2）Discrimination
+Phase。</p>
+<p>（1）Generation Phase</p>
+<p>在这一阶段，首先用GPT-4为前面介绍的4个代码任务写定义。之后人工给每个任务添加生成的要求。这两部分内容会整合到prompt里，让ChatGPT根据raw
+data生成指令数据。</p>
+<img src="/e259c7b2/wavecoder_framework.png" class title="数据合成">
+<p>（2）Discrimination Phase</p>
+<p>为了保证合成的数据质量，使用GPT-4作为判别器，分析和过滤上一步合成的数据。判别的prompt里把需要判别的内容细分成多个小点，方便模型分别给出结果，另外还会输入few-shot
+example，这些example不仅包含好的样本，也会包含不好的样本。一个判别的例子如下：</p>
+<img src="/e259c7b2/wavecoder_example.png" class title="数据合成">
+<h1 id="semcoder">Semcoder</h1>
+<p>论文：《SemCoder: Training Code Language Models with Comprehensive
+Semantics Reasoning》</p>
+<p>时间：2024年6月</p>
+<p>Semcoder在代码数据优化上，也是以合成可执行代码为目标，因为原来的代码数据中大约有四分之一的代码是不能执行的。具体来说，Semcoder在OSS-Instruct方案的基础上进行了改进：OSS-Instruct是随机抽取一些代码片段，而Semcoder则是将raw
+data解析成AST，并抽取子树以获得可解析的种子。OSS-Instruct之前在《训练数据合成(一)》介绍过了。可解析的代码会被执行，可执行的代码会用LLM进行调试，直到代码可正确运行。</p>
+<p>Semcoder构造的数据集称为PyX，构造的大致过程如下：</p>
+<img src="/e259c7b2/semcoder_intro.png" class title="数据合成">
+<p>PyX和OSS-Instruct数据集的效果对比：</p>
+<img src="/e259c7b2/semcoder_compare.png" class title="数据合成">
+<p>Semcoder还在PyX基础上，模仿“小黄鸭调试法”的思路，弄了一个提升模型debug和reasoning的数据集，这个这里暂时不展开，不过“拟人”这个思路到时挺有启发性。</p>
+<h1 id="autocoder">Autocoder</h1>
+<p>论文：《AutoCoder: Enhancing Code Large Language Model with
+AIEV-INSTRUCT》</p>
+<p>时间：2024年5月</p>
+<p>Autocoder提出一个用于合成代码相关多轮对话数据的方法AIEV-Instruct（AIEV
+= Agent-Interaction and
+Execution-Verified）。一共合成了169k的代码指令数据，用这份数据训练的33B参数的AutoCoder，在效果上超越了2024年4月份的GPT-4o，humaneval达到90.9%。</p>
+<p>AIEV-Instruct分为两个阶段：（1）Teaching Stage和（2）Self-Learning
+Stage。第一个阶段用于让student模型从teacher模型学习知识，而当student模型的效果达到了teacher模型的水平，就需要进行自学习了。</p>
+<p>整体的流程如下：</p>
+<img src="/e259c7b2/autocder_intro.png" class title="数据合成">
+<p>1、Teaching Stage</p>
+<p>在这个阶段，会用GPT-4 Turbo作为teacher model。GPT-4
+Turbo会被赋予两个角色，questioner和programmer，二者会进行交互，以获得对话数据。</p>
+<p>在一开始，先利用GPT-4 Turbo执行OSS-Instruct方案，从raw
+data中设计代码问题的描述，以及solution。在这个基础上，相比原始的OSS-Instruct，这里还会生成单元测试。</p>
+<p>这些生成的问题描述（上图①）、solution和单元测试（上图②）会被放进对话列表中作为对话历史的一部分。之后会进行执行反馈来验证代码，如果执行发生错误，将会把具体的error信息也加入到对话信息列表中（上图③）。同时会让questioner根据报错信息生成自然语言描述，加到对话信息列表中（上图④）。之后会由programmer重新修改代码（上图⑤），并迭代这个过程，直到单元测试通过。不过这个迭代过程有最大上限，设置为7次。如果迭代其次之后代码仍然无法执行成功，那么就放弃这一条数据。</p>
+<p>每处理2000条数据，就会对student模型，也就是AutoCoder进行一次训练。这2000条数据会按1:9被分成验证集和训练集，如果在验证集上student
+model的效果超过了teacher模型，就会进入到Self-Learning
+Stage，否则就继续进行下一轮的Teaching Stage。</p>
+<p>2、Self-Learning Stage</p>
+<p>Self-Learning Stage所做的事情其实跟Teaching
+Stage基本上是一样的，只是teacher模型换成了AutoCoder自己。</p>
+<p>这里合成数据所使用的raw
+data是来自Magicoder-Evol-Instruct和Magicoder-OSS-Instruct数据集的数据，总共186,000条。最终合成的数据集称为AutoCoder-AIEV-Instruct，包含169,000条数据，共241,000轮对话。AutoCoder-AIEV-Instruct和其他数据集的case对比如下：</p>
+<img src="/e259c7b2/autocoder_compare.png" class title="数据合成">
+<h1 id="代码格式优化">代码格式优化</h1>
+<p>论文：《LLM-assisted code cleaning for training accurate code
+generators》</p>
+<p>时间：2023年11月</p>
+<p>这篇论文核心就在于优化已有代码数据的格式。具体来说优化3点：<br>
+-
+重命名：变量命名的优化，把一些和上下文无关的，不清晰的命名改成一看就知道是什么的名字<br>
+- 模块化：把长代码段落split成单独的功能块，写成小函数的形式<br>
+- planning：用原子化的函数重新组装成完整的代码，并为每个操作写上注释</p>
+<img src="/e259c7b2/format_intro.png" class title="数据合成">
+<p>而这些转换都是通过ChatGPT来实现的。转换完成之后会使用测试样例进行验证，验证不通过的话最多会重试5次转换。</p>
+<p>1、重命名</p>
+<p>重命名的prompt如下：</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>QUESTION:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>&#123;problem_statement&#125;</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>ANSWER:</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>‘’‘python</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>&#123;solution&#125;</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>’‘’</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>Rename the variables <span class="kw">in</span> the program to be descriptive, meaningful, <span class="kw">and</span> consistent. Do <span class="kw">not</span> change the original semantics of the program. Enclose the program within backticks <span class="im">as</span> shown above <span class="kw">and</span> remember to use descriptive variable names.</span></code></pre></div>
+<p>2、模块化</p>
+<p>模块化的时候，如果代码比较长，那么就执行两轮的模块化。第一轮模块化的prompt如下：</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>QUESTION:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>&#123;problem_statement&#125;</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>ANSWER:</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>‘’‘python</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>&#123;renamed_solution&#125;</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>’‘’</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>Refactor the above program. Follow the guidelines:</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="op">*</span> Make the program more modular <span class="cf">with</span> smaller <span class="kw">and</span> meaningful helper functions.</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="op">*</span> Use good descriptive names <span class="cf">for</span> the helper functions.</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="op">*</span> Have an entry function called <span class="st">&#39;main()&#39;</span>.</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="op">*</span> Call <span class="st">&#39;main()&#39;</span> inside <span class="st">&#39;if name == &#39;</span>main<span class="st">&#39;&#39;</span>.</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>Do <span class="kw">not</span> change the original semantics of the program significantly <span class="kw">and</span> there <span class="kw">is</span> no need to perform optimizations. Enclose the program within backticks <span class="im">as</span> shown above.</span></code></pre></div>
+<p>第一轮完成后，如果代码中还包含一个超过20行的函数，那么就进一步进行模块，并指出具体要分解哪些函数。实践中大约有20%~40%需要二次模块化。所用prompt：</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>QUESTION:</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>&#123;problem_statement&#125;</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>ANSWER:</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>‘’‘python</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>&#123;modularized_solution&#125;</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>’‘’</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>Refactor the above program by modularizing it <span class="kw">and</span> breaking down <span class="bu">long</span> <span class="kw">and</span> <span class="bu">complex</span> functions into smaller meaningful helper functions. Particularly refactor <span class="kw">and</span> decompose the following function(s) into smaller helper functions <span class="op">-</span> &#123;function_names_string&#125; Only <span class="cf">return</span> the refactored program enclosed <span class="kw">in</span> backticks <span class="im">as</span> shown above.</span></code></pre></div>
+<p>3、planning</p>
+<p>prompt如下：</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>QUESTION:</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>&#123;problem_statement&#125;</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>ANSWER:</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>‘’‘python</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>&#123;modularized_solution&#125;</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>’‘’</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>Generate a summary <span class="cf">for</span> the following functions <span class="kw">and</span> classes <span class="kw">in</span> the program within four lines each. The summaries should be descriptive <span class="kw">and</span> helpful <span class="cf">for</span> understanding the program (however yet concise <span class="kw">in</span> four lines).</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>The functions <span class="kw">and</span> classes are <span class="op">-</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>&#123;list_of_function_names&#125;</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>Follow the provided <span class="bu">format</span> <span class="cf">for</span> the summaries <span class="cf">while</span> being informative <span class="kw">and</span> concise. Enclose the signatures <span class="kw">in</span> backticks <span class="im">as</span> shown above.</span></code></pre></div>
+<h1 id="personalised-distillation">Personalised Distillation</h1>
+<p>论文：《Personalized distillation: Empowering opensourced LLMs with
+adaptive learning for code generation》</p>
+<p>时间：2023年10月</p>
+<p>之前获取数据的做法一般是用指令从teacher模型（比如ChatGPT）获取答案，然后用得到的指令+答案数据来训练student模型。这种方法就没有考虑到不同的student模型的现有效果和优缺点。</p>
+<p>而Personalised Distillation则是先让student
+model尝试解决问题，然后teacher
+model再在这个基础上提供针对性的修改，帮助student
+model实现个性化的学习。</p>
+<img src="/e259c7b2/distill_intro.png" class title="数据合成">
+<p>具体来说，对于代码任务，如果student
+model已经能够解决，那么这个问题就不再需要teacher model。只有哪些student
+model解决不了的，才会把问题、student model的方案、执行反馈输入给teacher
+model，以获得改进方案，并给student model学习，这就是personalised
+distillation。</p>
+<p>直接学习teacher model的答案，和personalised
+distillation两种方法对比的一个例子如下：</p>
+<img src="/e259c7b2/distill_example.png" class title="数据合成">
+<p>可以看到个性化蒸馏后，student model的结果和teacher
+model直接生成的结果还是有比较大的不同。个性化蒸馏帮助student
+model在自己的思路上改进，而不单单只是学习teacher model的输出。</p>
+<h1 id="关于数据过滤">关于数据过滤</h1>
+<p>数据过滤也是数据合成中一个重要的环节。</p>
+<h2 id="superfiltering">Superfiltering</h2>
+<p>论文：《Superfiltering: Weak-to-Strong Data Filtering for Fast
+Instruction-Tuning https://arxiv.org/abs/2402.00530》</p>
+<p>时间：2024年2月</p>
+<p>Superfiltering通过实验发现，大模型和小模型在计算指令的IFD分数时具有一致性，因此可以用小模型通过IFD来选择指令，从而达到低成本高效果的目的。</p>
+<p>IFD = Instruction-Following
+Difficulty。IFD分数是一种用于衡量指令对模型生成回复帮助程度的指标。</p>
+<p>以下是一个计算IFD分数的具体例子：</p>
+<p>假设有一个instruction - response pair：<br>
+- Instruction（x）：“请介绍一下苹果这种水果。”<br>
+-
+Response（y）：“苹果是一种常见的水果，通常呈圆形，颜色有红色、绿色等，口感酸甜可口，富含维生素C和纤维素等营养成分。”</p>
+<p>使用模型计算PPL： -
+比如用规模比较小的GPT-2计算在没有instruction情况下生成该回复的PPL，<span class="math inline">\(\mathrm{PPL}(y_i)\)</span>，假设计算结果=3<br>
+-
+然后使用GPT-2计算在给定指令“请介绍一下苹果这种水果。”情况下生成该回复的PPL
+，<span class="math inline">\(\mathrm{PPL}(y_i|x_i)\)</span>，假设计算结果=5</p>
+<p>然后根据IFD分数的计算公式计算IFD score：</p>
+<p><span class="math display">\[\mathrm{IFD}(y_i|x_i)=\frac{\mathrm{PPL}(y_i|x_i)}{\mathrm{PPL}(y_i)}\]</span></p>
+<p>那么这条指令的IDF = 3 / 5 = 0.6。</p>
+<p>一般来说，IFD
+分数越低，表示指令对模型生成回复的帮助越大，该指令相对更容易被模型处理；反之，IFD
+分数越高，表示指令对模型生成回复的帮助越小，指令难度相对较大。论文里选择了IFD分数高的部分数据进行训练。</p>
+<h2 id="codebertscore">CodeBERTScore</h2>
+<p>论文：《CodeBERTScore: Evaluating Code Generation with Pretrained
+Models of Code》</p>
+<p>时间：2023年2月</p>
+<p>用代码相关指令数据，训练了5种语言（Python、C、Java、CPP、JavaScript）的Bert打分模型，在https://huggingface.co/neulab上可以下载。</p>
+<h1 id="小结">小结</h1>
+<ul>
+<li>不同领域的数据合成方法也很不相同<br>
+</li>
+<li>代码数据需要考虑可执行、可读性、结构化等维度</li>
+</ul>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门--CLIP</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Mastering the Craft of Data Synthesis for CodeLLMs
+https://arxiv.org/pdf/2411.00005<br>
+【2】Instruction Pre-Training: Language Models are Supervised Multitask
+Learners https://arxiv.org/abs/2406.14491<br>
+【3】Automatic instruction evolving for large language models
+https://arxiv.org/abs/2406.00770<br>
+【4】WaveCoder: Widespread And Versatile Enhancement For Code Large
+Language Models By Instruction Tuning
+https://arxiv.org/abs/2312.14187<br>
+【5】SemCoder: Training Code Language Models with Comprehensive
+Semantics Reasoning https://arxiv.org/abs/2406.01006<br>
+【6】AutoCoder: Enhancing Code Large Language Model with AIEV-INSTRUCT
+https://arxiv.org/abs/2405.14906<br>
+【7】LLM-Assisted Code Cleaning For Training Accurate Code Generators
+https://arxiv.org/abs/2311.14904<br>
+【8】Personalized distillation: Empowering opensourced LLMs with
+adaptive learning for code generation
+https://arxiv.org/abs/2310.18628<br>
+【9】Superfiltering: Weak-to-Strong Data Filtering for Fast
+Instruction-Tuning https://arxiv.org/abs/2402.00530<br>
+【10】CodeBERTScore: Evaluating Code Generation with Pretrained Models
+of Code https://arxiv.org/abs/2302.05527</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/e259c7b2.html" title="训练数据合成(三)">https://saicat.github.io/e259c7b2.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%90%88%E6%88%90/" rel="tag"><i class="fa fa-tag"></i> 数据合成</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2a22baeb.html" rel="prev" title="训练数据合成(二)">
+                  <i class="fa fa-angle-left"></i> 训练数据合成(二)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/569d722c.html" rel="next" title="多模态入门(二)--Flamingo,LLaVA系列和BLIP系列">
+                  多模态入门(二)--Flamingo,LLaVA系列和BLIP系列 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">545k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">16:31</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
