@@ -1,5 +1,5 @@
 ---
-title: DeepSeek-R1
+title: 深度求索DeepSeek-R1详解
 tags:
   - NLP
   - LLM
