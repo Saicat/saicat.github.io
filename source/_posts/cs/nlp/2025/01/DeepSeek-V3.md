@@ -21,7 +21,7 @@ date: 2025-01-29 23:12:34
 
 DeepSeek-R1以一己之力正面刚OpenAI和Anthropic。DeepSeek-R1能有这么强力的表现和DeepSeek-V3这个基模型的强大是分不开的。  
 
-{% asset_img perf.png r1 %}  
+{% asset_img perf.png dsv3 %}  
 
 现在就来盘一下DeepSeek-V3的一些细节。（不包括infra部分）  
 
@@ -163,7 +163,7 @@ V2的总参数为236B，激活参数为21B；而V3的总参数为671B，激活�
 
 $$\mathbf{h}_t^{\prime}=\mathbf{u}_t+\sum_{i=1}^{N_s}\mathrm{FFN}_i^{(s)}\left(\mathbf{u}_t\right)+\sum_{i=1}^{N_r}g_{i,t}\mathrm{FFN}_i^{(r)}\left(\mathbf{u}_t\right)$$  
 
-第一项来自残差链接，第二项是共享专家的输出，第三项是路由专家的输出；Ns是shared expert的数量，Nr是routed expert的数量，DeepSeek-V3中Ns=1，Nr=128。  
+第一项来自残差连接，第二项是共享专家的输出，第三项是路由专家的输出；Ns是shared expert的数量，Nr是routed expert的数量，DeepSeek-V3中Ns=1，Nr=128。  
 
 $$g_{i,t}=\frac{g_{i,t}^\prime}{\sum_{j=1}^{N_r}g_{j,t}^\prime}$$  
 
@@ -384,7 +384,7 @@ DeepSeek-V3就参考《Better & Faster Large Language Models via Multi-token Pre
 
 首先，假设模型的训练窗口长度时L，那么对于长度大于L的文档，首先就要切成长度为L的小块。这一步是无论什么训练策略都要做的，即使不进行任何拼接而对每个文档单独进行padding，也需要切分过长的文档。  
 
-那么接下来的任务就是把这些切分出来的文档chunk拼接成长度<=L的训练样本，并且样本数量越少越好。样本数量越好，意味着数据密度越高，padding越少。
+那么接下来的任务就是把这些切分出来的文档chunk拼接成长度<=L的训练样本，并且样本数量越少越好。样本数量越少，意味着数据密度越高，padding越少。
 
 到这里，其实就转化成了一个背包问题。但是背包问题是NP-hard的，没法直接得到最优解，因此可以借用已有的高效近似解法，First-Fit-Decreasing (FFD) 和Best-Fit-Decreasing (BFD) 来获得近似解。  
 
@@ -462,7 +462,7 @@ DeepSeek-V3的tokenizer除了加入其他语言的token之外，还增加了包�
 
 发现 :// 是被当成一个token处理的。  
 
-大多数的tokenizer都是greedy tokenization的策略。训练时可以看到完整的文本，因此所有链接中，:// 都被当做一个token处理，也就是模型在训练时机会没有见过 : token后面跟诊 // token的情况，这就导致如果prompt中给了 : ，模型就会输出错误的结果。  
+大多数的tokenizer都是greedy tokenization的策略。训练时可以看到完整的文本，因此所有链接中，:// 都被当做一个token处理，也就是模型在训练时几乎没有见过 : token后面跟诊 // token的情况，这就导致如果prompt中给了 : ，模型就会输出错误的结果。  
 
 词表中有很多以 : 开头的token，它们在训练时都被当做一个token处理了：  
 
