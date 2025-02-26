@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  看DeepSeek-VL2细节之前，先简单介绍下DeepSeek-VL2提到的recaption方案和visual prompt数据。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="DeepSeek-VL2">
+<meta property="og:url" content="https://saicat.github.io/b4d047c1.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  看DeepSeek-VL2细节之前，先简单介绍下DeepSeek-VL2提到的recaption方案和visual prompt数据。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/prose_pipeline.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/prose_prompt.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/prose_ocr_acc.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/prose_ocr_case.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/prose_length.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/prose_noun.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/vp_example.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/vp_prompt.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/ds_perf.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/ds_model.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/ds_overview.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/ds_tiling.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/ds_train.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/ds_case1.png">
+<meta property="og:image" content="https://saicat.github.io/b4d047c1/ds_case2.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-02-25T13:57:29.000Z">
+<meta property="article:modified_time" content="2025-02-25T14:23:12.057Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="多模态">
+<meta property="article:tag" content="SFT">
+<meta property="article:tag" content="预训练">
+<meta property="article:tag" content="CV">
+<meta property="article:tag" content="DeepSeek">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/b4d047c1/prose_pipeline.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/b4d047c1.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/b4d047c1.html","path":"b4d047c1.html","title":"DeepSeek-VL2"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>DeepSeek-VL2 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#recaptionpixelprose"><span class="nav-number">1.</span> <span class="nav-text">recaption：PixelProse</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#why-recaption"><span class="nav-number">1.1.</span> <span class="nav-text">why recaption</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%B9%E6%A1%88"><span class="nav-number">1.2.</span> <span class="nav-text">方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#pixelprose"><span class="nav-number">1.3.</span> <span class="nav-text">PixelProse</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#visual-prompt"><span class="nav-number">2.</span> <span class="nav-text">Visual Prompt</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">2.1.</span> <span class="nav-text">数据</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#deepseek-vl2"><span class="nav-number">3.</span> <span class="nav-text">DeepSeek-VL2</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E5%88%86%E8%BE%A8%E7%8E%87dynamic-tiling-strategy"><span class="nav-number">3.1.</span> <span class="nav-text">动态分辨率：Dynamic Tiling
+Strategy</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E9%98%B6%E6%AE%B5%E8%AE%AD%E7%BB%83"><span class="nav-number">3.2.</span> <span class="nav-text">多阶段训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE-1"><span class="nav-number">3.3.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cases"><span class="nav-number">3.4.</span> <span class="nav-text">cases</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">72</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">70</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/b4d047c1.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="DeepSeek-VL2 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          DeepSeek-VL2
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2025-02-25 21:57:29 / 修改时间：22:23:12" itemprop="dateCreated datePublished" datetime="2025-02-25T21:57:29+08:00">2025-02-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/%E5%A4%9A%E6%A8%A1%E6%80%81/" itemprop="url" rel="index"><span itemprop="name">多模态</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>15 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>看DeepSeek-VL2细节之前，先简单介绍下DeepSeek-VL2提到的recaption方案和visual
+prompt数据。</p>
+<h1 id="recaptionpixelprose">recaption：PixelProse</h1>
+<h2 id="why-recaption">why recaption</h2>
+<p>PixelProse是《From Pixels to Prose: A Large Dataset of Dense Image
+Captions》中提供的一个（合成）caption数据集，共有16M条样本；论文同时也介绍了他们构造PixelProse的recaption方案。</p>
+<p>为什么要做recaption？因为caption数据由来已久，业界有许多开源的caption数据集，这些数据集的收集、处理方式各不相同，数据内容和质量参差不齐。直接用这些数据训练会带入很多我们不想要的噪声，效果也不太好。</p>
+<p>通过具体case的分析，主要有这么些问题：</p>
+<ul>
+<li>数据里存在一些NSFW和Child Sexual Abuse Material
+(CSAM)的内容，这在很多场景都不合适甚至不合法<br>
+</li>
+<li>很多样本的图片和caption关联性太差，比如过于简短，或者缺乏准确的描述，这导致VL模型没法很好学习语言和图像之间的细节对齐关系<br>
+</li>
+<li>文字是VL模型和SD模型要学习的一个重点，但是现有的caption数据很多都没有给出图中文字的详细内容，使得模型很难学习文字</li>
+</ul>
+<h2 id="方案">方案</h2>
+<p>针对分析出来的这些问题，合成高质量的caption数据的流程设计成这样：</p>
+<img src="/b4d047c1/prose_pipeline.png" class title="DeepSeek-VL2">
+<p>一步一步来看。</p>
+<p>1、过滤</p>
+<p>source data有三个，CommonPool、CC12M 和
+RedCaps。当然如果现在我们要再多，那可以多加点数据集进去。首先，这些数据集通过NSFW分类模型和commercial
+Google APIs进行内容过滤，仅保留图片内容合适合法的数据。</p>
+<p>2、选择prompt</p>
+<p>接下来，会从下面5个预定义的prompt中随机选择一个，用于让Gemini生成新的prompt。</p>
+<img src="/b4d047c1/prose_prompt.png" class title="DeepSeek-VL2">
+<p>3、加入alt-text</p>
+<p>在生成的时候，会随机加入图片的alt-text到prompt中。参考《CapsFusion:
+Rethinking Image-Text Data at
+Scale》的发现，加入alt-text有机会提升生成结果细节的准确性。</p>
+<p>4、加入Negative Descriptions</p>
+<p>无论是VLM还是diffusion模型，对于negative描述的指令遵循能力总是比较差。比如跟diffusion模型说“画一幅没有大象的画”，最终画出来的画就有大象。</p>
+<p>为了增强模型对negative
+instruction的遵循能力，随机让Gemini增加一些途中不存在的物体的描述。比如“途中有5个红色的苹果”，就会再加上negative
+description “但是没有任何梨子出现在途中”。</p>
+<p>5、优化Text Recognition</p>
+<p>文字能力是VLM和diffusion模型都很重要的一个能力，如果没有文字识别能力，多模态模型无法识别图片上的路标、广告牌、标签等信息，而diffusion模型在生成包含文字的图像时也会是一团乱码。</p>
+<p>为了增强模型的文字理解能力，可以看到前面的5个prompt里都包含一个要求：</p>
+<blockquote>
+<p>If any text is present in the image, mention where it is, and the
+font.Describe the text in detail with quotation marks.</p>
+</blockquote>
+<p>不过生成caption的模型识别文字的准确率不是100%，甚至可能只有七八成的准确率，所以后面还要check一下。</p>
+<p>在校验之前，先用watermark
+model分类一下，对于不包含watermark，且出现文字的图片，再用OCR模型进行识别。小于15个pixel的text
+region会被抛弃。</p>
+<p>最终check的结果表明大概有76%的文字可以被caption模型正确识别：</p>
+<img src="/b4d047c1/prose_ocr_acc.png" class title="DeepSeek-VL2">
+<img src="/b4d047c1/prose_ocr_case.png" class title="DeepSeek-VL2">
+<p>当然OCR模型本身也不是100%正确的，对于样式复杂的情况，OCR模型也识别不准，不过整体上这个准确率校验还是可以参考的。</p>
+<h2 id="pixelprose">PixelProse</h2>
+<p>新合成的PixelProse文本长度相比原caption更长，包含更多细节信息：</p>
+<img src="/b4d047c1/prose_length.png" class title="DeepSeek-VL2">
+<p>从文本的分词结果上看，PixelProse所包含的名词多样性也更丰富：</p>
+<img src="/b4d047c1/prose_noun.png" class title="DeepSeek-VL2">
+<h1 id="visual-prompt">Visual Prompt</h1>
+<p>这一part主要是讲一下visual prompt。</p>
+<p>在纯文本的场景，prompt的使用大家都很熟悉的。而在多模态场景，一般来说用户指令也是以文本的形式给出，比如“图上这个人多少岁了”，“这只狗是什么品种”这样。</p>
+<p>假设现在有一张图，上面有很多人，你想要针对其中某个人对模型进行询问。如果用文本进行描述的话，就有点困难：这些人可能没有很整齐地排列，衣着也没有鲜明特点；哪怕能够通过位置或者特征进行文字描述，这也会给模型的理解和识别造成困难。</p>
+<p>回想一下，如果是在和人交流，那么要准确定位图上的一个人，最简单的方法就是用手指一下，或者拿笔在对应位置画个圈/箭头。那跟模型交流的时候也可以这么干：</p>
+<img src="/b4d047c1/vp_example.png" class title="DeepSeek-VL2">
+<p>这个圈/箭头就是visual prompt。</p>
+<p>如果模型具备和这些圈/箭头进行交互的能力，那么用户在交互的时候就会更加自然。</p>
+<h2 id="数据">数据</h2>
+<p>要训练这样的能力，首先就要有数据。《ViP-LLaVA: Making Large
+Multimodal Models Understand Arbitrary Visual
+Prompts》就搞了一批数据。</p>
+<p>1、source data</p>
+<p>visual
+prompt的数据还是通过数据合成获得。源数据就是现有各种物体识别/实体分割的数据，这些数据包含物体的位置和类型/名称信息，很方便改造成visual
+prompt数据。</p>
+<p>2、visual prompt type</p>
+<p>研究人员定义了一下巴中visual
+prompt类型，用于标识图像中的物体，总共有8种：</p>
+<img src="/b4d047c1/vp_prompt.png" class title="DeepSeek-VL2">
+<p>个人认为，这8种其实可以分成3个大类：</p>
+<p>（1）外框</p>
+<p>椭圆、长方形、三角形、物体的mask都属于把物体框起来的方式，只是有的框比较粗糙，有的比较精细。</p>
+<p>在构造这类visual
+prompt的时候，为了引入一定的随机性，会对外框的ratio、颜色和大小进行一定的随机变化，只要保证主要物体还在框里就行。</p>
+<p>（2）箭头</p>
+<p>箭头和把物体圈起来的做法不同，箭头一般画在物体附近，而且有方向性。</p>
+<p>（3）涂鸦</p>
+<p>scribble，contour和point其实都是类似涂鸦的方式，只是涂鸦的精细程度不同，point是最简陋的，contour是最精细的，而scribble介于两者之间。scribble是用贝塞尔曲线工具模拟人类轨迹画的。</p>
+<h1 id="deepseek-vl2">DeepSeek-VL2</h1>
+<p>DeepSeek-VL2开源了三个规模的模型，都是MoE：</p>
+<ul>
+<li>DeepSeek-VL2-Tiny：总参数3B，激活参数0.57B<br>
+</li>
+<li>DeepSeek-VL2-Small：总参数16B，激活参数2.4B<br>
+</li>
+<li>DeepSeek-VL2：总参数27B，激活参数4.1B</li>
+</ul>
+<p>原文给出的效果对比：</p>
+<img src="/b4d047c1/ds_perf.png" class title="DeepSeek-VL2">
+<p>不过这张图比的是激活参数。其实直接看总参数，DeepSeek-VL2的效果也是很不错的，只是没有看激活参数的优势那么大。从另一个角度想，如果DeepSeek通过模型架构和计算框架优化，可以把MoE+MLA结构做到和同样激活参数的dense模型相同效率的话，这么对比也不是不行。</p>
+<p>DeepSeek-VL2相比前一代，主要有3个优化点：</p>
+<ul>
+<li>动态高分辨率vision encoding<br>
+</li>
+<li>LLM架构优化<br>
+</li>
+<li>数据构建pipeline优化</li>
+</ul>
+<p>LLM架构优化其实就是MoE +
+MLA，带来的语言模型效率和效果提升，这部分在<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/alKnPog2LYSRQdm9wy1_QA">《DeepSeek-V3细节探索》</a>中有细说，此处就不展开。三个开源模型的具体结构参数：</p>
+<img src="/b4d047c1/ds_model.png" class title="DeepSeek-VL2">
+<p>最小的Tiny模型没有使用MLA，而是使用MHA，这和我们之前对MLA的认知是一致的：模型每个头的大小并不需要很多，模型增大更多是增加头数，而MLA需要在头数更多的场景下才能发挥效率和效果的优势，因此模型越大MLA优势越大，而在小模型上MLA则不容易发挥优势。</p>
+<p>另外，只有最大的DeepSeek-VL2使用了expert correction bias和sigmoid
+routing function，这俩都跟expert parallelism有关。</p>
+<p>另外有点奇怪的是只有small版本的vocab是102400，其他两个都是129280</p>
+<p>DeepSeek-VL2整体框架还是标准的三件套：</p>
+<img src="/b4d047c1/ds_overview.png" class title="DeepSeek-VL2">
+<h2 id="动态分辨率dynamic-tiling-strategy">动态分辨率：Dynamic Tiling
+Strategy</h2>
+<p>使用高分辨率 + 动态分辨率基本上已经是现在的标准做法。</p>
+<p>DeepSeek-VL2三个规模的模型使用的vision
+encoder都是SigLIP-SO400M-384，这是一个基础分辨率为384 ×
+384的模型。基于这个分辨率，定义了一批候选分辨率，这些候选分辨率的width和height都是384的倍数：</p>
+<p><span class="math display">\[
+C_R = \{(m\cdot 384, n\cdot 384) \mid m \in \mathbb{N}, n \in
+\mathbb{N}, 1 \leq m, n, mn \leq 9\}
+\]</span></p>
+<p>对于每一个原始图像，会保持ratio进行resize到每个候选分辨率，并选择使用所需padding最少的候选resolution。</p>
+<p>最后还会加上一个原图的缩略图，因此总用有（1 + m ×
+n）个tile，每个tile都是384 × 384的大小，由vision encoder来单独处理。</p>
+<p>以上是vision encoder的输出。接下来是VL Adaptor的处理。</p>
+<p>SigLIP-SO400M-384使用的patch size = 14，每个tile会产生27 × 27个visual
+embedding，会通过pixel unshuffle，把visual embedding的数量减少到14 ×
+14个。</p>
+<p>另外，为了帮助模型识别visual
+embedding的位置关系，在缩略图和子图的每行visual embedding最后都会加一个
+token，标识一下这一行embedding的结束。</p>
+<p>这么一来总的token数就变成：</p>
+<p>14 × (14 + 1) + 14m × (14n + 1)</p>
+<p>最终得到的图像feature按这样排布：</p>
+<img src="/b4d047c1/ds_tiling.png" class title="DeepSeek-VL2">
+<p>动态分辨率的方案到这里就结束了。不知道有没有细心的同学发现，上面的基础分辨率384并不是patch
+size 14的整数倍数（384 / 14 ≈
+27.4），我也有点奇怪，搜索之下发现确实有问题：原来SigLIP-SO400M-384的真实分辨率并不是384，而是14
+× 27 = 378，384只是由于历史遗留问题一直保持这么个写法。原链接在 <a target="_blank" rel="noopener" href="https://huggingface.co/google/siglip-so400m-patch14-384/discussions/4">https://huggingface.co/google/siglip-so400m-patch14-384/discussions/4</a>。（这简直和“2020年东京奥运会在2021举办”有异曲同工之妙）。</p>
+<h2 id="多阶段训练">多阶段训练</h2>
+<p>DeepSeek-VL2的训练分三个阶段：</p>
+<ul>
+<li>对齐：训练adaptor和vision encoder，冻结LLM<br>
+</li>
+<li>预训练：全参训练<br>
+</li>
+<li>SFT：全参训练</li>
+</ul>
+<img src="/b4d047c1/ds_train.png" class title="DeepSeek-VL2">
+<h2 id="数据-1">数据</h2>
+<p>1、对齐</p>
+<p>在对齐阶段，DeepSeek-VL2只用ShareGPT4v数据：包含1.2M条caption和conversation样本。</p>
+<p>2、预训练</p>
+<p>预训练阶段使用了70%的VL数据和30%纯文本数据。</p>
+<p>（1）Interleaved image-text data</p>
+<p>主要来自WIT、WikiHo和OBELICS，它们的混合比例通过在eepSeek-VL2-Tiny上实验确定；还有一个in-house数据集来增强真实世界知识的覆盖。</p>
+<p>（2）Image captioning data</p>
+<p>对现有的caption数据进行recaption处理，参考PixelProse的做法，在生成新caption的时候加入：</p>
+<ul>
+<li>OCR hints<br>
+</li>
+<li>meta information (e.g., location, camera settings)<br>
+</li>
+<li>original captions</li>
+</ul>
+<p>recaption之后还是存在一些质量问题，因此用DeepSeek
+Chat对文本质量再进行打分和过滤，这样一来caption效果得到了有效提升</p>
+<p>（3）OCR数据</p>
+<p>包括LaTeX OCR和12M
+RenderedText数据集，和一些in-house数据集，主要是中英文的。</p>
+<p>（4）VQA数据</p>
+<p>包括：<br>
+- General VQA<br>
+- Table, chart and document understanding<br>
+- Web-to-code and plot-to-Python generation<br>
+- QA with visual prompt</p>
+<p>（5）Visual grounding data</p>
+<p>数据样式：</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Prompt: Locate <span class="op">&lt;|</span>ref<span class="op">|&gt;&lt;</span>query<span class="op">&gt;&lt;|/</span>ref<span class="op">|&gt;</span> <span class="kw">in</span> the given image.</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Response: <span class="op">&lt;|</span>ref<span class="op">|&gt;&lt;</span>query<span class="op">&gt;&lt;|/</span>ref<span class="op">|&gt;&lt;|</span>det<span class="op">|&gt;</span>[[x1, y1, x2, y2],...]<span class="op">&lt;|/</span>det<span class="op">|&gt;</span></span></code></pre></div>
+<blockquote>
+<p>&lt;|ref|&gt;, &lt;|/ref|&gt;, &lt;|det|&gt;, &lt;|/det|&gt; are
+special tokens. &lt;query&gt; is a place-holder for either the category
+name (e.g., “car”) or description of the object (e.g., “the leftmost
+person”). [[x1, y1, x2, y2], ...] is a list of bounding boxes, where
+each bounding box corresponds to an object’s position. The coordinates
+x1, y1 and x2, y2 specify the top-left and bottom-right corners
+respectively, normalized to values between 0 and 999 according to the
+resolution of the image.</p>
+</blockquote>
+<p>还另外构建了负样本，把一些object从原图上消去，以增加模型robustness。</p>
+<p>（6）Grounded conversation data</p>
+<p>数据样式：</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>Prompt: <span class="op">&lt;|</span>grounding<span class="op">|&gt;</span>Can you describe the content of the image?</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>Response: Two <span class="op">&lt;|</span>ref<span class="op">|&gt;</span>dogs<span class="op">&lt;|/</span>ref<span class="op">|&gt;&lt;|</span>det<span class="op">|&gt;</span>[[x1, y1, x2, y2],...]<span class="op">&lt;|/</span>det<span class="op">|&gt;</span> are running on the grass.</span></code></pre></div>
+<p>3、SFT</p>
+<p>（1）General visual question-answering</p>
+<p>现有的VQA数据集有一些问题，包括：</p>
+<ul>
+<li>response太短<br>
+</li>
+<li>OCR质量差<br>
+</li>
+<li>有幻觉</li>
+</ul>
+<p>因此把original
+question、image和OCR信息放在一起，重生成response，以提升数据质量。</p>
+<p>（2）OCR and document understanding</p>
+<p>预训练后模型的OCR能力已经很强了，因此sft阶段专注选出低质量样本，提升数据质量。</p>
+<p>（3）Table and chart understanding</p>
+<p>同OCR类似</p>
+<p>（4）Reasoning, logic, and mathematics</p>
+<p>发现detailed
+response在小模型上的训练效果并不好，小模型对简洁的response的学习能力更好。</p>
+<p>（5）Textbook and academic questions</p>
+<p>使用了包含跨学科、大学水平的教科书内容的内部数据集。</p>
+<p>（6）Web-to-code and plot-to-Python generation</p>
+<p>对于开源数据也重新生成response提高质量。</p>
+<p>（7）Visual grounding</p>
+<p>把query翻译成了中文，还加了一个negative sample。</p>
+<p>（8）Grounded conversation</p>
+<p>使用《Groma: Localized visual tokenization for grounding multimodal
+large language models》和《Flickr30k entities: Collecting
+region-to-phrase correspondences for richer image-to-sentence
+models》数据集构建对话数据。</p>
+<p>（9）Text-Only datasets</p>
+<p>使用了很多数据，但是没有给出比例。</p>
+<p>一个总结，在数据这块DeepSeek-VL2在强调多样性的同时，也用现有的模型构建更强的pipeline重新生成response以提高数据质量。</p>
+<h2 id="cases">cases</h2>
+<img src="/b4d047c1/ds_case1.png" class title="DeepSeek-VL2">
+<img src="/b4d047c1/ds_case2.png" class title="DeepSeek-VL2">
+<h1 id="小结">小结</h1>
+<ul>
+<li>现有的多模态数据质量有高有低，直接使用可能有很好的效果<br>
+</li>
+<li>数据多样性能够有效提升模型训练效果<br>
+</li>
+<li>按这个趋势MoE有可能再次火起来？如果硬件的优化跟上，MoE说不定能成为attention一样的标准方案。MLA也同样有这个可能。</li>
+</ul>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】DeepSeek-VL2: Mixture-of-Experts Vision-Language Models for
+Advanced Multimodal
+Understanding，https://www.arxiv.org/abs/2412.10302<br>
+【2】From Pixels to Prose: A Large Dataset of Dense Image Captions,
+https://arxiv.org/abs/2406.10328<br>
+【3】ViP-LLaVA: Making Large Multimodal Models Understand Arbitrary
+Visual Prompts, https://arxiv.org/abs/2312.00784<br>
+【4】关于SigLIP-SO400M-384的输入分辨率：https://huggingface.co/google/siglip-so400m-patch14-384/discussions/4</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/b4d047c1.html" title="DeepSeek-VL2">https://saicat.github.io/b4d047c1.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/%E5%A4%9A%E6%A8%A1%E6%80%81/" rel="tag"><i class="fa fa-tag"></i> 多模态</a>
+              <a href="/tags/SFT/" rel="tag"><i class="fa fa-tag"></i> SFT</a>
+              <a href="/tags/%E9%A2%84%E8%AE%AD%E7%BB%83/" rel="tag"><i class="fa fa-tag"></i> 预训练</a>
+              <a href="/tags/CV/" rel="tag"><i class="fa fa-tag"></i> CV</a>
+              <a href="/tags/DeepSeek/" rel="tag"><i class="fa fa-tag"></i> DeepSeek</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/6c0f6207.html" rel="prev" title="Qwen2.5-1M技术解密">
+                  <i class="fa fa-angle-left"></i> Qwen2.5-1M技术解密
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">594k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">18:01</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
