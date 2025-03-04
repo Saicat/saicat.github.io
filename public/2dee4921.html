@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  给图片加水印大家都很熟悉了：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LLM水印">
+<meta property="og:url" content="https://saicat.github.io/2dee4921.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  给图片加水印大家都很熟悉了：">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/2dee4921/algo1.png">
+<meta property="og:image" content="https://saicat.github.io/2dee4921/algo2.png">
+<meta property="og:image" content="https://saicat.github.io/2dee4921/influence.png">
+<meta property="og:image" content="https://saicat.github.io/2dee4921/algo3.png">
+<meta property="og:image" content="https://saicat.github.io/2dee4921/example.png">
+<meta property="og:image" content="https://saicat.github.io/2dee4921/delta.png">
+<meta property="og:image" content="https://saicat.github.io/2dee4921/gamma.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-03-01T03:00:54.000Z">
+<meta property="article:modified_time" content="2025-03-02T13:05:03.313Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="LLM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/2dee4921/algo1.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/2dee4921.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/2dee4921.html","path":"2dee4921.html","title":"LLM水印"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>LLM水印 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#red-list-%E5%92%8C-green-list"><span class="nav-number">1.</span> <span class="nav-text">Red List 和 Green List</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#hard-red-list-watermark"><span class="nav-number">1.1.</span> <span class="nav-text">hard red list watermark</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#soft-red-list"><span class="nav-number">1.2.</span> <span class="nav-text">soft red list</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#private-watermark"><span class="nav-number">1.3.</span> <span class="nav-text">private watermark</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#undetectable-watermarks"><span class="nav-number">2.</span> <span class="nav-text">Undetectable Watermarks</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8F%92%E5%85%A5%E6%B0%B4%E5%8D%B0"><span class="nav-number">2.1.</span> <span class="nav-text">插入水印</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%E6%B0%B4%E5%8D%B0"><span class="nav-number">2.2.</span> <span class="nav-text">检测水印</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%9D%E8%B7%AF"><span class="nav-number">2.3.</span> <span class="nav-text">思路</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#unbiased-watermark"><span class="nav-number">3.</span> <span class="nav-text">Unbiased Watermark</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%CE%B4-reweighting"><span class="nav-number">3.1.</span> <span class="nav-text">δ-Reweighting</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%CE%B3-reweighting"><span class="nav-number">3.2.</span> <span class="nav-text">γ-Reweighting</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">4.</span> <span class="nav-text">其他</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">73</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">70</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/2dee4921.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="LLM水印 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          LLM水印
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-03-01 11:00:54" itemprop="dateCreated datePublished" datetime="2025-03-01T11:00:54+08:00">2025-03-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-03-02 21:05:03" itemprop="dateModified" datetime="2025-03-02T21:05:03+08:00">2025-03-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>6.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>12 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>给图片加水印大家都很熟悉了：</p>
+<ul>
+<li>比如给身份证照片加水印以确定用途保护个人信息，或者画师给自己的画加水印保护产权，想要无水印版本的就需要购买；这种水印一般比较明显，甚至会覆盖在图片上的关键位置；<br>
+</li>
+<li>也有些图片水印是隐形的，人眼极难发现；这种一般是用来确定数据来源（比如你要是给公司的数据文件截屏上面很可能就有你工号的隐形水印，一下就能定位到操作人），或者保护知识产权的；隐形水印可能需要借助工具自动识别，人眼的分辨能力没法处理。</li>
+</ul>
+<p>其实不只图片可以加水印，LLM生成的文字也可以加水印。LLM生成结果加水印有什么用呢？目前来看主要是两种主要应用场景：</p>
+<p>（1）帮助人类辨别哪些文本是LLM生成，哪些是人类写的（比如检测AI生成的作业或者论文）</p>
+<p>（2）对于开源协议不可以商用的模型，开发者能够有一定手段判断是否有人在未授权的情况下使用了自己的模型</p>
+<p>不过个人感觉这两种应用场景其实都不是很solid：</p>
+<p>（1）现在已经有大量开源模型，没法保证使用这些开源模型的人会愿意加入水印（或者说大概率不愿意），只有用户使用API生成，且模型提供商加入了水印，且水印的检测方式给到你的情况下，你才有机会检测水印；</p>
+<p>（2）如果使用者进行了一定的微调，模型的参数变化了，那么水印检测的方法也可能会失效；不过这个场景应该会有一些开源大厂会关注：如何在保持开源的情况下，又能不被滥用，如果不能在一定程度上保持这点，那就有可能对关键大小的模型选择不开源，这对AI开发者就是个坏消息；另外如果是通过API提供的，那模型供应商自己插入水印就变得方便了。</p>
+<p>来看下LLM水印具体是怎么做的。</p>
+<h1 id="red-list-和-green-list">Red List 和 Green List</h1>
+<p>这个方法出自23年初的《A Watermark for Large Language
+Models》，这是一种比较简单朴素的LLM水印方式。</p>
+<p>首先，我们需要知道，LLM
+watermarking分成两部分：水印的添加和水印的检测。添加水印和检测水印形成一个完整的闭环，我们才能够追溯这些文字的源头。</p>
+<p>文中提出理想水印的几个要求，还是比较合理的：</p>
+<ul>
+<li>水印的检测不需要知道模型参数和获取model API<br>
+</li>
+<li>加水印的模型不需要经过训练<br>
+</li>
+<li>只要有一个连续的文字片段就可以检测水印，甚至无需完整的上下文<br>
+</li>
+<li>水印无法被只修改少量文字就移除<br>
+</li>
+<li>有一个统计量能够判断水印检测的置信度</li>
+</ul>
+<p>更长远来看，个人认为可能还有一些更深层次的要求，比如：</p>
+<ul>
+<li>水印难以被迁移到无水印的文本上<br>
+</li>
+<li>水印的添加和检测成本显著地低于生成文本</li>
+</ul>
+<h2 id="hard-red-list-watermark">hard red list watermark</h2>
+<p>看下文中提出的第一种最简单的加水印的方法，使用hard red list。</p>
+<p>正常来说，LLM
+decode的时候首先根据prompt计算出下一个token在vocab上的概率分布；如果是贪心解码，那就下一个token就直接选择概率最高那个，如果是top-k或者top-p解码，那就会在概率最高的几个token里选择一个。</p>
+<p>现在如果在每次解码，都把vocab随机、均匀地分成red list和green
+list两组，并且限定下一个token只能从green
+list里选，那么后续就可以通过检测生成的文本中是否包含red
+list的token来判断这段文本是否是这个LLM生成的了：如果这段文本很好地遵循了只从green
+list选择的规则，那么就是LLM生成的（检测到了水印），反之如果这段文本根本不遵从这个rule，那么就很可能是人类写的（没有水印）。可以使用z检验作为指标来判断。</p>
+<p>加入水印的具体方案：</p>
+<img src="/2dee4921/algo1.png" class title="watermark">
+<p>在这个方案下，检测水印需要两个前提：</p>
+<ul>
+<li>需要知道这个模型的vocab<br>
+</li>
+<li>需要知道随机数生成逻辑和split词表的具体逻辑</li>
+</ul>
+<p>有了这两个，就可以检测出来插入了这个水印的文本。</p>
+<p>这种插入水印的方式显然会对生成的文本质量造成很大的影响，毕竟有一半的token不能使用了，运气最差的情况下，概率最高的token都被加入到red
+list里，那下一个token就是概率很低的token，导致句子完全不通顺了。</p>
+<p>我们知道无论哪种语言都有一些概率很高，近乎固定组合的sequence，比如成语、俗语、诗歌、歇后语。比如本来“落霞与孤鹜齐”的下一个字是“飞”，但是很不好运，使用hard
+watermark之后“飞”字被ban了，那生成的结果肯定就出问题了。</p>
+<p>这种搭配很固定的情况称为low entropy
+sequence，因为只要你看到了上文就基本可以确定下一个字是什么。</p>
+<h2 id="soft-red-list">soft red list</h2>
+<p>既然hard
+watermark会对生成的文本质量造成太大影响，那就尝试把hard变成soft，缓解一下这个问题。</p>
+<p>直接看下方案：</p>
+<img src="/2dee4921/algo2.png" class title="watermark">
+<p>前两步和hard方案是一样的。生成完随机数之后，就要根据随机数，切分red
+list和green list了，在soft方案里，red list和green
+list不再是对半分，而是有一个超参数γ，只有γ|V|个token会被放到red
+list里。明显γ越大，水印越强，但是对生成质量的影响也越大。</p>
+<p>（其实再进一步，还可以对每个token设定predefine的red list。）</p>
+<p>分出red list之后，也不直接把red list里的token禁用，而是对在green
+list里的token的logits增加一个正数δ，这相当于人为降低了red
+list里的token得分，但是并不100%禁用。δ越大，red
+list中的token被压制得越多，水印强度越大(更容易检测)，同样也会生成质量影响更大。</p>
+<p>soft方案对于low entropy的情况也有比较好的缓解，因为low entropy
+sequence中，下一个token的概率是非常高的，因此即使加了一个δ，这个固定搭配的token仍然有很大的机会被选中，无论是什么解码方式。</p>
+<p>γ和δ选择和模型是高度相关的，这就需要做实验确定了。文中在OPT模型上做了实验，随着γ和δ的增强，ppl是提升的：</p>
+<img src="/2dee4921/influence.png" class title="watermark">
+<p>在检测的时候同样用z检验判断是否加了水印。</p>
+<h2 id="private-watermark">private watermark</h2>
+<p>前面的hard watermark和soft watermark在生成red
+list的时候都是根据当前最后一个token来生成的，这样简单的机制在抗破译抗攻击方面还是不够强。那么一个增强的方法就是使用pseudorandom
+function (PRF)。</p>
+<p>PRF使用一个密钥，根据当前token和前h个token作为输入，生成随机种子，以决定vocab里的token是否要加入red
+list。这样在检测水印的时候，同样需要密钥和相同的PRF。</p>
+<img src="/2dee4921/algo3.png" class title="watermark">
+<p>最后看一个水印例子：</p>
+<img src="/2dee4921/example.png" class title="watermark">
+<h1 id="undetectable-watermarks">Undetectable Watermarks</h1>
+<p>上面的方法中，无论是hard还是soft，都会明显地影响生成结果，那有没有办法再减小一点水印对生成结果的影响呢？《Undetectable
+Watermarks for Language Models》就基于密码学的工具引入了undetectable
+watermarks。</p>
+<p>首先一个思路是，并不是所有文本都适合插入水印。比如对于low
+entropy的文本，“团结就是力量，这力量是铁，这力量是钢”这段文字根本就没法判断是人写的还是LLM生成的，因为它的搭配太确定了。如果非要改变这个搭配，就会明显影响了生成内容。因此low
+entropy sequence就不适合插入水印。</p>
+<p>再进一步，一段文本，有些entropy高（词表上token的得分分布比较均匀），有些entropy低（词表上token的得分只有一个0.99999，其他基本都是0），那就只在entropy足够高的时候才插入水印。</p>
+<p>原文有很多数学证明，这里就直接用一个例子来说明下。</p>
+<h2 id="插入水印">插入水印</h2>
+<p>比如对一个模型输入prompt=“今天天气怎么样”，正常情况下模型会输出“今天天气很好，适合去公园散步”。</p>
+<p>step1：检测熵</p>
+<p>如果我们要插入水印，首先就要计算empirical
+entropy。经验熵是基于已生成文本的实际概率分布计算的熵值，反映当前生成过程的“不确定性”。对于序列x1、x2、...、xt，p(x)是这个token生成时的概率，经验熵计算所有x的log(p(x))的平均值。经验熵越大，说明当前序列的不确性高，反之则说明序列的确定性很高（就是前面说的固定搭配）。这里就需要一个阈值来判别当前的熵是高还是低。</p>
+<p>比如生成到“今天”，发现下一个token是“天气”的概率特别高，经验熵很低，那么这个时候就不插入水印；把“天气”放进序列之后，发现“今天天气”后面的熵开始高了，p(“很好”)=0.6，p(“不错”)=0.4，这两者比较接近，导致经验熵高于阈值，那么就可以开始插入水印了。</p>
+<p>step2：生成随机数</p>
+<p>我们需要一个PseudoRandom
+Function，来生成随机数。PRF的特点是，只要输入相同，输出就相同，这也是后面我们可以检测水印的前提。PRF的输入有两个：</p>
+<ul>
+<li>密钥，这个是生成水印的人加入的，只有持有这个密钥才能检测水印，密钥可以是一个字符串，比如"技术博客linsight.cn"<br>
+</li>
+<li>当前的上下文</li>
+</ul>
+<p>根据这两个输入，我们获得一个随机数u=0.55</p>
+<p>step3：选择token</p>
+<p>根据随机数，在两个候选token “很好”和“不错”之间进行选择：</p>
+<ul>
+<li>如果u ≤ p("很好")，选择"很好"<br>
+</li>
+<li>如果u &gt; p("很好")，选择"不错"</li>
+</ul>
+<p>这一步在外部看来，概率的分布不变。因为这里我们只是替换了随机选择的函数，把“所有人都不知道的随机逻辑”变成“持有密钥的人知道，其他人不知道的随机逻辑”。</p>
+<h2 id="检测水印">检测水印</h2>
+<p>先要需要验证句子 "今天天气很好，适合去公园散步" 是否含有水印。</p>
+<p>step1：重建PRF随机数</p>
+<p>使用相同的密钥"技术博客linsight.cn"和上下文"今天天气"，通过PRF重新生成u₁=0.55。</p>
+<p>step2：计算单个token验证分数</p>
+<p>实际生成的token是"很好"，基于对数似然：</p>
+<p>如果选"很好"：s(x₁, u₁) = -ln(u₁)</p>
+<p>如果选"不错"：如果选0：s(x₁, u₁) = -ln(1 - u₁)</p>
+<p>s = -ln(0.55) ≈ 0.597</p>
+<p>step3、累加所有token分数</p>
+<p>假设整个句子有5个高熵token，每个token的分数如下：</p>
+<p>s₁=0.597, s₂=0.8, s₃=0.3, s₄=0.9, s₅=0.4</p>
+<p>总分数：C = 0.597 + 0.8 + 0.3 + 0.9 + 0.4 = 2.997</p>
+<p>step4、阈值判断</p>
+<p>假设一段文本高熵token的数量为L。</p>
+<p>对于自然文本：若文本无水印，伪随机数uj服从均匀分布 U(0,1)，此时每个
+s(xj,uj) 的期望值为1，总C值的期望为 E(C)=L。</p>
+<p>对于含水印文本：若文本含水印，uj的分布被密钥约束（例如选词1时
+uj≤pj(1)），导致每个 s(xj,uj) 的期望值大于1，总C值 E(C)&gt;L。</p>
+<p>因此在上面这个例子里，2.997 &lt; L，可以认为没有包含水印。</p>
+<h2 id="思路">思路</h2>
+<p>总体来说，这种方法有两个核心思路：</p>
+<ul>
+<li>只对高熵部分的文本添加水印，减少对生成质量的影响<br>
+</li>
+<li>把高熵token的选择从「不可知的随机选择」变成「基于密钥的PRF选择」，让掌握密钥的人可以检测到水印。</li>
+</ul>
+<h1 id="unbiased-watermark">Unbiased Watermark</h1>
+<p>《UNBIASED WATERMARK FOR LARGE LANGUAGE
+MODELS》提出两种不影响生成质量的水印方案，δ-Reweighting和γ-Reweighting。</p>
+<h2 id="δ-reweighting">δ-Reweighting</h2>
+<p>δ-Reweighting前半部分和上面的undetectable
+watermark类似，主要在后面选择包含水印的token的策略有所不同。还是直接看一个例子。</p>
+<p>比如模型根据prompt“你喜欢吃什么水果？”，现在生成到了“我喜欢吃”，再下一个token的选择有：</p>
+<ul>
+<li>苹果，p=0.35<br>
+</li>
+<li>香蕉，p=0.25<br>
+</li>
+<li>橘子，p=0.20<br>
+</li>
+<li>梨子，p=0.15<br>
+</li>
+<li>葡萄，p=0.05</li>
+</ul>
+<p>还是通过一个密钥和PRF生成一个随机数，根据这个随机数落在的区间，选择一个token。比如现在生成随机数0.66，落在了“橘子”的区间，那就输出“橘子”。</p>
+<p>从单次采样来看，这是一个delta分布：只有“橘子”的概率为1，其他token都是0。因为只要PRF是同样的，context和密钥也是同样的，那么每次都会输出相同的“橘子”。</p>
+<p>而从多次采样取平均的结果来看，生成苹果的概率依然是0.35，生成橘子的频率依然是0.20。</p>
+<img src="/2dee4921/delta.png" class title="watermark">
+<h2 id="γ-reweighting">γ-Reweighting</h2>
+<p>相比δ-Reweighting，γ-Reweighting主要是在调整概率的方案上有所不同：</p>
+<p>γ-Reweighting将词表随机打乱（还是使用包含密钥的PRF）之后分成前后两段，每次decode都固定对词表后半段的token概率进行提升（翻倍），而对词表前半段的token进行缩减（变成0）。</p>
+<p>同样地，单次来看，有一半的token被ban了，但是整体多次统计来看，还是保持正常的概率。</p>
+<img src="/2dee4921/gamma.png" class title="watermark">
+<p>那检测水印的时候，就看打乱后的词表后半段是否概率更高。</p>
+<p>整体来看γ-Reweighting的实现和检测更为简单，可能被逆向破解。而δ-Reweighting更加动态随机，抗攻击性更强。</p>
+<h1 id="其他">其他</h1>
+<ul>
+<li>清华等⾼校联合推出了开源的⼤模型⽔印⼯具包
+MarkLLM，支持多种水印的嵌入和检测方式</li>
+</ul>
+<h1 id="小结">小结</h1>
+<ul>
+<li>目前加水印都多多少少会对生成质量产生影响<br>
+</li>
+<li>加水印 &amp; 检测水印是高成本的事情，不是特殊场景恐怕不会使用</li>
+</ul>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】A Watermark for Large Language Models,
+https://arxiv.org/abs/2301.10226<br>
+【2】UNBIASED WATERMARK FOR LARGE LANGUAGE MODELS,
+https://arxiv.org/abs/2310.10669<br>
+【3】Undetectable Watermarks for Language Models,
+https://arxiv.org/abs/2306.09194</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/2dee4921.html" title="LLM水印">https://saicat.github.io/2dee4921.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/b4d047c1.html" rel="prev" title="DeepSeek-VL2">
+                  <i class="fa fa-angle-left"></i> DeepSeek-VL2
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">601k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">18:12</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
