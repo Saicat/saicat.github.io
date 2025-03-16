@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  现在长思考模型助力agent，能够循环进行复杂任务的拆解和执行。为了告诉模型任务和能够调用的工具&#x2F;当前观察到的信息等，输入prompt也是越来越长，10k甚至更长的输入已经是普遍的状况。虽然推理框架也越来越强，不过本着能省一点是一点想法，prompt压缩也是个值得考虑的方向，特别是在偏垂域的场景。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="prompt压缩(一)">
+<meta property="og:url" content="https://saicat.github.io/4519eadd.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  现在长思考模型助力agent，能够循环进行复杂任务的拆解和执行。为了告诉模型任务和能够调用的工具&#x2F;当前观察到的信息等，输入prompt也是越来越长，10k甚至更长的输入已经是普遍的状况。虽然推理框架也越来越强，不过本着能省一点是一点想法，prompt压缩也是个值得考虑的方向，特别是在偏垂域的场景。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/cc_method.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/cc_kl.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/cc_specific.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/cc_repeat.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/cc_follow.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/sc_level.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/sc_example.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/sc_result.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/sc_compare.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/lingua_framework.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/lingua_algo1.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/lingua_perf1.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/lingua_perf2.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/gist_mask.png">
+<meta property="og:image" content="https://saicat.github.io/4519eadd/gist_perf.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-03-15T09:16:52.000Z">
+<meta property="article:modified_time" content="2025-03-16T08:46:20.078Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="prompt压缩">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/4519eadd/cc_method.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/4519eadd.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/4519eadd.html","path":"4519eadd.html","title":"prompt压缩(一)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>prompt压缩(一) | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#conditioning-contextscc"><span class="nav-number">1.</span> <span class="nav-text">Conditioning Contexts（CC）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%B9%E6%B3%95"><span class="nav-number">1.1.</span> <span class="nav-text">方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%82%E5%AF%9F"><span class="nav-number">1.2.</span> <span class="nav-text">观察</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">1.3.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#selective-context"><span class="nav-number">2.</span> <span class="nav-text">Selective Context</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#self-information"><span class="nav-number">2.1.</span> <span class="nav-text">self-information</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%B9%E6%B3%95-1"><span class="nav-number">2.2.</span> <span class="nav-text">方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C"><span class="nav-number">2.3.</span> <span class="nav-text">实验</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93-1"><span class="nav-number">2.4.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#llmlingua"><span class="nav-number">3.</span> <span class="nav-text">LLMLingua</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%B9%E6%B3%95-2"><span class="nav-number">3.1.</span> <span class="nav-text">方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">3.2.</span> <span class="nav-text">效果</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#gist"><span class="nav-number">4.</span> <span class="nav-text">GIST</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%9D%E8%B7%AF"><span class="nav-number">4.1.</span> <span class="nav-text">思路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">4.2.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C-1"><span class="nav-number">4.3.</span> <span class="nav-text">实验</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93-2"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">74</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">71</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/4519eadd.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="prompt压缩(一) | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          prompt压缩(一)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-03-15 17:16:52" itemprop="dateCreated datePublished" datetime="2025-03-15T17:16:52+08:00">2025-03-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-03-16 16:46:20" itemprop="dateModified" datetime="2025-03-16T16:46:20+08:00">2025-03-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>14 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>现在长思考模型助力agent，能够循环进行复杂任务的拆解和执行。为了告诉模型任务和能够调用的工具/当前观察到的信息等，输入prompt也是越来越长，10k甚至更长的输入已经是普遍的状况。虽然推理框架也越来越强，不过本着能省一点是一点想法，prompt压缩也是个值得考虑的方向，特别是在偏垂域的场景。</p>
+<p>其实垂域任务的微调也算是prompt压缩的一种。比如对于通用模型，做法是加上任务描述：</p>
+<p>"判断这段文本的情感类型，正向输出1，负向输出0。{text}"</p>
+<p>现在我们直接构造数据对(text,
+label)，而不需要加额外的任务描述；用这些数据微调模型，让它专注做情感分析。回想一下，这正是Bert的拿手任务。</p>
+<p>这相当于把任务描述训进了模型参数中，从而减少了每次的输入文本量，即"判断这段文本的情感类型，正向输出1，负向输出0。"这段文字。</p>
+<p>当然这种做法在现在看来太低效了。针对每个任务或者每个prompt微调一个模型在大规模模型的场景下成本太高，也不可能部署多个模型来处理各种任务，更重要的是没法顾及到所有的输入prompt。</p>
+<p>今天先来学习下几个prompt压缩的工作。</p>
+<h1 id="conditioning-contextscc">Conditioning Contexts（CC）</h1>
+<p>Conditioning contexts是prompt压缩比较早期的工作了。</p>
+<p>CC属于soft prompt compression。既然有soft prompt
+compression，那肯定有hard prompt compression。简单来说，hard
+compression主要研究一个输入里哪些token可以保留哪些token可以删掉，是相对离散的；而soft
+compression则是把压缩的prompt带到了参数层面，是连续的，有点像prompt
+tuning。</p>
+<h2 id="方法">方法</h2>
+<p>CC具体方案就是在输入question前面append一些embedding（这就是压缩过的prompt），训练目标就是最小化原prompt的输出和压缩prompt的输出之间的KL散度：</p>
+<img src="/4519eadd/cc_method.png" class title="prompt_compression">
+<p>方案确实和prompt tuning很像，区别就是prompt
+tuning是学习正确label，而CC学习的是原prompt下的输出结果。</p>
+<p>研究人员拿GPT2系列各个规模的模型做实验，在不同规模的模型上，KL散度的走势和值都很相近，这说明这样的soft
+prompt是有在多个规模的模型使用的潜力的（比如在小模型上训练，在大模型上使用）；另外随着soft
+prompt的长度的增加，KL散度越来越低：</p>
+<img src="/4519eadd/cc_kl.png" class title="prompt_compression">
+<h2 id="观察">观察</h2>
+<p>另外，研究人员通过对general类型问题和细节问题在压缩前后准确率的比较，发现压缩过的soft
+prompt更倾向于记住general的内容，而遗忘细节内容：</p>
+<img src="/4519eadd/cc_specific.png" class title="prompt_compression">
+<p>那么这样的方式训练出来的soft
+prompt可以在多大程度上保留原prompt的信息呢？研究人员用一个reconstruction
+task，即在压缩的soft prompt后加上“Now repeat the
+text:”的要求，让模型尝试给出它看到的信息。注意即使只给“Now repeat the
+text:”这句话，模型也会输出，因此需要进行一定的归一化。把输出的分布在原prompt
++ repeat和no prompt +
+repeat之间进行归一化，把原prompt的token的概率可视化：</p>
+<img src="/4519eadd/cc_repeat.png" class title="prompt_compression">
+<p>heatmap中黄色是1（说明soft
+prompt很好地保留了原prompt信息），紫色是0。可以看到大致的趋势是：（1）随着soft
+prompt的长度n减小，损失越来越大（2）soft
+prompt更倾向于记住原prompt中靠前部分的信息。</p>
+<p>最后，文中还提出一个想法：soft
+prompt更能让模型遵循相应的要求。这里做了一个实验：有两个prompt，一个要求模型谈论猫，另一个要求模型输出负面情感的内容，然后分别使用原prompt和压缩过的soft
+prompt对模型的输出结果进行指令遵循情况的检验。结果发现，soft
+prompt比原prompt的指令遵循情况更好一些：</p>
+<img src="/4519eadd/cc_follow.png" class title="prompt_compression">
+<h2 id="小结">小结</h2>
+<p>整体来看，CC所使用的soft prompt和prompt
+tuning很像，依然是一次训练只能针对一条prompt。因此如果要使用的话，比较适用于有超长固定system
+prompt的场景，这样在推理的时候可以节省一些推理成本。当然，在效果上是有一些损失的，而且损失的是现在大家比较关注的细节信息。</p>
+<p>不过原文也提出了几个有意思的点：</p>
+<ul>
+<li>压缩过的soft prompt可以提升模型指令遵循的效果<br>
+</li>
+<li>reconstruction task可用于检验prompt的压缩效果</li>
+</ul>
+<h1 id="selective-context">Selective Context</h1>
+<p>前面的CC是soft prompt compression，这里要讲的selective
+context就是hard prompt compression。</p>
+<p>selective
+context的大思路：输入prompt中不是每个token都一样重要，有些知识模型已经知道，就不必重复说，因此可以删掉一些token。</p>
+<h2 id="self-information">self-information</h2>
+<p>那怎么判断一个token重不重要呢，就是使用self-information。</p>
+<p>Information
+theory中，self-information表征在给定的分布下，一个event携带的信息量。</p>
+<p>在language
+modeling的context下，生成一个token就可以看作一个event。那self-information就可以写作：</p>
+<p><span class="math display">\[I(x)=-\log_2P(x_t|x_0,x_1,...,x_{t-1})\]</span></p>
+<p>I越大，x的信息量越多。</p>
+<p>题外话一下，language
+modeling中和self-information相关的还有entropy和perplexity：</p>
+<p><span class="math display">\[H(S)=\frac{1}{N}\Sigma_tI(x_t)\]</span></p>
+<p><span class="math display">\[PP(S)=2^{H(S)}\]</span></p>
+<p>对于连续的token，有</p>
+<p><span class="math display">\[\begin{aligned}I(x_0,x_1)&amp;=-\log_2P(x_0,x_1)\\&amp;=-\log_2P(x_0)P(x_1|x_0)\\&amp;=-\log_2P(x_0)-\log_2P(x_1|x_0)\\&amp;=I(x_0)+I(x_1)\end{aligned}\]</span></p>
+<p>这说明token级别以上的lexical
+unit（比如words、phrases和sentences）都可以通过token的自信息得分相加而得到，这点很重要。</p>
+<h2 id="方法-1">方法</h2>
+<p>selective context的方法有三步。</p>
+<p>（1）计算token的self-information</p>
+<p>这一步可以选用小一些的模型比如Llama-7B，而生成模型则是更大规模的Llama模型。(那么这里就有一个问题：用于压缩的模型和用于生成模型之间的关系是否支持这种对应)</p>
+<p>在实操上有一个发现，LLM倾向于给靠后的lexical
+unit打低分，因此实操中不把整个prompt一次输入，而是改成一个句子一个句子计算，这样就缓解了靠后的lexical
+unit分数偏低的问题。</p>
+<p>（2）（optional）聚合lexical unit</p>
+<p>在token层面删除，可能导致文本的不连续，因此可以改为在phrase或者sentence级别删除内容。不过这也引入了新的复杂性：phrase和sentence边界的检测。实操上可以依赖传统的NLP工具来分割phrase和sentence。</p>
+<p>在消融实验中，phrase level的效果最好，而sentence
+level的效果最差：</p>
+<img src="/4519eadd/sc_level.png" class title="prompt_compression">
+<p>（3）eliminate不必要的部分</p>
+<p>删除的时候，不是使用自信息的threshold，或者固定保留top-k个unit，而是按self-information从高到低排序，保留总和为top-p的lexical
+unit。p相当于限定了保留信息的量，而从高到低排序保证了所用的unit是最少的，也就是最大的compression
+rate。</p>
+<p>p设为0.5时的一个例子：</p>
+<img src="/4519eadd/sc_example.png" class title="prompt_compression">
+<h2 id="实验">实验</h2>
+<p>既然删除了部分lexical
+unit，那模型输出结果就会变化，模型的效果很可能会下降。研究人员用4类任务实验，验证压缩的效果：（1）original
+context reconstruction（2）summarisation（3）question
+answering（4）conversation task。</p>
+<p>各个任务的指标都是和原prompt相比。具体来说，用original
+prompt下的模型输出作为标准，计算压缩prompt的输出和原输出的BLEU, METEOR,
+ROUGE, and BERTScore。</p>
+<p>在不同的压缩率（删除的lexical
+unit比例）下，模型的在各个任务的平均结果：</p>
+<img src="/4519eadd/sc_result.png" class title="prompt_compression">
+<p>和random compression的比较</p>
+<img src="/4519eadd/sc_compare.png" class title="prompt_compression">
+<h2 id="小结-1">小结</h2>
+<p>实验没有测原task的得分变化，感觉这里有点不完善。</p>
+<p>Selective
+context的好处是不用训练生成模型，而可以应用到所有的输入prompt。不过一个问题是，用于压缩的prompt的小模型和生成模型在分布上也存在一些对不齐的情况，因此效果是有一些损失的。</p>
+<h1 id="llmlingua">LLMLingua</h1>
+<p>LLMLingua是prompt压缩比较经典的工作了。</p>
+<p>他们观察到prompt里不同的部分 --
+instruction、demonstration和question三者所能用的压缩率是不同的。demonstration通常是一些示例，是instruction和question的具象化，因此会包含比较多的信息冗余，而instruction和question本身是和answer是更加相关的，因此不能压缩太多。</p>
+<img src="/4519eadd/lingua_framework.png" class title="prompt_compression">
+<h2 id="方法-2">方法</h2>
+<p>1、coarse compression</p>
+<p>基于上面的思路，LLMLingua首先对demonstration做一个coarse的compression。具体来说就是以完整的demonstration为单位，删掉一部分demonstration。</p>
+<p>instruction和question的压缩率是预定义的（实操中这两个压缩率分别是τ_ins=0.85,τ_que=0.9），可以根据这两个部分的压缩率、整体的target压缩率和各个部分的原始长度计算coarse
+demonstration compression这一步要删掉多少demonstration。</p>
+<p>那么怎么决定保留哪些demonstration呢？就是用一个小模型计算demonstration的PPL，然后保留PPL大的文本。</p>
+<img src="/4519eadd/lingua_algo1.png" class title="prompt_compression">
+<p>k表示选择多少个demonstration。</p>
+<p>（由于demonstration是粗粒度的选择，最终选的token数量和target的压缩率有出入，因此需要重新计算一下inteructino和question的压缩率）</p>
+<p>2、fine compression</p>
+<p>在粗粒度的删除之后，就要进行细粒度的Iterative Token-level Prompt
+Compression（ITPC），把（instruction，删减过的demonstration，question）再进一步进行压缩。在这一步，token-level的dropout可能造成更多的信息损失，因此应该使用sentence-level的dropout以保持一定的lingusitic
+integrity。</p>
+<p>（1）分段</p>
+<p>首先把文本切成segment（实操中segment的长度是100token）。</p>
+<p>（2）计算条件概率</p>
+<p>使用小模型 <span class="math inline">\(\mathcal{M}_s\)</span>
+计算每个段 <span class="math inline">\(s_j\)</span>
+中token的条件概率：</p>
+<p><span class="math display">\[
+p\left(s_{j, i} \mid s_{j,&lt;i}, \widetilde{s}_{&lt;j}\right)
+\]</span></p>
+<p>其中 <span class="math inline">\(\widetilde{s}_{&lt;j}\)</span>
+表示前 <span class="math inline">\(j-1\)</span> 个段压缩后的结果。</p>
+<p>（3）动态计算压缩阈值</p>
+<p>根据段 <span class="math inline">\(s_j\)</span> 的压缩比例 <span class="math inline">\(\tau_{s_j}\)</span>，动态计算阈值 <span class="math inline">\(\gamma_j\)</span>，保留满足 <span class="math inline">\(p(s_{j,i}) &gt; \gamma_j\)</span> 的令牌。</p>
+<p>（4）迭代压缩</p>
+<p>将压缩后的段 <span class="math inline">\(\widetilde{s}_j\)</span>
+拼接至后续段，重复步骤2-3，直到所有段被压缩。</p>
+<h2 id="效果">效果</h2>
+<p>LLMLingua在长文本上的效果还是可以的：</p>
+<img src="/4519eadd/lingua_perf1.png" class title="prompt_compression">
+<img src="/4519eadd/lingua_perf2.png" class title="prompt_compression">
+<h1 id="gist">GIST</h1>
+<h2 id="思路">思路</h2>
+<p>长的prompt，比如system
+prompt占用大量重复计算；通过cache可以减少计算，但是prompt很长的话还是需要比较多的缓存；通过finetune可以把prompt内化，不过这样每个prompt都需要训一个模型。context
+distillation就是这样，不需要额外数据，内化prompt，一个模型学一个prompt：</p>
+<p><span class="math display">\[
+\mathcal{L}_{CD}\left(p_{CD}^{t},
+t\right)=\mathbb{E}_{x}\left[D_{KL}\left(p_{LM}(y | t, x) \|
+p_{CD}^{t}(y | x)\right)\right]
+\]</span></p>
+<p>t是prompt。</p>
+<p>那么更好的情况应该是只训一个模型，可以处理所有的prompt；学习G(t)这样一个映射，让G(t)更短，并且G有足够的泛化性。GIST方法就是学习G(t)的一种方法。泛化的G，只训练一次，就可以支持各种prompt的压缩：</p>
+<p><span class="math display">\[
+\mathcal{L}_{G}(p_{G}, T)=\mathbb{E}_{t \sim T, x}[D_{KL}(p_{LM}(y \mid
+t, x) \| p_{G}(y \mid G(t), x))]
+\]</span></p>
+<h2 id="训练">训练</h2>
+<p>GIST方法首先在词表增加一个gist
+token，注意只有一个。训练的时候在prompt和answer中间夹k个gist
+token的copy，这k个gist token就用来学习怎么压缩prompt。</p>
+<p>把gist token加在prompt和answer中间之后，还要修改attention
+mask，让gist token后面的token只能看到gist token，而看不到原始的prompt
+token；而gist token可以看到原始的prompt，相当于让gist
+token成为把信息从prompt传递到answer的唯一桥梁，这就强制把prompt的信息都压缩到gist
+token里。</p>
+<p>各个模型结构下，attention mask的修改：</p>
+<img src="/4519eadd/gist_mask.png" class title="prompt_compression">
+<h2 id="实验-1">实验</h2>
+<p>几个对照模型：</p>
+<ul>
+<li>positive control：不修改attention mask，等价于用原prompt微调<br>
+</li>
+<li>negative control：不输入task，相当于random gist token<br>
+</li>
+<li>discrete compression with
+TF-IDF：用TF-IDF把prompt里的最关键词提取出来，比如Write a letter to your
+boss asking for an increase in salary → salary，Given two integers, find
+their average → average</li>
+</ul>
+<p>结合模型打分（GhatGPT）和Rouge-L，各个模型的效果：</p>
+<img src="/4519eadd/gist_perf.png" class title="prompt_compression">
+<p>GIST方法还是比较接近原prompt的效果的。</p>
+<h1 id="小结-2">小结</h1>
+<ul>
+<li>prompt压缩在特定的场景下，还是有比较大的收益的；对于目前输入普遍很长的情况，如果考虑成本，这是一个值得考虑的方向<br>
+</li>
+<li>prompt压缩的评测还是更多关注怎么和原prompt输出对齐，这里要记得做归一化</li>
+</ul>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Compressing Context to Enhance Inference Efficiency of Large
+Language Models<br>
+【2】Prompt Compression and Contrastive Conditioning for Controllability
+and Toxicity Reduction in Language Models<br>
+【3】Learning to compress prompts with gist tokens<br>
+【4】LLMLingua: Compressing prompts for accelerated inference of large
+language models</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/4519eadd.html" title="prompt压缩(一)">https://saicat.github.io/4519eadd.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/prompt%E5%8E%8B%E7%BC%A9/" rel="tag"><i class="fa fa-tag"></i> prompt压缩</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2dee4921.html" rel="prev" title="LLM水印">
+                  <i class="fa fa-angle-left"></i> LLM水印
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">609k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">18:26</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
