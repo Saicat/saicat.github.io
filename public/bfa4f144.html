@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  之前讲过了prompt压缩，追求把模型的输入减少一些：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="reasoning压缩(一)">
+<meta property="og:url" content="https://saicat.github.io/bfa4f144.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  之前讲过了prompt压缩，追求把模型的输入减少一些：">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/tba_examples.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/tba_algo1.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/tba_algo2.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/tba_ep.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/tba_ep_example.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/cod_prompt.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/cod_perf.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/cod_perf_1.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/cod_perf_2.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/cod_perf_3.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/cod_perf_4.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/cod_perf_bad.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/sot_pipeline.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/sot_perf.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/infty_intro.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/infty_prompt.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/infty_gendata.png">
+<meta property="og:image" content="https://saicat.github.io/bfa4f144/infty_perf.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-03-29T08:55:13.000Z">
+<meta property="article:modified_time" content="2025-03-29T09:47:03.346Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="transformer">
+<meta property="article:tag" content="reasoning压缩">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/bfa4f144/tba_examples.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/bfa4f144.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/bfa4f144.html","path":"bfa4f144.html","title":"reasoning压缩(一)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>reasoning压缩(一) | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#token-budget-aware-llm-reasoning"><span class="nav-number">1.</span> <span class="nav-text">Token-Budget-Aware LLM
+Reasoning</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%BB%E6%89%BE%E6%9C%80%E4%BD%B3budget"><span class="nav-number">1.1.</span> <span class="nav-text">寻找最佳budget</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tale-ep"><span class="nav-number">1.2.</span> <span class="nav-text">TALE-EP</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tale-post-training-tale-pt"><span class="nav-number">1.3.</span> <span class="nav-text">TALE Post-Training (TALE-PT)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#chain-of-draftcod"><span class="nav-number">2.</span> <span class="nav-text">Chain of Draft（CoD）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#sketch-of-thoughtsot"><span class="nav-number">3.</span> <span class="nav-text">Sketch-of-Thought（SoT）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%93%E4%B8%9A%E6%80%9D%E7%BB%B4"><span class="nav-number">3.1.</span> <span class="nav-text">专业思维</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#router"><span class="nav-number">3.2.</span> <span class="nav-text">Router</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">3.3.</span> <span class="nav-text">效果</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#inftythink"><span class="nav-number">4.</span> <span class="nav-text">InftyThink</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">76</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">72</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/bfa4f144.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="reasoning压缩(一) | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          reasoning压缩(一)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2025-03-29 16:55:13 / 修改时间：17:47:03" itemprop="dateCreated datePublished" datetime="2025-03-29T16:55:13+08:00">2025-03-29</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>17 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>之前讲过了prompt压缩，追求把模型的输入减少一些：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/7ugiuuhRaXV4P62C7GsA1w">prompt压缩(一)</a><br>
+</li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/RKODtrYHzBL3bFlD2srzjA">prompt压缩(二)</a></li>
+</ul>
+<p>而如今长思考模型的使用越来越多，模型的输出长度也成了一个问题，于是也就有了压缩思考过程的尝试。</p>
+<h1 id="token-budget-aware-llm-reasoning">Token-Budget-Aware LLM
+Reasoning</h1>
+<h2 id="寻找最佳budget">寻找最佳budget</h2>
+<p>这篇文章里，他们发现了在prompt里加上生成budget的限制，比如要求模型使用50个token以内来回答问题，会改变模型生成的长度。比如下面这个例子：</p>
+<img src="/bfa4f144/tba_examples.png" class title="reasoning_compression2">
+<p>但是这个budget的选择也有讲究。首先，不合适的budget会影响模型的效果，准确率会受影响。另外，如果选择一个过低的budget，模型的生成长度上反而比合理budget下要长。比如上面这个例子，当budget=50的时候，模型最终生成长度为86；而如果把budget降到10，模型生成的长度就反而增长到157。文中把这个现象叫做token
+elasticity
+phenomenon。当给定的budget低于合理的范围，就会出现这个不减反增的现象。</p>
+<p>因此怎么选择一个好的budget，在保证效果的情况下，又能让模型减少输出长度，就是关键所在。</p>
+<p>文中首先用二分法来搜索一个budget，来保证模型输出的正确性。具体来说，就是用原CoT作为budget搜索的右边界(right)，0作为初始的左边界(left)。如果在budget=(left
++
+right)/2的情况下模型输出依然正确，说明budget还能再压缩，那下一步就搜索左边，反之就要增加budget，去搜索右边：</p>
+<img src="/bfa4f144/tba_algo1.png" class title="reasoning_compression2">
+<p>为了对付token elasticity
+phenomenon的问题，算法1里的isFeasible里用贪心策略，要求当前budget下的实际输出长度必须要比上次的短：</p>
+<img src="/bfa4f144/tba_algo2.png" class title="reasoning_compression2">
+<h2 id="tale-ep">TALE-EP</h2>
+<p>基于前面的分析，文中提出两个方法来压缩reasoning长度，第一个是TALE-EP。</p>
+<p>TALE = Token-budget-Aware Llm rEasoning</p>
+<p>EP = Estimation and Prompting</p>
+<img src="/bfa4f144/tba_ep.png" class title="reasoning_compression2">
+<p>预测budget部分则是使用一个LLM，用下面的prompt来给出预测：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Task: Analyze the given question and estimate the</span><br><span class="line">minimum number of tokens required to generate a</span><br><span class="line">complete and accurate response. Please Give the</span><br><span class="line">response by strictly following this format: [[budget]],</span><br><span class="line">for example, Budget: [[12]].</span><br></pre></td></tr></table></figure>
+<p>再看一个TALE-EP的例子：</p>
+<img src="/bfa4f144/tba_ep_example.png" class title="reasoning_compression2">
+<p>TALE-EP不需要训练模型，只需要依赖LLM+prompt对budge进行预测。</p>
+<p>TALE-EP能比CoT减少67%左右的token（从Vanilla CoT的461.25 → 148.72
+tokens），不过效果也比CoT稍微差一点点（83.75% → 81.03%）。</p>
+<h2 id="tale-post-training-tale-pt">TALE Post-Training (TALE-PT)</h2>
+<p>另一个方式TALE-PT，则是直接把token的压缩训练到生成模型中去，相当于让生成模型自己隐式地去判断应该要用多少budget。训练方式有SFT和DPO两种。</p>
+<p>1、SFT</p>
+<p>把原来的CoT数据按前面的algorithm1和2改造成短思考的形式，然后直接微调生成模型。</p>
+<p>2、DPO</p>
+<p>另外一个方法就是使用强化学习DPO，用改造过的短思考数据作为正例，而原CoT的答案作为负例，进行训练。</p>
+<p>经过SFT训练的TALE-PT效果还是比没有训练的TALE-EP更好一些：</p>
+<ul>
+<li>SFT版：+1.01%（77.56% → 78.57%）<br>
+</li>
+<li>DPO版：-3.45%（77.56% → 74.11%），token也减少了50%左右。</li>
+</ul>
+<h1 id="chain-of-draftcod">Chain of Draft（CoD）</h1>
+<p>CoT要求模型一步一步分析当前的问题，把复杂问题分解成可以快速解决的子问题。这种要求下，模型的输出其实就是在碎碎念：“我现在要煮一个水煮牛肉，先切牛肉……逆纹切薄片才嫩，这块肉怎么这么难切？刀该磨了……料酒、生抽、淀粉、蛋清……蛋清是不是放多了？算了先这样试试吧……腌二十分钟够不够？现在再尝试加点料酒……”</p>
+<p>这样虽然能够让过程清晰一些，但是也显得有些啰嗦了。</p>
+<p>CoD就参照人类专业一些的做法。比如学霸在做数学题的时候可能就不会碎碎念，而是首先把当前的条件都用简洁的方式表达出来，然后列几个候选方案的公式，最后验证结果。</p>
+<p>因此相比CoT，CoD在system
+prompt上就明确要求用更少的文字来进行思考：</p>
+<img src="/bfa4f144/cod_prompt.png" class title="reasoning_compression2">
+<p>另外CoD还会提供一些人工编写，包含简洁思考过程的case来作为示例。比如用于GSM8K的system
+prompt和few-shot example是这样的：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">system_prompt: |</span><br><span class="line">  Think step by step, but only keep minimum draft for each thinking step, with 5 words at most.</span><br><span class="line">  Return the answer at the end of the response after a separator ####.</span><br><span class="line">format: |</span><br><span class="line">  Q: &#123;question&#125;</span><br><span class="line">  A: &#123;answer&#125;</span><br><span class="line">fewshot: </span><br><span class="line">  - question: |</span><br><span class="line">      There are 15 trees in the grove. Grove workers will plant trees in the</span><br><span class="line">      grove today. After they are done, there will be 21 trees. How many trees did</span><br><span class="line">      the grove workers plant today?</span><br><span class="line">    answer: |</span><br><span class="line">      21 - 15 = 6. #### 6</span><br><span class="line">  - question: | </span><br><span class="line">      If there are 3 cars in the parking lot and 2 more cars arrive, how many</span><br><span class="line">      cars are in the parking lot?</span><br><span class="line">    answer: |</span><br><span class="line">      3 + 2 = 5. #### 5</span><br><span class="line">  - question: |</span><br><span class="line">      Leah had 32 chocolates and her sister had 42. If they ate 35, how many</span><br><span class="line">      pieces do they have left in total?</span><br><span class="line">    answer: |</span><br><span class="line">      32 + 42 = 74; 74 - 35 = 39. #### 39</span><br><span class="line">  - question:</span><br><span class="line">      Jason had 20 lollipops. He gave Denny some lollipops. Now Jason has 12</span><br><span class="line">      lollipops. How many lollipops did Jason give to Denny?</span><br><span class="line">    answer: |</span><br><span class="line">      20 - x = 12; x = 20 - 12 = 8. #### 8</span><br><span class="line">  - question: |</span><br><span class="line">      Shawn has five toys. For Christmas, he got two toys each from his mom and</span><br><span class="line">      dad. How many toys does he have now?</span><br><span class="line">    answer: |</span><br><span class="line">      2 * 2 = 4; 5 + 4 = 9. #### 9</span><br><span class="line">  - question: |</span><br><span class="line">      There were nine computers in the server room. Five more computers were</span><br><span class="line">      installed each day, from monday to thursday. How many computers are now in the</span><br><span class="line">      server room?</span><br><span class="line">    answer: |</span><br><span class="line">      5 * 4 = 20; 9 + 20 = 29. #### 29</span><br><span class="line">  - question: |</span><br><span class="line">      Michael had 58 golf balls. On tuesday, he lost 23 golf balls. On wednesday,</span><br><span class="line">      he lost 2 more. How many golf balls did he have at the end of wednesday?</span><br><span class="line">    answer: |</span><br><span class="line">      58 - 23 = 35; 35 - 2 = 33. #### 33</span><br><span class="line">  - question: |</span><br><span class="line">      Olivia has $23. She bought five bagels for $3 each. How much money does</span><br><span class="line">      she have left</span><br><span class="line">    answer: |</span><br><span class="line">      5 * 3 = 15; 23 - 15 = 8. #### 8</span><br></pre></td></tr></table></figure>
+<p>CoD基本上需要给每个任务提供不同的few-shot
+example，这里还是有些工作量的。其他任务的prompt都能在论文github找到。</p>
+<p>这些example很重要，原文发现没有使用这样示例样本，CoD的准确率就会大打折扣，甚至比不用CoT直接回答高不了多少：</p>
+<img src="/bfa4f144/cod_perf.png" class title="reasoning_compression2">
+<p>在使用较大模型时，在压缩reasoning长度上，CoD的效果还是不错的，最大能压缩到CoT的7%，而准确率还能基本持平：</p>
+<img src="/bfa4f144/cod_perf_1.png" class title="reasoning_compression2">
+<img src="/bfa4f144/cod_perf_2.png" class title="reasoning_compression2">
+<img src="/bfa4f144/cod_perf_3.png" class title="reasoning_compression2">
+<img src="/bfa4f144/cod_perf_4.png" class title="reasoning_compression2">
+<p>不过在小模型上（1.5B、3B之类的）效果就不行了：</p>
+<img src="/bfa4f144/cod_perf_bad.png" class title="reasoning_compression2">
+<h1 id="sketch-of-thoughtsot">Sketch-of-Thought（SoT）</h1>
+<h2 id="专业思维">专业思维</h2>
+<p>SoT和CoD的大思路其实有些相似（名字也相关，sketch和draft嘛），都是认为CoT的碎碎念没有必要，应该用更加专业的人类思维方式来进行思考，不用啥都往思维链里放。</p>
+<p>在这个framework下，SoT自己先提出三种抽象的专业思维方式：</p>
+<ul>
+<li>Conceptual Chaining<br>
+</li>
+<li>Chunked Symbolism<br>
+</li>
+<li>Expert Lexicons</li>
+</ul>
+<p>1、Conceptual Chaining</p>
+<blockquote>
+<p>Conceptual Chaining extracts essential terms and presents reasoning
+as direct step-by-step pathways with minimal text</p>
+</blockquote>
+<p>Conceptual
+chaining仿照人类对事物概念的快速联想，用最简洁的符号来表示这种联想，比如箭头→。这种形式不用太关注这个联想的具体关系是什么，比如看到雨你可以联想到伞，那就“雨→伞”，也可以联想到云，那就“雨→云”，也可以联想到树，“雨→树”。这种方式不用把二者的具体关系都碎碎念解释出来，但是也很符合人类的思考方式。</p>
+<p>Conceptual chaining适合用于commonsense reasoning相关的任务：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Q: What is the name of the currency used in Seoul?</span><br><span class="line">A: &lt;think&gt; #Seoul → #South Korea → Won &lt;/think&gt;</span><br><span class="line">Answer: Korean Wo</span><br></pre></td></tr></table></figure>
+<p>具体的prompt是这样的：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">## **Role &amp; Objective**  </span><br><span class="line">You are a reasoning expert specializing in **structured concept linking** by connecting essential ideas in a logical sequence. Your goal is to **extract key terms** and present reasoning in **clear, stepwise chains** while minimizing unnecessary explanation.  </span><br><span class="line"></span><br><span class="line">This reasoning method follows a **conceptual chaining approach**, where information is **linked in structured steps** to establish relationships between ideas. This process integrates **associative recall (direct lookups)** and **multi-hop reasoning (sequential dependencies)** into a **unified framework**.  </span><br><span class="line"></span><br><span class="line">This method is most effective for:  </span><br><span class="line">- **Commonsense reasoning** (quickly linking familiar ideas)  </span><br><span class="line">- **Multi-hop inference** (tracing logical or causal dependencies)  </span><br><span class="line">- **Fact-based recall** (retrieving knowledge with minimal cognitive load)  </span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">## **How to Apply This Reasoning Method**  </span><br><span class="line">1. **Extract Key Concepts** → Identify the most relevant words or entities.  </span><br><span class="line">2. **Use Minimal Words** → Keep each reasoning step **concise and direct**.  </span><br><span class="line">3. **Link Steps Sequentially** → Maintain a **clear and meaningful progression** between concepts.  </span><br><span class="line">4. **Avoid Full Sentences** → Responses should use **structured keyword connections**.  </span><br><span class="line">5. **Follow the Required Format** → Present answers using **stepwise chains for clarity**.  </span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">## **Rules &amp; Directives**</span><br><span class="line">1. **Use Structured Concept Linking**</span><br><span class="line">   - Each step **must be logically connected**.</span><br><span class="line">   - Use arrows (`→`) to show dependencies.</span><br><span class="line"></span><br><span class="line">2. **Avoid Unnecessary Text**</span><br><span class="line">   - **Do not** restate the question.</span><br><span class="line">   - **Do not** use full sentences.</span><br><span class="line"></span><br><span class="line">3. **Maintain Logical Flow**</span><br><span class="line">   - Concepts must be **meaningfully ordered**.</span><br><span class="line">   - Ensure **each step contributes to the reasoning process**.</span><br><span class="line"></span><br><span class="line">4. **Output Format**</span><br><span class="line">   - Use the exact structured format:</span><br><span class="line">   ``</span><br><span class="line">   &lt;think&gt;</span><br><span class="line">   [shorthand reasoning]</span><br><span class="line">   &lt;/think&gt;</span><br><span class="line">   \boxed&#123;[Final answer]&#125;</span><br><span class="line">   ``</span><br><span class="line">   - The **final answer must be boxed**.</span><br><span class="line">   - **If the question is multiple-choice, return the correct letter option inside the box.**</span><br><span class="line">   - **Use minimal words in your response.**</span><br></pre></td></tr></table></figure>
+<p>这个prompt主要分为三部分：</p>
+<ul>
+<li>第一部分：角色定位和目的说明<br>
+</li>
+<li>第二部分：介绍Conceptual Chaining和它适用的场景<br>
+</li>
+<li>第三部分：具体说明怎么使用Conceptual
+Chaining来解决问题，都有什么细节要关注</li>
+</ul>
+<p>其他的prompt在<a target="_blank" rel="noopener" href="https://github.com/ashishpatel26/sot/tree/main/sketch_of_thought/config/prompts">https://github.com/ashishpatel26/sot/tree/main/sketch_of_thought/config/prompts</a>可以找到。</p>
+<p>2、Chunked Symbolism</p>
+<p>人类看信息的时候会把信息分块，比如一段段看，或者读电话号码的时候，会把3个或者4个数字看做一个chunk。</p>
+<p>放到reasoning里，就是让模型将复杂的数学推理过程拆解为更小的、可管理的chunk，并通过符号和公式紧凑表达，避免自然语言的冗余描述。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Q: A car accelerates at 2.5 m/sˆ2 for 10 seconds. If</span><br><span class="line">its initial velocity was 15 m/s, what is its final</span><br><span class="line">velocity?</span><br><span class="line">A: &lt;think&gt; a = 2.5 m/sˆ2, t = 10 s, vi = 15 m/s vf =</span><br><span class="line">15 + (2.5 × 10), vf = 40 m/s &lt;/think&gt;</span><br><span class="line">Answer: 40 m/s</span><br></pre></td></tr></table></figure>
+<p>3、Expert Lexicons</p>
+<p>缩写这个大家都很熟悉，在特定领域都有大量的专有缩写，这让我们可以减少很多冗余文本的使用。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Q: A patient with STEMI is given MONA therapy. They</span><br><span class="line">are allergic to aspirin. Are they at risk with this</span><br><span class="line">treatment?</span><br><span class="line">A: &lt;think&gt; STEMI → ST-Elevation MI, MONA → Morphine,</span><br><span class="line">O2, Nitrates, Aspirin, so Aspirin ∈ MONA &lt;/think&gt;</span><br><span class="line">Answer: Yes</span><br></pre></td></tr></table></figure>
+<h2 id="router">Router</h2>
+<p>以上这几种思考方式分别适合用于不同的场景。</p>
+<p>Conceptual Chaining适用于常识推理、多跳推理、Fact-based
+Recall。而Chunked Symbolism就适用于数学推理和符号逻辑问题。Expert
+Lexicons则适合专业领域比如医学相关的推理。</p>
+<p>因此需要一个router根据输入问题的不同，选择一个适合的prompt来处理。文中训练了一个DistilBERT来做这个分流，DistilBERT模型比较小效率很高。训练数据来自于14200条reasoning
+task的数据，这些数据用GPT-4o + prompt打标，分成这三类中的一类。</p>
+<img src="/bfa4f144/sot_pipeline.png" class title="reasoning_compression2">
+<h2 id="效果">效果</h2>
+<p>相比CoT，SoT在效果差不多的情况下，可以减少70%左右的token使用。</p>
+<img src="/bfa4f144/sot_perf.png" class title="reasoning_compression2">
+<h1 id="inftythink">InftyThink</h1>
+<p>一句话，InftyThink把线性连续的reasoning过程，转化成包含reasoning
+summary的迭代过程。</p>
+<p>看下面这张图就大概明白了：</p>
+<img src="/bfa4f144/infty_intro.png" class title="reasoning_compression2">
+<p>比如原来的CoT是把任务拆解成多个子问题，然后一个一个连续地输出结果。现在InftyThink不一次思考完所有问题，而是思考一部分之后，用一个summary
+prompt +
+LLM把前面的思考过程总结一下，替换原来是思考过程，然后再让模型在summary的基础上继续思考。</p>
+<p>summary prompt：</p>
+<img src="/bfa4f144/infty_prompt.png" class title="reasoning_compression2">
+<p>文中而用于生成summary的LLM是Llama-3.3-70B-Instruct。(一个问题，这里为什么不使用原模型来做summary呢？)</p>
+<p>另外，怎么决定什么时候要做summary呢？首先定一个基础语义单位，比如是句子或者段落，模型生成的结果都会按这个切分。当一个完整的语义单位生成完之后，如果现有的思考长度超过某个阈值（比如4k
+token），那就会触发summary。</p>
+<p>由于summary比原思考过程短，且迭代越多短得越多，因此可以减少整个思考过程的长度。理论上InftyThink的做法支持无限长度的生成。</p>
+<p>由于思考的方式变了，因此模型需要重新训练，来适应这种一段一段summary +
+生成的方式。训练用的数据从CoT数据改造的包含summary的数据：</p>
+<img src="/bfa4f144/infty_gendata.png" class title="reasoning_compression2">
+<p>效果上，InftyThink在OpenR1-Math的准确率有所提升，整个过程的计算程度也更短：</p>
+<img src="/bfa4f144/infty_perf.png" class title="reasoning_compression2">
+<h1 id="小结">小结</h1>
+<p>prompt
+engineer的含金量还在提升，模型越强prompt效果越好。赶紧都从过往的人类思维研究里找一些方法放到prompt里。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Token-Budget-Aware LLM Reasoning<br>
+【2】Chain of Draft: Thinking Faster by Writing Less<br>
+【3】Sketch-of-Thought: Efficient LLM Reasoning with Adaptive
+Cognitive-Inspired Sketching<br>
+【4】InftyThink: Breaking the Length Limits of Long-Context Reasoning in
+Large Language Models</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/bfa4f144.html" title="reasoning压缩(一)">https://saicat.github.io/bfa4f144.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/transformer/" rel="tag"><i class="fa fa-tag"></i> transformer</a>
+              <a href="/tags/reasoning%E5%8E%8B%E7%BC%A9/" rel="tag"><i class="fa fa-tag"></i> reasoning压缩</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/ea2871bf.html" rel="prev" title="prompt压缩(二)">
+                  <i class="fa fa-angle-left"></i> prompt压缩(二)
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">626k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">18:58</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
