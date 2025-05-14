@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  Qwen3报告出来了，这次发报告的速度感觉比之前快一些。来看下报告披露了什么内容。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Qwen3实测 &amp; 技术报告">
+<meta property="og:url" content="https://saicat.github.io/37ee84bb.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  Qwen3报告出来了，这次发报告的速度感觉比之前快一些。来看下报告披露了什么内容。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/37ee84bb/post_train.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-05-14T14:38:57.000Z">
+<meta property="article:modified_time" content="2025-05-14T15:04:11.718Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Qwen">
+<meta property="article:tag" content="RL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/37ee84bb/post_train.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/37ee84bb.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/37ee84bb.html","path":"37ee84bb.html","title":"Qwen3实测 & 技术报告"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Qwen3实测 & 技术报告 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E6%88%98%E6%84%9F%E5%8F%97"><span class="nav-number">1.</span> <span class="nav-text">实战感受</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.</span> <span class="nav-text">模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">3.</span> <span class="nav-text">预训练</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#post-training"><span class="nav-number">4.</span> <span class="nav-text">Post-training</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#post-training%E7%9A%84%E5%90%84%E4%B8%AAphase"><span class="nav-number">4.1.</span> <span class="nav-text">post-training的各个phase</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#strong-to-weak-distillation"><span class="nav-number">4.2.</span> <span class="nav-text">Strong-to-Weak Distillation</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">80</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">76</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/37ee84bb.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Qwen3实测 & 技术报告 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Qwen3实测 & 技术报告
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2025-05-14 22:38:57 / 修改时间：23:04:11" itemprop="dateCreated datePublished" datetime="2025-05-14T22:38:57+08:00">2025-05-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>6.3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>11 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>Qwen3报告出来了，这次发报告的速度感觉比之前快一些。来看下报告披露了什么内容。</p>
+<h1 id="实战感受">实战感受</h1>
+<p>说报告内容之前，插几句直观的Qwen3使用感受。</p>
+<p>最近都在搞Agent，因此之前Qwen3模型出来的时候，第一时间用旗舰的235B
+MoE模型替换Agent业务中在用的DeepSeek-R1和V3，试试看效果怎么样。</p>
+<p>这个Agent业务大致上就是一个类DeepSearch的框架，主prompt是一个大几k字符的英文prompt，加上一些比较细致的输出要求。给DeepSeek-R1，DeepSeek-V3和Qwen3-235B-A22B（think）跑了相同的60条case。</p>
+<p>在格式/指令遵循上，主要看格式的输出是不是符合要求。R1和V3的60条都没有出错，而Qwen3-235B-A22B则跑了13条的时候就错了4条，也就没继续跑了。虽然这几条case都是一些不严重的错误，基本可以通过规则修复，但还是觉得有点奇怪，第一想法就是Qwen3不至于和V3/R1有这么大差距。于是尝试把原来的英文prompt翻译成中文的，再跑Qwen3-235B-A22B，发现指令遵循的效果好了不少，60条只错了1条，勉强算是达到可用水平了。</p>
+<p>而效果上，在DeepSearch这个场景，Qwen3-235B-A22B（think）能够做到和DeepSeek-V3差不多的水平，至少在这几十条评测case中，没有看到明显的差距。</p>
+<p>速度上，Qwen3-235B几乎能够做到R1/V3的两倍速度，这在实践上还是挺有优势的。</p>
+<p>整体上，可以认为Qwen3-235B-A22B的中文能力和DeepSeek-V3接近，而Qwen3的参数量更小一些，在一些场景下可以平替DeepSeek-V3甚至R1；而英文场景上，Qwen3暂时还是和V3/R1有一些差距的。</p>
+<p>BTW，发现DeepSeek-R1/V3在英文上的效果可能还略好于中文。</p>
+<h1 id="模型">模型</h1>
+<p>回到Qwen3报告上来，先看下模型设计。</p>
+<p>Qwen3共有8个模型：</p>
+<table>
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>模型</th>
+<th>类型</th>
+<th>层数</th>
+<th>头数(Q/KV)</th>
+<th>是否共享专家</th>
+<th>总专家数/激活专家数</th>
+<th>是否绑定嵌入</th>
+<th>上下文长度</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Qwen3-0.6B</td>
+<td>Dense</td>
+<td>28</td>
+<td>16 / 8</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>是</td>
+<td>32K</td>
+</tr>
+<tr class="even">
+<td>Qwen3-1.7B</td>
+<td>Dense</td>
+<td>28</td>
+<td>16 / 8</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>是</td>
+<td>32K</td>
+</tr>
+<tr class="odd">
+<td>Qwen3-4B</td>
+<td>Dense</td>
+<td>36</td>
+<td>32 / 8</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>是</td>
+<td>128K</td>
+</tr>
+<tr class="even">
+<td>Qwen3-8B</td>
+<td>Dense</td>
+<td>36</td>
+<td>32 / 8</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>否</td>
+<td>128K</td>
+</tr>
+<tr class="odd">
+<td>Qwen3-14B</td>
+<td>Dense</td>
+<td>40</td>
+<td>40 / 8</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>否</td>
+<td>128K</td>
+</tr>
+<tr class="even">
+<td>Qwen3-32B</td>
+<td>Dense</td>
+<td>64</td>
+<td>64 / 8</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>否</td>
+<td>128K</td>
+</tr>
+<tr class="odd">
+<td>Qwen3-30B-A3B</td>
+<td>MoE</td>
+<td>48</td>
+<td>32 / 4</td>
+<td>否</td>
+<td>128 / 8</td>
+<td>否</td>
+<td>128K</td>
+</tr>
+<tr class="even">
+<td>Qwen3-235B-A22B</td>
+<td>MoE</td>
+<td>94</td>
+<td>64 / 4</td>
+<td>否</td>
+<td>128 / 8</td>
+<td>否</td>
+<td>128K</td>
+</tr>
+</tbody>
+</table>
+<p>大部分设置都和前代是一样：</p>
+<ul>
+<li>RoPE<br>
+</li>
+<li>GQA<br>
+</li>
+<li>SwiGLU<br>
+</li>
+<li>较小模型tie
+embedding把参数留给层数，较大模型就还是分别训练效果更好</li>
+</ul>
+<p>有变化的包括：</p>
+<ul>
+<li>相比Qwen二代，Qwen3去掉了QKV
+bias，增加了QK-Norm，提高训练稳定性<br>
+</li>
+<li>MoE没有使用共享专家了<br>
+</li>
+<li>MoE使用lobal-batch load balancing loss，提高专家专业度</li>
+</ul>
+<p>MoE不使用共享专家这个倒是有点意外，后续值得探索一下。</p>
+<h1 id="预训练">预训练</h1>
+<p>预训练阶段，数据总量进一步提升到了36T
+token，除了常规的数据收集，还用Qwen2.5-VL从文档中提取了一些数据。另外也用Qwen2.5、Qwen2.5-Coder和Qwen2.5-Math合成了T
+token级别的训练数据。</p>
+<p>训练还是多阶段：</p>
+<table>
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>阶段</th>
+<th>训练数据</th>
+<th>长度</th>
+<th>训练目标</th>
+<th>特殊操作</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>通用阶段（S1）</td>
+<td>约30T token，涵盖119种语言和方言</td>
+<td>4,096</td>
+<td>训练语言熟练度和通用世界知识</td>
+<td>无</td>
+</tr>
+<tr class="even">
+<td>推理阶段（S2）</td>
+<td>约5T更高质量的token，增加STEM、Code、推理和合成数据比例</td>
+<td>4,096</td>
+<td>进一步提高推理能力</td>
+<td>加速学习率衰减</td>
+</tr>
+<tr class="odd">
+<td>长上下文阶段</td>
+<td>数十B token，75%文本长度在16,384 - 32,768，25%文本长度在4,096 -
+16,384</td>
+<td>32,768</td>
+<td>扩展模型上下文长度</td>
+<td>使用ABF将RoPE基础频率从10,000提高到1,000,000；引入YARN和DCA以实现推理时序列长度提升四倍</td>
+</tr>
+</tbody>
+</table>
+<p>Base模型的评测效果不出意外，整体上是在更小参数量上获得更高的分数：</p>
+<ul>
+<li><strong>Qwen3-235B-A22B-Base优势显著</strong>：在多数任务上，Qwen3-235B-A22B-Base凭借更少的总参数或激活参数，超越DeepSeek-V3
+Base、Llama-4-Maverick
+Base、Qwen2.5-72B-Base等。对比参数约为其两倍的Llama-4-Maverick-Base，以及总参数约为其三倍的DeepSeek-V3-Base，Qwen3-235B-A22B-Base在大部分基准测试中表现更优。<br>
+</li>
+<li><strong>Qwen3
+MoE基础模型表现出色</strong>：使用相同预训练数据时，Qwen3
+MoE仅用1/5的激活参数就能达到与Qwen3 dense模型相近的水平。同时，Qwen3
+MoE以不到1/2的激活参数和更少的总参数，超越Qwen2.5
+MoE。即便激活参数仅为Qwen2.5 dense模型的1/10，Qwen3
+MoE基础模型仍能comparable。<br>
+</li>
+<li><strong>Qwen3密集基础模型性能提升</strong>：Qwen3
+dense模型在较高参数规模下，整体性能与Qwen2.5基础模型相当，在STEM、编码和推理基准测试中，部分Qwen3
+dense模型性能甚至超越更高参数规模的Qwen2.5模型。例如，Qwen3-1.7B/4B/8B/14B/32B-Base分别与Qwen2.5-3B/7B/14B/32B/72B-Base性能可比，且在特定领域表现更优。</li>
+</ul>
+<h1 id="post-training">Post-training</h1>
+<p>在post-training上，Qwen3有两个特性：</p>
+<ul>
+<li>1.strong-to-weak蒸馏：只有最大的旗舰MoE模型和最大的Dense模型是走常规训练流程获得的，其他几个都是用这俩蒸馏获得的。相比使用多阶段的post-training，使用teacher
+model的output
+logits蒸馏的效果更好，而且资源消耗量只有多阶段post-training的1/10。<br>
+</li>
+<li>2.thinking control：每个模型都既有thinking mode也有non-thinking
+mode，可在启动配置中开关，也可在每个输入中通过soft开关调整。</li>
+</ul>
+<img src="/37ee84bb/post_train.png" class title="Qwen3">
+<p>看上图，旗舰模型的post-training共有4个stage，前两个stage主要提升深度思考的能力，而后两个stage就把两种模式结合起来。</p>
+<h2 id="post-training的各个phase">post-training的各个phase</h2>
+<ol type="1">
+<li>Long-CoT Cold Start</li>
+</ol>
+<p>数据：整理涵盖数学、代码、逻辑推理和一般 STEM
+问题等多类别的综合数据集，数据集中每个问题都配有经过验证的参考答案或基于代码的测试用例，作为长思维链训练
+“冷启动” 阶段的基础。（更详细的筛选策略在报告4.1）</p>
+<p>Cold
+Start的目的是为模型灌输基础推理模式，而不过分追求推理效果，以便在后续强化学习阶段有更大的提升空间和灵活性。因此，在这个阶段要使用比较少的数据量和训练步骤。</p>
+<ol start="2" type="1">
+<li>Reasoning RL</li>
+</ol>
+<p>这是提升模型推理思考能力的关键阶段。</p>
+<p><strong>数据筛选标准</strong>：（1）未在Cold
+Start阶段使用（2）冷启动模型可学习（3）具有挑战性以及（4）覆盖广泛子领域，最终收集到3,995对数据。<br>
+<strong>训练方法与策略</strong>：用GRPO训练模型，用大batch size、 a high
+number of rollouts per query和off-policy训练，可以提升训练效率。<br>
+<strong>训练效果</strong>：在单次RL训练过程中，模型的训练奖励和验证性能不断提升，且无需手动调整超参数。以Qwen3-235B-A22B模型为例，其AIME24分数在170个RL训练step中从70.1提升到85.1。</p>
+<ol start="3" type="1">
+<li>Thinking Mode Fusion</li>
+</ol>
+<p>这一阶段的目的是将non-thinking能力整合到二阶段得到的thinking模型中。</p>
+<p><strong>SFT数据构建</strong>：SFT数据融合“thikning”和“non-thinking”数据。“thikning”数据利用第二阶段的模型，通过rejection
+sampling第一阶段的query生成；“non-thinking”数据涵盖code、数学、指令遵循等多领域任务。为提升低资源语言的任务效果，增加了翻译任务的比例。</p>
+<p><strong>聊天模板设计</strong>：设计专用聊天模板，在用户query或system
+message里，用“/think”和“/no
+think”标志区分“thikning”和“non-thinking”样本。模型据此选择合适的思考模式。“non-thinking”样本的response保留空的思考内容，保证两种模式格式上的一致。模型默认是处于“thikning”模式，因此训练时还加入了无“/think”标志的样本，模型也要按“thikning”处理。对于多轮对话，随机插入标志，让模型按最后遇到的标志进行回复。</p>
+<p><strong>思维预算控制</strong>：思维模式的融合让模型能基于不完整思维生成response，为思维预算控制创造条件。当模型思考长度达用户设定阈值，插入停止思维指令，强制模型生成response。这一能力在融合过程中自然形成，无需额外训练，提升了模型在不同场景下的推理效率和资源利用效率。</p>
+<ol start="4" type="1">
+<li>General RL</li>
+</ol>
+<p>和R1一样，最后阶段要进行通用数据的RL训练，以提升全场景下的模型能力。</p>
+<p>General
+RL最重要的工作就是建立强大的reward系统。Qwen3的reward系统涵盖20+任务，分别关注在提升多样能力，包括：</p>
+<ul>
+<li>确保模型准确理解并遵循用户指令的指令遵循能力；<br>
+</li>
+<li>使模型遵循特定格式规范的格式遵循能力；<br>
+</li>
+<li>提高模型在开放query中表现出的helpfulness,
+engagement和style，以优化用户体验的偏好对齐能力；<br>
+</li>
+<li>训练模型正确调用工具接口，增强agent能力；<br>
+</li>
+<li>针对特定场景（如RAG），引导模型生成准确且合适的response，降低幻觉风险的特殊场景能力；<br>
+等</li>
+</ul>
+<p>reward的类型也分成三种：</p>
+<ul>
+<li><strong>Rule-based
+Reward</strong>：在推理RL阶段已广泛使用，可高精度评估模型输出的正确性，有效防止reward
+hacking，适用于指令遵循和格式遵守等一般任务。<br>
+</li>
+<li><strong>Model-based Reward with Reference
+Answer</strong>：为每个query提供参考答案，让Qwen2.5-72B-Instruct根据参考答案进行评分，能更灵活处理多样任务，避免单纯基于规则奖励可能出现的误判。<br>
+</li>
+<li><strong>Model-based Reward without Reference
+Answer</strong>：利用人类偏好数据训练reward模型，为模型response打分，可处理更general的query。</li>
+</ul>
+<h2 id="strong-to-weak-distillation">Strong-to-Weak Distillation</h2>
+<p>蒸馏已经是比较成熟的手段了，多个实践也都证明有稳定收益。</p>
+<p>Qwen3的蒸馏主要分2个阶段：</p>
+<ul>
+<li><strong>Off-policy
+Distillation</strong>：将teacher模型在“/think”和“/no
+think”两种模式下生成的输出结合起来，用于蒸馏。这帮助轻量级学生模型培养基本的推理技能，以及在不同思维模式间切换的能力，为下一阶段的On-policy
+Distillation训练打基础。<br>
+</li>
+<li><strong>On-policy
+Distillation</strong>：具体操作是对prompt进行采样，学生模型以“/think”或“/no
+think”模式生成response，然后通过对齐其输出的logits与教师模型（Qwen3-32B或Qwen3-235B-A22B）的logits，最小化KL散度，实现学生模型的微调。</li>
+</ul>
+<h1 id="小结">小结</h1>
+<p>Qwen3主要的变化的点：</p>
+<ul>
+<li>MoE不使用共享专家<br>
+</li>
+<li>全线模型支持thinking和non-thinking切换，不过这种做法估计对纯thinking模式有损</li>
+</ul>
+<p>整体来说，Qwen3比Qwen2.5在效果和效率上都有一定提升，特别是融合思考模型，是大部分无法做大规模训练的算法团队的救星，有机会缓解被老板追着问耗时/成本能不能解决的问题了。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】Qwen3 Technical Report,
+https://github.com/QwenLM/Qwen3/blob/main/Qwen3_Technical_Report.pdf</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/37ee84bb.html" title="Qwen3实测 &amp; 技术报告">https://saicat.github.io/37ee84bb.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/Qwen/" rel="tag"><i class="fa fa-tag"></i> Qwen</a>
+              <a href="/tags/RL/" rel="tag"><i class="fa fa-tag"></i> RL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/b242bfb3.html" rel="prev" title="Agent完全手册(零)：三大模块，三个理念">
+                  <i class="fa fa-angle-left"></i> Agent完全手册(零)：三大模块，三个理念
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">662k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">20:03</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
