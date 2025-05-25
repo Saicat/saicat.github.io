@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  最近搞DeepResearch。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="DeepResearch的报告生成方法">
+<meta property="og:url" content="https://saicat.github.io/44c62dc5.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  最近搞DeepResearch。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/44c62dc5/dr_example.jpg">
+<meta property="og:image" content="https://saicat.github.io/44c62dc5/v3_html.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-05-19T14:31:35.000Z">
+<meta property="article:modified_time" content="2025-05-25T09:29:23.355Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Agent">
+<meta property="article:tag" content="DeepResearch">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/44c62dc5/dr_example.jpg">
+
+
+<link rel="canonical" href="https://saicat.github.io/44c62dc5.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/44c62dc5.html","path":"44c62dc5.html","title":"DeepResearch的报告生成方法"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>DeepResearch的报告生成方法 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%8A%A5%E5%91%8A%E7%9A%84%E7%89%B9%E7%82%B9"><span class="nav-number">1.</span> <span class="nav-text">报告的特点</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#deepsearch%E7%9A%84%E7%BB%93%E6%9E%9C"><span class="nav-number">2.</span> <span class="nav-text">DeepSearch的结果</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#step1%E6%96%87%E5%AD%97%E7%89%88%E7%9A%84%E5%88%9D%E7%A8%BF"><span class="nav-number">3.</span> <span class="nav-text">step1：文字版的初稿</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%B4%E6%8E%A5%E7%94%9F%E6%88%90%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">3.1.</span> <span class="nav-text">直接生成的问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%A7%E7%BA%B2%E7%94%9F%E6%88%90"><span class="nav-number">3.2.</span> <span class="nav-text">大纲生成</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A1%AB%E5%85%85%E7%BB%86%E8%8A%82"><span class="nav-number">3.3.</span> <span class="nav-text">填充细节</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#step2%E5%9B%BE%E6%96%87%E6%8A%A5%E5%91%8A"><span class="nav-number">4.</span> <span class="nav-text">step2：图文报告</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%BE%E7%9A%84%E7%B1%BB%E5%9E%8B"><span class="nav-number">4.1.</span> <span class="nav-text">图的类型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A0%E5%85%A5%E5%9B%BE%E7%9A%84%E6%96%B9%E6%B3%95"><span class="nav-number">4.2.</span> <span class="nav-text">加入图的方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%BE%E8%A1%A8%E7%94%9F%E6%88%90"><span class="nav-number">4.3.</span> <span class="nav-text">图表生成</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E6%90%9C%E7%B4%A2%E6%BA%90%E7%9A%84%E5%9B%BE"><span class="nav-number">4.4.</span> <span class="nav-text">其他搜索源的图</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%8A%A5%E5%91%8A%E7%9A%84%E6%A0%BC%E5%BC%8F"><span class="nav-number">5.</span> <span class="nav-text">报告的格式</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">83</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/44c62dc5.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="DeepResearch的报告生成方法 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          DeepResearch的报告生成方法
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-05-19 22:31:35" itemprop="dateCreated datePublished" datetime="2025-05-19T22:31:35+08:00">2025-05-19</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-05-25 17:29:23" itemprop="dateModified" datetime="2025-05-25T17:29:23+08:00">2025-05-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>14 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>【本文已在同名 微信公众号 / 知乎 / <a target="_blank" rel="noopener" href="http://www.linsight.cn/">个人博客linsight.cn</a> 上线】</p>
+<hr>
+<p>最近搞DeepResearch。</p>
+<p>DeepResearch的任务是为用户提供一份全面深入的研究报告。</p>
+<p>列一些典型的用户query：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">做一份端午从上海去东京的五天四夜购物攻略，预算八千</span><br><span class="line">洛阳龙门石窟和老君山三天两夜文化摄影攻略</span><br><span class="line">深入研究一下DeepResearch技术今年的发展趋势</span><br><span class="line">三胎政策在成都改善型住房需求中的刺激效果，并预测一下明年四室户型供需缺口</span><br></pre></td></tr></table></figure>
+<p>都是一些较为复杂的，需要多步拆解处理的任务。用户中比较热门的任务类型包括「旅游攻略」，「专业研报」（如技术说明，专业分析："整理下MoE模型的演进过程"）还有「信息整合」（比如给出一份市面上20w以内的电车的对比资料）。</p>
+<p>可以粗暴认为DeepResearch主要就由DeepSearch +
+报告生成这两大模块组成。当然这个过程还可以由planner +
+reflect循环调度。</p>
+<p>这篇略过DeepSearch，先看看「报告生成」的模块。</p>
+<p>假设我们已经有了比较合理、丰富的搜索结果了，那报告要怎么生成呢？</p>
+<h1 id="报告的特点">报告的特点</h1>
+<p>1、长度较长</p>
+<p>DeepResearch的报告首先长度是比较长的，一般至少在几千个token，甚至上万token或者更长，具体就取决于话题和任务的复杂度。</p>
+<p>2、图文并茂</p>
+<p>除了大量的文字，报告还应该是图文并茂的。这里的「图」包含图片和数据图表（比如折线图、扇形图、表格等）。</p>
+<p>3、排版和格式</p>
+<p>为了提供给用户提供更好的阅读体验，报告应该支持比较好的排版。具体的排版就和输出报告的格式有关，常用的就是html、pdf、ppt。</p>
+<p>比如我用coze空间做一份旅游攻略，prompt是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">给我做一份端午节出国旅行的攻略，东南亚，两个人，悠闲一点，预算6000</span><br></pre></td></tr></table></figure>
+<p>跑了差不多半个小时之后就获得了一份html版本的图文攻略：</p>
+<img src="/44c62dc5/dr_example.jpg" class title="研报">
+<p>上面这个图还没截完整，后面还有好几个不同国家的出行方案。</p>
+<h1 id="deepsearch的结果">DeepSearch的结果</h1>
+<p>DeepSearch是报告生成的起点，先看下它都提供了什么。</p>
+<p>1、general search</p>
+<p>目前DeepSearch的结果主要是一系列网页搜索的结果，每个网页包含以下字段：</p>
+<ul>
+<li>title：网页标题<br>
+</li>
+<li>content：完整正文的「文本」内容<br>
+</li>
+<li>url：原文链接<br>
+</li>
+<li>summary：正文的简短总结<br>
+</li>
+<li>images：网页中的图片列表，包含图片的url和对应的caption</li>
+</ul>
+<p>其中title、content和url是常规的网页搜索结果字段，就不说了。</p>
+<p>summary是额外添加的，在报告生成的处理逻辑里，对于不需要网页细节内容的部分，就可以使用summary进行处理，从而减少处理的token，节省时间和成本。</p>
+<p>个人认为，成本问题是DeepResearch一个很重要的方向。如果DeepResearch要向大众推广，那么开发过程中，60%以上的时间都会在考虑怎么节省成本。</p>
+<p>图片的caption也是搜索到网页后增加的，用于后续在报告中添加图片。</p>
+<p>2、domain search</p>
+<p>除了general search，还会有一些常用场景需要的搜索源，比如：</p>
+<ul>
+<li>导航工具：用于获取特定地点之间的交通信息，包括驾车、航班和火车，一般旅游攻略对这个有强需求。<br>
+</li>
+<li>美食工具：获取美食的价格评分和地点还有评价，也是旅游场景的所需要的。</li>
+</ul>
+<p>除了用现有工具，也可以针对自有数据建设向量搜索。</p>
+<p>这些都可以整合成general
+search的结果格式：标题、正文、摘要，url和图像是optional的。</p>
+<h1 id="step1文字版的初稿">step1：文字版的初稿</h1>
+<p>从搜索结果到最终报告，中间需要多个步骤。（有没有大佬已经在做一步端到端的生成？把所有数据都塞给模型，要求一步到位生成图文结果。目前这样做的效果比较差，模型窗口长度限制也是个问题）</p>
+<p>报告的目标格式一般包含选择html、pdf和ppt，这些格式用户使用起来比较熟悉。</p>
+<p>转成目标格式之前，首先要生成一份逻辑通顺，行文流畅，内容完整，包含文字和图片的初稿。</p>
+<p>而这个初稿的生成又分为「生成文字」和「增加图像」两个阶段。</p>
+<p>第一步我们就是要获得文字版本的初稿。</p>
+<p>这里选择用markdown格式来生成文字初稿。因为markdown格式比较简单（能少用点token），模型生成的效果也好，支持多级的标题，公式以及图片的插入，基本能够满足我们的需求。</p>
+<h2 id="直接生成的问题">直接生成的问题</h2>
+<p>这个文字版本也没法一步直接生成。稍微讲一下直接生成的问题：</p>
+<ul>
+<li>搜索结果太多，假设一个网页平均有1000 token，那100个搜索结果就要100k
+token，已经超过或者接近很多模型的窗口上限了；参考秘塔AI，经常出现100个200个甚至更多的网页引用，所以100k级别的输入并不会是少见的情况。<br>
+</li>
+<li>即使模型的窗口可以接受这个长度或者更长的输入，也容易出现lost in the
+middle的情况；对于需要使用到原文细节信息的情况（比如旅行规划中的车次/航班号，出发时间，或者经济研报中多个地区多个维度的数据），要在大量的文本中准确捞到正确的内容是一个容易出错的事情。<br>
+</li>
+<li>目前大部分模型支持的生成长度在2k到4k，在更大长度的内容输出上，容易出现截断。</li>
+</ul>
+<h2 id="大纲生成">大纲生成</h2>
+<p>直接生成会遇到问题，那么更好一点的做法是先生成文档的大纲（即各级标题），再根据大纲去填充细节。</p>
+<p>生成大纲这一步就可以用上搜索结果中的summary了，因为生成大纲并不需要关注太多细节。</p>
+<p>比如在制定旅游攻略的任务下，我们搜索到的内容基本可以分为交通、住宿、美食、景点、通讯等，我们只要让模型根据搜索内容的summary指定report的大纲就可以了。类似地，研究NLP深度模型的发展模型也可以根据搜索结果分为embedding模型、Bert时代、GPT时代、Agent等。</p>
+<p>假设一个summary是30个token，那么即使有200个搜索结果，长度也只有6k
+token，模型可以轻松处理。</p>
+<p>生成大纲时，也有一些细节限制：</p>
+<ul>
+<li>要限定每级标题的数量，防止模型生成过多，并且限定标题级别数量，比如最多只能使用到3级标题。<br>
+</li>
+<li>要求各级标题之间尽量不要有overlap。<br>
+</li>
+<li>标题要起得明确清晰，让人单独看到这个标题也知道是什么意思（因为这些标题在设计上可能是要在报告完成前，展示给用户看的）。</li>
+</ul>
+<p>举一个例子。输入query =
+"上海至东京国庆购物攻略：8000元预算五天四夜经济型方案"</p>
+<p>制订的大纲各级标题是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[&quot;一、行程规划与交通安排\n1.1 机票选择策略\n1.2 机场至市区交通方案&quot;,</span><br><span class="line">&quot;二、住宿选择与区位分析\n2.1 银座商圈高性价比酒店\n2.2 新宿商圈经济型住宿&quot;,</span><br><span class="line">&quot;三、购物商圈深度攻略\n3.1 银座高端购物路线\n3.2 新宿平价消费指南\n3.3 表参道特色品牌挖掘&quot;,</span><br><span class="line">&quot;四、预算分配与消费控制\n4.1 8000元预算分解模型\n4.2 免税政策与退税实操&quot;,</span><br><span class="line">&quot;五、行程优化建议\n5.1 交通卡券组合方案\n5.2 错峰购物时段建议&quot;]</span><br></pre></td></tr></table></figure>
+<p>上面这个例子共有5个一级标题，也就是5个大的chapter。</p>
+<p>大纲格式也可以自行设计，结构化的也可以，只要模型能准确遵循就行。</p>
+<p>这一步里其实有很多细节可以优化，比如传给LLM的搜索结果的排序和筛选，或者利用多次采样再合并获取更合理的大纲等。</p>
+<h2 id="填充细节">填充细节</h2>
+<p>得到大纲的标题之后，就要根据搜索结果填充每个chapter的细节。</p>
+<p>这里可以并行来做：每个chapter调一个模型来填充细节。</p>
+<p>prompt是类似这样的（简化版）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">你需要根据用户的要求，和文档的大纲，完成分配给你的章节的撰写。</span><br><span class="line"></span><br><span class="line">你需要根据搜索结果来完成这一章节。</span><br><span class="line"></span><br><span class="line">用户query: &#123;query&#125;</span><br><span class="line"></span><br><span class="line">大纲: &#123;outline&#125;</span><br><span class="line"></span><br><span class="line">分配给你的章节: &#123;chapter&#125;</span><br><span class="line"></span><br><span class="line">搜索结果: &#123;search_results&#125;</span><br></pre></td></tr></table></figure>
+<p>前面分析了，全量的搜索结果过多，一起都塞给模型，可能导致结果不佳，成本也高。因此在这一步也不宜直接把所有搜索结果扔给模型去完成细节的编写，而是先从搜索结果里找到和当前要写的这个章节相关的条目。</p>
+<p>比如在旅游规划任务下，有一个chapter是交通相关的内容。200个搜索结果里有40个涉及了飞机火车的班次信息，以及景点之间的交通工具推荐。那么在写这一个chapter的时候，就只需要给模型输入这40个搜索结果，而不需要200个搜索结果都给。</p>
+<p>那怎么找到相关搜索条目呢？可以用BGE或者小的LLM给每个文档做一个打分或者匹配，以此筛选搜索结果。也可以在生成大纲的时候就要求模型把对应的条目编号和标题一同给出。</p>
+<p>这一步同样有很多细节可以优化，比如：</p>
+<ul>
+<li>如果觉得以一级标题进行搜索结果匹配还是有太多结果，那可以进行二级或者三级标题的匹配，把章节拆得更细，从而减少每个章节编写的难度。<br>
+</li>
+<li>为了方便编写细节的模型理解，可以在生成大纲的时候增加一个长一点的解释，限定这一章需要补充的信息。<br>
+</li>
+<li>把章节细节的编写也设计成迭代的模型，逐步完善。</li>
+</ul>
+<p>值得单独拎出来说的，是关于字母和数字的细节。涉及字母和数字的通常是比较严谨的信息，比如火车/航班的班次，出发/到达时间，或者路途的公里数，开车所需的时间和住宿价格等。一方面，这些内容错一个字母或者数字就会给用户带来比较大的困惑，另一方面，数字通常涉及计算，而LLM的"口算"并不是很可靠。针对这些问题，可以额外添加一个利用计算器或者python代码验证字母和数字的环节，并把结果提供给章节编写的模型，从而减少计算错误和幻觉带来的问题。</p>
+<p>最后，记得让模型给出reference，用于展示给用户。</p>
+<h1 id="step2图文报告">step2：图文报告</h1>
+<p>上面这几步做完之后，就有一个纯文本的report初稿了。但是呈现给用户，光有字不够，还得有图。</p>
+<h2 id="图的类型">图的类型</h2>
+<p>report里都有什么图？先来分个类。</p>
+<p>1、来自检索结果（网页）的图</p>
+<p>检索结果中包含一些可以直接使用的图片，这些图片可以直接插入到report的适当位置。</p>
+<p>一种是如旅游景点的风景图，地标建筑照片等。这一类图片的特点是，插入到report时，在准确度上的要求相对比较低，只要别出现明显的图文不匹配（比如文字在介绍山，但是图片是海景），都还可以接受。</p>
+<p>另外，也有可能出现对准确度有一些要求的情况，比如路线导航，车次的信息表。这类信息如果出错（火车的章节配了个航班的图）可能就会让用户的体验大打折扣。</p>
+<p>再进一步，比如对于经济调研的研报，那么就有可能出现很多折线图、柱状图、扇形图或者信息密集的表格，这种图表每个字母每个数字都很重要，不能出错，不能和文本的信息对不上。</p>
+<p>这些来自检索结果文档的图片，插入report的关键在于 -
+要用对图，比如搜索的时候有可能搜到有矛盾的信息，那么LLM在总结完文本之后，我们需要知道应该用哪些文档的图片，不应该用哪些文档的图片
+- 插对位置，这就要求我们知道每张图片的主要信息是什么</p>
+<p>2、从其他来源获得的图</p>
+<p>有些时候搜索结果文档里只有文字，或者文档中的图不是我们想要的图，那我们就可能需要根据用户需求和文本报告内容，自己从另外的来源获取合适的图。</p>
+<p>（1）来源1：自己画数据图表</p>
+<p>如果report中有一系列数据，比如某地不同月份的温度，或者不同厂商的市场占比，那么这些数据就可以生成图表，方便用户直观阅读。比如不同月份的温度可以画成折线图，不同厂商的占比可以画成扇形图。根据数据的类型，也可以制成柱状图、表格或者其他图表。</p>
+<p>（2）来源2：图片搜索接口</p>
+<p>假设我们在给用户制作旅游攻略的时候，查到有一处古镇适合游玩，我们想把这个古镇的资料作为攻略的一部分进行介绍，但是恰好搜到的网页只有文字，那么我们可以在制作report的时候，拿这个古镇的文字介绍去搜索图片，然后把搜到的图片插入到report中。</p>
+<p>3、各种图的难度</p>
+<p>上面分出来的这几种图片和图表，按开发难度排个序：</p>
+<ul>
+<li>level 1：常规的图表生成，如折线图、柱状图、表格等<br>
+</li>
+<li>level 2：插入来自文档的图片和图表<br>
+</li>
+<li>level 3：插入来自其他搜索源的图</li>
+</ul>
+<h2 id="加入图的方法">加入图的方法</h2>
+<p>先说下插入「来自文档的图片」的方法。大致的思路就是和之前在<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a>中介绍的InternLM-XComposer类似。</p>
+<p>InternLM-XComposer生成图文并茂文档的做法是这样的：</p>
+<ul>
+<li>（1）生成纯文本文档<br>
+</li>
+<li>（2）找到文本结果中可以/需要插入图像的位置，并生成对应的caption<br>
+</li>
+<li>（3）用上一步的caption进行图像检索，获得候选，并选择最符合的图像，获得最终结果</li>
+</ul>
+<p>稍微有点不同的是，InternLM-XComposer由于图片库比较大，所以它的做法是“假设某个位置需要图，并生成这张假想的图的caption”，然后根据这个caption去图库里找。</p>
+<p>而在我们这个report生成的场景下，我们的图片库相对比较小。假设我们平均每个章节用到了30个搜索结果，每个搜索结果平均有3张图，那么我们的图库就有90张。如果按InternLM-XComposer的做法，很难在这么小的图库里找到对应的图，因此我们反过来，先跑出图库所有的图的caption，再把这些caption都提供给LLM，让模型来决定在哪里可以插入哪些图片。</p>
+<h2 id="图表生成">图表生成</h2>
+<p>要生成图表，一个方法是要求模型在report中包含数字的地方，判断是否适合插入图表，适合插入什么图表，然后调用工具或者写python代码生成图表，最后把生成结果贴到对应位置上就行。</p>
+<p>而如果报告的目标格式是html，那么也可以在生成html的prompt中，直接要求模型判断和插入图表，html
++ css基本可以所有我们想要的图表。</p>
+<h2 id="其他搜索源的图">其他搜索源的图</h2>
+<p>假设我们在旅游攻略的展示策略上，要求一定要有足够的景点图，而搜索文档中又刚好没有符合要求的，那我们可以单独去搜索我们想要的图。</p>
+<p>首先我们需要知道搜什么图。prompt可能是类似这样的：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">你是一个配图专家，你的任务是给文本配上合适的图。</span><br><span class="line"></span><br><span class="line">你可以调用图片搜索工具，并利用关键字进行图片搜索。</span><br><span class="line"></span><br><span class="line">&#123;工具description&#125;</span><br><span class="line"></span><br><span class="line">请根据一下的文本，给出工具调用名称和关键词：</span><br><span class="line"></span><br><span class="line">&#123;chapter&#125;</span><br></pre></td></tr></table></figure>
+<p>这部分的逻辑相对来说就比较定制化了。</p>
+<h1 id="报告的格式">报告的格式</h1>
+<p>报告常用的格式就是html，ppt和pdf了。其中html和ppt都可以转pdf，所以理论上只要支持html和ppt就可以了。</p>
+<p>1、html</p>
+<p>之前发现html的生成有一个不错的工具叫deepsite，<a target="_blank" rel="noopener" href="https://enzostvs-deepsite.hf.space/">https://enzostvs-deepsite.hf.space/</a>。可以根据输入prompt直接生成漂亮的页面。后来发现后台其实就是DeepSeek。</p>
+<p>试了在DeepSeek-R1和DeepSeek-V3上要求直接根据文案生成网页，效果不错，而且V3的效果比R1更好。前几天又发现Qwen
+Chat也专门针对WebDev做了优化，Qwen3能够直接给出比较好的网页设计了。</p>
+<p>随便给V3输了一组数据，生成的网页就挺漂亮的：</p>
+<img src="/44c62dc5/v3_html.png" class title="研报">
+<p>不过直接大模型生成html目前也有一些问题：</p>
+<ul>
+<li>对指令的遵循会比较差，容易出现幻觉，比如上面这个图，下面那行字就是模型自己加的。<br>
+</li>
+<li>复杂的页面设计，html代码很长，生成时间很久，还容易出现阶段。</li>
+</ul>
+<p>2、ppt</p>
+<p>ppt的生成就得靠专业的接口了，这个头部的几家AI公司都有这个能力。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 训练框架<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe0adaa5.html">LLM训练框架：从优化器和精度讲到ZeRO</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】https://mp.weixin.qq.com/s/iPJ7eLa3O6zILXi1HESkCQ</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/44c62dc5.html" title="DeepResearch的报告生成方法">https://saicat.github.io/44c62dc5.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/Agent/" rel="tag"><i class="fa fa-tag"></i> Agent</a>
+              <a href="/tags/DeepResearch/" rel="tag"><i class="fa fa-tag"></i> DeepResearch</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/fe0adaa5.html" rel="prev" title="LLM训练框架：从优化器和精度讲到ZeRO">
+                  <i class="fa fa-angle-left"></i> LLM训练框架：从优化器和精度讲到ZeRO
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/4cd8532f.html" rel="next" title="LLM训练各种并行策略">
+                  LLM训练各种并行策略 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">687k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">20:49</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
