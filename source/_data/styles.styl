@@ -7,24 +7,60 @@
     font-size : 13px;     
 }
 
-//网页背景图片
+// 为文章内容添加样式（整合之前的多个定义）
+.post-block {
+  background-color: #ffffff;
+  border: 1px solid #e1e4e8;
+  border-top: 3px solid #000000; // 顶部色彩条
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 18px; // 稍微减小内边距
+  margin-bottom: 20px; // 减小底部间距
+}
+
+// 确保主页背景有轻微的灰色调，增强对比
 body {
-    background:url(/images/background/wallhaven-p97q73.png);
-    background-repeat: no-repeat;
-    background-attachment:fixed; //不重复
-    background-size: cover;      //填充
-    background-position:50% 50%;
+  background-color: #f6f8fa;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: 50% 50%;
 }
 
-
-//###### 博客内容透明化 ######
-
+// 博客内容透明化设置
 :root {
-  --content-bg-color:#202020d0;
+  --content-bg-color: #ffffffd0; // 带透明度的白色
 }
 
+// 调整全局字体大小和行高
+body {
+  font-size: 0.95em; // 稍微减小字体大小
+  line-height: 1.6; // 适当减小行高
+}
 
-//菜单栏背景
-//.header-inner {
-//  background:url(/images/shadow.png);
-//}
+// 调整文章内容字体和间距
+.post-body {
+  font-size: 0.95em; // 文章内容字体稍微减小
+  letter-spacing: -0.01em; // 轻微减小字间距
+  word-spacing: -0.01em; // 轻微减小词间距
+}
+
+// 调整标题字体大小
+.post-title {
+  font-size: 1.6em; // 减小标题字体
+}
+
+// 调整段落间距
+.post-body p {
+  margin-bottom: 0.9em; // 减小段落间距
+}
+
+// 调整列表项间距
+.post-body ul, .post-body ol {
+  padding-left: 1.5em; // 减小列表缩进
+}
+
+// 调整代码块内边距
+.post-body pre {
+  padding: 0.8em; // 减小代码块内边距
+}
