@@ -1,5 +1,5 @@
 ---
-title: LLM训练框架：从优化器和精度讲到Zero
+title: LLM训练框架：从优化器和精度讲到ZeRO
 tags:
   - NLP
   - LLM
@@ -590,4 +590,3 @@ ZeRO-Offload基于ZeRO-2的优化器状态和梯度分片策略，但进一步�
 【9】LLM 时代，如何优雅地训练大模型？，https://zhuanlan.zhihu.com/p/660394604  
 【10】deepspeed 滴 ZERO 介绍，https://blog.csdn.net/weixin_42253689/article/details/147568376  
 【11】图解大模型训练之：数据并行下篇( DeepSpeed ZeRO，零冗余优化)，https://zhuanlan.zhihu.com/p/618865052  
-【】

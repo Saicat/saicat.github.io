@@ -22,7 +22,7 @@
 
     <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  这篇文章主要从一个搞数据和训练策略的LLM算法工程师角度总结一下之前用到的训练框架相关知识，包括优化器、精度和混合精度训练和DP、ZeRO的相关内容。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="LLM训练框架：从优化器和精度讲到Zero">
+<meta property="og:title" content="LLM训练框架：从优化器和精度讲到ZeRO">
 <meta property="og:url" content="https://saicat.github.io/fe0adaa5.html">
 <meta property="og:site_name" content="Linsight">
 <meta property="og:description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  这篇文章主要从一个搞数据和训练策略的LLM算法工程师角度总结一下之前用到的训练框架相关知识，包括优化器、精度和混合精度训练和DP、ZeRO的相关内容。">
@@ -34,7 +34,7 @@
 <meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
 <meta property="og:image" content="https://saicat.github.io/images/wechat.png">
 <meta property="article:published_time" content="2025-05-17T08:33:15.000Z">
-<meta property="article:modified_time" content="2025-05-18T11:16:10.350Z">
+<meta property="article:modified_time" content="2025-05-18T11:32:05.759Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
@@ -48,10 +48,10 @@
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/fe0adaa5.html","path":"fe0adaa5.html","title":"LLM训练框架：从优化器和精度讲到Zero"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/fe0adaa5.html","path":"fe0adaa5.html","title":"LLM训练框架：从优化器和精度讲到ZeRO"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>LLM训练框架：从优化器和精度讲到Zero | Linsight</title>
+<title>LLM训练框架：从优化器和精度讲到ZeRO | Linsight</title>
   
 
 
@@ -166,7 +166,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-count">83</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -177,7 +177,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">77</span>
+        <span class="site-state-item-count">79</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -229,12 +229,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="LLM训练框架：从优化器和精度讲到Zero | Linsight">
+      <meta itemprop="name" content="LLM训练框架：从优化器和精度讲到ZeRO | Linsight">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          LLM训练框架：从优化器和精度讲到Zero
+          LLM训练框架：从优化器和精度讲到ZeRO
         </h1>
 
         <div class="post-meta-container">
@@ -252,7 +252,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2025-05-18 19:16:10" itemprop="dateModified" datetime="2025-05-18T19:16:10+08:00">2025-05-18</time>
+      <time title="修改时间：2025-05-18 19:32:05" itemprop="dateModified" datetime="2025-05-18T19:32:05+08:00">2025-05-18</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1212,8 +1212,7 @@ AdamW，https://zhuanlan.zhihu.com/p/7272881104<br>
 【10】deepspeed 滴 ZERO
 介绍，https://blog.csdn.net/weixin_42253689/article/details/147568376<br>
 【11】图解大模型训练之：数据并行下篇( DeepSpeed
-ZeRO，零冗余优化)，https://zhuanlan.zhihu.com/p/618865052<br>
-【】</p>
+ZeRO，零冗余优化)，https://zhuanlan.zhihu.com/p/618865052</p>
 
     </div>
 
@@ -1231,7 +1230,7 @@ ZeRO，零冗余优化)，https://zhuanlan.zhihu.com/p/618865052<br>
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://saicat.github.io/fe0adaa5.html" title="LLM训练框架：从优化器和精度讲到Zero">https://saicat.github.io/fe0adaa5.html</a>
+      <a href="https://saicat.github.io/fe0adaa5.html" title="LLM训练框架：从优化器和精度讲到ZeRO">https://saicat.github.io/fe0adaa5.html</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -1255,6 +1254,9 @@ ZeRO，零冗余优化)，https://zhuanlan.zhihu.com/p/618865052<br>
                 </a>
             </div>
             <div class="post-nav-item">
+                <a href="/44c62dc5.html" rel="next" title="DeepResearch的报告生成方法">
+                  DeepResearch的报告生成方法 <i class="fa fa-angle-right"></i>
+                </a>
             </div>
           </div>
     </footer>
@@ -1286,13 +1288,13 @@ ZeRO，零冗余优化)，https://zhuanlan.zhihu.com/p/618865052<br>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">674k</span>
+    <span title="站点总字数">687k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">20:25</span>
+    <span title="站点阅读时长">20:49</span>
   </span>
 </div>
 <div class="busuanzi-count">
