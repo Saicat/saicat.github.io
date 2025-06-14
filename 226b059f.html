@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="MetaGPT MetaGPT的开发团队就是搞OpenManus的团队。 MetaGPT项目做得很早，23年就开始搞multi-agent了。MetaGPT主要是想通过多智能体的协作提升代码能力。做法上，大致上来说就是把一个软件团队所需的角色，比如产品经理、项目经理、架构师、开发工程师、测试工程师等都用LLM给角色扮演出来。不同的LLM角色和人类团队一样相互合作，共同开发项目：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="agent调研(1)--MetaGPT,OpenManus和OWL">
+<meta property="og:url" content="https://saicat.github.io/226b059f.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="MetaGPT MetaGPT的开发团队就是搞OpenManus的团队。 MetaGPT项目做得很早，23年就开始搞multi-agent了。MetaGPT主要是想通过多智能体的协作提升代码能力。做法上，大致上来说就是把一个软件团队所需的角色，比如产品经理、项目经理、架构师、开发工程师、测试工程师等都用LLM给角色扮演出来。不同的LLM角色和人类团队一样相互合作，共同开发项目：">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/226b059f/metagpt.png">
+<meta property="og:image" content="https://saicat.github.io/226b059f/owl_overview.png">
+<meta property="og:image" content="https://saicat.github.io/226b059f/owl_workforce.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-06-14T11:43:40.000Z">
+<meta property="article:modified_time" content="2025-06-14T11:52:28.882Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Agent">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/226b059f/metagpt.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/226b059f.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/226b059f.html","path":"226b059f.html","title":"agent调研(1)--MetaGPT,OpenManus和OWL"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>agent调研(1)--MetaGPT,OpenManus和OWL | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊AI技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#metagpt"><span class="nav-number">1.</span> <span class="nav-text">MetaGPT</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#openmanus"><span class="nav-number">2.</span> <span class="nav-text">OpenManus</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#owl"><span class="nav-number">3.</span> <span class="nav-text">OWL</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">85</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">80</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/226b059f.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="agent调研(1)--MetaGPT,OpenManus和OWL | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          agent调研(1)--MetaGPT,OpenManus和OWL
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2025-06-14 19:43:40 / 修改时间：19:52:28" itemprop="dateCreated datePublished" datetime="2025-06-14T19:43:40+08:00">2025-06-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/Agent/" itemprop="url" rel="index"><span itemprop="name">Agent</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>14 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="metagpt">MetaGPT</h1>
+<p>MetaGPT的开发团队就是搞OpenManus的团队。</p>
+<p>MetaGPT项目做得很早，23年就开始搞multi-agent了。MetaGPT主要是想通过多智能体的协作提升代码能力。做法上，大致上来说就是把一个软件团队所需的角色，比如产品经理、项目经理、架构师、开发工程师、测试工程师等都用LLM给角色扮演出来。不同的LLM角色和人类团队一样相互合作，共同开发项目：</p>
+<img src="/226b059f/metagpt.png" class title="agent">
+<p>MetaGPT对Agent和Multi-Agent的定义：</p>
+<blockquote>
+<p>智能体 = 大语言模型（LLM） + 观察 + 思考 + 行动 + 记忆</p>
+</blockquote>
+<blockquote>
+<p>多智能体 = 智能体 + 环境 + 标准流程（SOP） + 通信 + 经济</p>
+</blockquote>
+<ul>
+<li>SOP = Standard Operating
+Procedures：是管理智能体行动和交互的既定程序，确保系统内部的有序和高效运作。例如，在汽车制造的SOP中，一个agent焊接汽车零件，而另一个安装电缆，保持装配线的有序运作。可以看出SOP非常依赖人为的设计，每个agent的操作空间、交互方式是被定义好的。<br>
+</li>
+<li>经济：这指的是多智能体环境中的价值交换系统，决定资源分配和任务优先级。</li>
+</ul>
+<p>MetaGPT中每个角色的输入输出都是格式化的信息，这样保证来自不同Agent的信息可以方便地被其他角色使用。</p>
+<p>通信上，系统中设计了一个shared message
+pool，各个Agent可以自由地在这里发布和订阅消息。和传统人工设计的信息流通方式相比，shared
+message pool更方便解耦多个Agent之间的工作。比如产品经理发布 PRD →
+消息池自动通知订阅该类型的架构师、工程师 →
+后者按需读取，无需等待前者主动推送。</p>
+<p>传统模式中，工程师必须等待项目经理分配任务才能开始工作；而在 MetaGPT
+中，工程师可直接从消息池获取架构设计文档，甚至在产品经理完成 PRD
+前，即可通过消息池的 “草稿” 版本提前介入，实现并行工作。</p>
+<p>总体来说，MetaGPT是针对代码场景的定制化设计，同时各个LLM「在设计范围内具有一定自由度」的一个Multi-Agent
+System。</p>
+<h1 id="openmanus">OpenManus</h1>
+<p>Manus出来当天，MetaGPT的团队基于原来的方案，花了几个小时复刻了一个OpenManus。后来也一直在更新，而且更新了很多版。</p>
+<p>相比MetaGPT，OpenManus的大框架更为general，可以支持更多的场景。可以通过部分改动，快速定制支持不同的场景；也可以直接用通用模块，这样所有中间流程都交给LLM自己规划和处理。</p>
+<p>1、组件</p>
+<p>（1）Agent</p>
+<p>OpenManus中的Agent的实现是这样的：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">        ┌─────────────┐</span><br><span class="line">        │  BaseAgent  │</span><br><span class="line">        └──────┬──────┘</span><br><span class="line">               │</span><br><span class="line">               ▼</span><br><span class="line">        ┌─────────────┐</span><br><span class="line">        │ ReActAgent  │</span><br><span class="line">        └──────┬──────┘</span><br><span class="line">               │</span><br><span class="line">               ▼</span><br><span class="line">        ┌─────────────┐</span><br><span class="line">        │ToolCallAgent│</span><br><span class="line">        └──────┬──────┘</span><br><span class="line">               │</span><br><span class="line">  ┌────────────┬────────────┐</span><br><span class="line">  │            │            │</span><br><span class="line">  ▼            ▼            ▼</span><br><span class="line">┌─────────┐ ┌───────┐ ┌───────┐</span><br><span class="line">│Planning │ │SWE    │ │Manus  │</span><br><span class="line">│Agent    │ │Agent  │ │       │</span><br><span class="line">└─────────┘ └───────┘ └───────┘</span><br></pre></td></tr></table></figure>
+<p>采用了多层集成的方式来实现不同的Agent，而每个Agent都是一个ReAct
+Agent，迭代地执行任务，直到任务完成或者超过循环次数。比如Manus
+Agent设置的默认最大循环次数就是20轮。</p>
+<ul>
+<li>BaseAgent：抽象类，run是主入口，run中迭代执行step<br>
+</li>
+<li>ReActAgent：step中加入抽象函数reasoning和action<br>
+</li>
+<li>ToolCallAgent：引入工具，实装了think和action，think中决定使用什么工具<br>
+</li>
+<li>Manus：OpenManus中的主要Agent，相对通用</li>
+</ul>
+<p>每个Agent有自己的prompt，定义了角色和任务。</p>
+<p>除了system
+prompt，OpenManus还使用了一个NEXT_STEP_PROMPT。NEXT_STEP_PROMPT主要让模型选择下一步干什么。比如Manus
+Agent的NEXT_STEP_PROMPT：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">NEXT_STEP_PROMPT = <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">Based on user needs, proactively select the most appropriate tool or combination of tools. For complex tasks, you can break down the problem and use different tools step by step to solve it. After using each tool, clearly explain the execution results and suggest the next steps.</span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+<p>使用上，NEXT_STEP_PROMPT是以user角色输入的：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>, </span><br><span class="line">        <span class="string">&quot;content&quot;</span>: SYSTEM_PROMPT</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, </span><br><span class="line">        <span class="string">&quot;content&quot;</span>: query</span><br><span class="line">    &#125;, </span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, </span><br><span class="line">        <span class="string">&quot;content&quot;</span>: NEXT_STEP_PROMPT</span><br><span class="line">    &#125;</span><br><span class="line">] </span><br></pre></td></tr></table></figure>
+<p>我试了下，连续两个user角色输入，和把两次输入的content直接拼接在一起，response回复的差异不大。其实就可以把NEXT_STEP_PROMPT视作一个template，它和user
+query一起构成了user
+prompt，包含了任务query，以及设定好的instruction。</p>
+<p>（2）Tool</p>
+<p>OpenManus中的tool主要包括代码执行（python代码解释器、Bash等），信息搜索（Google
+Search和BrowserUse），文件操作等。</p>
+<p>所有工具都继承自 BaseTool 基类：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">BaseTool</span>(ABC, BaseModel):</span><br><span class="line">    name: <span class="built_in">str</span></span><br><span class="line">    description: <span class="built_in">str</span></span><br><span class="line">    parameters: <span class="type">Optional</span>[<span class="built_in">dict</span>] = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">class</span> <span class="title class_">Config</span>:</span><br><span class="line">        arbitrary_types_allowed = <span class="literal">True</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">__call__</span>(<span class="params">self, **kwargs</span>) -&gt; <span class="type">Any</span>:</span><br><span class="line">        <span class="string">&quot;&quot;&quot;Execute the tool with given parameters.&quot;&quot;&quot;</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">await</span> self.execute(**kwargs)</span><br><span class="line"></span><br><span class="line"><span class="meta">    @abstractmethod</span></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">execute</span>(<span class="params">self, **kwargs</span>) -&gt; <span class="type">Any</span>:</span><br><span class="line">        <span class="string">&quot;&quot;&quot;Execute the tool with given parameters.&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">to_param</span>(<span class="params">self</span>) -&gt; <span class="type">Dict</span>:</span><br><span class="line">        <span class="string">&quot;&quot;&quot;Convert tool to function call format.&quot;&quot;&quot;</span></span><br><span class="line">        <span class="keyword">return</span> &#123;</span><br><span class="line">            <span class="string">&quot;type&quot;</span>: <span class="string">&quot;function&quot;</span>,</span><br><span class="line">            <span class="string">&quot;function&quot;</span>: &#123;</span><br><span class="line">                <span class="string">&quot;name&quot;</span>: self.name,</span><br><span class="line">                <span class="string">&quot;description&quot;</span>: self.description,</span><br><span class="line">                <span class="string">&quot;parameters&quot;</span>: self.parameters,</span><br><span class="line">            &#125;,</span><br><span class="line">        &#125;</span><br></pre></td></tr></table></figure>
+<p>每个工具都通过 parameters 字典定义其接受的参数，遵循 JSON Schema
+格式：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">parameters: <span class="built_in">dict</span> = &#123;</span><br><span class="line">    <span class="string">&quot;type&quot;</span>: <span class="string">&quot;object&quot;</span>,</span><br><span class="line">    <span class="string">&quot;properties&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;command&quot;</span>: &#123;</span><br><span class="line">            <span class="string">&quot;description&quot;</span>: <span class="string">&quot;The command to execute...&quot;</span>,</span><br><span class="line">            <span class="string">&quot;enum&quot;</span>: [<span class="string">&quot;create&quot;</span>, <span class="string">&quot;update&quot;</span>, <span class="string">&quot;list&quot;</span>, <span class="string">&quot;get&quot;</span>, <span class="string">&quot;set_active&quot;</span>, <span class="string">&quot;mark_step&quot;</span>, <span class="string">&quot;delete&quot;</span>],</span><br><span class="line">            <span class="string">&quot;type&quot;</span>: <span class="string">&quot;string&quot;</span>,</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="comment"># 其他参数...</span></span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">&quot;required&quot;</span>: [<span class="string">&quot;command&quot;</span>],</span><br><span class="line">    <span class="string">&quot;additionalProperties&quot;</span>: <span class="literal">False</span>,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用的时候，工具通过to_param转成模型可接受的格式。</p>
+<p>（3）Flow</p>
+<p>Agent理解任务，输出action，Tool进行操作，返回结果。这中间的流转就需要Flow来调度。</p>
+<p>个人理解上，Flow的设计可能和场景和任务比较有关联。比如一般来说就是串行的，模型
+→ 工具 → 模型 → 工具 →
+回复这样，而在一些场景下也可能有并行的，比如DeepSearch中拆解出来的任务是可以并行搜索的。</p>
+<p>OpenManus中实现的PlanningFlow大致上就是串行为主的设计。</p>
+<p>（4）Sandbox</p>
+<p>Agent在执行任务过程中会对文件等进行很多操作，这其实是有风险的，因此需要一个沙箱环境来隔离，免得把主机搞崩了。</p>
+<p>2、流程</p>
+<p>OpenManus的流程是典型的：思考+行动循环。</p>
+<p>3、架构分层</p>
+<p>分为5层：</p>
+<blockquote>
+<ul>
+<li>用户层：通过命令行界面与用户交互，处理输入并展示结果。入口文件为
+run_flow.py。<br>
+</li>
+<li>Flow层：作为框架的调度中心，负责任务编排和执行策略。核心组件是
+PlanningFlow。<br>
+</li>
+<li>Agent层：实现任务执行逻辑，具备思考(think)和行动(act)能力。包含
+ToolCallAgent、PlanningAgent 和 Manus 等。<br>
+</li>
+<li>Tool层：提供可扩展的工具集，增强 Agent 的执行能力。核心工具为
+PlanningTool。<br>
+</li>
+<li>LLM层：统一封装大语言模型接口，支持多种模型配置。</li>
+</ul>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"># OpenManus分层架构示意图</span><br><span class="line"></span><br><span class="line">┌───────────────┐</span><br><span class="line">│   用户层       │</span><br><span class="line">└──────┬────────┘</span><br><span class="line">       ↓</span><br><span class="line">┌───────────────┐</span><br><span class="line">│   Flow层      │</span><br><span class="line">└──────┬────────┘</span><br><span class="line">       ↓</span><br><span class="line">┌───────────────┐</span><br><span class="line">│   Agent层     │</span><br><span class="line">└──────┬────────┘</span><br><span class="line">       ├──────────────┐</span><br><span class="line">       ↓              ↓</span><br><span class="line">┌───────────────┐ ┌───────────────┐</span><br><span class="line">│   LLM层       │ │   Tool层      │</span><br><span class="line">└───────────────┘ └───────────────┘</span><br></pre></td></tr></table></figure>
+<p>详细的可以看<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/1897429266813125945">《OpenManus
+代码框架详解》</a></p>
+<h1 id="owl">OWL</h1>
+<p>OWL = OPTIMIZED WORKFORCE LEARNING</p>
+<p>OWL最近出了技术报告，看下它提供了什么信息。</p>
+<p>首先是分析现有的multi-agent system的问题：</p>
+<ul>
+<li>目前的MAS大部分是domain-specific的，cross-domain
+transferability受限。<br>
+</li>
+<li>推理上：一般需要针对业务场景定制，无法一个系统通用处理不同场景下的问题，比如MetaGPT，就是针对代码场景的设计，依赖SOP进行开发。<br>
+</li>
+<li>训练上：大部分多Agent框架在训练的时候需要优化多个Agent，比如MALT（Multi-Agent
+LLM Training）。</li>
+</ul>
+<p>OWL的设计包含三个主要模块：</p>
+<ul>
+<li>Domain-Agnostic Planner：做abstract task
+decompositions，不和任何场景绑定<br>
+</li>
+<li>Coordinator：把Planner拆解出来的task分配给不同的worker<br>
+</li>
+<li>Domain Agent（Worker
+Nodes）：worker，封装工具API，负责完成某项具体任务</li>
+</ul>
+<p>下图左边是传统的框架，右边是OWL的framework，推理的WORKFORCE和训练的Optimized
+Workforce Learning：</p>
+<img src="/226b059f/owl_overview.png" class title="agent">
+<p>WORKFORCE的一个示意图：</p>
+<img src="/226b059f/owl_workforce.png" class title="agent">
+<p>其中有一个task
+channel，coordinator和worker的信息发布和结果发布都在这里，各个worker之间是互不相见的，仅由coordinator来调配。</p>
+<p>个人感觉OWL的核心设计其实就是Planner和Coordinator的拆分。通常来说，这二者的任务是可以由同一个角色来完成的。拆分开之后，在不同的任务场景下，Coordinator和worker都可以不动，仅通过特异化训练Planner来适配不同场景。</p>
+<p>Planner使用了Qwen+SFT+DPO，效果就有比较不错的提升。</p>
+<p>OWL附录里提供各个Agent包括Worker的prompt，基本上是比较标准的agent
+prompt。有一点可以参考的就是，prompt中把整体的角色定义放在的system
+prompt，而具体的信息和规则就放在user
+prompt。这应该和模型训练时会更多follow system
+prompt的大原则的特点相关。</p>
+<p>总体上，OWL的拆解有点像职场那样，进行了层级的拆解：有领导planner，只管拆任务，拆完任务就做完了；coordinator是基层管理者，负责worker工作的发布和管理。这有点上升到管理哲学的层面了，到底这样的架构有多大的实际收益，个人有点打问号。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/44c62dc5.html">DeepResearch的报告生成方法</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7c2f9dcb.html">从RAG到DeepSearch</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 训练框架<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe0adaa5.html">LLM训练框架：从优化器和精度讲到ZeRO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4cd8532f.html">LLM训练各种并行策略</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+<h1 id="reference">Reference</h1>
+<p>【1】OWL: Optimized Workforce Learning for General Multi-Agent
+Assistance in Real-World Task
+Automation，https://github.com/camel-ai/owl/blob/main/assets/OWL_Technical_Report.pdf<br>
+【2】MetaGPT，https://docs.deepwisdom.ai/v0.4/zh/guide/tutorials/concepts.html<br>
+【3】OpenManus
+代码框架详解，https://zhuanlan.zhihu.com/p/1897429266813125945<br>
+【4】[源码学习]
+通过OpenManus了解Agent系统的实现，https://zhuanlan.zhihu.com/p/1904129741365154580<br>
+【5】从prompt看OpenManus的实现思路，https://zhuanlan.zhihu.com/p/1889982149991580008<br>
+【6】OpenManus LLM
+工具调用机制详解，https://zhuanlan.zhihu.com/p/1886362220297967012</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/226b059f.html" title="agent调研(1)--MetaGPT,OpenManus和OWL">https://saicat.github.io/226b059f.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/Agent/" rel="tag"><i class="fa fa-tag"></i> Agent</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/7c2f9dcb.html" rel="prev" title="从RAG到DeepSearch">
+                  <i class="fa fa-angle-left"></i> 从RAG到DeepSearch
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">708k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">21:28</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
