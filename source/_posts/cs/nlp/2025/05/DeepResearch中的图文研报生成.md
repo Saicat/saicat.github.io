@@ -8,9 +8,10 @@ tags:
 categories:
   - CS
   - NLP
-  - LLM
+  - Agent
 abbrlink: 44c62dc5
 date: 2025-05-19 22:31:35
+hidden: false
 ---
 
 【本文已在同名 微信公众号 / 知乎 / [个人博客linsight.cn](http://www.linsight.cn/) 上线】  
@@ -290,7 +291,7 @@ InternLM-XComposer生成图文并茂文档的做法是这样的：
 不过直接大模型生成html目前也有一些问题：  
 
 - 对指令的遵循会比较差，容易出现幻觉，比如上面这个图，下面那行字就是模型自己加的。  
-- 复杂的页面设计，html代码很长，生成时间很久，还容易出现阶段。  
+- 复杂的页面设计，html代码很长，生成时间很久，还容易出现截断。  
 
 2、ppt  
 
