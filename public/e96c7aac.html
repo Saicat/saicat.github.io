@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="新增一个栏目，写写平时读的文献，主要看思路。 数据合成 多轮对话数据合成：Review-Instruct">
+<meta property="og:type" content="article">
+<meta property="og:title" content="最近阅读--关于数据合成、agent、reasoning和多任务">
+<meta property="og:url" content="https://saicat.github.io/e96c7aac.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="新增一个栏目，写写平时读的文献，主要看思路。 数据合成 多轮对话数据合成：Review-Instruct">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-06-28T03:42:22.000Z">
+<meta property="article:modified_time" content="2025-07-05T12:23:32.587Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/images/qrcode.jpg">
+
+
+<link rel="canonical" href="https://saicat.github.io/e96c7aac.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/e96c7aac.html","path":"e96c7aac.html","title":"最近阅读--关于数据合成、agent、reasoning和多任务"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>最近阅读--关于数据合成、agent、reasoning和多任务 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊AI技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%90%88%E6%88%90"><span class="nav-number">1.</span> <span class="nav-text">数据合成</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E8%BD%AE%E5%AF%B9%E8%AF%9D%E6%95%B0%E6%8D%AE%E5%90%88%E6%88%90review-instruct"><span class="nav-number">1.1.</span> <span class="nav-text">多轮对话数据合成：Review-Instruct</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#agent"><span class="nav-number">2.</span> <span class="nav-text">Agent</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#toward-a-theory-of-agents-as-tool-use-decision-makers"><span class="nav-number">2.1.</span> <span class="nav-text">Toward a
+Theory of Agents as Tool-Use Decision-Makers</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#anthropic%E6%8A%8Athink%E5%BD%93%E5%81%9A%E5%B7%A5%E5%85%B7"><span class="nav-number">2.2.</span> <span class="nav-text">Anthropic：把think当做工具</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reasoning%E6%A8%A1%E5%9E%8B"><span class="nav-number">3.</span> <span class="nav-text">reasoning模型</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#innate-reasoning-is-not-enough"><span class="nav-number">3.1.</span> <span class="nav-text">Innate Reasoning is Not
+Enough</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mixture-of-thought"><span class="nav-number">3.2.</span> <span class="nav-text">Mixture-of-Thought</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E6%96%B9%E5%BC%8F"><span class="nav-number">4.</span> <span class="nav-text">训练方式</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BB%E5%8A%A8%E5%AD%A6%E4%B9%A0self-adapting-language-models"><span class="nav-number">4.1.</span> <span class="nav-text">主动学习：Self-Adapting
+Language Models</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E4%BB%BB%E5%8A%A1%E5%85%8D%E8%AE%AD%E7%BB%83%E6%B3%9B%E5%8C%96text-to-lora"><span class="nav-number">4.2.</span> <span class="nav-text">多任务免训练泛化：Text-to-LoRA</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">88</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">80</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/e96c7aac.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="最近阅读--关于数据合成、agent、reasoning和多任务 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          最近阅读--关于数据合成、agent、reasoning和多任务
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-06-28 11:42:22" itemprop="dateCreated datePublished" datetime="2025-06-28T11:42:22+08:00">2025-06-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-07-05 20:23:32" itemprop="dateModified" datetime="2025-07-05T20:23:32+08:00">2025-07-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.5k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>10 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>新增一个栏目，写写平时读的文献，主要看思路。</p>
+<h1 id="数据合成">数据合成</h1>
+<h2 id="多轮对话数据合成review-instruct">多轮对话数据合成：Review-Instruct</h2>
+<p>原文：ACL2025：《Review-Instruct: A Review-Driven Multi-Turn
+Conversations Generation Method for Large Language Models》<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2505.11010">https://arxiv.org/abs/2505.11010</a></p>
+<p>1、要解决的问题</p>
+<p>现在的LLM使用的对话训练数据大部分是单轮的，而少量多轮的数据，上下文的逻辑联系也不多，导致在多轮对话场景下，LLM的能力相比单轮要差一些。</p>
+<p>因此，要想办法提升多轮对话数据的上下文联系，和难度（最主要的就是难度）。</p>
+<p>一些依赖LLM合成数据的方法，多样性和难度不足。</p>
+<p>2、方法</p>
+<p>Review-Instruct提出“Ask-Respond-Review”三阶段迭代流程，来提升多轮合成数据的难度。</p>
+<p>具体来说，对于每一条query（相当于用户的第一轮问题），candidate
+LLM先生成对应的response。在这个条件下，我们想要获取和这轮对话深度相关的后续问答。</p>
+<p>先使用一组reviewer（每个reviewer是一个LLM
+Agent）对前一轮生成的response进行评审，主要包括回答的深度、丰富度、相关性、连贯性等，并提出一些意见，比如“要在xx方面回答得更深入一些”“需要关注xx的长期影响力”。然后有一个chairman（也是一个LLM
+Agent），整合多个reviewer的意见，然后对前一轮的response进行追问（相当于用户的下一轮追问），这样多轮对话在上下文中的关联性和难度就获得了提升。</p>
+<h1 id="agent">Agent</h1>
+<h2 id="toward-a-theory-of-agents-as-tool-use-decision-makers">Toward a
+Theory of Agents as Tool-Use Decision-Makers</h2>
+<p>原文：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2506.00886">https://arxiv.org/abs/2506.00886</a></p>
+<p>主要是一些认知和agent设计原则：</p>
+<ul>
+<li>知识边界：提升模型决策效率的一个要点是：知道自己知道什么，知道自己不知道什么<br>
+</li>
+<li>决策边界：模型需要知道自己什么时候“想”，什么时候“做”<br>
+</li>
+<li>理想情况是：知识边界和决策边界重合，知道的就想，不知道就找<br>
+</li>
+<li>想和做本质上应该是平等的，都是一个工具</li>
+</ul>
+<p>最后这一点，把think看作工具，和下面这个有些相关。</p>
+<h2 id="anthropic把think当做工具">Anthropic：把think当做工具</h2>
+<p>原文：<a target="_blank" rel="noopener" href="https://www.anthropic.com/engineering/claude-think-tool">https://www.anthropic.com/engineering/claude-think-tool</a></p>
+<p>1、think tool 和 extended thinking</p>
+<p>extended thinking：如DeepSeek-R1的深度思考，在正式回答前。</p>
+<p>think
+tool：在回答过程中，可以停下来思考，模型自己决定什么时候需要停下来思考，就像在深度思考中调用工具一样自然。</p>
+<p>2、think tool</p>
+<p>说白了，think tool就是propmt +
+LLM，根据不同的需要求，设计propmt，接收不同的输入和输出。description会明确介绍这个思考工具的功能，好让模型自己决定什么时候调用。</p>
+<p>用不同的prompt就可以得到不同的思考工具。</p>
+<p>决定是否使用think tool：ReAct方式来决定工具的调用。</p>
+<p>think tool获取的结果再通过prompt加到原模型的上下文。</p>
+<h1 id="reasoning模型">reasoning模型</h1>
+<h2 id="innate-reasoning-is-not-enough">Innate Reasoning is Not
+Enough</h2>
+<p>原文：《Innate Reasoning is Not Enough: In-Context Learning Enhances
+Reasoning Large Language Models with Less Overthinking》<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2503.19602">https://arxiv.org/abs/2503.19602</a></p>
+<p>1、背景</p>
+<p>CoT在非reasoning模型上很有效果，那CoT在reasoning模型上效果如何？对这个问题做了一些实验。</p>
+<p>2、发现</p>
+<p>以R1-Qwen-xxB各种规模的模型做实验。</p>
+<p>（1）CoT在reasoning LLM也有效果</p>
+<p>CoT在不同规模的reasoning模型和不同任务上的效果：</p>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th>小模型</th>
+<th>大模型</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>简单任务</td>
+<td>CoT提升较多</td>
+<td>CoT提升较少</td>
+</tr>
+<tr class="even">
+<td>困难任务</td>
+<td>CoT提升较少</td>
+<td>CoT提升较多</td>
+</tr>
+</tbody>
+</table>
+<p>总结来说，就是在模型容量适配的任务上，CoT效果更好。</p>
+<p>在简单任务上，效果随着思考长度的增加，呈现先上升后下降的趋势。也就是，一定的思考可以提升效果，而过多的思考则损害效果。</p>
+<p>（2）CoT能减少冗余思考</p>
+<ul>
+<li>直接prompt：生成的思考token数量分布分散，且存在大量冗余<br>
+</li>
+<li>Few-shot CoT：能有效集中思考token的分布，减少冗余<br>
+</li>
+<li>Zero-shot CoT：介于直接提示和Few-shot CoT之间</li>
+</ul>
+<p>直观上来想，有CoT或者few-shot，模型更容易理解指令，从而减少不必要的思考步骤。</p>
+<p>Few-shot CoT中，One-shot CoT效果最佳。</p>
+<p>（3）reasoning对反思词汇的attention异常高</p>
+<p>分析attention
+logits发现：reasoning模型对反思相关词汇（如“Wait”“Ensure”）分配了异常高的注意力。</p>
+<p>而基础模型未表现出这种模式，表明reasoning
+LLM在训练中过拟合了反思机制。</p>
+<p>CoT提示通过外部引导缓解了这种过拟合行为。</p>
+<h2 id="mixture-of-thought">Mixture-of-Thought</h2>
+<p>原文：《Learning to Reason via Mixture-of-Thought for Logical
+Reasoning》<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2505.15817">https://arxiv.org/abs/2505.15817</a></p>
+<p>1、要解决的问题</p>
+<p>让模型使用自然语言进行思考和推理是现在的主流方式，但是自然语言推理有其局限性，在很多问题上的效果不够好。</p>
+<p>2、方法</p>
+<p>（1）3种推理方式</p>
+<p>既然一种推理方式有问题，那就多弄几种不同形式的推理CoT。</p>
+<ul>
+<li>自然语言推理（NL CoT）</li>
+</ul>
+<p>目前最常用。适合用于需要常识、逻辑深度较浅、开放语义场景的推理。</p>
+<ul>
+<li>代码推理（code CoT）</li>
+</ul>
+<p>结构化的推理方式，在这篇论文中仅写代码，不执行。</p>
+<p>类定义、函数定义适用于规则约束、状态转移的场景。</p>
+<ul>
+<li>真值表推理（Truth Table CoT）</li>
+</ul>
+<p>这篇论文新创的，也是结构化的推理。真值表适用于多种情况需要遍历的场景。</p>
+<p>（2）训练 &amp; 推理</p>
+<p>这3种方式适用于不同的情况，那么一个使用方式就是对于一个任务，用三种方式都跑一遍结果，然后投票。</p>
+<p>为了提升效果，需要训练模型。训练数据是合成的，三种都合成，然后根据正确答案进行过滤，保留合理的推理轨迹。</p>
+<p>然后用合成的数据训练模型。这个「合成数据」-&gt;「训练」的模型会迭代几次，下次的数据合成模型就用这轮训出来的最佳模型做。</p>
+<h1 id="训练方式">训练方式</h1>
+<h2 id="主动学习self-adapting-language-models">主动学习：Self-Adapting
+Language Models</h2>
+<p>原文：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2506.10943">https://arxiv.org/abs/2506.10943</a></p>
+<p>提出SEAL学习框架。</p>
+<p>1、要解决的问题</p>
+<p>背景是让LLM来处理新任务。</p>
+<p>LLM依赖SFT或者ICL来处理新的任务，但是SFT需要预先获取大量高质量的训练数据；ICL不用训练，但ICL无法持久化，效果也不如SFT。</p>
+<p>2、思路</p>
+<p>SFT是被动地学习，而人在学习的时候，除了被动学习，还有主动学习，就像学生除了听课（被动学习）还会整理笔记（主动学习），用更清晰的格式和说法来帮助自己理解知识。写技术博客也是一种以输出帮助学习的方法。那模型如果能自己整理知识，那应该也能学得更好。</p>
+<p>3、方法</p>
+<p>自己整理知识自己学习，简单来说就是自己生成数据，再训练自己。</p>
+<p>比如说现在要在一个知识数据集上训练，以提升LLM在这个领域的知识水平。原始的训练数据集D={(C,τ)}，其中C是一个知识文档，τ是用于验证在这个文档上学习效果的数据，可以是C相关的知识问答题、选择题之类的（有答案的那种）。</p>
+<p>本来微调是拿C直接训，而SEAL不拿C直接训，而是：</p>
+<ul>
+<li>1、用LLM从C生成多个self-edit（SE）数据<br>
+</li>
+<li>2、在每个SE上用LoRA训练LLM，获得LLM'<br>
+</li>
+<li>3、用τ评测第2步训练出来的LLM'，获得reward r<br>
+</li>
+<li>4、选择第3步中有正收益的SE，和对应的r，通过强化学习（ReST^EM方法）来更新LLM（不是LLM'）</li>
+</ul>
+<p>SE里除了来自C的增强数据，还有用于训练LLM的超参，这相当于让模型学习怎么更新自己的参数。</p>
+<p>对于不同的数据类型，τ也不同，主要原则就是τ需要能够评测训练结果，获得reward。</p>
+<h2 id="多任务免训练泛化text-to-lora">多任务免训练泛化：Text-to-LoRA</h2>
+<p>原文：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2506.06105">https://arxiv.org/abs/2506.06105</a></p>
+<p>1、要解决的问题</p>
+<p>如果我们有多个任务要处理，需要收集多个任务的数据，然后训练多个LoRA。这样的做法任务和LoRA一一对应，成本高，再加入新的任务的时候又要重新训练新的LoRA。</p>
+<p>2、思路</p>
+<p>如果能搞一个工具，这个工具的输入是文本，输出是LoRA，那么以后就不用训练LoRA了。Text-to-LoRA的目的就是搞这么一个工具。相当于获得LoRA泛化器，这个LoRA泛化器称之为T2L，是一个hypernetwork。hypernetwork的输出是另一个神经网络。</p>
+<p>3、方法</p>
+<p>T2L的输入是query，输出是LoRA参数。T2L本身也是个神经网络，原文设计了几个不同的变体，但是参数量都很少，比单个LoRA大不了多少。</p>
+<p>获得T2L有两种方法。</p>
+<p>（1）Reconstruction</p>
+<p>如果我们已经有很多LoRA参数（实验是479）个，那么可以直接让T2L学习input
+query到LoRA参数的构建，误差就是hypernetwork输出的AB矩阵和真实的AB矩阵的误差。</p>
+<p>（2）直接SFT</p>
+<p>如果我们没有训练好LoRA，但是有数据（input，label），那对于每条input，可以先获得T2L的AB矩阵，把AB矩阵加到Base
+Model上，获得输出，计算输出和label的loss，反向传播训练T2L的参数。</p>
+<p>4、效果</p>
+<p>根据文中测试，T2L方法的效果介于单独LoRA训练和，和prompt
+engineering之间。</p>
+<p>5、收益</p>
+<p>收益就是如果T2L
+hypernetwork泛化性够好，那么就对于新任务，可以直接提升效果（效果优于prompt工程），而不需要训练新的LoRA了。</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/44c62dc5.html">DeepResearch的报告生成方法</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7c2f9dcb.html">从RAG到DeepSearch</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/226b059f.html">agent调研(1)--MetaGPT,OpenManus和OWL</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f93b3aaf.html">Devin和Anthropic的Agent开发经验</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 训练框架<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe0adaa5.html">LLM训练框架：从优化器和精度讲到ZeRO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4cd8532f.html">LLM训练各种并行策略</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/e96c7aac.html" title="最近阅读--关于数据合成、agent、reasoning和多任务">https://saicat.github.io/e96c7aac.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/f93b3aaf.html" rel="prev" title="Devin和Anthropic的Agent开发经验">
+                  <i class="fa fa-angle-left"></i> Devin和Anthropic的Agent开发经验
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/af7f9363.html" rel="next" title="最近阅读2-关于自适应深度思考、context engineering和模型训练">
+                  最近阅读2-关于自适应深度思考、context engineering和模型训练 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">732k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">22:12</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
