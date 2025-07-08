@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="整合一下agent常用的评测数据集。（虽然评测数据集很重要，但是谨记Goodhart&#39;s law，迷信测试指标也不可取。） overview             数据集 语言 难度 数量 模态 领域 评测方式     GAIA 英文 高 166dev+300test 多模态 涵盖个人日常任务，科学问题，以及通用信息查询 可自动化   BrowseComp 英文 高 1266 文本 多领域 可自">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Agent评测数据集">
+<meta property="og:url" content="https://saicat.github.io/72150a83.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="整合一下agent常用的评测数据集。（虽然评测数据集很重要，但是谨记Goodhart&#39;s law，迷信测试指标也不可取。） overview             数据集 语言 难度 数量 模态 领域 评测方式     GAIA 英文 高 166dev+300test 多模态 涵盖个人日常任务，科学问题，以及通用信息查询 可自动化   BrowseComp 英文 高 1266 文本 多领域 可自">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/72150a83/hle_domain.png">
+<meta property="og:image" content="https://saicat.github.io/72150a83/hle_1.png">
+<meta property="og:image" content="https://saicat.github.io/72150a83/hle_2.png">
+<meta property="og:image" content="https://saicat.github.io/72150a83/hle_3.png">
+<meta property="og:image" content="https://saicat.github.io/72150a83/gpqa_1.png">
+<meta property="og:image" content="https://saicat.github.io/72150a83/gpqa_2.png">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2025-07-06T14:03:18.000Z">
+<meta property="article:modified_time" content="2025-07-08T13:54:35.878Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Agent">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/72150a83/hle_domain.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/72150a83.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/72150a83.html","path":"72150a83.html","title":"Agent评测数据集"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Agent评测数据集 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊AI技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#overview"><span class="nav-number">1.</span> <span class="nav-text">overview</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#gaia"><span class="nav-number">2.</span> <span class="nav-text">GAIA</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#browsecomp"><span class="nav-number">3.</span> <span class="nav-text">BrowseComp</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#browsecomp-zh"><span class="nav-number">4.</span> <span class="nav-text">BrowseComp-ZH</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#hle"><span class="nav-number">5.</span> <span class="nav-text">HLE</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#gpqa"><span class="nav-number">6.</span> <span class="nav-text">GPQA</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#scholarsearch"><span class="nav-number">7.</span> <span class="nav-text">ScholarSearch</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">80</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/72150a83.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Agent评测数据集 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Agent评测数据集
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-07-06 22:03:18" itemprop="dateCreated datePublished" datetime="2025-07-06T22:03:18+08:00">2025-07-06</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-07-08 21:54:35" itemprop="dateModified" datetime="2025-07-08T21:54:35+08:00">2025-07-08</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/Agent/" itemprop="url" rel="index"><span itemprop="name">Agent</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>17k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>31 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>整合一下agent常用的评测数据集。（虽然评测数据集很重要，但是谨记Goodhart's
+law，迷信测试指标也不可取。）</p>
+<h1 id="overview">overview</h1>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集</th>
+<th>语言</th>
+<th>难度</th>
+<th>数量</th>
+<th>模态</th>
+<th>领域</th>
+<th>评测方式</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>GAIA</td>
+<td>英文</td>
+<td>高</td>
+<td>166dev+300test</td>
+<td>多模态</td>
+<td>涵盖个人日常任务，科学问题，以及通用信息查询</td>
+<td>可自动化</td>
+</tr>
+<tr class="even">
+<td>BrowseComp</td>
+<td>英文</td>
+<td>高</td>
+<td>1266</td>
+<td>文本</td>
+<td>多领域</td>
+<td>可自动化</td>
+</tr>
+<tr class="odd">
+<td>BrowseComp-ZH</td>
+<td>中文</td>
+<td>高</td>
+<td>289</td>
+<td>文本</td>
+<td>11个领域</td>
+<td>可自动化</td>
+</tr>
+<tr class="even">
+<td>HLE</td>
+<td>英文</td>
+<td>高</td>
+<td>2700+</td>
+<td>13%多模态问题</td>
+<td>数学、人文科学、自然科学等数十个不同的学科</td>
+<td>可自动化</td>
+</tr>
+<tr class="odd">
+<td>GPQA</td>
+<td>英语</td>
+<td>中</td>
+<td>448道多选题</td>
+<td>文本</td>
+<td>生物学、物理学和化学</td>
+<td>可自动化</td>
+</tr>
+<tr class="even">
+<td>ScholarSearch</td>
+<td>英文</td>
+<td>中</td>
+<td>223</td>
+<td>文本</td>
+<td>覆盖Science &amp; Engineering和Social Sciences &amp;
+Humanities两大门类，共15个细分学科</td>
+<td>可自动化</td>
+</tr>
+</tbody>
+</table>
+<h1 id="gaia">GAIA</h1>
+<p>数据集：GAIA = General AI Agent Assessment，由 Meta、HuggingFace
+等团队联合提出。</p>
+<p>数据内容：GAIA所有问题都是研究团队设计的，问题语言都是英文，参考答案也是英文（因此也很依赖英文的搜索工具，所以在中文场景可能略有些局限性）。数据中，大部分是文本（约70%），小部分涉及视频、音频、图像和excel、pdf、ppt、png、jpg、csv、pdb、mp3等多种模态和格式。共有466条数据，其中166条包含唯一答案的问题（val
+set），因此很适合自动化评测（比如LLM-as-judge）；另外还有300条不包含答案的数据（test
+set，用于leaderboard排名）。</p>
+<p>GAIA的数据考察Agent多个维度的能力，包括：推理能力、多模态能力、网页浏览&amp;信息检索、工具使用能力、世界知识等。</p>
+<p>GAIA把问题根据难度分成3个等级：level 1，level 2和level 3。level
+1最简单，level
+3最难，难度越高，模态也越丰富。通常来说难度越高，需要的工具和步骤越多（但也不是严格绝对的）。</p>
+<p>放几条数据样例（val
+set）的感受一下，数据里除了问题和答案，还有中间step：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="string">&quot;task_id&quot;</span>: <span class="string">&quot;c61d22de-5f6c-4958-a7f6-5e9707bd3466&quot;</span>, <span class="string">&quot;Question&quot;</span>: <span class="string">&quot;A paper about AI regulation that was originally submitted to arXiv.org in June 2022 shows a figure with three axes, where each axis has a label word at both ends. Which of these words is used to describe a type of society in a Physics and Society article submitted to arXiv.org on August 11, 2016?&quot;</span>, <span class="string">&quot;Level&quot;</span>: <span class="number">2</span>, <span class="string">&quot;Final answer&quot;</span>: <span class="string">&quot;egalitarian&quot;</span>, <span class="string">&quot;file_name&quot;</span>: <span class="string">&quot;&quot;</span>, <span class="string">&quot;Annotator Metadata&quot;</span>: &#123;<span class="string">&quot;Steps&quot;</span>: <span class="string">&quot;1. Go to arxiv.org and navigate to the Advanced Search page.\n2. Enter \&quot;AI regulation\&quot; in the search box and select \&quot;All fields\&quot; from the dropdown.\n3. Enter 2022-06-01 and 2022-07-01 into the date inputs, select \&quot;Submission date (original)\&quot;, and submit the search.\n4. Go through the search results to find the article that has a figure with three axes and labels on each end of the axes, titled \&quot;Fairness in Agreement With European Values: An Interdisciplinary Perspective on AI Regulation\&quot;.\n5. Note the six words used as labels: deontological, egalitarian, localized, standardized, utilitarian, and consequential.\n6. Go back to arxiv.org\n7. Find \&quot;Physics and Society\&quot; and go to the page for the \&quot;Physics and Society\&quot; category.\n8. Note that the tag for this category is \&quot;physics.soc-ph\&quot;.\n9. Go to the Advanced Search page.\n10. Enter \&quot;physics.soc-ph\&quot; in the search box and select \&quot;All fields\&quot; from the dropdown.\n11. Enter 2016-08-11 and 2016-08-12 into the date inputs, select \&quot;Submission date (original)\&quot;, and submit the search.\n12. Search for instances of the six words in the results to find the paper titled \&quot;Phase transition from egalitarian to hierarchical societies driven by competition between cognitive and social constraints\&quot;, indicating that \&quot;egalitarian\&quot; is the correct answer.&quot;</span>, <span class="string">&quot;Number of steps&quot;</span>: <span class="string">&quot;12&quot;</span>, <span class="string">&quot;How long did this take?&quot;</span>: <span class="string">&quot;8 minutes&quot;</span>, <span class="string">&quot;Tools&quot;</span>: <span class="string">&quot;1. Web browser\n2. Image recognition tools (to identify and parse a figure with three axes)&quot;</span>, <span class="string">&quot;Number of tools&quot;</span>: <span class="string">&quot;2&quot;</span>&#125;&#125;</span><br><span class="line">&#123;<span class="string">&quot;task_id&quot;</span>: <span class="string">&quot;17b5a6a3-bc87-42e8-b0fb-6ab0781ef2cc&quot;</span>, <span class="string">&quot;Question&quot;</span>: <span class="string">&quot;I\u2019m researching species that became invasive after people who kept them as pets released them. There\u2019s a certain species of fish that was popularized as a pet by being the main character of the movie Finding Nemo. According to the USGS, where was this fish found as a nonnative species, before the year 2020? I need the answer formatted as the five-digit zip codes of the places the species was found, separated by commas if there is more than one place.&quot;</span>, <span class="string">&quot;Level&quot;</span>: <span class="number">2</span>, <span class="string">&quot;Final answer&quot;</span>: <span class="string">&quot;34689&quot;</span>, <span class="string">&quot;file_name&quot;</span>: <span class="string">&quot;&quot;</span>, <span class="string">&quot;Annotator Metadata&quot;</span>: &#123;<span class="string">&quot;Steps&quot;</span>: <span class="string">&quot;1. Search the web for \u201cfinding nemo main character\u201d.\n2. Note the results, which state that the main character is a clownfish.\n3. Search the web for \u201cusgs nonnative species database\u201d.\n4. Click result for the Nonindigenous Aquatic Species site.\n5. Click \u201cMarine Fishes\u201d.\n6. Click \u201cSpecies List of Nonindigenous Marine Fish\u201d.\n7. Scroll through the list until I find the clown anenomefish, and click \u201cCollection info\u201d.\n8. Note the place that a clown anenomefish was found, in Fred Howard Park at the Gulf of Mexico.\n9. Search the web for \u201cfred howard park florida zip code\u201d.\n10. Note the zip code, 34689. Since only one clownfish was found before the year 2020, this is the answer.&quot;</span>, <span class="string">&quot;Number of steps&quot;</span>: <span class="string">&quot;10&quot;</span>, <span class="string">&quot;How long did this take?&quot;</span>: <span class="string">&quot;5 minutes&quot;</span>, <span class="string">&quot;Tools&quot;</span>: <span class="string">&quot;1. Search engine\n2. Web browser&quot;</span>, <span class="string">&quot;Number of tools&quot;</span>: <span class="string">&quot;2&quot;</span>&#125;&#125;</span><br><span class="line">&#123;<span class="string">&quot;task_id&quot;</span>: <span class="string">&quot;04a04a9b-226c-43fd-b319-d5e89743676f&quot;</span>, <span class="string">&quot;Question&quot;</span>: <span class="string">&quot;If we assume all articles published by Nature in 2020 (articles, only, not book reviews/columns, etc) relied on statistical significance to justify their findings and they on average came to a p-value of 0.04, how many papers would be incorrect as to their claims of statistical significance? Round the value up to the next integer.&quot;</span>, <span class="string">&quot;Level&quot;</span>: <span class="number">2</span>, <span class="string">&quot;Final answer&quot;</span>: <span class="string">&quot;41&quot;</span>, <span class="string">&quot;file_name&quot;</span>: <span class="string">&quot;&quot;</span>, <span class="string">&quot;Annotator Metadata&quot;</span>: &#123;<span class="string">&quot;Steps&quot;</span>: <span class="string">&quot;1. Find how many articles were published in Nature in 2020 by Googling \&quot;articles submitted to nature 2020\&quot;\n2. Click through to Nature&#x27;s archive for 2020 and filter the results to only provide articles, not other types of publications: 1002\n3. Find 4% of 1002 and round up: 40.08 &gt; 41&quot;</span>, <span class="string">&quot;Number of steps&quot;</span>: <span class="string">&quot;3&quot;</span>, <span class="string">&quot;How long did this take?&quot;</span>: <span class="string">&quot;5 minutes&quot;</span>, <span class="string">&quot;Tools&quot;</span>: <span class="string">&quot;1. search engine\n2. calculator&quot;</span>, <span class="string">&quot;Number of tools&quot;</span>: <span class="string">&quot;2&quot;</span>&#125;&#125;</span><br><span class="line">&#123;<span class="string">&quot;task_id&quot;</span>: <span class="string">&quot;14569e28-c88c-43e4-8c32-097d35b9a67d&quot;</span>, <span class="string">&quot;Question&quot;</span>: <span class="string">&quot;In Unlambda, what exact charcter or text needs to be added to correct the following code to output \&quot;For penguins\&quot;? If what is needed is a character, answer with the name of the character. If there are different names for the character, use the shortest. The text location is not needed. Code:\n\n`r```````````.F.o.r. .p.e.n.g.u.i.n.si&quot;</span>, <span class="string">&quot;Level&quot;</span>: <span class="number">2</span>, <span class="string">&quot;Final answer&quot;</span>: <span class="string">&quot;backtick&quot;</span>, <span class="string">&quot;file_name&quot;</span>: <span class="string">&quot;&quot;</span>, <span class="string">&quot;Annotator Metadata&quot;</span>: &#123;<span class="string">&quot;Steps&quot;</span>: <span class="string">&quot;1. Searched \&quot;Unlambda syntax\&quot; online (optional).\n2. Opened https://en.wikipedia.org/wiki/Unlambda.\n3. Note that the hello world program is very similar in syntax to the code in this question.\n4. Go to the source referenced by the hello world program.\n5. From the referenced source, read what the components of the program do to understand that each period needs a backtick after the initial `r.\n6. Observe that in the given code, there are 12 periods but only 11 backticks after the initial `r, so the missing character is a backtick.&quot;</span>, <span class="string">&quot;Number of steps&quot;</span>: <span class="string">&quot;6&quot;</span>, <span class="string">&quot;How long did this take?&quot;</span>: <span class="string">&quot;15 minutes&quot;</span>, <span class="string">&quot;Tools&quot;</span>: <span class="string">&quot;1. Web browser\n2. Search engine\n3. Unlambda compiler (optional)&quot;</span>, <span class="string">&quot;Number of tools&quot;</span>: <span class="string">&quot;3&quot;</span>&#125;&#125;</span><br><span class="line">&#123;<span class="string">&quot;task_id&quot;</span>: <span class="string">&quot;e1fc63a2-da7a-432f-be78-7c4a95598703&quot;</span>, <span class="string">&quot;Question&quot;</span>: <span class="string">&quot;If Eliud Kipchoge could maintain his record-making marathon pace indefinitely, how many thousand hours would it take him to run the distance between the Earth and the Moon its closest approach? Please use the minimum perigee value on the Wikipedia page for the Moon when carrying out your calculation. Round your result to the nearest 1000 hours and do not use any comma separators if necessary.&quot;</span>, <span class="string">&quot;Level&quot;</span>: <span class="number">1</span>, <span class="string">&quot;Final answer&quot;</span>: <span class="string">&quot;17&quot;</span>, <span class="string">&quot;file_name&quot;</span>: <span class="string">&quot;&quot;</span>, <span class="string">&quot;Annotator Metadata&quot;</span>: &#123;<span class="string">&quot;Steps&quot;</span>: <span class="string">&quot;1. Googled Eliud Kipchoge marathon pace to find 4min 37sec/mile\n2. Converted into fractions of hours.\n3. Found moon periapsis in miles (225,623 miles).\n4. Multiplied the two to find the number of hours and rounded to the nearest 100 hours.&quot;</span>, <span class="string">&quot;Number of steps&quot;</span>: <span class="string">&quot;4&quot;</span>, <span class="string">&quot;How long did this take?&quot;</span>: <span class="string">&quot;20 Minutes&quot;</span>, <span class="string">&quot;Tools&quot;</span>: <span class="string">&quot;1. A web browser.\n2. A search engine.\n3. A calculator.&quot;</span>, <span class="string">&quot;Number of tools&quot;</span>: <span class="string">&quot;3&quot;</span>&#125;&#125;</span><br><span class="line">&#123;<span class="string">&quot;task_id&quot;</span>: <span class="string">&quot;32102e3e-d12a-4209-9163-7b3a104efe5d&quot;</span>, <span class="string">&quot;Question&quot;</span>: <span class="string">&quot;The attached spreadsheet shows the inventory for a movie and video game rental store in Seattle, Washington. What is the title of the oldest Blu-Ray recorded in this spreadsheet? Return it as appearing in the spreadsheet.&quot;</span>, <span class="string">&quot;Level&quot;</span>: <span class="number">2</span>, <span class="string">&quot;Final answer&quot;</span>: <span class="string">&quot;Time-Parking 2: Parallel Universe&quot;</span>, <span class="string">&quot;file_name&quot;</span>: <span class="string">&quot;32102e3e-d12a-4209-9163-7b3a104efe5d.xlsx&quot;</span>, <span class="string">&quot;Annotator Metadata&quot;</span>: &#123;<span class="string">&quot;Steps&quot;</span>: <span class="string">&quot;1. Open the attached file.\n2. Compare the years given in the Blu-Ray section to find the oldest year, 2009.\n3. Find the title of the Blu-Ray disc that corresponds to the year 2009: Time-Parking 2: Parallel Universe.&quot;</span>, <span class="string">&quot;Number of steps&quot;</span>: <span class="string">&quot;3&quot;</span>, <span class="string">&quot;How long did this take?&quot;</span>: <span class="string">&quot;1 minute&quot;</span>, <span class="string">&quot;Tools&quot;</span>: <span class="string">&quot;1. Microsoft Excel&quot;</span>, <span class="string">&quot;Number of tools&quot;</span>: <span class="string">&quot;1&quot;</span>&#125;&#125;</span><br><span class="line">&#123;<span class="string">&quot;task_id&quot;</span>: <span class="string">&quot;8e867cd7-cff9-4e6c-867a-ff5ddc2550be&quot;</span>, <span class="string">&quot;Question&quot;</span>: <span class="string">&quot;How many studio albums were published by Mercedes Sosa between 2000 and 2009 (included)? You can use the latest 2022 version of english wikipedia.&quot;</span>, <span class="string">&quot;Level&quot;</span>: <span class="number">1</span>, <span class="string">&quot;Final answer&quot;</span>: <span class="string">&quot;3&quot;</span>, <span class="string">&quot;file_name&quot;</span>: <span class="string">&quot;&quot;</span>, <span class="string">&quot;Annotator Metadata&quot;</span>: &#123;<span class="string">&quot;Steps&quot;</span>: <span class="string">&quot;1. I did a search for Mercedes Sosa\n2. I went to the Wikipedia page for her\n3. I scrolled down to \&quot;Studio albums\&quot;\n4. I counted the ones between 2000 and 2009&quot;</span>, <span class="string">&quot;Number of steps&quot;</span>: <span class="string">&quot;4&quot;</span>, <span class="string">&quot;How long did this take?&quot;</span>: <span class="string">&quot;5 minutes&quot;</span>, <span class="string">&quot;Tools&quot;</span>: <span class="string">&quot;1. web browser\n2. google search&quot;</span>, <span class="string">&quot;Number of tools&quot;</span>: <span class="string">&quot;2&quot;</span>&#125;&#125;</span><br><span class="line">&#123;<span class="string">&quot;task_id&quot;</span>: <span class="string">&quot;3627a8be-a77f-41bb-b807-7e1bd4c0ebdf&quot;</span>, <span class="string">&quot;Question&quot;</span>: <span class="string">&quot;The object in the British Museum&#x27;s collection with a museum number of 2012,5015.17 is the shell of a particular mollusk species. According to the abstract of a research article published in Science Advances in 2021, beads made from the shells of this species were found that are at least how many thousands of years old?&quot;</span>, <span class="string">&quot;Level&quot;</span>: <span class="number">2</span>, <span class="string">&quot;Final answer&quot;</span>: <span class="string">&quot;142&quot;</span>, <span class="string">&quot;file_name&quot;</span>: <span class="string">&quot;&quot;</span>, <span class="string">&quot;Annotator Metadata&quot;</span>: &#123;<span class="string">&quot;Steps&quot;</span>: <span class="string">&quot;1. Use search engine to search for \&quot;British Museum search collection\&quot; and navigate to the British Museum&#x27;s collection search webpage.\n2. Select \&quot;Museum number\&quot; as search field and \&quot;2012,5015.17\&quot; in text box, then run search.\n3. Open the page for the single result and note that the description says that this is the shell of an individual of the Nassa gibbosula species.\n4. Use search engine to search for \&quot;Nassa gibbosula\&quot;.\n5. Note that according to the search result from the World Register of Marine Species website, Nassa gibbosula is not an accepted species name.\n6. Open the page for Nassa gibbosula on the World Register of Marine Species website.\n7. Scan the page and note that the accepted species name is Tritia gibbosula.\n8. Use search engine to search for \&quot;Science Advances 2021 Tritia gibbosula\&quot;.\n9. Find that the top result is an article from 2021 in Science Advances titled \&quot;Early Middle Stone Age personal ornaments from Bizmoune Cave, Essaouira, Morocco\&quot;.\n10. Scan abstract and note that the article discusses beads made from Tritia gibbosula shells that date to at least 142 thousand years ago, giving a final answer of 142.&quot;</span>, <span class="string">&quot;Number of steps&quot;</span>: <span class="string">&quot;10&quot;</span>, <span class="string">&quot;How long did this take?&quot;</span>: <span class="string">&quot;12 minutes&quot;</span>, <span class="string">&quot;Tools&quot;</span>: <span class="string">&quot;1. Web browser\n2. Search engine&quot;</span>, <span class="string">&quot;Number of tools&quot;</span>: <span class="string">&quot;2&quot;</span>&#125;&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到题目的难度是很大的，人来操作也要费一些功夫，特别是level
+2和level 3的题目。</p>
+<p>比如第一题，level
+2的：“一篇关于人工智能监管的论文最初于2022年6月提交到arXiv.org，其中展示了一个包含三个坐标轴的图表，每个坐标轴的两端都有标签词。在2016年8月11日提交到arXiv.org的《物理与社会》文章中，这些词中哪一个被用来描述一种社会类型？”</p>
+<p>再看一个，也是level
+2的：“我正在研究那些被人们当作宠物饲养后放生并成为入侵物种的生物。有一种鱼类因作为电影《海底总动员》的主角而成为热门宠物。根据美国地质调查局（USGS）的数据，在2020年之前，这种鱼在哪些地方作为非本地物种被发现？答案需要以发现地的五位邮政编码格式呈现，若有多处发现地则用逗号分隔。”</p>
+<p>看看level
+1的：“如果埃鲁德·基普乔格能够无限保持他创造纪录的马拉松配速，那么他以最近距离从地球跑到月球需要多少千小时？计算时请使用维基百科上月球的最小近地点数值，并将结果四舍五入到最接近的1000小时，且不要使用任何逗号分隔符。”</p>
+<p>最后看个level
+3的感受一下：“梅赛德斯·索萨在2000年至2009年（含）期间发行了多少张录音室专辑？你可以使用2022年最新版本的英文维基百科。”</p>
+<h1 id="browsecomp">BrowseComp</h1>
+<p>BrowseComp（Browsing Competition），由 OpenAI
+开源，用于评估agent网络浏览能力的基准测试数据集。</p>
+<p>共包含1266个问题，涵盖多个领域。BrowseComp都是文本，没有多模态数据。而且答案都设计为简短、明确的答案，因此可以做自动化验证。</p>
+<p>样例：</p>
+<p>1、足球比赛查询</p>
+<p>问题："Identify the two football teams that played a match officiated
+by a Brazilian referee between 1990 and 1994 where there were four
+yellow cards (two for each team), three of which were not issued in the
+first half, and there were four substitutions, one of which was an
+injury substitution before the 25th minute of the game."</p>
+<p>答案：爱尔兰对罗马尼亚 (Ireland vs. Romania)</p>
+<p>2、学术论文查找</p>
+<p>问题："Find a research paper published before June 2023 that mentions
+cultural traditions, scientific processes, and culinary innovation, and
+is co-authored by three individuals, one of whom is an Assistant
+Professor from West Bengal and another holds a PhD."</p>
+<p>答案：《面包制作的基础：面包的科学》(The Fundamentals of Bread
+Making: The Science of Bread)</p>
+<h1 id="browsecomp-zh">BrowseComp-ZH</h1>
+<p>BrowseComp的中文版，由港科大（广州）、北京大学、浙江大学、阿里巴巴、字节跳动、NIO
+等联合发布。大致上是参考BrowseComp搞的。</p>
+<p>共有289条数据，覆盖11个领域。</p>
+<p>样例：</p>
+<p>example 1：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">话题：艺术</span><br><span class="line">问题：在中国传统艺术中，有一种特殊的绘画形式，起源于元代，盛行于清末，传说是由一位古代知名画家在酒后兴起所创。这种艺术形式在2010~2015年之间被列入某省级非物质文化遗产名录。绘制这种艺术形式需要画家精通各种画法，并且要善书各种字体。请问这种艺术形式是什么？</span><br><span class="line">答案：锦灰堆</span><br></pre></td></tr></table></figure>
+<p>example 2：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">话题：影视</span><br><span class="line">问题：某知名电视剧，女二号（演员）在1993年进入演艺圈。女一号（演员）的现任丈夫是浙江湖州人。男一号（演员）6年后登上了春晚舞台。问该电视剧是什么？</span><br><span class="line">答案：父母爱情</span><br></pre></td></tr></table></figure>
+<h1 id="hle">HLE</h1>
+<p>Humanity's Last
+Exam，人类的最后考试，覆盖了数学、人文科学、自然科学等数十个不同的学科领域。</p>
+<p>基本信息：</p>
+<ul>
+<li>题目数量：2700+<br>
+</li>
+<li>多模态数据：占比13%<br>
+</li>
+<li>多选题占比：24%<br>
+</li>
+<li>精确匹配题占比：76%</li>
+</ul>
+<p>领域分布：</p>
+<img src="/72150a83/hle_domain.png" class title="agent评测">
+<p>模型表现对比：</p>
+<ul>
+<li>OpenAI Deep Research：26.6% 准确率<br>
+</li>
+<li>Kimi-Researcher：26.9% 准确率<br>
+</li>
+<li>DeepSeek-R1：9.4% 准确率<br>
+</li>
+<li>Gemini 2.5 Pro：21.6% 准确率</li>
+</ul>
+<p>样例：</p>
+<img src="/72150a83/hle_1.png" class title="agent评测">
+<img src="/72150a83/hle_2.png" class title="agent评测">
+<img src="/72150a83/hle_3.png" class title="agent评测">
+<h1 id="gpqa">GPQA</h1>
+<p>Graduate-Level Google-Proof Q&amp;A。</p>
+<p>主要包括大学研究生级别的生物学、物理学和化学题目，共有448道多选题：</p>
+<ul>
+<li>生物学：33%，约148题<br>
+</li>
+<li>物理学：35%，约157题<br>
+</li>
+<li>化学：32%，约143题</li>
+</ul>
+<p>测评结果：</p>
+<ul>
+<li>领域博士专家：65% 正确率<br>
+</li>
+<li>高技能非专家：34% 正确率<br>
+</li>
+<li>GPT-4 基线模型：39% 正确率</li>
+</ul>
+<p>样例：</p>
+<img src="/72150a83/gpqa_1.png" class title="agent评测">
+<img src="/72150a83/gpqa_2.png" class title="agent评测">
+<h1 id="scholarsearch">ScholarSearch</h1>
+<p>ScholarSearch 是由北京大学 DS-Lab
+团队发布的首个专门用于评估大语言模型在学术研究场景下复杂信息检索能力的数据集，包含223道高难度的学术检索题目及其对应的标准答案。</p>
+<p>ScholarSearch是纯文本数据集，覆盖Science &amp; Engineering和Social
+Sciences &amp;
+Humanities两大门类，共15个细分学科。数据集主要英文为主。</p>
+<p>GPT-4o-search-preview的得分为18.83%。</p>
+<p>样例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Domain: Physics</span><br><span class="line"></span><br><span class="line">Question: The State Key Laboratory of Magnetism at the Institute of Physics, Chinese Academy of Sciences/Beijing National Research Center for Condensed Matter Physics recently published groundbreaking research. They used the antiferromagnetic insulator LaFeO3 (LFO) as an electron donor to construct LNOn/LFO1 (n=1-5) superlattices. By modulating the charge transfer at the interface (Fe³⁺→Ni³⁺), they controlled the orbital hybridization degree of the Fe-ONi band, inducing robust ferromagnetism well above room temperature in the 1:1 superlattice, i.e., the layered double perovskite La2NiFeO6 thin film. In the experimental results of this paper, what is the Curie temperature (in Kelvin) of the 3:1 superlattice LaNiO3/LaFeO3?</span><br><span class="line"></span><br><span class="line">Answer: 589K</span><br><span class="line">Explanation: Search for &quot;Chinese Academy of Sciences publishes research on inducing high-temperature ferromagnetism in La2NiFeO6 double perovskite thin films&quot; to identify the paper title as Ferromagnetism in LaFeO3/LaNiO3 Superlattices with High Curie Temperature. Locate the paper via Google Scholar and refer to the experimental results section to confirm the answer as 589K.</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Domain: Economics</span><br><span class="line"></span><br><span class="line">Question: China&#x27;s accounting standards are revised annually. Compared to the 2023 accounting standards, what direct change was made in the 2024 accounting standards under CAS 22 – Recognition and Measurement of Financial Instruments regarding the subsequent measurement of financial assets at amortized cost, specifically in the accounting treatment of accrued interest?</span><br><span class="line"></span><br><span class="line">Answer: The &quot;Interest Receivable&quot; and &quot;Interest Payable&quot; accounts were changed to &quot;Debt Investments – Accrued Interest.&quot;</span><br><span class="line"></span><br><span class="line">Explanation: After searching multiple web pages and referring to https://finance.sina.cn/2024-06-11/detail-inaykqrw3776358.d.html, Table 10 (Section 2), the 2024 revision of CAS 22 – Recognition and Measurement of Financial Instruments adjusted the accounting treatment as follows: For debt investments, other debt investments, trading financial assets (bonds), bonds payable, and trading financial liabilities (bonds) with periodic interest payments, the year-end accrual of coupon interest was changed from the &quot;Interest Receivable/Payable&quot; accounts to the &quot;Debt Investments – Accrued Interest&quot; sub-account.</span><br></pre></td></tr></table></figure>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/44c62dc5.html">DeepResearch的报告生成方法</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7c2f9dcb.html">从RAG到DeepSearch</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/226b059f.html">agent调研(1)--MetaGPT,OpenManus和OWL</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f93b3aaf.html">Devin和Anthropic的Agent开发经验</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 训练框架<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe0adaa5.html">LLM训练框架：从优化器和精度讲到ZeRO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4cd8532f.html">LLM训练各种并行策略</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 论文阅读：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e96c7aac.html">最近阅读--关于数据合成、agent、reasoning和多任务</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/af7f9363.html">最近阅读2-关于自适应深度思考、context
+engineering和模型训练</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/72150a83.html" title="Agent评测数据集">https://saicat.github.io/72150a83.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/Agent/" rel="tag"><i class="fa fa-tag"></i> Agent</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/af7f9363.html" rel="prev" title="最近阅读2-关于自适应深度思考、context engineering和模型训练">
+                  <i class="fa fa-angle-left"></i> 最近阅读2-关于自适应深度思考、context engineering和模型训练
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">749k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">22:43</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
