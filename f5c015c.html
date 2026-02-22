@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  大语言模型虽然效果很好，但是推理时，朴素的自回归解码策略需要逐个串行解码，耗时较长，这给用户的耐心带来了很大挑战。如今各家大模型提供商基本都有对外提供大模型的体验平台，而模型的推理效率自然也成了一个重要的竞争点。">
 <meta property="og:type" content="article">
@@ -173,18 +173,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -358,18 +358,27 @@ Generation with Aggressive Decoding》。</p>
 decoding也是一个在解码策略上进行优化的方法。投机解码可以在不用训练原模型的基础上，提升2x-3x的推理速度，并且保证结果和原模型完全一致，没有任何效果损失。</p>
 <h1 id="speculative-decoding算法">speculative decoding算法</h1>
 <p>回想一下，自回归语言模型在训练的时候，在每一个位置，会根据当前及前面所有的token，预测下一个token。由于强制学习的特性，所有token可以一起训练。在某种特别的情况下，模型对当前的输入拟合得特别好，就有可能出现每个token的预测，都完美命中下一个输入token的情况。举个例子：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">位置：一  二  三  四</span><br><span class="line">输入：我  爱  中  国</span><br><span class="line">输出：爱  中  国  EOS</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-none"><code class="language-none">位置：一  二  三  四
+输入：我  爱  中  国
+输出：爱  中  国  EOS<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
 <p>而在推理的时候，这种依赖前面所有token的特性，使得自回归模型只能一个一个串行地解码：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">step1：输入“我”，输出“爱”；</span><br><span class="line">step2：输入“我爱”，输出“中”；</span><br><span class="line">step3：输入“我爱中”，输出“国”；</span><br><span class="line">step4：输入“我爱中国”，输出“EOS”；</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-none"><code class="language-none">step1：输入“我”，输出“爱”；
+step2：输入“我爱”，输出“中”；
+step3：输入“我爱中”，输出“国”；
+step4：输入“我爱中国”，输出“EOS”；<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
 <p>现在，假设我们有一个神奇海螺，你只要输入“我”，就会输出“爱 中 国
 EOS”四个token作为草稿，我们就可以拿着这四个draft
 token一起放到原来的模型，跑一下各个位置的输出，进行验证，跟训练时的前向推理一样：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">位置：一  二  三  四</span><br><span class="line">输入：我  爱  中  国</span><br><span class="line">输出：爱  中  国  EOS</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-none"><code class="language-none">位置：一  二  三  四
+输入：我  爱  中  国
+输出：爱  中  国  EOS<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
 <p>然后就会发现模型的输出和神奇海螺给出的草稿完全一致，那就相当于我们只进行了一次模型推理，就解码了四个token，并且和原模型的效果完全一致。并且一般情况下，模型对一个位置进行预测和对四个位置进行预测的耗时基本没有太大的差异，也就是说在这个例子下，模型解码速度提升到了将近4倍。</p>
 <p>当然，神奇海螺不会总是能够给出和模型一模一样的结果，除非它就是模型本身。因此，在上面这个例子中，输入“我”之后，神奇海螺有可能给出的是“爱
 中 华 EOS”这四个draft
 token。这种情况下，我们把这些token一起输入到模型进行验证</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">位置：一  二  三  四</span><br><span class="line">输入：我  爱  中  华</span><br><span class="line">输出：爱  中  国  EOS</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-none"><code class="language-none">位置：一  二  三  四
+输入：我  爱  中  华
+输出：爱  中  国  EOS<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
 <p>会发现神奇海螺给出的“爱”和“中”命中了模型的结果，但是“华”没对上。不过这种情况下，跑一次模型推理也能解码出两个token，推理效率依然有提升。</p>
 <p>部分情况下，神奇海螺给出的结果也可能完全跑偏，比如给它输入“我”，它有可能输出“叫
 小
@@ -671,7 +680,7 @@ Sampling https://arxiv.org/abs/2302.01318</p>
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -682,13 +691,13 @@ Sampling https://arxiv.org/abs/2302.01318</p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

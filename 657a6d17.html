@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  简单读一下这篇：《Cognitive Behaviors that Enable Self-Improving Reasoners, or, Four Habits of Highly Effective STaRs》">
 <meta property="og:type" content="article">
@@ -167,18 +167,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -281,7 +281,7 @@
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>21 分钟</span>
+      <span>20 分钟</span>
     </span>
 </div>
 
@@ -335,7 +335,28 @@ the target of 75, we need a number divisible by...”)</p></li>
 这些行为使得更加动态的搜索轨迹成为可能。</p>
 <p>那么怎么看模型是否具备以上的思考行为呢？文中使用few-shot prompt + GPT
 4o-mini来判断模型输出中是否包含以上这些思考模式，以及包含多少：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">prompts = [</span><br><span class="line">    <span class="comment"># 1. Answer-verification steps</span></span><br><span class="line">    <span class="string">f&quot;&quot;&quot;Here is a chain-of-reasoning that a Language Model generated while trying to play the game of CountDown with the numbers <span class="subst">&#123;numbers&#125;</span>. The goal is to reach the target number <span class="subst">&#123;target&#125;</span>. The chain-of-reasoning the model used is: <span class="subst">&#123;completion&#125;</span>. </span></span><br><span class="line"><span class="string">Evaluate whether the chain-of-reasoning contains any answer-verification steps. An example of an answer-verification step is: &#x27;This sequence results in 1, which is not equal to 22&#x27; and &#x27;Since 25 is not equal to 22&#x27; for explicit verification and &#x27;Too high!&#x27; or &#x27;This works!&#x27; for implicit verification. We want to mark instances where the chain-of-reasoning explicitly checks the current result against the target number. </span></span><br><span class="line"><span class="string">If you find any answer-verification steps, please count them and provide the count as between the tags &lt;count&gt; &lt;/count&gt;. If the chain-of-reasoning does not contain any answer-verification steps, please provide a count of 0 as &lt;count&gt;0&lt;/count&gt;.&quot;&quot;&quot;</span>,</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 2. Backtracking behavior</span></span><br><span class="line">    <span class="string">f&quot;&quot;&quot;Here is a chain-of-reasoning that a Language Model generated while trying to play the game of CountDown with the numbers <span class="subst">&#123;numbers&#125;</span>. The goal is to reach the target number <span class="subst">&#123;target&#125;</span>. The chain-of-reasoning the model used is: <span class="subst">&#123;completion&#125;</span>.</span></span><br><span class="line"><span class="string">Evaluate whether the chain-of-reasoning contains any backtracking behavior, where the model realizes a path won&#x27;t work and explicitly goes back to try a different approach. Due to the nature of the problem, any attempt at a new combination of numbers that does not directly use the result from the previous computation is considered backtracking. </span></span><br><span class="line"><span class="string">For example, in the reasoning trace with numbers [20, 7, 11, 78] - &quot;(78 - 20) - (11 - 7) = 58 - 4 = 54, (54 - 78) + 11 = -24 + 11 = -13, (-13 + 78) - 11 = 65 - 11 = 54, (78 - 58) + 11 = 20 + 11 = 31, (78 - 58) + (20 - 11) = 20 + 9 = 29, (78 - 20) + (11 - 7) = 58 + 4 = 62, (78 - 11) - (20 - 7) = 67 - 13 = 54, (78 - 20) + (11 / 7) = 58 + 1.5714 = 59.5714, (78 - 11) / (20 - 7) = 67 / 13 = 5, (78 - 20) + (11 + 7) = 58&quot;, there are 5 instances of backtracking to the initial numbers.</span></span><br><span class="line"><span class="string">Count the number of distinct backtracking instances and provide the count between the tags &lt;count&gt; &lt;/count&gt;. If the chain-of-reasoning does not contain any backtracking behavior, please provide a count of 0 as &lt;count&gt;0&lt;/count&gt;.&quot;&quot;&quot;</span>,</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 3. Subgoal setting</span></span><br><span class="line">    <span class="string">f&quot;&quot;&quot;Here is a chain-of-reasoning that a Language Model generated while trying to play the game of CountDown with the numbers <span class="subst">&#123;numbers&#125;</span>. The goal is to reach the target number <span class="subst">&#123;target&#125;</span>. The chain-of-reasoning the model used is: <span class="subst">&#123;completion&#125;</span>.</span></span><br><span class="line"><span class="string">Evaluate whether the chain-of-reasoning contains any explicit subgoal setting, where the model breaks down the problem into smaller, intermediate goals. An example of subgoal setting is: &quot;First, I&#x27;ll try to get close to <span class="subst">&#123;target//<span class="number">2</span>&#125;</span>, then...&quot;.</span></span><br><span class="line"><span class="string">Count the number of distinct subgoals set and provide the count between the tags &lt;count&gt; &lt;/count&gt;. If the chain-of-reasoning does not contain any subgoal setting, please provide a count of 0 as &lt;count&gt;0&lt;/count&gt;.&quot;&quot;&quot;</span>,</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 4. Backward-chaining</span></span><br><span class="line">    <span class="string">f&quot;&quot;&quot;Here is a chain-of-reasoning that a Language Model generated while trying to play the game of CountDown with the numbers <span class="subst">&#123;numbers&#125;</span>. The goal is to reach the target number <span class="subst">&#123;target&#125;</span>. The chain-of-reasoning the model used is: <span class="subst">&#123;completion&#125;</span>.</span></span><br><span class="line"><span class="string">Evaluate whether the chain-of-reasoning contains any backward-chaining behavior, where the model starts from the target number and works backwards to the initial numbers. An example of backward-chaining when the target is 24 and the numbers are 12 and 2 is: &quot;Let&#x27;s work backwards from the target. 24/2 = 12. So, 12*2=24.&quot; and if the target is 22 and the numbers are 25 and 3 is: &quot;Since the target is 22, and 22 + 3 = 25, ...&quot;.</span></span><br><span class="line"><span class="string">Count the number of distinct backward-chaining instances and provide the count between the tags &lt;count&gt; &lt;/count&gt;. If the chain-of-reasoning does not contain any backward-chaining behavior, please provide a count of 0 as &lt;count&gt;0&lt;/count&gt;.&quot;&quot;&quot;</span></span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">prompts <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token comment"># 1. Answer-verification steps</span>
+    <span class="token string-interpolation"><span class="token string">f"""Here is a chain-of-reasoning that a Language Model generated while trying to play the game of CountDown with the numbers </span><span class="token interpolation"><span class="token punctuation">&#123;</span>numbers<span class="token punctuation">&#125;</span></span><span class="token string">. The goal is to reach the target number </span><span class="token interpolation"><span class="token punctuation">&#123;</span>target<span class="token punctuation">&#125;</span></span><span class="token string">. The chain-of-reasoning the model used is: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>completion<span class="token punctuation">&#125;</span></span><span class="token string">. 
+Evaluate whether the chain-of-reasoning contains any answer-verification steps. An example of an answer-verification step is: 'This sequence results in 1, which is not equal to 22' and 'Since 25 is not equal to 22' for explicit verification and 'Too high!' or 'This works!' for implicit verification. We want to mark instances where the chain-of-reasoning explicitly checks the current result against the target number. 
+If you find any answer-verification steps, please count them and provide the count as between the tags &lt;count> &lt;/count>. If the chain-of-reasoning does not contain any answer-verification steps, please provide a count of 0 as &lt;count>0&lt;/count>."""</span></span><span class="token punctuation">,</span>
+
+    <span class="token comment"># 2. Backtracking behavior</span>
+    <span class="token string-interpolation"><span class="token string">f"""Here is a chain-of-reasoning that a Language Model generated while trying to play the game of CountDown with the numbers </span><span class="token interpolation"><span class="token punctuation">&#123;</span>numbers<span class="token punctuation">&#125;</span></span><span class="token string">. The goal is to reach the target number </span><span class="token interpolation"><span class="token punctuation">&#123;</span>target<span class="token punctuation">&#125;</span></span><span class="token string">. The chain-of-reasoning the model used is: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>completion<span class="token punctuation">&#125;</span></span><span class="token string">.
+Evaluate whether the chain-of-reasoning contains any backtracking behavior, where the model realizes a path won't work and explicitly goes back to try a different approach. Due to the nature of the problem, any attempt at a new combination of numbers that does not directly use the result from the previous computation is considered backtracking. 
+For example, in the reasoning trace with numbers [20, 7, 11, 78] - "(78 - 20) - (11 - 7) = 58 - 4 = 54, (54 - 78) + 11 = -24 + 11 = -13, (-13 + 78) - 11 = 65 - 11 = 54, (78 - 58) + 11 = 20 + 11 = 31, (78 - 58) + (20 - 11) = 20 + 9 = 29, (78 - 20) + (11 - 7) = 58 + 4 = 62, (78 - 11) - (20 - 7) = 67 - 13 = 54, (78 - 20) + (11 / 7) = 58 + 1.5714 = 59.5714, (78 - 11) / (20 - 7) = 67 / 13 = 5, (78 - 20) + (11 + 7) = 58", there are 5 instances of backtracking to the initial numbers.
+Count the number of distinct backtracking instances and provide the count between the tags &lt;count> &lt;/count>. If the chain-of-reasoning does not contain any backtracking behavior, please provide a count of 0 as &lt;count>0&lt;/count>."""</span></span><span class="token punctuation">,</span>
+
+    <span class="token comment"># 3. Subgoal setting</span>
+    <span class="token string-interpolation"><span class="token string">f"""Here is a chain-of-reasoning that a Language Model generated while trying to play the game of CountDown with the numbers </span><span class="token interpolation"><span class="token punctuation">&#123;</span>numbers<span class="token punctuation">&#125;</span></span><span class="token string">. The goal is to reach the target number </span><span class="token interpolation"><span class="token punctuation">&#123;</span>target<span class="token punctuation">&#125;</span></span><span class="token string">. The chain-of-reasoning the model used is: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>completion<span class="token punctuation">&#125;</span></span><span class="token string">.
+Evaluate whether the chain-of-reasoning contains any explicit subgoal setting, where the model breaks down the problem into smaller, intermediate goals. An example of subgoal setting is: "First, I'll try to get close to </span><span class="token interpolation"><span class="token punctuation">&#123;</span>target<span class="token operator">//</span><span class="token number">2</span><span class="token punctuation">&#125;</span></span><span class="token string">, then...".
+Count the number of distinct subgoals set and provide the count between the tags &lt;count> &lt;/count>. If the chain-of-reasoning does not contain any subgoal setting, please provide a count of 0 as &lt;count>0&lt;/count>."""</span></span><span class="token punctuation">,</span>
+
+    <span class="token comment"># 4. Backward-chaining</span>
+    <span class="token string-interpolation"><span class="token string">f"""Here is a chain-of-reasoning that a Language Model generated while trying to play the game of CountDown with the numbers </span><span class="token interpolation"><span class="token punctuation">&#123;</span>numbers<span class="token punctuation">&#125;</span></span><span class="token string">. The goal is to reach the target number </span><span class="token interpolation"><span class="token punctuation">&#123;</span>target<span class="token punctuation">&#125;</span></span><span class="token string">. The chain-of-reasoning the model used is: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>completion<span class="token punctuation">&#125;</span></span><span class="token string">.
+Evaluate whether the chain-of-reasoning contains any backward-chaining behavior, where the model starts from the target number and works backwards to the initial numbers. An example of backward-chaining when the target is 24 and the numbers are 12 and 2 is: "Let's work backwards from the target. 24/2 = 12. So, 12*2=24." and if the target is 22 and the numbers are 25 and 3 is: "Since the target is 22, and 22 + 3 = 25, ...".
+Count the number of distinct backward-chaining instances and provide the count between the tags &lt;count> &lt;/count>. If the chain-of-reasoning does not contain any backward-chaining behavior, please provide a count of 0 as &lt;count>0&lt;/count>."""</span></span>
+<span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>结果发现 Qwen 的效果改进与cognitive
 behaviors的出现相吻合，特别是verification和backtracking这两个模式：</p>
 <img src="/657a6d17/behaviors.png" class title="Cognitive_Behaviors">
@@ -373,7 +394,23 @@ behaviors，那RL阶段就有可能获得更好的效果。</p>
 <p>对应的prompt在<a target="_blank" rel="noopener" href="https://github.com/kanishkg/cognitive-behaviors/blob/main/generate_cot_datasets/api_gen.py">https://github.com/kanishkg/cognitive-behaviors/blob/main/generate_cot_datasets/api_gen.py</a></p>
 <p>要求模型输出各种认知行为的prompt都是system prompt。比如all
 strategies的system prompt是这样的：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">I want to produce reasoning trajectories for the game of countdown. The goal here is to reach a target number by combining integers using basic arithmetic operations.</span><br><span class="line">Write your thoughts in &lt;think&gt; &lt;/think&gt; tags.</span><br><span class="line">The answer is a series of arithmetic operations (+, -, *, /) that results in the target number.</span><br><span class="line">Write the final answer in &lt;answer&gt; &lt;/answer&gt; tags.</span><br><span class="line">For the final answer, make sure that each step in the final answer is written as &lt;answer&gt; (number1 [+-*/] number2) [+-*/] number3 &lt;/answer&gt;.</span><br><span class="line">Answer should be a valid mathematical expression ONLY containing starting integers and NOT the target number.</span><br><span class="line">Otherwise, the grader will not be able to parse your answer.</span><br><span class="line">- Verify that you have reached the answer and backtrack to the start or an intermediate step.</span><br><span class="line">- Work backwards from the goal if it makes things easier.</span><br><span class="line">- Decompose the answer into sub-goals and try to reach them to then reach the target, if you are unable to reach the goal or a subgoal backtrack to a previous state.</span><br><span class="line">HINT: Set subgoals that are useful like factors of the target or multiples of the target. Or numbers close to the target.</span><br><span class="line">For example, you can say things like:</span><br><span class="line">1. When the target is 24 and you have [12, 2]: &quot;12+2 = 14. 14 is not 24, so let&#x27;s try something else. 12*2=24 and 24 was the goal, so the goal has been reached.&quot;</span><br><span class="line">2. When the target is 10 and you have [12, 2]: &quot;12+2 = 14. 14 is not 10, let&#x27;s try a different sequence of operations.&quot;</span><br><span class="line">3. When the target is 10 and you have [9, 3, 2]: &quot;Let&#x27;s try to reach 20 since it is a multiple of 10…&quot; If you can&#x27;t reach it, then try something else.</span><br><span class="line">4. When the target is 24 and you have [10, 2, 2]: &quot;Let&#x27;s first try to reach 12 since it is a factor of 24; 10 * 2 = 20, let&#x27;s try a different sequence. 10 + 2 = 12. Now, 12 * 2 = 24.&quot;</span><br><span class="line">5. For backward chaining, when the target is 24 and you have (12, 2): &quot;Let&#x27;s work backwards from the target. 24/2 = 12. So, 12*2=24.&quot; This is useful when setting subgoals.</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">I want to produce reasoning trajectories for the game of countdown. The goal here is to reach a target number by combining integers using basic arithmetic operations.
+Write your thoughts in &lt;think> &lt;/think> tags.
+The answer is a series of arithmetic operations (+, -, *, /) that results in the target number.
+Write the final answer in &lt;answer> &lt;/answer> tags.
+For the final answer, make sure that each step in the final answer is written as &lt;answer> (number1 [+-*/] number2) [+-*/] number3 &lt;/answer>.
+Answer should be a valid mathematical expression ONLY containing starting integers and NOT the target number.
+Otherwise, the grader will not be able to parse your answer.
+- Verify that you have reached the answer and backtrack to the start or an intermediate step.
+- Work backwards from the goal if it makes things easier.
+- Decompose the answer into sub-goals and try to reach them to then reach the target, if you are unable to reach the goal or a subgoal backtrack to a previous state.
+HINT: Set subgoals that are useful like factors of the target or multiples of the target. Or numbers close to the target.
+For example, you can say things like:
+1. When the target is 24 and you have [12, 2]: "12+2 = 14. 14 is not 24, so let's try something else. 12*2=24 and 24 was the goal, so the goal has been reached."
+2. When the target is 10 and you have [12, 2]: "12+2 = 14. 14 is not 10, let's try a different sequence of operations."
+3. When the target is 10 and you have [9, 3, 2]: "Let's try to reach 20 since it is a multiple of 10…" If you can't reach it, then try something else.
+4. When the target is 24 and you have [10, 2, 2]: "Let's first try to reach 12 since it is a factor of 24; 10 * 2 = 20, let's try a different sequence. 10 + 2 = 12. Now, 12 * 2 = 24."
+5. For backward chaining, when the target is 24 and you have (12, 2): "Let's work backwards from the target. 24/2 = 12. So, 12*2=24." This is useful when setting subgoals.<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>在这些不同的思考行为要求下，Claude-3.5-Sonnet的得分如下：</p>
 <img src="/657a6d17/counting.png" class title="Cognitive_Behaviors">
 <p>虽然在这些行为模式下并不总能推理出正确答案，但是思考行为是存在的。</p>
@@ -390,7 +427,34 @@ strategies的system prompt是这样的：</p>
 预训练数据中的 OpenWebMath 和 FineMath 中随机20w条样本拿出来，用
 Qwen-2.5-32B 分析里面包含了多少这些重要的 target behaviors。</p>
 <p>放个分析用的prompt样例，比如backtracking：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"># Task Description</span><br><span class="line">You will be provided with text from the internet.</span><br><span class="line">Evaluate whether the text contains any backtracking behavior, where the writer realizes a path won&#x27;t work and explicitly goes back to try a different approach. An example of backtracking is: &quot;Let me try again&quot;, &quot;Wait&quot;, &quot;I made a mistake&quot;, or &quot;we need to try a different sequence of operations&quot;. We want to mark instances where the writer abandons a thought and backtracks to a previous computation.</span><br><span class="line"></span><br><span class="line">Backtracking in mathematics might look like:</span><br><span class="line">- &quot;I started with the wrong formula. Let&#x27;s use integration by parts instead.&quot;</span><br><span class="line">- &quot;This approach leads to a contradiction. Going back to the original equation...&quot;</span><br><span class="line">- &quot;I see the error in my calculation. Let&#x27;s recalculate using...&quot;</span><br><span class="line">- &quot;This algebraic manipulation isn&#x27;t simplifying as expected. Let&#x27;s try factoring differently.&quot;</span><br><span class="line"></span><br><span class="line">Count the number of distinct backtracking instances and provide the count between the tags &lt;count&gt; &lt;/count&gt;. If the writer does not backtrack, please provide a count of 0 as &lt;count&gt;0&lt;/count&gt;.</span><br><span class="line"></span><br><span class="line"># Task Format</span><br><span class="line">Format your response in markdown as follows:</span><br><span class="line"></span><br><span class="line">## Thoughts</span><br><span class="line">[Brief description describing what behavior was noticed and where backtracking occurred]</span><br><span class="line"></span><br><span class="line">## Does backtrack?</span><br><span class="line">[yes/no]</span><br><span class="line"></span><br><span class="line">## Number of backtrack steps</span><br><span class="line">&lt;count&gt; [1/2/...] &lt;/count&gt;</span><br><span class="line"></span><br><span class="line"># Task to evaluate for backtracking</span><br><span class="line">&#123;response&#125;</span><br><span class="line"></span><br><span class="line"># Response</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text"># Task Description
+You will be provided with text from the internet.
+Evaluate whether the text contains any backtracking behavior, where the writer realizes a path won't work and explicitly goes back to try a different approach. An example of backtracking is: "Let me try again", "Wait", "I made a mistake", or "we need to try a different sequence of operations". We want to mark instances where the writer abandons a thought and backtracks to a previous computation.
+
+Backtracking in mathematics might look like:
+- "I started with the wrong formula. Let's use integration by parts instead."
+- "This approach leads to a contradiction. Going back to the original equation..."
+- "I see the error in my calculation. Let's recalculate using..."
+- "This algebraic manipulation isn't simplifying as expected. Let's try factoring differently."
+
+Count the number of distinct backtracking instances and provide the count between the tags &lt;count> &lt;/count>. If the writer does not backtrack, please provide a count of 0 as &lt;count>0&lt;/count>.
+
+# Task Format
+Format your response in markdown as follows:
+
+## Thoughts
+[Brief description describing what behavior was noticed and where backtracking occurred]
+
+## Does backtrack?
+[yes/no]
+
+## Number of backtrack steps
+&lt;count> [1/2/...] &lt;/count>
+
+# Task to evaluate for backtracking
+&#123;response&#125;
+
+# Response<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>结果确实比较少，加起来不超过20%。这还是和reasoning密切相关的数学数据集，其他更加通用的数据所包含的认知行为数量就可想而知了。</p>
 <p>既然如此，那就用 OpenWebMath 构造两个数据集：</p>
 <ul>
@@ -578,7 +642,7 @@ Four Habits of Highly Effective STaRs</p>
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -589,13 +653,13 @@ Four Habits of Highly Effective STaRs</p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

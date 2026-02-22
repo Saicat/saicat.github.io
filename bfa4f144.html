@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  之前讲过了prompt压缩，追求把模型的输入减少一些：">
 <meta property="og:type" content="article">
@@ -180,18 +180,18 @@ Reasoning</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a cl
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -287,7 +287,7 @@ Reasoning</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a cl
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>9.3k</span>
+      <span>9.1k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -335,7 +335,11 @@ phenomenon的问题，算法1里的isFeasible里用贪心策略，要求当前bu
 <p>EP = Estimation and Prompting</p>
 <img src="/bfa4f144/tba_ep.png" class title="reasoning_compression2">
 <p>预测budget部分则是使用一个LLM，用下面的prompt来给出预测：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Task: Analyze the given question and estimate the</span><br><span class="line">minimum number of tokens required to generate a</span><br><span class="line">complete and accurate response. Please Give the</span><br><span class="line">response by strictly following this format: [[budget]],</span><br><span class="line">for example, Budget: [[12]].</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">Task: Analyze the given question and estimate the
+minimum number of tokens required to generate a
+complete and accurate response. Please Give the
+response by strictly following this format: [[budget]],
+for example, Budget: [[12]].<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>再看一个TALE-EP的例子：</p>
 <img src="/bfa4f144/tba_ep_example.png" class title="reasoning_compression2">
 <p>TALE-EP不需要训练模型，只需要依赖LLM+prompt对budge进行预测。</p>
@@ -362,7 +366,55 @@ prompt上就明确要求用更少的文字来进行思考：</p>
 <img src="/bfa4f144/cod_prompt.png" class title="reasoning_compression2">
 <p>另外CoD还会提供一些人工编写，包含简洁思考过程的case来作为示例。比如用于GSM8K的system
 prompt和few-shot example是这样的：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">system_prompt: |</span><br><span class="line">  Think step by step, but only keep minimum draft for each thinking step, with 5 words at most.</span><br><span class="line">  Return the answer at the end of the response after a separator ####.</span><br><span class="line">format: |</span><br><span class="line">  Q: &#123;question&#125;</span><br><span class="line">  A: &#123;answer&#125;</span><br><span class="line">fewshot: </span><br><span class="line">  - question: |</span><br><span class="line">      There are 15 trees in the grove. Grove workers will plant trees in the</span><br><span class="line">      grove today. After they are done, there will be 21 trees. How many trees did</span><br><span class="line">      the grove workers plant today?</span><br><span class="line">    answer: |</span><br><span class="line">      21 - 15 = 6. #### 6</span><br><span class="line">  - question: | </span><br><span class="line">      If there are 3 cars in the parking lot and 2 more cars arrive, how many</span><br><span class="line">      cars are in the parking lot?</span><br><span class="line">    answer: |</span><br><span class="line">      3 + 2 = 5. #### 5</span><br><span class="line">  - question: |</span><br><span class="line">      Leah had 32 chocolates and her sister had 42. If they ate 35, how many</span><br><span class="line">      pieces do they have left in total?</span><br><span class="line">    answer: |</span><br><span class="line">      32 + 42 = 74; 74 - 35 = 39. #### 39</span><br><span class="line">  - question:</span><br><span class="line">      Jason had 20 lollipops. He gave Denny some lollipops. Now Jason has 12</span><br><span class="line">      lollipops. How many lollipops did Jason give to Denny?</span><br><span class="line">    answer: |</span><br><span class="line">      20 - x = 12; x = 20 - 12 = 8. #### 8</span><br><span class="line">  - question: |</span><br><span class="line">      Shawn has five toys. For Christmas, he got two toys each from his mom and</span><br><span class="line">      dad. How many toys does he have now?</span><br><span class="line">    answer: |</span><br><span class="line">      2 * 2 = 4; 5 + 4 = 9. #### 9</span><br><span class="line">  - question: |</span><br><span class="line">      There were nine computers in the server room. Five more computers were</span><br><span class="line">      installed each day, from monday to thursday. How many computers are now in the</span><br><span class="line">      server room?</span><br><span class="line">    answer: |</span><br><span class="line">      5 * 4 = 20; 9 + 20 = 29. #### 29</span><br><span class="line">  - question: |</span><br><span class="line">      Michael had 58 golf balls. On tuesday, he lost 23 golf balls. On wednesday,</span><br><span class="line">      he lost 2 more. How many golf balls did he have at the end of wednesday?</span><br><span class="line">    answer: |</span><br><span class="line">      58 - 23 = 35; 35 - 2 = 33. #### 33</span><br><span class="line">  - question: |</span><br><span class="line">      Olivia has $23. She bought five bagels for $3 each. How much money does</span><br><span class="line">      she have left</span><br><span class="line">    answer: |</span><br><span class="line">      5 * 3 = 15; 23 - 15 = 8. #### 8</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">system_prompt: |
+  Think step by step, but only keep minimum draft for each thinking step, with 5 words at most.
+  Return the answer at the end of the response after a separator ####.
+format: |
+  Q: &#123;question&#125;
+  A: &#123;answer&#125;
+fewshot: 
+  - question: |
+      There are 15 trees in the grove. Grove workers will plant trees in the
+      grove today. After they are done, there will be 21 trees. How many trees did
+      the grove workers plant today?
+    answer: |
+      21 - 15 = 6. #### 6
+  - question: | 
+      If there are 3 cars in the parking lot and 2 more cars arrive, how many
+      cars are in the parking lot?
+    answer: |
+      3 + 2 = 5. #### 5
+  - question: |
+      Leah had 32 chocolates and her sister had 42. If they ate 35, how many
+      pieces do they have left in total?
+    answer: |
+      32 + 42 = 74; 74 - 35 = 39. #### 39
+  - question:
+      Jason had 20 lollipops. He gave Denny some lollipops. Now Jason has 12
+      lollipops. How many lollipops did Jason give to Denny?
+    answer: |
+      20 - x = 12; x = 20 - 12 = 8. #### 8
+  - question: |
+      Shawn has five toys. For Christmas, he got two toys each from his mom and
+      dad. How many toys does he have now?
+    answer: |
+      2 * 2 = 4; 5 + 4 = 9. #### 9
+  - question: |
+      There were nine computers in the server room. Five more computers were
+      installed each day, from monday to thursday. How many computers are now in the
+      server room?
+    answer: |
+      5 * 4 = 20; 9 + 20 = 29. #### 29
+  - question: |
+      Michael had 58 golf balls. On tuesday, he lost 23 golf balls. On wednesday,
+      he lost 2 more. How many golf balls did he have at the end of wednesday?
+    answer: |
+      58 - 23 = 35; 35 - 2 = 33. #### 33
+  - question: |
+      Olivia has $23. She bought five bagels for $3 each. How much money does
+      she have left
+    answer: |
+      5 * 3 = 15; 23 - 15 = 8. #### 8<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>CoD基本上需要给每个任务提供不同的few-shot
 example，这里还是有些工作量的。其他任务的prompt都能在论文github找到。</p>
 <p>这些example很重要，原文发现没有使用这样示例样本，CoD的准确率就会大打折扣，甚至比不用CoT直接回答高不了多少：</p>
@@ -393,9 +445,55 @@ as direct step-by-step pathways with minimal text</p>
 <p>Conceptual
 chaining仿照人类对事物概念的快速联想，用最简洁的符号来表示这种联想，比如箭头→。这种形式不用太关注这个联想的具体关系是什么，比如看到雨你可以联想到伞，那就“雨→伞”，也可以联想到云，那就“雨→云”，也可以联想到树，“雨→树”。这种方式不用把二者的具体关系都碎碎念解释出来，但是也很符合人类的思考方式。</p>
 <p>Conceptual chaining适合用于commonsense reasoning相关的任务：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Q: What is the name of the currency used in Seoul?</span><br><span class="line">A: &lt;think&gt; #Seoul → #South Korea → Won &lt;/think&gt;</span><br><span class="line">Answer: Korean Wo</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">Q: What is the name of the currency used in Seoul?
+A: &lt;think> #Seoul → #South Korea → Won &lt;/think>
+Answer: Korean Wo<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
 <p>具体的prompt是这样的：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">## **Role &amp; Objective**  </span><br><span class="line">You are a reasoning expert specializing in **structured concept linking** by connecting essential ideas in a logical sequence. Your goal is to **extract key terms** and present reasoning in **clear, stepwise chains** while minimizing unnecessary explanation.  </span><br><span class="line"></span><br><span class="line">This reasoning method follows a **conceptual chaining approach**, where information is **linked in structured steps** to establish relationships between ideas. This process integrates **associative recall (direct lookups)** and **multi-hop reasoning (sequential dependencies)** into a **unified framework**.  </span><br><span class="line"></span><br><span class="line">This method is most effective for:  </span><br><span class="line">- **Commonsense reasoning** (quickly linking familiar ideas)  </span><br><span class="line">- **Multi-hop inference** (tracing logical or causal dependencies)  </span><br><span class="line">- **Fact-based recall** (retrieving knowledge with minimal cognitive load)  </span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">## **How to Apply This Reasoning Method**  </span><br><span class="line">1. **Extract Key Concepts** → Identify the most relevant words or entities.  </span><br><span class="line">2. **Use Minimal Words** → Keep each reasoning step **concise and direct**.  </span><br><span class="line">3. **Link Steps Sequentially** → Maintain a **clear and meaningful progression** between concepts.  </span><br><span class="line">4. **Avoid Full Sentences** → Responses should use **structured keyword connections**.  </span><br><span class="line">5. **Follow the Required Format** → Present answers using **stepwise chains for clarity**.  </span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">## **Rules &amp; Directives**</span><br><span class="line">1. **Use Structured Concept Linking**</span><br><span class="line">   - Each step **must be logically connected**.</span><br><span class="line">   - Use arrows (`→`) to show dependencies.</span><br><span class="line"></span><br><span class="line">2. **Avoid Unnecessary Text**</span><br><span class="line">   - **Do not** restate the question.</span><br><span class="line">   - **Do not** use full sentences.</span><br><span class="line"></span><br><span class="line">3. **Maintain Logical Flow**</span><br><span class="line">   - Concepts must be **meaningfully ordered**.</span><br><span class="line">   - Ensure **each step contributes to the reasoning process**.</span><br><span class="line"></span><br><span class="line">4. **Output Format**</span><br><span class="line">   - Use the exact structured format:</span><br><span class="line">   ``</span><br><span class="line">   &lt;think&gt;</span><br><span class="line">   [shorthand reasoning]</span><br><span class="line">   &lt;/think&gt;</span><br><span class="line">   \boxed&#123;[Final answer]&#125;</span><br><span class="line">   ``</span><br><span class="line">   - The **final answer must be boxed**.</span><br><span class="line">   - **If the question is multiple-choice, return the correct letter option inside the box.**</span><br><span class="line">   - **Use minimal words in your response.**</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">## **Role &amp; Objective**  
+You are a reasoning expert specializing in **structured concept linking** by connecting essential ideas in a logical sequence. Your goal is to **extract key terms** and present reasoning in **clear, stepwise chains** while minimizing unnecessary explanation.  
+
+This reasoning method follows a **conceptual chaining approach**, where information is **linked in structured steps** to establish relationships between ideas. This process integrates **associative recall (direct lookups)** and **multi-hop reasoning (sequential dependencies)** into a **unified framework**.  
+
+This method is most effective for:  
+- **Commonsense reasoning** (quickly linking familiar ideas)  
+- **Multi-hop inference** (tracing logical or causal dependencies)  
+- **Fact-based recall** (retrieving knowledge with minimal cognitive load)  
+
+---
+
+## **How to Apply This Reasoning Method**  
+1. **Extract Key Concepts** → Identify the most relevant words or entities.  
+2. **Use Minimal Words** → Keep each reasoning step **concise and direct**.  
+3. **Link Steps Sequentially** → Maintain a **clear and meaningful progression** between concepts.  
+4. **Avoid Full Sentences** → Responses should use **structured keyword connections**.  
+5. **Follow the Required Format** → Present answers using **stepwise chains for clarity**.  
+
+---
+
+## **Rules &amp; Directives**
+1. **Use Structured Concept Linking**
+   - Each step **must be logically connected**.
+   - Use arrows (`→`) to show dependencies.
+
+2. **Avoid Unnecessary Text**
+   - **Do not** restate the question.
+   - **Do not** use full sentences.
+
+3. **Maintain Logical Flow**
+   - Concepts must be **meaningfully ordered**.
+   - Ensure **each step contributes to the reasoning process**.
+
+4. **Output Format**
+   - Use the exact structured format:
+   ``
+   &lt;think>
+   [shorthand reasoning]
+   &lt;/think>
+   \boxed&#123;[Final answer]&#125;
+   ``
+   - The **final answer must be boxed**.
+   - **If the question is multiple-choice, return the correct letter option inside the box.**
+   - **Use minimal words in your response.**<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>这个prompt主要分为三部分：</p>
 <ul>
 <li>第一部分：角色定位和目的说明<br>
@@ -409,10 +507,20 @@ Chaining来解决问题，都有什么细节要关注</li>
 <p>2、Chunked Symbolism</p>
 <p>人类看信息的时候会把信息分块，比如一段段看，或者读电话号码的时候，会把3个或者4个数字看做一个chunk。</p>
 <p>放到reasoning里，就是让模型将复杂的数学推理过程拆解为更小的、可管理的chunk，并通过符号和公式紧凑表达，避免自然语言的冗余描述。</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Q: A car accelerates at 2.5 m/sˆ2 for 10 seconds. If</span><br><span class="line">its initial velocity was 15 m/s, what is its final</span><br><span class="line">velocity?</span><br><span class="line">A: &lt;think&gt; a = 2.5 m/sˆ2, t = 10 s, vi = 15 m/s vf =</span><br><span class="line">15 + (2.5 × 10), vf = 40 m/s &lt;/think&gt;</span><br><span class="line">Answer: 40 m/s</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">Q: A car accelerates at 2.5 m/sˆ2 for 10 seconds. If
+its initial velocity was 15 m/s, what is its final
+velocity?
+A: &lt;think> a = 2.5 m/sˆ2, t = 10 s, vi = 15 m/s vf =
+15 + (2.5 × 10), vf = 40 m/s &lt;/think>
+Answer: 40 m/s<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>3、Expert Lexicons</p>
 <p>缩写这个大家都很熟悉，在特定领域都有大量的专有缩写，这让我们可以减少很多冗余文本的使用。</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Q: A patient with STEMI is given MONA therapy. They</span><br><span class="line">are allergic to aspirin. Are they at risk with this</span><br><span class="line">treatment?</span><br><span class="line">A: &lt;think&gt; STEMI → ST-Elevation MI, MONA → Morphine,</span><br><span class="line">O2, Nitrates, Aspirin, so Aspirin ∈ MONA &lt;/think&gt;</span><br><span class="line">Answer: Yes</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">Q: A patient with STEMI is given MONA therapy. They
+are allergic to aspirin. Are they at risk with this
+treatment?
+A: &lt;think> STEMI → ST-Elevation MI, MONA → Morphine,
+O2, Nitrates, Aspirin, so Aspirin ∈ MONA &lt;/think>
+Answer: Yes<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <h2 id="router">Router</h2>
 <p>以上这几种思考方式分别适合用于不同的场景。</p>
 <p>Conceptual Chaining适用于常识推理、多跳推理、Fact-based
@@ -609,7 +717,7 @@ Large Language Models</p>
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -620,13 +728,13 @@ Large Language Models</p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

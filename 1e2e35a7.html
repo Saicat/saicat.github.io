@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  从目前的实践结果来看，从大模型通过裁剪、蒸馏等手段获取小模型，效果是比较好的，同时成本也相比直接从零预训练要低廉得多，而且也免去了大量收集数据和清洗数据的工作。">
 <meta property="og:type" content="article">
@@ -186,18 +186,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -592,7 +592,15 @@ activations的意思。</p>
 个权重，使得剩下的非零权重数量不超过 4 个。<br>
 - 2:4，意义和4:8类似。</p>
 <p>PyTorch code for Wanda：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># W: weight matrix (C_out, C_in);</span></span><br><span class="line"><span class="comment"># X: input matrix (N * L, C_in);</span></span><br><span class="line"><span class="comment"># s: desired sparsity, between 0 and 1;</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">prune</span>(<span class="params">W, X, s</span>):</span><br><span class="line">  metric = W.<span class="built_in">abs</span>() * X.norm(p=<span class="number">2</span>, dim=<span class="number">0</span>)</span><br><span class="line">  _, sorted_idx = torch.sort(metric, dim=<span class="number">1</span>)</span><br><span class="line">  pruned_idx = sorted_idx[:,:<span class="built_in">int</span>(C_in * s)]</span><br><span class="line">  W.scatter_(dim=<span class="number">1</span>, index=pruned_idx, src=<span class="number">0</span>)</span><br><span class="line">  <span class="keyword">return</span> W</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># W: weight matrix (C_out, C_in);</span>
+<span class="token comment"># X: input matrix (N * L, C_in);</span>
+<span class="token comment"># s: desired sparsity, between 0 and 1;</span>
+<span class="token keyword">def</span> <span class="token function">prune</span><span class="token punctuation">(</span>W<span class="token punctuation">,</span> X<span class="token punctuation">,</span> s<span class="token punctuation">)</span><span class="token punctuation">:</span>
+  metric <span class="token operator">=</span> W<span class="token punctuation">.</span><span class="token builtin">abs</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">*</span> X<span class="token punctuation">.</span>norm<span class="token punctuation">(</span>p<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">,</span> dim<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span>
+  _<span class="token punctuation">,</span> sorted_idx <span class="token operator">=</span> torch<span class="token punctuation">.</span>sort<span class="token punctuation">(</span>metric<span class="token punctuation">,</span> dim<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+  pruned_idx <span class="token operator">=</span> sorted_idx<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span><span class="token punctuation">:</span><span class="token builtin">int</span><span class="token punctuation">(</span>C_in <span class="token operator">*</span> s<span class="token punctuation">)</span><span class="token punctuation">]</span>
+  W<span class="token punctuation">.</span>scatter_<span class="token punctuation">(</span>dim<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> index<span class="token operator">=</span>pruned_idx<span class="token punctuation">,</span> src<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span>
+  <span class="token keyword">return</span> W<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <h1 id="sleb">SLEB</h1>
 <p>论文：《SLEB: Streamlining LLMs through Redundancy Verification and
 Elimination of Transformer Blocks》</p>
@@ -774,7 +782,7 @@ Elimination of Transformer Blocks https://arxiv.org/abs/2402.09025</p>
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -785,13 +793,13 @@ Elimination of Transformer Blocks https://arxiv.org/abs/2402.09025</p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

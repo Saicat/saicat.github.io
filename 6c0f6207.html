@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  在看Qwen2.5-1M的方案之前，先把Qwen2.5-1M中用到的技术，DCA，MInference 1.0和chunked prefill学习一下。">
 <meta property="og:type" content="article">
@@ -187,18 +187,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -428,7 +428,43 @@ P_{q}^{Inter}[i] - P_{k}[j] &amp; \text{if } \lfloor i / s\rfloor -
 <h2 id="dca和flash-attention一起使用">DCA和Flash Attention一起使用</h2>
 <p>DCA还有一个好处，就是可以和Flash Attention一起用。</p>
 <p>Pseudocode of DCA with FlashAttention：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># q: 1 x d query vector (tensor with shape [1, d])</span></span><br><span class="line"><span class="comment"># i: the absolute index of q (integer)</span></span><br><span class="line"><span class="comment"># K, V: i x d matrices for keys and values (tensors with shape [i, d])</span></span><br><span class="line"><span class="comment"># s: chunk size (integer)</span></span><br><span class="line"><span class="comment"># P_k, P_q_intra, P_q_succ, P_q_inter: position ids (lists of integers)</span></span><br><span class="line">n = math.floor(i/s) <span class="comment"># Number of chunks before the current chunk</span></span><br><span class="line"><span class="comment"># Apply rotary position embeddings to the entire key matrix K</span></span><br><span class="line">K = apply_rotary_pos_emb(K, P_k) <span class="comment"># K is [i, d] after embedding</span></span><br><span class="line"><span class="comment"># ------------- Intra-chunk Attention, casual=True -------------</span></span><br><span class="line">q_intra = apply_rotary_pos_emb(q, P_q_intra[i]) <span class="comment"># q_intra is [1, d]</span></span><br><span class="line"><span class="comment"># Select intra-chunk keys and values</span></span><br><span class="line">K_intra = K[s*n:i] <span class="comment"># K_intra is [(i - s*n), d]</span></span><br><span class="line">V_intra = V[s*n:i] <span class="comment"># V_intra is [(i - s*n), d]</span></span><br><span class="line"><span class="comment"># Compute output and softmax attention map for intra-chunk attention</span></span><br><span class="line">o_intra, map_intra = Flash(q_intra, K_intra, V_intra) <span class="comment"># o_intra is [1, d], map_intra is [1, i - s*n]</span></span><br><span class="line"><span class="comment"># ------------- Successive-chunk Attention, casual=False -----------</span></span><br><span class="line">q_succ = apply_rotary_pos_emb(q, P_q_succ[i]) <span class="comment"># q_succ is [1, d]</span></span><br><span class="line"><span class="comment"># Select successive-chunk keys and values</span></span><br><span class="line">K_succ = K[s*(n-<span class="number">1</span>):s*n] <span class="comment"># K_succ is [s, d]</span></span><br><span class="line">V_succ = V[s*(n-<span class="number">1</span>):s*n] <span class="comment"># V_succ is [s, d]</span></span><br><span class="line"><span class="comment"># Compute output and softmax attention map for successive-chunk attention</span></span><br><span class="line">o_succ, map_succ = Flash(q_succ, K_succ, V_succ) <span class="comment"># o_succ is [1, d], map_succ is [1, s]</span></span><br><span class="line"><span class="comment"># ------------- Inter-chunk Attention, casual=False -----------</span></span><br><span class="line">q_inter = apply_rotary_pos_emb(q, P_q_inter[i]) <span class="comment"># q_inter is [1, d]</span></span><br><span class="line"><span class="comment"># Select inter-chunk keys and values</span></span><br><span class="line">K_inter = K[:s*(n-<span class="number">1</span>)] <span class="comment"># K_inter is [s*(n-1), d]</span></span><br><span class="line">V_inter = V[:s*(n-<span class="number">1</span>)] <span class="comment"># V_inter is [s*(n-1), d]</span></span><br><span class="line"><span class="comment"># Compute output and softmax attention map for inter-chunk attention</span></span><br><span class="line">o_inter, map_inter = Flash(q_inter, K_inter, V_inter) <span class="comment"># o_inter is [1, d], map_inter is [1, s*(n-1)]</span></span><br><span class="line"><span class="comment"># Normalization</span></span><br><span class="line"><span class="comment"># Sum the attention maps for each attention type to get normalizers</span></span><br><span class="line">sum_intra = map_intra.<span class="built_in">sum</span>(-<span class="number">1</span>) <span class="comment"># sum_intra is a scalar</span></span><br><span class="line">sum_inter = map_inter.<span class="built_in">sum</span>(-<span class="number">1</span>) <span class="comment"># sum_inter is a scalar</span></span><br><span class="line">sum_succ = map_succ.<span class="built_in">sum</span>(-<span class="number">1</span>) <span class="comment"># sum_succ is a scalar</span></span><br><span class="line">normalizer = sum_intra + sum_inter + sum_succ <span class="comment"># normalizer is a scalar</span></span><br><span class="line"><span class="comment"># Concatenate attention outputs and divide by normalizer</span></span><br><span class="line">output = (sum_intra*o_intra, sum_succ*o_succ, sum_inter*o_inter) / normalizer <span class="comment"># output is [1, d]</span></span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># q: 1 x d query vector (tensor with shape [1, d])</span>
+<span class="token comment"># i: the absolute index of q (integer)</span>
+<span class="token comment"># K, V: i x d matrices for keys and values (tensors with shape [i, d])</span>
+<span class="token comment"># s: chunk size (integer)</span>
+<span class="token comment"># P_k, P_q_intra, P_q_succ, P_q_inter: position ids (lists of integers)</span>
+n <span class="token operator">=</span> math<span class="token punctuation">.</span>floor<span class="token punctuation">(</span>i<span class="token operator">/</span>s<span class="token punctuation">)</span> <span class="token comment"># Number of chunks before the current chunk</span>
+<span class="token comment"># Apply rotary position embeddings to the entire key matrix K</span>
+K <span class="token operator">=</span> apply_rotary_pos_emb<span class="token punctuation">(</span>K<span class="token punctuation">,</span> P_k<span class="token punctuation">)</span> <span class="token comment"># K is [i, d] after embedding</span>
+<span class="token comment"># ------------- Intra-chunk Attention, casual=True -------------</span>
+q_intra <span class="token operator">=</span> apply_rotary_pos_emb<span class="token punctuation">(</span>q<span class="token punctuation">,</span> P_q_intra<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token comment"># q_intra is [1, d]</span>
+<span class="token comment"># Select intra-chunk keys and values</span>
+K_intra <span class="token operator">=</span> K<span class="token punctuation">[</span>s<span class="token operator">*</span>n<span class="token punctuation">:</span>i<span class="token punctuation">]</span> <span class="token comment"># K_intra is [(i - s*n), d]</span>
+V_intra <span class="token operator">=</span> V<span class="token punctuation">[</span>s<span class="token operator">*</span>n<span class="token punctuation">:</span>i<span class="token punctuation">]</span> <span class="token comment"># V_intra is [(i - s*n), d]</span>
+<span class="token comment"># Compute output and softmax attention map for intra-chunk attention</span>
+o_intra<span class="token punctuation">,</span> map_intra <span class="token operator">=</span> Flash<span class="token punctuation">(</span>q_intra<span class="token punctuation">,</span> K_intra<span class="token punctuation">,</span> V_intra<span class="token punctuation">)</span> <span class="token comment"># o_intra is [1, d], map_intra is [1, i - s*n]</span>
+<span class="token comment"># ------------- Successive-chunk Attention, casual=False -----------</span>
+q_succ <span class="token operator">=</span> apply_rotary_pos_emb<span class="token punctuation">(</span>q<span class="token punctuation">,</span> P_q_succ<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token comment"># q_succ is [1, d]</span>
+<span class="token comment"># Select successive-chunk keys and values</span>
+K_succ <span class="token operator">=</span> K<span class="token punctuation">[</span>s<span class="token operator">*</span><span class="token punctuation">(</span>n<span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">:</span>s<span class="token operator">*</span>n<span class="token punctuation">]</span> <span class="token comment"># K_succ is [s, d]</span>
+V_succ <span class="token operator">=</span> V<span class="token punctuation">[</span>s<span class="token operator">*</span><span class="token punctuation">(</span>n<span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">:</span>s<span class="token operator">*</span>n<span class="token punctuation">]</span> <span class="token comment"># V_succ is [s, d]</span>
+<span class="token comment"># Compute output and softmax attention map for successive-chunk attention</span>
+o_succ<span class="token punctuation">,</span> map_succ <span class="token operator">=</span> Flash<span class="token punctuation">(</span>q_succ<span class="token punctuation">,</span> K_succ<span class="token punctuation">,</span> V_succ<span class="token punctuation">)</span> <span class="token comment"># o_succ is [1, d], map_succ is [1, s]</span>
+<span class="token comment"># ------------- Inter-chunk Attention, casual=False -----------</span>
+q_inter <span class="token operator">=</span> apply_rotary_pos_emb<span class="token punctuation">(</span>q<span class="token punctuation">,</span> P_q_inter<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token comment"># q_inter is [1, d]</span>
+<span class="token comment"># Select inter-chunk keys and values</span>
+K_inter <span class="token operator">=</span> K<span class="token punctuation">[</span><span class="token punctuation">:</span>s<span class="token operator">*</span><span class="token punctuation">(</span>n<span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">]</span> <span class="token comment"># K_inter is [s*(n-1), d]</span>
+V_inter <span class="token operator">=</span> V<span class="token punctuation">[</span><span class="token punctuation">:</span>s<span class="token operator">*</span><span class="token punctuation">(</span>n<span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">]</span> <span class="token comment"># V_inter is [s*(n-1), d]</span>
+<span class="token comment"># Compute output and softmax attention map for inter-chunk attention</span>
+o_inter<span class="token punctuation">,</span> map_inter <span class="token operator">=</span> Flash<span class="token punctuation">(</span>q_inter<span class="token punctuation">,</span> K_inter<span class="token punctuation">,</span> V_inter<span class="token punctuation">)</span> <span class="token comment"># o_inter is [1, d], map_inter is [1, s*(n-1)]</span>
+<span class="token comment"># Normalization</span>
+<span class="token comment"># Sum the attention maps for each attention type to get normalizers</span>
+sum_intra <span class="token operator">=</span> map_intra<span class="token punctuation">.</span><span class="token builtin">sum</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token comment"># sum_intra is a scalar</span>
+sum_inter <span class="token operator">=</span> map_inter<span class="token punctuation">.</span><span class="token builtin">sum</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token comment"># sum_inter is a scalar</span>
+sum_succ <span class="token operator">=</span> map_succ<span class="token punctuation">.</span><span class="token builtin">sum</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token comment"># sum_succ is a scalar</span>
+normalizer <span class="token operator">=</span> sum_intra <span class="token operator">+</span> sum_inter <span class="token operator">+</span> sum_succ <span class="token comment"># normalizer is a scalar</span>
+<span class="token comment"># Concatenate attention outputs and divide by normalizer</span>
+output <span class="token operator">=</span> <span class="token punctuation">(</span>sum_intra<span class="token operator">*</span>o_intra<span class="token punctuation">,</span> sum_succ<span class="token operator">*</span>o_succ<span class="token punctuation">,</span> sum_inter<span class="token operator">*</span>o_inter<span class="token punctuation">)</span> <span class="token operator">/</span> normalizer <span class="token comment"># output is [1, d]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <h1 id="minference-1.0">MInference 1.0</h1>
 <p>MInference
 1.0是一个理论有损的推理加速框架，加速的是pre-filling的阶段。在1M上下文长度的情况下，首字的推理速度相比Flash
@@ -601,7 +637,13 @@ token的长度。接下来，就要从这些段落里找到和query相关的部�
 <p>Tool-calling agent或ReAct agent是经典的解决方案。因此，将level
 2封装为一个工具，由工具调用智能体（Lv3-智能体）调用。tool-calling
 agent进行多跳推理的流程如下：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Ask the Lv3-Agent a question.</span><br><span class="line"><span class="keyword">while</span> (the Lv3-Agent cannot answer the question based on its memory) &#123;</span><br><span class="line">    The Lv3-Agent proposes a new sub-question to be answered.</span><br><span class="line">    The Lv3-Agent asks the Lv2-Agent the sub-question.</span><br><span class="line">    Add the Lv2-Agent<span class="string">&#x27;s response to the Lv3-Agent&#x27;</span>s memory.</span><br><span class="line">&#125;</span><br><span class="line">The Lv3-Agent provides the final answer to the original question.</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">Ask the Lv3<span class="token operator">-</span>Agent a question<span class="token punctuation">.</span>
+<span class="token keyword">while</span> <span class="token punctuation">(</span>the Lv3<span class="token operator">-</span>Agent cannot answer the question based on its memory<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    The Lv3<span class="token operator">-</span>Agent proposes a new sub<span class="token operator">-</span>question to be answered<span class="token punctuation">.</span>
+    The Lv3<span class="token operator">-</span>Agent asks the Lv2<span class="token operator">-</span>Agent the sub<span class="token operator">-</span>question<span class="token punctuation">.</span>
+    Add the Lv2<span class="token operator">-</span>Agent<span class="token string">'s response to the Lv3-Agent'</span>s memory<span class="token punctuation">.</span>
+<span class="token punctuation">&#125;</span>
+The Lv3<span class="token operator">-</span>Agent provides the final answer to the original question<span class="token punctuation">.</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <img src="/6c0f6207/agent_level3.png" class title="Qwen2.5-1M">
 <p>为了验证这个Agent的有效性，做了下实验。使用一个32k训练+外推256k的模型，以及4k-RAG和4k-Agent三个方案。在LV-Eval和NeedleBench上，效果是这样的：</p>
 <img src="/6c0f6207/agent_perf.png" class title="Qwen2.5-1M">
@@ -818,7 +860,7 @@ prefill是如何进一步优化的？，https://zhuanlan.zhihu.com/p/6144374775<
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -829,13 +871,13 @@ prefill是如何进一步优化的？，https://zhuanlan.zhihu.com/p/6144374775<
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

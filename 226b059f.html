@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="MetaGPT MetaGPT的开发团队就是搞OpenManus的团队。 MetaGPT项目做得很早，23年就开始搞multi-agent了。MetaGPT主要是想通过多智能体的协作提升代码能力。做法上，大致上来说就是把一个软件团队所需的角色，比如产品经理、项目经理、架构师、开发工程师、测试工程师等都用LLM给角色扮演出来。不同的LLM角色和人类团队一样相互合作，共同开发项目：">
 <meta property="og:type" content="article">
@@ -163,18 +163,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -270,14 +270,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>7.7k</span>
+      <span>7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>14 分钟</span>
+      <span>13 分钟</span>
     </span>
 </div>
 
@@ -321,7 +321,27 @@ System。</p>
 <p>1、组件</p>
 <p>（1）Agent</p>
 <p>OpenManus中的Agent的实现是这样的：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">        ┌─────────────┐</span><br><span class="line">        │  BaseAgent  │</span><br><span class="line">        └──────┬──────┘</span><br><span class="line">               │</span><br><span class="line">               ▼</span><br><span class="line">        ┌─────────────┐</span><br><span class="line">        │ ReActAgent  │</span><br><span class="line">        └──────┬──────┘</span><br><span class="line">               │</span><br><span class="line">               ▼</span><br><span class="line">        ┌─────────────┐</span><br><span class="line">        │ToolCallAgent│</span><br><span class="line">        └──────┬──────┘</span><br><span class="line">               │</span><br><span class="line">  ┌────────────┬────────────┐</span><br><span class="line">  │            │            │</span><br><span class="line">  ▼            ▼            ▼</span><br><span class="line">┌─────────┐ ┌───────┐ ┌───────┐</span><br><span class="line">│Planning │ │SWE    │ │Manus  │</span><br><span class="line">│Agent    │ │Agent  │ │       │</span><br><span class="line">└─────────┘ └───────┘ └───────┘</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">        ┌─────────────┐
+        │  BaseAgent  │
+        └──────┬──────┘
+               │
+               ▼
+        ┌─────────────┐
+        │ ReActAgent  │
+        └──────┬──────┘
+               │
+               ▼
+        ┌─────────────┐
+        │ToolCallAgent│
+        └──────┬──────┘
+               │
+  ┌────────────┬────────────┐
+  │            │            │
+  ▼            ▼            ▼
+┌─────────┐ ┌───────┐ ┌───────┐
+│Planning │ │SWE    │ │Manus  │
+│Agent    │ │Agent  │ │       │
+└─────────┘ └───────┘ └───────┘<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>采用了多层集成的方式来实现不同的Agent，而每个Agent都是一个ReAct
 Agent，迭代地执行任务，直到任务完成或者超过循环次数。比如Manus
 Agent设置的默认最大循环次数就是20轮。</p>
@@ -338,9 +358,24 @@ Agent设置的默认最大循环次数就是20轮。</p>
 <p>除了system
 prompt，OpenManus还使用了一个NEXT_STEP_PROMPT。NEXT_STEP_PROMPT主要让模型选择下一步干什么。比如Manus
 Agent的NEXT_STEP_PROMPT：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">NEXT_STEP_PROMPT = <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">Based on user needs, proactively select the most appropriate tool or combination of tools. For complex tasks, you can break down the problem and use different tools step by step to solve it. After using each tool, clearly explain the execution results and suggest the next steps.</span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">NEXT_STEP_PROMPT <span class="token operator">=</span> <span class="token triple-quoted-string string">"""
+Based on user needs, proactively select the most appropriate tool or combination of tools. For complex tasks, you can break down the problem and use different tools step by step to solve it. After using each tool, clearly explain the execution results and suggest the next steps.
+"""</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
 <p>使用上，NEXT_STEP_PROMPT是以user角色输入的：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>, </span><br><span class="line">        <span class="string">&quot;content&quot;</span>: SYSTEM_PROMPT</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, </span><br><span class="line">        <span class="string">&quot;content&quot;</span>: query</span><br><span class="line">    &#125;, </span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, </span><br><span class="line">        <span class="string">&quot;content&quot;</span>: NEXT_STEP_PROMPT</span><br><span class="line">    &#125;</span><br><span class="line">] </span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token punctuation">[</span>
+    <span class="token punctuation">&#123;</span>
+        <span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"system"</span><span class="token punctuation">,</span> 
+        <span class="token string">"content"</span><span class="token punctuation">:</span> SYSTEM_PROMPT
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#123;</span>
+        <span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> 
+        <span class="token string">"content"</span><span class="token punctuation">:</span> query
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> 
+    <span class="token punctuation">&#123;</span>
+        <span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> 
+        <span class="token string">"content"</span><span class="token punctuation">:</span> NEXT_STEP_PROMPT
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">]</span> <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>我试了下，连续两个user角色输入，和把两次输入的content直接拼接在一起，response回复的差异不大。其实就可以把NEXT_STEP_PROMPT视作一个template，它和user
 query一起构成了user
 prompt，包含了任务query，以及设定好的instruction。</p>
@@ -348,10 +383,47 @@ prompt，包含了任务query，以及设定好的instruction。</p>
 <p>OpenManus中的tool主要包括代码执行（python代码解释器、Bash等），信息搜索（Google
 Search和BrowserUse），文件操作等。</p>
 <p>所有工具都继承自 BaseTool 基类：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">BaseTool</span>(ABC, BaseModel):</span><br><span class="line">    name: <span class="built_in">str</span></span><br><span class="line">    description: <span class="built_in">str</span></span><br><span class="line">    parameters: <span class="type">Optional</span>[<span class="built_in">dict</span>] = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">class</span> <span class="title class_">Config</span>:</span><br><span class="line">        arbitrary_types_allowed = <span class="literal">True</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">__call__</span>(<span class="params">self, **kwargs</span>) -&gt; <span class="type">Any</span>:</span><br><span class="line">        <span class="string">&quot;&quot;&quot;Execute the tool with given parameters.&quot;&quot;&quot;</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">await</span> self.execute(**kwargs)</span><br><span class="line"></span><br><span class="line"><span class="meta">    @abstractmethod</span></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">execute</span>(<span class="params">self, **kwargs</span>) -&gt; <span class="type">Any</span>:</span><br><span class="line">        <span class="string">&quot;&quot;&quot;Execute the tool with given parameters.&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">to_param</span>(<span class="params">self</span>) -&gt; <span class="type">Dict</span>:</span><br><span class="line">        <span class="string">&quot;&quot;&quot;Convert tool to function call format.&quot;&quot;&quot;</span></span><br><span class="line">        <span class="keyword">return</span> &#123;</span><br><span class="line">            <span class="string">&quot;type&quot;</span>: <span class="string">&quot;function&quot;</span>,</span><br><span class="line">            <span class="string">&quot;function&quot;</span>: &#123;</span><br><span class="line">                <span class="string">&quot;name&quot;</span>: self.name,</span><br><span class="line">                <span class="string">&quot;description&quot;</span>: self.description,</span><br><span class="line">                <span class="string">&quot;parameters&quot;</span>: self.parameters,</span><br><span class="line">            &#125;,</span><br><span class="line">        &#125;</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">BaseTool</span><span class="token punctuation">(</span>ABC<span class="token punctuation">,</span> BaseModel<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    name<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    description<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    parameters<span class="token punctuation">:</span> Optional<span class="token punctuation">[</span><span class="token builtin">dict</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">None</span>
+
+    <span class="token keyword">class</span> <span class="token class-name">Config</span><span class="token punctuation">:</span>
+        arbitrary_types_allowed <span class="token operator">=</span> <span class="token boolean">True</span>
+
+    <span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">__call__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> <span class="token operator">**</span>kwargs<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> Any<span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""Execute the tool with given parameters."""</span>
+        <span class="token keyword">return</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>execute<span class="token punctuation">(</span><span class="token operator">**</span>kwargs<span class="token punctuation">)</span>
+
+    <span class="token decorator annotation punctuation">@abstractmethod</span>
+    <span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">execute</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> <span class="token operator">**</span>kwargs<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> Any<span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""Execute the tool with given parameters."""</span>
+
+    <span class="token keyword">def</span> <span class="token function">to_param</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> Dict<span class="token punctuation">:</span>
+        <span class="token triple-quoted-string string">"""Convert tool to function call format."""</span>
+        <span class="token keyword">return</span> <span class="token punctuation">&#123;</span>
+            <span class="token string">"type"</span><span class="token punctuation">:</span> <span class="token string">"function"</span><span class="token punctuation">,</span>
+            <span class="token string">"function"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>
+                <span class="token string">"name"</span><span class="token punctuation">:</span> self<span class="token punctuation">.</span>name<span class="token punctuation">,</span>
+                <span class="token string">"description"</span><span class="token punctuation">:</span> self<span class="token punctuation">.</span>description<span class="token punctuation">,</span>
+                <span class="token string">"parameters"</span><span class="token punctuation">:</span> self<span class="token punctuation">.</span>parameters<span class="token punctuation">,</span>
+            <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+        <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>每个工具都通过 parameters 字典定义其接受的参数，遵循 JSON Schema
 格式：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">parameters: <span class="built_in">dict</span> = &#123;</span><br><span class="line">    <span class="string">&quot;type&quot;</span>: <span class="string">&quot;object&quot;</span>,</span><br><span class="line">    <span class="string">&quot;properties&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;command&quot;</span>: &#123;</span><br><span class="line">            <span class="string">&quot;description&quot;</span>: <span class="string">&quot;The command to execute...&quot;</span>,</span><br><span class="line">            <span class="string">&quot;enum&quot;</span>: [<span class="string">&quot;create&quot;</span>, <span class="string">&quot;update&quot;</span>, <span class="string">&quot;list&quot;</span>, <span class="string">&quot;get&quot;</span>, <span class="string">&quot;set_active&quot;</span>, <span class="string">&quot;mark_step&quot;</span>, <span class="string">&quot;delete&quot;</span>],</span><br><span class="line">            <span class="string">&quot;type&quot;</span>: <span class="string">&quot;string&quot;</span>,</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="comment"># 其他参数...</span></span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">&quot;required&quot;</span>: [<span class="string">&quot;command&quot;</span>],</span><br><span class="line">    <span class="string">&quot;additionalProperties&quot;</span>: <span class="literal">False</span>,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">parameters<span class="token punctuation">:</span> <span class="token builtin">dict</span> <span class="token operator">=</span> <span class="token punctuation">&#123;</span>
+    <span class="token string">"type"</span><span class="token punctuation">:</span> <span class="token string">"object"</span><span class="token punctuation">,</span>
+    <span class="token string">"properties"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>
+        <span class="token string">"command"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>
+            <span class="token string">"description"</span><span class="token punctuation">:</span> <span class="token string">"The command to execute..."</span><span class="token punctuation">,</span>
+            <span class="token string">"enum"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"create"</span><span class="token punctuation">,</span> <span class="token string">"update"</span><span class="token punctuation">,</span> <span class="token string">"list"</span><span class="token punctuation">,</span> <span class="token string">"get"</span><span class="token punctuation">,</span> <span class="token string">"set_active"</span><span class="token punctuation">,</span> <span class="token string">"mark_step"</span><span class="token punctuation">,</span> <span class="token string">"delete"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+            <span class="token string">"type"</span><span class="token punctuation">:</span> <span class="token string">"string"</span><span class="token punctuation">,</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+        <span class="token comment"># 其他参数...</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token string">"required"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"command"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"additionalProperties"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>使用的时候，工具通过to_param转成模型可接受的格式。</p>
 <p>（3）Flow</p>
 <p>Agent理解任务，输出action，Tool进行操作，返回结果。这中间的流转就需要Flow来调度。</p>
@@ -382,7 +454,24 @@ PlanningTool。<br>
 <li>LLM层：统一封装大语言模型接口，支持多种模型配置。</li>
 </ul>
 </blockquote>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"># OpenManus分层架构示意图</span><br><span class="line"></span><br><span class="line">┌───────────────┐</span><br><span class="line">│   用户层       │</span><br><span class="line">└──────┬────────┘</span><br><span class="line">       ↓</span><br><span class="line">┌───────────────┐</span><br><span class="line">│   Flow层      │</span><br><span class="line">└──────┬────────┘</span><br><span class="line">       ↓</span><br><span class="line">┌───────────────┐</span><br><span class="line">│   Agent层     │</span><br><span class="line">└──────┬────────┘</span><br><span class="line">       ├──────────────┐</span><br><span class="line">       ↓              ↓</span><br><span class="line">┌───────────────┐ ┌───────────────┐</span><br><span class="line">│   LLM层       │ │   Tool层      │</span><br><span class="line">└───────────────┘ └───────────────┘</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-none"><code class="language-none"># OpenManus分层架构示意图
+
+┌───────────────┐
+│   用户层       │
+└──────┬────────┘
+       ↓
+┌───────────────┐
+│   Flow层      │
+└──────┬────────┘
+       ↓
+┌───────────────┐
+│   Agent层     │
+└──────┬────────┘
+       ├──────────────┐
+       ↓              ↓
+┌───────────────┐ ┌───────────────┐
+│   LLM层       │ │   Tool层      │
+└───────────────┘ └───────────────┘<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>详细的可以看<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/1897429266813125945">《OpenManus
 代码框架详解》</a></p>
 <h1 id="owl">OWL</h1>
@@ -603,7 +692,7 @@ Automation，https://github.com/camel-ai/owl/blob/main/assets/OWL_Technical_Repo
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -614,13 +703,13 @@ Automation，https://github.com/camel-ai/owl/blob/main/assets/OWL_Technical_Repo
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

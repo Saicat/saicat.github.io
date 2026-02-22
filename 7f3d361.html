@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  InternLM系列模型的参与方有上海AI实验室、商汤、香港中文大学，以及复旦和上交。主力应该是前两个，InternLM中的Intern这个名字也是继承自它们之前的视觉模型项目的名字。">
 <meta property="og:type" content="article">
@@ -175,18 +175,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -282,14 +282,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>8.6k</span>
+      <span>8.4k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>16 分钟</span>
+      <span>15 分钟</span>
     </span>
 </div>
 
@@ -448,14 +448,58 @@ loss的思路，为了让难样本的loss更大，而简单样本的loss更小�
 <p>图像画出来是这样的</p>
 <img src="/7f3d361/l_rank.png" class title="InternLM系列模型">
 <p>附上代码</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># Define the function again for plotting</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">g</span>(<span class="params">P</span>):</span><br><span class="line">    <span class="keyword">return</span> -(<span class="number">1</span> - <span class="number">2</span> * np.maximum(<span class="number">0</span>, P - <span class="number">0.5</span>))**<span class="number">2</span> * np.log(P)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Generate P values</span></span><br><span class="line">P = np.linspace(<span class="number">0.01</span>, <span class="number">1</span>, <span class="number">400</span>)  <span class="comment"># P values from a small number above 0 to 1</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Generate y values</span></span><br><span class="line">y = g(P)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Plotting the corrected graph</span></span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">6</span>))</span><br><span class="line">plt.plot(P, y, label=<span class="string">r&#x27;$-(1-2 \times \max(0, P-\frac&#123;1&#125;&#123;2&#125;))^&#123;2&#125; \log(P)$&#x27;</span>)</span><br><span class="line">plt.title(<span class="string">r&#x27;Graph of $-(1-2 \times \max(0, P-\frac&#123;1&#125;&#123;2&#125;))^&#123;2&#125; \log(P)$&#x27;</span>)</span><br><span class="line">plt.xlabel(<span class="string">&#x27;P&#x27;</span>)</span><br><span class="line">plt.ylabel(<span class="string">&#x27;Function Value&#x27;</span>)</span><br><span class="line">plt.legend()</span><br><span class="line">plt.grid(<span class="literal">True</span>)</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> numpy <span class="token keyword">as</span> np
+<span class="token keyword">import</span> matplotlib<span class="token punctuation">.</span>pyplot <span class="token keyword">as</span> plt
+
+
+<span class="token comment"># Define the function again for plotting</span>
+<span class="token keyword">def</span> <span class="token function">g</span><span class="token punctuation">(</span>P<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">-</span> <span class="token number">2</span> <span class="token operator">*</span> np<span class="token punctuation">.</span>maximum<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> P <span class="token operator">-</span> <span class="token number">0.5</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">**</span><span class="token number">2</span> <span class="token operator">*</span> np<span class="token punctuation">.</span>log<span class="token punctuation">(</span>P<span class="token punctuation">)</span>
+
+<span class="token comment"># Generate P values</span>
+P <span class="token operator">=</span> np<span class="token punctuation">.</span>linspace<span class="token punctuation">(</span><span class="token number">0.01</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">400</span><span class="token punctuation">)</span>  <span class="token comment"># P values from a small number above 0 to 1</span>
+
+<span class="token comment"># Generate y values</span>
+y <span class="token operator">=</span> g<span class="token punctuation">(</span>P<span class="token punctuation">)</span>
+
+<span class="token comment"># Plotting the corrected graph</span>
+plt<span class="token punctuation">.</span>figure<span class="token punctuation">(</span>figsize<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>plot<span class="token punctuation">(</span>P<span class="token punctuation">,</span> y<span class="token punctuation">,</span> label<span class="token operator">=</span><span class="token string">r'$-(1-2 \times \max(0, P-\frac&#123;1&#125;&#123;2&#125;))^&#123;2&#125; \log(P)$'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>title<span class="token punctuation">(</span><span class="token string">r'Graph of $-(1-2 \times \max(0, P-\frac&#123;1&#125;&#123;2&#125;))^&#123;2&#125; \log(P)$'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>xlabel<span class="token punctuation">(</span><span class="token string">'P'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>ylabel<span class="token punctuation">(</span><span class="token string">'Function Value'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>legend<span class="token punctuation">(</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>grid<span class="token punctuation">(</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>模型输出的win vs lose
 response的概率越大，说明case越简单，loss就趋向于0，反之则loss会增大。</p>
 <p>另外就是如果不对reward的分数进行限制，那么就有可能出现绝对值特别大的数，这样可能导致训练不稳定。因此再加上一个对reward
 score的logarithmic barrier penalty：</p>
 <p><span class="math display">\[L_{penalty}=-(\log(x+5)+\log(5-x))\]</span></p>
 <p>这个函数只在(-5, 5)之间有定义，画一下图像如下：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"></span><br><span class="line"><span class="comment"># Define the function</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">f</span>(<span class="params">x</span>):</span><br><span class="line">    <span class="keyword">return</span> -np.log(x + <span class="number">5</span>) - np.log(<span class="number">5</span> - x)</span><br><span class="line">    </span><br><span class="line">x = np.linspace(-<span class="number">10</span>, <span class="number">10</span>, <span class="number">1000</span>)  <span class="comment"># x values from -10 to 10</span></span><br><span class="line">x = x[(x + <span class="number">5</span>) &gt; <span class="number">0</span>]  <span class="comment"># Filter out values where the function is undefined for the first log</span></span><br><span class="line">x = x[(<span class="number">5</span> - x) &gt; <span class="number">0</span>]  <span class="comment"># Filter out values where the function is undefined for the second log</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Generate y values for the filtered x values</span></span><br><span class="line">y = f(x)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Plotting the updated range</span></span><br><span class="line">plt.figure(figsize=(<span class="number">10</span>, <span class="number">6</span>))</span><br><span class="line">plt.plot(x, y, label=<span class="string">r&#x27;$-(\log(x+5)+\log(5-x))$&#x27;</span>)</span><br><span class="line">plt.title(<span class="string">r&#x27;Graph of $-(\log(x+5)+\log(5-x))$&#x27;</span>)</span><br><span class="line">plt.xlabel(<span class="string">&#x27;x&#x27;</span>)</span><br><span class="line">plt.ylabel(<span class="string">&#x27;y&#x27;</span>)</span><br><span class="line">plt.legend()</span><br><span class="line">plt.grid(<span class="literal">True</span>)</span><br><span class="line">plt.show()</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> numpy <span class="token keyword">as</span> np
+<span class="token keyword">import</span> matplotlib<span class="token punctuation">.</span>pyplot <span class="token keyword">as</span> plt
+
+<span class="token comment"># Define the function</span>
+<span class="token keyword">def</span> <span class="token function">f</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span>np<span class="token punctuation">.</span>log<span class="token punctuation">(</span>x <span class="token operator">+</span> <span class="token number">5</span><span class="token punctuation">)</span> <span class="token operator">-</span> np<span class="token punctuation">.</span>log<span class="token punctuation">(</span><span class="token number">5</span> <span class="token operator">-</span> x<span class="token punctuation">)</span>
+    
+x <span class="token operator">=</span> np<span class="token punctuation">.</span>linspace<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">1000</span><span class="token punctuation">)</span>  <span class="token comment"># x values from -10 to 10</span>
+x <span class="token operator">=</span> x<span class="token punctuation">[</span><span class="token punctuation">(</span>x <span class="token operator">+</span> <span class="token number">5</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">]</span>  <span class="token comment"># Filter out values where the function is undefined for the first log</span>
+x <span class="token operator">=</span> x<span class="token punctuation">[</span><span class="token punctuation">(</span><span class="token number">5</span> <span class="token operator">-</span> x<span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">]</span>  <span class="token comment"># Filter out values where the function is undefined for the second log</span>
+
+<span class="token comment"># Generate y values for the filtered x values</span>
+y <span class="token operator">=</span> f<span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+
+<span class="token comment"># Plotting the updated range</span>
+plt<span class="token punctuation">.</span>figure<span class="token punctuation">(</span>figsize<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>plot<span class="token punctuation">(</span>x<span class="token punctuation">,</span> y<span class="token punctuation">,</span> label<span class="token operator">=</span><span class="token string">r'$-(\log(x+5)+\log(5-x))$'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>title<span class="token punctuation">(</span><span class="token string">r'Graph of $-(\log(x+5)+\log(5-x))$'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>xlabel<span class="token punctuation">(</span><span class="token string">'x'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>ylabel<span class="token punctuation">(</span><span class="token string">'y'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>legend<span class="token punctuation">(</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>grid<span class="token punctuation">(</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <img src="/7f3d361/u_shape.png" class title="InternLM系列模型">
 <p>对于绝对值比较大的reward
 score（靠近-5或者5），这个loss值就会增大。</p>
@@ -684,7 +728,7 @@ https://www.baike.com/wikiid/7382383761788551219?anchor=lxmlbsze188r<br>
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -695,13 +739,13 @@ https://www.baike.com/wikiid/7382383761788551219?anchor=lxmlbsze188r<br>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

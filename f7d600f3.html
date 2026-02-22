@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="最近阿里通义Lab发布了WebSailor模型，顾名思义，这是一个专门优化「上网冲浪能力」的模型。而在WebSailor之前，他们已经发布过WebWalker和WebDancer。  （下一个模型会叫什么呢，WebPilot或者WebAstronaut？）">
 <meta property="og:type" content="article">
@@ -162,18 +162,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -275,7 +275,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>6.7k</span>
+      <span>6.6k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -407,7 +407,51 @@ token），包含基础推理步骤。<br>
 <p>另外，这些数据来自于QwQ-32B自己生成，其分布一致性比直接使用外部的轨迹数据要好。</p>
 <p>训练中，会提高「部分正确数据」的采样比例，这些数据包含正确和错误推理，对强化学习更好。</p>
 <p>（4）流程图</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">                +-----------------+</span><br><span class="line">                | CRAWLQA/E2HQA   |</span><br><span class="line">                | (100K QA Pairs) |</span><br><span class="line">                +--------+--------+</span><br><span class="line">                        |</span><br><span class="line">                +--------+--------+</span><br><span class="line">                | 双CoT轨迹采样     |</span><br><span class="line">                | [输入相同QA问题]  |</span><br><span class="line">                +--------+--------+</span><br><span class="line">                        |</span><br><span class="line">        +---------------+---------------+</span><br><span class="line">        |                               |</span><br><span class="line">+---------+---------+           +---------+---------+</span><br><span class="line">| Short-CoT         |           | Long-CoT          |</span><br><span class="line">| (GPT-4o生成轨迹)   |           | (QwQ-32B生成轨迹)  |</span><br><span class="line">+---------+---------+           +---------+---------+</span><br><span class="line">        |                               |</span><br><span class="line">+---------+---------+           +---------+---------+</span><br><span class="line">| 三级过滤漏斗        |           | 三级过滤漏斗       |</span><br><span class="line">| 1. 格式校验        |           | 1. 格式校验        |</span><br><span class="line">| 2. 答案正确性       |           | 2. 答案正确性      |  # 独立校验</span><br><span class="line">| 3. 质量评估        |           | 3. 质量评估        |</span><br><span class="line">+---------+---------+           +---------+---------+</span><br><span class="line">        |                               |</span><br><span class="line">+---------+---------+           +---------+---------+</span><br><span class="line">| 有效轨迹 → SFT数据  |           | 有效轨迹 → SFT数据  |</span><br><span class="line">+---------+---------+           +---------+---------+</span><br><span class="line">        |                               |</span><br><span class="line">        +---------------+---------------+</span><br><span class="line">                        |</span><br><span class="line">                +--------+--------+</span><br><span class="line">                | SFT训练          |  </span><br><span class="line">                | (仅优化思考/动作) |  # 屏蔽observation损失</span><br><span class="line">                +--------+--------+</span><br><span class="line">                        |</span><br><span class="line">                +--------+--------+</span><br><span class="line">                | 被过滤QA对       |  </span><br><span class="line">                | (部分正确+噪声)   |  # 注：含可挽救样本</span><br><span class="line">                +--------+--------+</span><br><span class="line">                        |</span><br><span class="line">                +--------+--------+</span><br><span class="line">                | DAPO优化        |</span><br><span class="line">                | 1. 动态采样      |  # 过采样部分正确样本</span><br><span class="line">                | 2. 奖励加权      |  # 格式10%+答案90%</span><br><span class="line">                +-----------------+</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-none"><code class="language-none">                +-----------------+
+                | CRAWLQA&#x2F;E2HQA   |
+                | (100K QA Pairs) |
+                +--------+--------+
+                        |
+                +--------+--------+
+                | 双CoT轨迹采样     |
+                | [输入相同QA问题]  |
+                +--------+--------+
+                        |
+        +---------------+---------------+
+        |                               |
++---------+---------+           +---------+---------+
+| Short-CoT         |           | Long-CoT          |
+| (GPT-4o生成轨迹)   |           | (QwQ-32B生成轨迹)  |
++---------+---------+           +---------+---------+
+        |                               |
++---------+---------+           +---------+---------+
+| 三级过滤漏斗        |           | 三级过滤漏斗       |
+| 1. 格式校验        |           | 1. 格式校验        |
+| 2. 答案正确性       |           | 2. 答案正确性      |  # 独立校验
+| 3. 质量评估        |           | 3. 质量评估        |
++---------+---------+           +---------+---------+
+        |                               |
++---------+---------+           +---------+---------+
+| 有效轨迹 → SFT数据  |           | 有效轨迹 → SFT数据  |
++---------+---------+           +---------+---------+
+        |                               |
+        +---------------+---------------+
+                        |
+                +--------+--------+
+                | SFT训练          |  
+                | (仅优化思考&#x2F;动作) |  # 屏蔽observation损失
+                +--------+--------+
+                        |
+                +--------+--------+
+                | 被过滤QA对       |  
+                | (部分正确+噪声)   |  # 注：含可挽救样本
+                +--------+--------+
+                        |
+                +--------+--------+
+                | DAPO优化        |
+                | 1. 动态采样      |  # 过采样部分正确样本
+                | 2. 奖励加权      |  # 格式10%+答案90%
+                +-----------------+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <h1 id="websailor">WebSailor</h1>
 <p>原文：《WebSailor: Navigating Super-human Reasoning for Web
 Agent》</p>
@@ -434,7 +478,8 @@ Generalization）能力。</li>
 <p>这个路径上的信息会被模糊化处理，比如「2012年」就变成「21世纪初」，「Apple」就变成「以A开头的企业」，「0.8%」就变成「不足1%」。</p>
 <p>然后这样一个路径会被用于生成问题，比如路径「南美首都 →
 21世纪荣誉获得者 → 哥伦比亚艺术学院」，就可以生成问题：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">问题：“某乐曲与南美首都相关，其歌词作者获21世纪荣誉，旋律创作者毕业于哥伦比亚艺术学院，求乐曲名称？”</span><br><span class="line">答案：“Rue de Rivoli”</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-none"><code class="language-none">问题：“某乐曲与南美首都相关，其歌词作者获21世纪荣誉，旋律创作者毕业于哥伦比亚艺术学院，求乐曲名称？”
+答案：“Rue de Rivoli”<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
 <p>step 2：思考路径优化</p>
 <p>把上面收集到的数据直接给QwQ-32B来跑，推理路径会比较冗长，可能出现一些无效、重复或者错误的探索。因此需要对推理轨迹进行重构优化。</p>
 <p>具体做法是选择一个强大的模型，把问题和QwQ-32B的原始推理轨迹给它，让它对推理进行总结。</p>
@@ -637,7 +682,7 @@ engineering和模型训练</a><br>
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -648,13 +693,13 @@ engineering和模型训练</a><br>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

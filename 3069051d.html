@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  放假了，小小水一篇多模态的经典之作，CLIP。">
 <meta property="og:type" content="article">
@@ -166,18 +166,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -325,7 +325,26 @@ label扩展成了自然语言的形式。使用自然语言作为监督信号的
 encoder通过对比学习，把文本的表征向match的图像靠拢，而和batch内其他图像，也就是负样本的距离尽量拉大。image
 encoder也是同样地学习图像表征。</p>
 <p>训练的pseudo-code如下：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># image_encoder - ResNet or Vision Transformer</span></span><br><span class="line"><span class="comment"># text_encoder - CBOW or Text Transformer</span></span><br><span class="line"><span class="comment"># I[n, h, w, c] - minibatch of aligned images</span></span><br><span class="line"><span class="comment"># T[n, l] - minibatch of aligned texts</span></span><br><span class="line"><span class="comment"># W_i[d_i, d_e] - learned proj of image to embed</span></span><br><span class="line"><span class="comment"># W_t[d_t, d_e] - learned proj of text to embed</span></span><br><span class="line"><span class="comment"># t - learned temperature parameter</span></span><br><span class="line"><span class="comment"># extract feature representations of each modality</span></span><br><span class="line">I_f = image_encoder(I) <span class="comment">#[n, d_i]</span></span><br><span class="line">T_f = text_encoder(T) <span class="comment">#[n, d_t]</span></span><br><span class="line"><span class="comment"># joint multimodal embedding [n, d_e]</span></span><br><span class="line">I_e = l2_normalize(np.dot(I_f, W_i), axis=<span class="number">1</span>)</span><br><span class="line">T_e = l2_normalize(np.dot(T_f, W_t), axis=<span class="number">1</span>)</span><br><span class="line"><span class="comment"># scaled pairwise cosine similarities [n, n]</span></span><br><span class="line">logits = np.dot(I_e, T_e.T) * np.exp(t)</span><br><span class="line"><span class="comment"># symmetric loss function</span></span><br><span class="line">labels = np.arange(n)</span><br><span class="line">loss_i = cross_entropy_loss(logits, labels, axis=<span class="number">0</span>)</span><br><span class="line">loss_t = cross_entropy_loss(logits, labels, axis=<span class="number">1</span>)</span><br><span class="line">loss = (loss_i + loss_t)/<span class="number">2</span></span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># image_encoder - ResNet or Vision Transformer</span>
+<span class="token comment"># text_encoder - CBOW or Text Transformer</span>
+<span class="token comment"># I[n, h, w, c] - minibatch of aligned images</span>
+<span class="token comment"># T[n, l] - minibatch of aligned texts</span>
+<span class="token comment"># W_i[d_i, d_e] - learned proj of image to embed</span>
+<span class="token comment"># W_t[d_t, d_e] - learned proj of text to embed</span>
+<span class="token comment"># t - learned temperature parameter</span>
+<span class="token comment"># extract feature representations of each modality</span>
+I_f <span class="token operator">=</span> image_encoder<span class="token punctuation">(</span>I<span class="token punctuation">)</span> <span class="token comment">#[n, d_i]</span>
+T_f <span class="token operator">=</span> text_encoder<span class="token punctuation">(</span>T<span class="token punctuation">)</span> <span class="token comment">#[n, d_t]</span>
+<span class="token comment"># joint multimodal embedding [n, d_e]</span>
+I_e <span class="token operator">=</span> l2_normalize<span class="token punctuation">(</span>np<span class="token punctuation">.</span>dot<span class="token punctuation">(</span>I_f<span class="token punctuation">,</span> W_i<span class="token punctuation">)</span><span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+T_e <span class="token operator">=</span> l2_normalize<span class="token punctuation">(</span>np<span class="token punctuation">.</span>dot<span class="token punctuation">(</span>T_f<span class="token punctuation">,</span> W_t<span class="token punctuation">)</span><span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+<span class="token comment"># scaled pairwise cosine similarities [n, n]</span>
+logits <span class="token operator">=</span> np<span class="token punctuation">.</span>dot<span class="token punctuation">(</span>I_e<span class="token punctuation">,</span> T_e<span class="token punctuation">.</span>T<span class="token punctuation">)</span> <span class="token operator">*</span> np<span class="token punctuation">.</span>exp<span class="token punctuation">(</span>t<span class="token punctuation">)</span>
+<span class="token comment"># symmetric loss function</span>
+labels <span class="token operator">=</span> np<span class="token punctuation">.</span>arange<span class="token punctuation">(</span>n<span class="token punctuation">)</span>
+loss_i <span class="token operator">=</span> cross_entropy_loss<span class="token punctuation">(</span>logits<span class="token punctuation">,</span> labels<span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span>
+loss_t <span class="token operator">=</span> cross_entropy_loss<span class="token punctuation">(</span>logits<span class="token punctuation">,</span> labels<span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+loss <span class="token operator">=</span> <span class="token punctuation">(</span>loss_i <span class="token operator">+</span> loss_t<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>在clip的训练框架中，text encoder和image
 encoder的地位是对称的。看上面代码中的loss计算，取的是二者的平均。</p>
 <p>和之前的对比学习一样，为了提升学习的效果，负样本需要尽量多，因此实验中使用32,768的batch
@@ -490,7 +509,7 @@ Supervision https://arxiv.org/abs/2103.00020</p>
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -501,13 +520,13 @@ Supervision https://arxiv.org/abs/2103.00020</p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">

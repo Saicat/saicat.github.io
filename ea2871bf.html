@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="【本文已在同名 微信公众号 &#x2F; 知乎 &#x2F; 个人博客linsight.cn 上线】  前文：prompt压缩(一)">
 <meta property="og:type" content="article">
@@ -165,18 +165,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">89</span>
+          <span class="site-state-item-count">90</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">9</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">79</span>
+        <span class="site-state-item-count">81</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -272,7 +272,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>7.8k</span>
+      <span>7.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -382,9 +382,40 @@ MR，如果AG大，说明MR小，太小的MR说明压缩prompt所包含的原始
 <p>压缩模型训练的时候就要学习根据上下文和问题来区分正例和负例句子。</p>
 <p>要构建这样的数据集，首先从WikiText的文档开始，这些文档都是比较长的。第一步就是要从这些上下文里获取一些positive的句子。</p>
 <p>positive的句子至少得是一致连贯的：如果一个句子英文单词的数量达到一定的比例，并且都由ASCII字符组成，那么就认为这个句子是一直连贯的。把符合要求的句子和上下文一起，用下面这个prompt生成QA对：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Prompt <span class="number">1</span> (Question Prompt):</span><br><span class="line">Here <span class="keyword">is</span> a text to consider: TEXT: <span class="string">&quot;text&quot;</span></span><br><span class="line">Read the sentence <span class="keyword">in</span> double brackets,</span><br><span class="line">namely, [[sentence]].</span><br><span class="line">Ask questions to this sentence, <span class="keyword">and</span> make</span><br><span class="line">sure the question <span class="keyword">is</span> <span class="keyword">not</span> answerable <span class="keyword">from</span></span><br><span class="line">this sentence alone without knowing the</span><br><span class="line">context.</span><br><span class="line">Reply <span class="keyword">in</span> this <span class="built_in">format</span>:</span><br><span class="line">Q: &#123;question <span class="number">1</span>&#125;</span><br><span class="line">A: &#123;answer <span class="number">1</span>&#125;</span><br><span class="line">Q: &#123;question <span class="number">2</span>&#125;</span><br><span class="line">A: &#123;answer <span class="number">2</span>&#125;</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">Prompt <span class="token number">1</span> <span class="token punctuation">(</span>Question Prompt<span class="token punctuation">)</span><span class="token punctuation">:</span>
+Here <span class="token keyword">is</span> a text to consider<span class="token punctuation">:</span> TEXT<span class="token punctuation">:</span> <span class="token string">"text"</span>
+Read the sentence <span class="token keyword">in</span> double brackets<span class="token punctuation">,</span>
+namely<span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">[</span>sentence<span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>
+Ask questions to this sentence<span class="token punctuation">,</span> <span class="token keyword">and</span> make
+sure the question <span class="token keyword">is</span> <span class="token keyword">not</span> answerable <span class="token keyword">from</span>
+this sentence alone without knowing the
+context<span class="token punctuation">.</span>
+Reply <span class="token keyword">in</span> this <span class="token builtin">format</span><span class="token punctuation">:</span>
+Q<span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>question <span class="token number">1</span><span class="token punctuation">&#125;</span>
+A<span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>answer <span class="token number">1</span><span class="token punctuation">&#125;</span>
+Q<span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>question <span class="token number">2</span><span class="token punctuation">&#125;</span>
+A<span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>answer <span class="token number">2</span><span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>常有的一种情况是，一个句子虽然不能直接回答问题，但是包含了回答问题所需要的元素，因此压缩模型需要关注这种情况：只有这一个positive不足以回答的问题。因此用下面这个prompt来检验生成的QA是否符合这种情况：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">Prompt <span class="number">2</span> (Verification Prompt):</span><br><span class="line">You are given a piece of text, a question</span><br><span class="line"><span class="keyword">and</span> an answer. Verify whether it <span class="keyword">is</span></span><br><span class="line">possible to derive such an answer by</span><br><span class="line">considering only the given piece of text</span><br><span class="line">(you should rely only on the piece of</span><br><span class="line">text). Think step by step <span class="keyword">and</span> finish</span><br><span class="line">your thoughts <span class="keyword">with</span> one word: <span class="string">&quot;Yes&quot;</span> <span class="keyword">or</span></span><br><span class="line"><span class="string">&quot;No&quot;</span>. Answer <span class="string">&quot;Yes&quot;</span> <span class="keyword">if</span> <span class="keyword">and</span> only <span class="keyword">if</span> ALL the</span><br><span class="line">necessary information <span class="keyword">is</span> contained <span class="keyword">in</span> the</span><br><span class="line">text. If anything <span class="keyword">is</span> missing, then state</span><br><span class="line">what <span class="keyword">is</span> missing <span class="keyword">and</span> answer <span class="string">&quot;No&quot;</span>. Answer</span><br><span class="line"><span class="string">&quot;Yes&quot;</span> ONLY <span class="keyword">if</span> there <span class="keyword">is</span> no such information</span><br><span class="line"><span class="keyword">in</span> the answer that <span class="keyword">is</span> missing <span class="keyword">in</span> the text.</span><br><span class="line">Otherwise, answer <span class="string">&quot;No&quot;</span>!!</span><br><span class="line">&#123;A demonstration&#125;</span><br><span class="line">Text: &#123;context sentence&#125;</span><br><span class="line">Question: &#123;question&#125;</span><br><span class="line">Answer: &#123;answer&#125;</span><br><span class="line">Verification result: Yes/No</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">Prompt <span class="token number">2</span> <span class="token punctuation">(</span>Verification Prompt<span class="token punctuation">)</span><span class="token punctuation">:</span>
+You are given a piece of text<span class="token punctuation">,</span> a question
+<span class="token keyword">and</span> an answer<span class="token punctuation">.</span> Verify whether it <span class="token keyword">is</span>
+possible to derive such an answer by
+considering only the given piece of text
+<span class="token punctuation">(</span>you should rely only on the piece of
+text<span class="token punctuation">)</span><span class="token punctuation">.</span> Think step by step <span class="token keyword">and</span> finish
+your thoughts <span class="token keyword">with</span> one word<span class="token punctuation">:</span> <span class="token string">"Yes"</span> <span class="token keyword">or</span>
+<span class="token string">"No"</span><span class="token punctuation">.</span> Answer <span class="token string">"Yes"</span> <span class="token keyword">if</span> <span class="token keyword">and</span> only <span class="token keyword">if</span> ALL the
+necessary information <span class="token keyword">is</span> contained <span class="token keyword">in</span> the
+text<span class="token punctuation">.</span> If anything <span class="token keyword">is</span> missing<span class="token punctuation">,</span> then state
+what <span class="token keyword">is</span> missing <span class="token keyword">and</span> answer <span class="token string">"No"</span><span class="token punctuation">.</span> Answer
+<span class="token string">"Yes"</span> ONLY <span class="token keyword">if</span> there <span class="token keyword">is</span> no such information
+<span class="token keyword">in</span> the answer that <span class="token keyword">is</span> missing <span class="token keyword">in</span> the text<span class="token punctuation">.</span>
+Otherwise<span class="token punctuation">,</span> answer <span class="token string">"No"</span>!!
+<span class="token punctuation">&#123;</span>A demonstration<span class="token punctuation">&#125;</span>
+Text<span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>context sentence<span class="token punctuation">&#125;</span>
+Question<span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>question<span class="token punctuation">&#125;</span>
+Answer<span class="token punctuation">:</span> <span class="token punctuation">&#123;</span>answer<span class="token punctuation">&#125;</span>
+Verification result<span class="token punctuation">:</span> Yes<span class="token operator">/</span>No<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>只有验证结果为No的QA会保留。</p>
 <p>下一步就是获取negative句子。获取negative句子有两步。第一步先用一个sentence
 embedding模型，计算正例句子和问题Q的相似度η，然后计算上下文中所有其他句子和问题Q的相似度，对于相似度小于η的句子，都放到负例候选集里。</p>
@@ -563,7 +594,7 @@ and Improved LLM Inference</p>
 
   <div class="copyright">
     &copy; 
-    <span itemprop="copyrightYear">2025</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-heart"></i>
     </span>
@@ -574,13 +605,13 @@ and Improved LLM Inference</p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">750k</span>
+    <span title="站点总字数">786k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">22:43</span>
+    <span title="站点阅读时长">23:49</span>
   </span>
 </div>
 <div class="busuanzi-count">
