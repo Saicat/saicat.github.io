@@ -19,15 +19,15 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="高频题  LeetCode 88 - 合并两个有序数组">
+    <meta name="description" content="高频基础题  LeetCode 88 - 合并两个有序数组">
 <meta property="og:type" content="article">
 <meta property="og:title" content="LeetCode面试题解整理">
 <meta property="og:url" content="https://saicat.github.io/dd5035ac.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="高频题  LeetCode 88 - 合并两个有序数组">
+<meta property="og:description" content="高频基础题  LeetCode 88 - 合并两个有序数组">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-02-21T04:18:17.000Z">
-<meta property="article:modified_time" content="2026-03-04T14:31:18.633Z">
+<meta property="article:modified_time" content="2026-03-10T14:57:16.783Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="leetcode">
 <meta property="article:tag" content="algorithm">
@@ -141,7 +141,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%AB%98%E9%A2%91%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">高频题</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-88---%E5%90%88%E5%B9%B6%E4%B8%A4%E4%B8%AA%E6%9C%89%E5%BA%8F%E6%95%B0%E7%BB%84"><span class="nav-number">1.1.</span> <span class="nav-text">LeetCode 88 -
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%AB%98%E9%A2%91%E5%9F%BA%E7%A1%80%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">高频基础题</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-88---%E5%90%88%E5%B9%B6%E4%B8%A4%E4%B8%AA%E6%9C%89%E5%BA%8F%E6%95%B0%E7%BB%84"><span class="nav-number">1.1.</span> <span class="nav-text">LeetCode 88 -
 合并两个有序数组</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-5---%E6%9C%80%E9%95%BF%E5%9B%9E%E6%96%87%E5%AD%90%E4%B8%B2"><span class="nav-number">1.2.</span> <span class="nav-text">LeetCode 5 - 最长回文子串</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-542---01-%E7%9F%A9%E9%98%B5"><span class="nav-number">1.3.</span> <span class="nav-text">LeetCode 542 - 01 矩阵</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-215---%E6%95%B0%E7%BB%84%E4%B8%AD%E7%9A%84%E7%AC%AC-k-%E4%B8%AA%E6%9C%80%E5%A4%A7%E5%85%83%E7%B4%A0"><span class="nav-number">1.4.</span> <span class="nav-text">LeetCode 215 -
 数组中的第 K 个最大元素</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-72---%E7%BC%96%E8%BE%91%E8%B7%9D%E7%A6%BB"><span class="nav-number">1.5.</span> <span class="nav-text">LeetCode 72 - 编辑距离</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-54---%E8%9E%BA%E6%97%8B%E7%9F%A9%E9%98%B5"><span class="nav-number">1.6.</span> <span class="nav-text">LeetCode 54 - 螺旋矩阵</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-59.-%E8%9E%BA%E6%97%8B%E7%9F%A9%E9%98%B5-ii"><span class="nav-number">1.7.</span> <span class="nav-text">LeetCode 59. 螺旋矩阵 II</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-226---%E7%BF%BB%E8%BD%AC%E4%BA%8C%E5%8F%89%E6%A0%91"><span class="nav-number">1.8.</span> <span class="nav-text">LeetCode 226 - 翻转二叉树</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-700---%E4%BA%8C%E5%8F%89%E6%90%9C%E7%B4%A2%E6%A0%91%E4%B8%AD%E7%9A%84%E6%90%9C%E7%B4%A2"><span class="nav-number">1.9.</span> <span class="nav-text">LeetCode 700 -
 二叉搜索树中的搜索</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-11---%E7%9B%9B%E6%9C%80%E5%A4%9A%E6%B0%B4%E7%9A%84%E5%AE%B9%E5%99%A8"><span class="nav-number">1.10.</span> <span class="nav-text">LeetCode 11 - 盛最多水的容器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-334---%E9%80%92%E5%A2%9E%E7%9A%84%E4%B8%89%E5%85%83%E5%AD%90%E5%BA%8F%E5%88%97"><span class="nav-number">1.11.</span> <span class="nav-text">LeetCode 334 -
@@ -170,18 +170,22 @@
 排布二进制网格的最少交换次数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1545---%E6%89%BE%E5%87%BA%E7%AC%AC-n-%E4%B8%AA%E4%BA%8C%E8%BF%9B%E5%88%B6%E5%AD%97%E7%AC%A6%E4%B8%B2%E4%B8%AD%E7%9A%84%E7%AC%AC-k-%E4%BD%8D"><span class="nav-number">2.22.</span> <span class="nav-text">LeetCode
 1545 - 找出第 N 个二进制字符串中的第 K 位</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-516.-%E6%9C%80%E9%95%BF%E5%9B%9E%E6%96%87%E5%AD%90%E5%BA%8F%E5%88%97"><span class="nav-number">2.23.</span> <span class="nav-text">LeetCode 516. 最长回文子序列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1582.-%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%9F%A9%E9%98%B5%E4%B8%AD%E7%9A%84%E7%89%B9%E6%AE%8A%E4%BD%8D%E7%BD%AE"><span class="nav-number">2.24.</span> <span class="nav-text">LeetCode 1582.
 二进制矩阵中的特殊位置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-712.-%E4%B8%A4%E4%B8%AA%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%9A%84%E6%9C%80%E5%B0%8Fascii%E5%88%A0%E9%99%A4%E5%92%8C"><span class="nav-number">2.25.</span> <span class="nav-text">LeetCode 712.
-两个字符串的最小ASCII删除和</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%98%E8%B4%B9%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text">付费题</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1056---%E6%98%93%E6%B7%B7%E6%B7%86%E6%95%B0"><span class="nav-number">3.1.</span> <span class="nav-text">LeetCode 1056 - 易混淆数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1427---%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%9A%84%E5%B7%A6%E5%8F%B3%E7%A7%BB"><span class="nav-number">3.2.</span> <span class="nav-text">LeetCode 1427 -
-字符串的左右移</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-161---%E7%9B%B8%E9%9A%94%E4%B8%BA-1-%E7%9A%84%E7%BC%96%E8%BE%91%E8%B7%9D%E7%A6%BB"><span class="nav-number">3.3.</span> <span class="nav-text">LeetCode 161 - 相隔为 1
-的编辑距离</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-186---%E5%8F%8D%E8%BD%AC%E5%AD%97%E7%AC%A6%E4%B8%B2%E4%B8%AD%E7%9A%84%E5%8D%95%E8%AF%8D-ii"><span class="nav-number">3.4.</span> <span class="nav-text">LeetCode 186 -
-反转字符串中的单词 II</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1055---%E5%BD%A2%E6%88%90%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%9A%84%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84"><span class="nav-number">3.5.</span> <span class="nav-text">LeetCode 1055 -
-形成字符串的最短路径</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-159---%E8%87%B3%E5%A4%9A%E5%8C%85%E5%90%AB%E4%B8%A4%E4%B8%AA%E4%B8%8D%E5%90%8C%E5%AD%97%E7%AC%A6%E7%9A%84%E6%9C%80%E9%95%BF%E5%AD%90%E4%B8%B2"><span class="nav-number">3.6.</span> <span class="nav-text">LeetCode 159 -
-至多包含两个不同字符的最长子串</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-249---%E7%A7%BB%E4%BD%8D%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%88%86%E7%BB%84"><span class="nav-number">3.7.</span> <span class="nav-text">LeetCode 249 -
-移位字符串分组</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-266---%E5%9B%9E%E6%96%87%E6%8E%92%E5%88%97"><span class="nav-number">3.8.</span> <span class="nav-text">LeetCode 266 - 回文排列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-280---%E6%91%86%E5%8A%A8%E6%8E%92%E5%BA%8F"><span class="nav-number">3.9.</span> <span class="nav-text">LeetCode 280 - 摆动排序</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9C%89%E7%82%B9%E9%9A%BE"><span class="nav-number">4.</span> <span class="nav-text">有点难</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-76---%E6%9C%80%E5%B0%8F%E8%A6%86%E7%9B%96%E5%AD%90%E4%B8%B2-1"><span class="nav-number">4.1.</span> <span class="nav-text">LeetCode 76 - 最小覆盖子串</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-239---%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3%E6%9C%80%E5%A4%A7%E5%80%BC"><span class="nav-number">4.2.</span> <span class="nav-text">LeetCode 239 -
-滑动窗口最大值</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-516---%E6%9C%80%E9%95%BF%E5%9B%9E%E6%96%87%E5%AD%90%E5%BA%8F%E5%88%97"><span class="nav-number">4.3.</span> <span class="nav-text">LeetCode 516 -
-最长回文子序列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-4---%E5%AF%BB%E6%89%BE%E4%B8%A4%E4%B8%AA%E6%AD%A3%E5%BA%8F%E6%95%B0%E7%BB%84%E7%9A%84%E4%B8%AD%E4%BD%8D%E6%95%B0"><span class="nav-number">4.4.</span> <span class="nav-text">LeetCode 4 -
-寻找两个正序数组的中位数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-239---%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3%E6%9C%80%E5%A4%A7%E5%80%BC-1"><span class="nav-number">4.5.</span> <span class="nav-text">LeetCode 239 -
-滑动窗口最大值</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-983---%E6%9C%80%E4%BD%8E%E7%A5%A8%E4%BB%B7"><span class="nav-number">4.6.</span> <span class="nav-text">LeetCode 983 - 最低票价</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-2517---%E7%A4%BC%E7%9B%92%E7%9A%84%E6%9C%80%E5%A4%A7%E7%94%9C%E8%9C%9C%E5%BA%A6"><span class="nav-number">4.7.</span> <span class="nav-text">LeetCode 2517 -
-礼盒的最大甜蜜度</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%8E%92%E5%BA%8F%E7%AE%97%E6%B3%95"><span class="nav-number">5.</span> <span class="nav-text">排序算法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%92%E6%B3%A1%E6%8E%92%E5%BA%8F"><span class="nav-number">5.1.</span> <span class="nav-text">冒泡排序</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BB%8F%E9%AA%8C"><span class="nav-number">6.</span> <span class="nav-text">经验</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A0%86"><span class="nav-number">6.1.</span> <span class="nav-text">堆</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E5%B7%B1%E5%AE%9E%E7%8E%B0%E5%A0%86"><span class="nav-number">6.1.1.</span> <span class="nav-text">自己实现堆</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%9F%E5%88%97%E4%BC%98%E5%85%88%E9%98%9F%E5%88%97%E5%8F%8C%E5%90%91%E9%98%9F%E5%88%97"><span class="nav-number">6.2.</span> <span class="nav-text">队列，优先队列，双向队列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%88"><span class="nav-number">6.3.</span> <span class="nav-text">栈</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8Equick-sort%E5%88%B0quick-select"><span class="nav-number">6.4.</span> <span class="nav-text">从quick sort到quick select</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E5%88%86"><span class="nav-number">6.5.</span> <span class="nav-text">二分</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9E%E6%BA%AF"><span class="nav-number">6.6.</span> <span class="nav-text">回溯</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%92%E5%88%97%E7%BB%84%E5%90%88"><span class="nav-number">6.7.</span> <span class="nav-text">排列组合</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92"><span class="nav-number">6.8.</span> <span class="nav-text">动态规划</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">6.9.</span> <span class="nav-text">其他</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%83%8C%E8%AF%B5%E9%A2%98"><span class="nav-number">6.9.1.</span> <span class="nav-text">背诵题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%8B%E4%B8%80%E4%B8%AA%E6%8E%92%E5%88%97"><span class="nav-number">6.9.1.1.</span> <span class="nav-text">31. 下一个排列</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%80%E5%B7%A7"><span class="nav-number">6.10.</span> <span class="nav-text">技巧</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BF%AB%E9%80%9F%E7%9A%84%E7%9F%A9%E9%98%B5%E8%BD%AC%E7%BD%AE%E6%96%B9%E6%B3%95"><span class="nav-number">6.10.1.</span> <span class="nav-text">快速的矩阵转置方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#zip%E8%A7%A3%E9%87%8A"><span class="nav-number">6.10.2.</span> <span class="nav-text">zip解释</span></a></li></ol></li></ol></li></ol></div>
+两个字符串的最小ASCII删除和</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1758.-%E7%94%9F%E6%88%90%E4%BA%A4%E6%9B%BF%E4%BA%8C%E8%BF%9B%E5%88%B6%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%9A%84%E6%9C%80%E5%B0%91%E6%93%8D%E4%BD%9C%E6%95%B0"><span class="nav-number">2.26.</span> <span class="nav-text">LeetCode 1758.
+生成交替二进制字符串的最少操作数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1784.-%E6%A3%80%E6%9F%A5%E4%BA%8C%E8%BF%9B%E5%88%B6%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%AD%97%E6%AE%B5"><span class="nav-number">2.27.</span> <span class="nav-text">LeetCode 1784.
+检查二进制字符串字段</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1980.-%E6%89%BE%E5%87%BA%E4%B8%8D%E5%90%8C%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6%E5%AD%97%E7%AC%A6%E4%B8%B2"><span class="nav-number">2.28.</span> <span class="nav-text">LeetCode 1980.
+找出不同的二进制字符串</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-525.-%E8%BF%9E%E7%BB%AD%E6%95%B0%E7%BB%84"><span class="nav-number">2.29.</span> <span class="nav-text">LeetCode 525. 连续数组</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-3129.-%E6%89%BE%E5%87%BA%E6%89%80%E6%9C%89%E7%A8%B3%E5%AE%9A%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%95%B0%E7%BB%84-i"><span class="nav-number">2.30.</span> <span class="nav-text">LeetCode 3129.
+找出所有稳定的二进制数组 I</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1427---%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%9A%84%E5%B7%A6%E5%8F%B3%E7%A7%BB"><span class="nav-number">2.31.</span> <span class="nav-text">LeetCode 1427 -
+字符串的左右移</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-161---%E7%9B%B8%E9%9A%94%E4%B8%BA-1-%E7%9A%84%E7%BC%96%E8%BE%91%E8%B7%9D%E7%A6%BB"><span class="nav-number">2.32.</span> <span class="nav-text">LeetCode 161 - 相隔为 1
+的编辑距离</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-186---%E5%8F%8D%E8%BD%AC%E5%AD%97%E7%AC%A6%E4%B8%B2%E4%B8%AD%E7%9A%84%E5%8D%95%E8%AF%8D-ii"><span class="nav-number">2.33.</span> <span class="nav-text">LeetCode 186 -
+反转字符串中的单词 II</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-1055---%E5%BD%A2%E6%88%90%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%9A%84%E6%9C%80%E7%9F%AD%E8%B7%AF%E5%BE%84"><span class="nav-number">2.34.</span> <span class="nav-text">LeetCode 1055 -
+形成字符串的最短路径</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-159---%E8%87%B3%E5%A4%9A%E5%8C%85%E5%90%AB%E4%B8%A4%E4%B8%AA%E4%B8%8D%E5%90%8C%E5%AD%97%E7%AC%A6%E7%9A%84%E6%9C%80%E9%95%BF%E5%AD%90%E4%B8%B2"><span class="nav-number">2.35.</span> <span class="nav-text">LeetCode 159 -
+至多包含两个不同字符的最长子串</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-249---%E7%A7%BB%E4%BD%8D%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%88%86%E7%BB%84"><span class="nav-number">2.36.</span> <span class="nav-text">LeetCode 249 -
+移位字符串分组</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-266---%E5%9B%9E%E6%96%87%E6%8E%92%E5%88%97"><span class="nav-number">2.37.</span> <span class="nav-text">LeetCode 266 - 回文排列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-280---%E6%91%86%E5%8A%A8%E6%8E%92%E5%BA%8F"><span class="nav-number">2.38.</span> <span class="nav-text">LeetCode 280 - 摆动排序</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9C%89%E7%82%B9%E9%9A%BE"><span class="nav-number">3.</span> <span class="nav-text">有点难</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-76---%E6%9C%80%E5%B0%8F%E8%A6%86%E7%9B%96%E5%AD%90%E4%B8%B2-1"><span class="nav-number">3.1.</span> <span class="nav-text">LeetCode 76 - 最小覆盖子串</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-239---%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3%E6%9C%80%E5%A4%A7%E5%80%BC"><span class="nav-number">3.2.</span> <span class="nav-text">LeetCode 239 -
+滑动窗口最大值</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-516---%E6%9C%80%E9%95%BF%E5%9B%9E%E6%96%87%E5%AD%90%E5%BA%8F%E5%88%97"><span class="nav-number">3.3.</span> <span class="nav-text">LeetCode 516 -
+最长回文子序列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-4---%E5%AF%BB%E6%89%BE%E4%B8%A4%E4%B8%AA%E6%AD%A3%E5%BA%8F%E6%95%B0%E7%BB%84%E7%9A%84%E4%B8%AD%E4%BD%8D%E6%95%B0"><span class="nav-number">3.4.</span> <span class="nav-text">LeetCode 4 -
+寻找两个正序数组的中位数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-239---%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3%E6%9C%80%E5%A4%A7%E5%80%BC-1"><span class="nav-number">3.5.</span> <span class="nav-text">LeetCode 239 -
+滑动窗口最大值</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-983---%E6%9C%80%E4%BD%8E%E7%A5%A8%E4%BB%B7"><span class="nav-number">3.6.</span> <span class="nav-text">LeetCode 983 - 最低票价</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#leetcode-2517---%E7%A4%BC%E7%9B%92%E7%9A%84%E6%9C%80%E5%A4%A7%E7%94%9C%E8%9C%9C%E5%BA%A6"><span class="nav-number">3.7.</span> <span class="nav-text">LeetCode 2517 -
+礼盒的最大甜蜜度</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%8E%92%E5%BA%8F%E7%AE%97%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text">排序算法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%92%E6%B3%A1%E6%8E%92%E5%BA%8F"><span class="nav-number">4.1.</span> <span class="nav-text">冒泡排序</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BB%8F%E9%AA%8C"><span class="nav-number">5.</span> <span class="nav-text">经验</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A0%86"><span class="nav-number">5.1.</span> <span class="nav-text">堆</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E5%B7%B1%E5%AE%9E%E7%8E%B0%E5%A0%86"><span class="nav-number">5.1.1.</span> <span class="nav-text">自己实现堆</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%9F%E5%88%97%E4%BC%98%E5%85%88%E9%98%9F%E5%88%97%E5%8F%8C%E5%90%91%E9%98%9F%E5%88%97"><span class="nav-number">5.2.</span> <span class="nav-text">队列，优先队列，双向队列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%88"><span class="nav-number">5.3.</span> <span class="nav-text">栈</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8Equick-sort%E5%88%B0quick-select"><span class="nav-number">5.4.</span> <span class="nav-text">从quick sort到quick select</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E5%88%86"><span class="nav-number">5.5.</span> <span class="nav-text">二分</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9E%E6%BA%AF"><span class="nav-number">5.6.</span> <span class="nav-text">回溯</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%92%E5%88%97%E7%BB%84%E5%90%88"><span class="nav-number">5.7.</span> <span class="nav-text">排列组合</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92"><span class="nav-number">5.8.</span> <span class="nav-text">动态规划</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">5.9.</span> <span class="nav-text">其他</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%83%8C%E8%AF%B5%E9%A2%98"><span class="nav-number">5.9.1.</span> <span class="nav-text">背诵题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%8B%E4%B8%80%E4%B8%AA%E6%8E%92%E5%88%97"><span class="nav-number">5.9.1.1.</span> <span class="nav-text">31. 下一个排列</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%80%E5%B7%A7"><span class="nav-number">5.10.</span> <span class="nav-text">技巧</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BF%AB%E9%80%9F%E7%9A%84%E7%9F%A9%E9%98%B5%E8%BD%AC%E7%BD%AE%E6%96%B9%E6%B3%95"><span class="nav-number">5.10.1.</span> <span class="nav-text">快速的矩阵转置方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#zip%E8%A7%A3%E9%87%8A"><span class="nav-number">5.10.1.1.</span> <span class="nav-text">zip解释</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E5%88%B6%E8%BD%AC%E6%8D%A2"><span class="nav-number">5.10.2.</span> <span class="nav-text">进制转换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#accumulate"><span class="nav-number">5.10.3.</span> <span class="nav-text">accumulate</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E5%BF%B5"><span class="nav-number">5.11.</span> <span class="nav-text">概念</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%89%8D%E7%BC%80%E6%A0%91trie%E6%A0%91%E5%AD%97%E5%85%B8%E6%A0%91"><span class="nav-number">5.11.1.</span> <span class="nav-text">前缀树，Trie树，字典树</span></a></li></ol></li></ol></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -196,7 +200,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">91</span>
+          <span class="site-state-item-count">92</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -282,7 +286,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-03-04 22:31:18" itemprop="dateModified" datetime="2026-03-04T22:31:18+08:00">2026-03-04</time>
+      <time title="修改时间：2026-03-10 22:57:16" itemprop="dateModified" datetime="2026-03-10T22:57:16+08:00">2026-03-10</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -313,14 +317,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>49k</span>
+      <span>55k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1:30</span>
+      <span>1:39</span>
     </span>
 </div>
 
@@ -330,7 +334,7 @@
     
     
     
-    <div class="post-body" itemprop="articleBody"><h1 id="高频题">高频题</h1>
+    <div class="post-body" itemprop="articleBody"><h1 id="高频基础题">高频基础题</h1>
 <hr>
 <h2 id="leetcode-88---合并两个有序数组">LeetCode 88 -
 合并两个有序数组</h2>
@@ -2456,13 +2460,192 @@ min、max。</p>
                 <span class="token keyword">else</span><span class="token punctuation">:</span>
                     dp<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token builtin">min</span><span class="token punctuation">(</span>dp<span class="token punctuation">[</span>i <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">+</span> <span class="token builtin">ord</span><span class="token punctuation">(</span>s1<span class="token punctuation">[</span>i <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span> dp<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">[</span>j <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">+</span> <span class="token builtin">ord</span><span class="token punctuation">(</span>s2<span class="token punctuation">[</span>j <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
         <span class="token keyword">return</span> dp<span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<h1 id="付费题">付费题</h1>
-<h2 id="leetcode-1056---易混淆数">LeetCode 1056 - 易混淆数</h2>
-<p><strong>原题描述：</strong> 判断旋转 180°
-后是否得到有效且不同的数。0→0,1→1,6→9,8→8,9→6，其他无效。</p>
-<p><strong>解法：</strong>
-建立映射，将数字翻转并逐位转换，检查是否有效且与原数不同。</p>
-<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">def</span> <span class="token function">confusingNumber</span><span class="token punctuation">(</span>n<span class="token punctuation">:</span> <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">bool</span><span class="token punctuation">:</span>
+<hr>
+<h2 id="leetcode-1758.-生成交替二进制字符串的最少操作数">LeetCode 1758.
+生成交替二进制字符串的最少操作数</h2>
+<p>给你一个仅由字符 '0' 和 '1' 组成的字符串 s 。一步操作中，你可以将任一
+'0' 变成 '1' ，或者将 '1' 变成 '0' 。</p>
+<p>交替字符串
+定义为：如果字符串中不存在相邻两个字符相等的情况，那么该字符串就是交替字符串。例如，字符串
+"010" 是交替字符串，而字符串 "0100" 不是。</p>
+<p>返回使 s 变成 交替字符串 所需的 最少 操作数。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">Solution</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">minOperations</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> s<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">int</span><span class="token punctuation">:</span>
+        <span class="token comment"># 计算和候选答案的差异数，即操作数</span>
+        <span class="token keyword">def</span> <span class="token function">diff</span><span class="token punctuation">(</span>s1<span class="token punctuation">,</span> s2<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">return</span> <span class="token builtin">sum</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token number">1</span> <span class="token keyword">for</span> i <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>s1<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">if</span> s1<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">!=</span> s2<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        
+        n <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span>
+        <span class="token comment"># 一个长度下，能成为交替字符的只有两个候选，分别构造出来，计算和s的位数差，即可得操作数</span>
+        group_n <span class="token operator">=</span> <span class="token punctuation">(</span>n <span class="token operator">//</span> <span class="token number">2</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        s1 <span class="token operator">=</span> <span class="token string">"01"</span> <span class="token operator">*</span> group_n
+        s1 <span class="token operator">=</span> s1<span class="token punctuation">[</span><span class="token punctuation">:</span>n<span class="token punctuation">]</span>
+        s2 <span class="token operator">=</span> <span class="token string">"10"</span> <span class="token operator">*</span> group_n
+        s2 <span class="token operator">=</span> s2<span class="token punctuation">[</span><span class="token punctuation">:</span>n<span class="token punctuation">]</span>
+        <span class="token keyword">return</span> <span class="token builtin">min</span><span class="token punctuation">(</span>diff<span class="token punctuation">(</span>s<span class="token punctuation">,</span> s1<span class="token punctuation">)</span><span class="token punctuation">,</span> diff<span class="token punctuation">(</span>s<span class="token punctuation">,</span> s2<span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>更快捷的写法</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">Solution</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">minOperations</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> s<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">int</span><span class="token punctuation">:</span>
+        <span class="token comment"># 更快捷的写法</span>
+        <span class="token comment"># cnt是其中一个候选操作数</span>
+        cnt <span class="token operator">=</span> <span class="token builtin">sum</span><span class="token punctuation">(</span><span class="token builtin">int</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span> <span class="token operator">!=</span> i <span class="token operator">%</span> <span class="token number">2</span> <span class="token keyword">for</span> i<span class="token punctuation">,</span> c <span class="token keyword">in</span> <span class="token builtin">enumerate</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token comment"># len(s) - cnt是另一个候选的操作数</span>
+        <span class="token keyword">return</span> <span class="token builtin">min</span><span class="token punctuation">(</span>cnt<span class="token punctuation">,</span> <span class="token builtin">len</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span> <span class="token operator">-</span> cnt<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="leetcode-1784.-检查二进制字符串字段">LeetCode 1784.
+检查二进制字符串字段</h2>
+<p>给你一个二进制字符串 s ，该字符串 不含前导零 。</p>
+<p>如果 s 包含 零个或一个由连续的 '1' 组成的字段 ，返回 true​​​
+。否则，返回 false 。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">Solution</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">checkOnesSegment</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> s<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">bool</span><span class="token punctuation">:</span>
+        <span class="token comment"># 由于没有前导0，因此第一位一定是1，也就是至少有一块连续的1，那么如果隔了0之后，后面还有1，则一定是false</span>
+        count <span class="token operator">=</span> <span class="token number">0</span>
+        <span class="token keyword">for</span> i <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token builtin">len</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">if</span> s<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">!=</span> s<span class="token punctuation">[</span>i <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+                count <span class="token operator">+=</span> <span class="token number">1</span>
+                <span class="token keyword">if</span> count <span class="token operator">>=</span> <span class="token number">2</span><span class="token punctuation">:</span>
+                    <span class="token keyword">return</span> <span class="token boolean">False</span>
+        <span class="token keyword">return</span> <span class="token boolean">True</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>更进一步简化：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">Solution</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">checkOnesSegment</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> s<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">bool</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token string">"01"</span> <span class="token keyword">not</span> <span class="token keyword">in</span> s<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="leetcode-1980.-找出不同的二进制字符串">LeetCode 1980.
+找出不同的二进制字符串</h2>
+<p>给你一个字符串数组 nums ，该数组由 n 个 互不相同
+的二进制字符串组成，且每个字符串长度都是 n 。请你找出并返回一个长度为 n
+且 没有出现 在 nums 中的二进制字符串。如果存在多种答案，只需返回
+任意一个 即可。</p>
+<p>示例 1：<br>
+输入：nums = ["01","10"]<br>
+输出："11"<br>
+解释："11" 没有出现在 nums 中。"00" 也是正确答案。</p>
+<p>示例 2：<br>
+输入：nums = ["00","01"]<br>
+输出："11"<br>
+解释："11" 没有出现在 nums 中。"10" 也是正确答案。</p>
+<p>示例 3：<br>
+输入：nums = ["111","011","001"]<br>
+输出："101"<br>
+解释："101" 没有出现在 nums 中。"000"、"010"、"100"、"110"
+也是正确答案。</p>
+<p>方法1：转成十进制处理，再转回二进制</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">Solution</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">findDifferentBinaryString</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> nums<span class="token punctuation">:</span> List<span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+        n <span class="token operator">=</span> <span class="token builtin">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span>
+        vals <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token builtin">int</span><span class="token punctuation">(</span>num<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token keyword">for</span> num <span class="token keyword">in</span> nums<span class="token punctuation">&#125;</span>  <span class="token comment"># 把二进制字符串转成十进制</span>
+
+        <span class="token comment"># 寻找不再vals中的数</span>
+        <span class="token comment"># 这里的写法比较巧妙，值得理解</span>
+        val <span class="token operator">=</span> <span class="token number">0</span>
+        <span class="token keyword">while</span> val <span class="token keyword">in</span> vals<span class="token punctuation">:</span>
+            val <span class="token operator">+=</span> <span class="token number">1</span>
+
+        <span class="token comment"># 找到之后，转成二进制</span>
+        <span class="token comment"># 这里写得也比较巧妙</span>
+        res <span class="token operator">=</span> <span class="token string">"&#123;:b&#125;"</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>val<span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token string">"0"</span> <span class="token operator">*</span> <span class="token punctuation">(</span>n <span class="token operator">-</span> <span class="token builtin">len</span><span class="token punctuation">(</span>res<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">+</span> res<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="leetcode-525.-连续数组">LeetCode 525. 连续数组</h2>
+<p>给定一个二进制数组 nums , 找到含有相同数量的 0 和 1
+的最长连续子数组，并返回该子数组的长度。</p>
+<p>示例 1：<br>
+输入：nums = [0,1]<br>
+输出：2<br>
+说明：[0, 1] 是具有相同数量 0 和 1 的最长连续子数组。</p>
+<p>示例 2：<br>
+输入：nums = [0,1,0]<br>
+输出：2<br>
+说明：[0, 1] (或 [1, 0]) 是具有相同数量 0 和 1 的最长连续子数组。</p>
+<p>示例 3：<br>
+输入：nums = [0,1,1,1,1,1,0,0,0]<br>
+输出：6<br>
+解释：[1,1,1,0,0,0] 是具有相同数量 0 和 1 的最长连续子数组。</p>
+<p>思路：前缀和</p>
+<p>一句话思路：把 0 看成 -1，计算和为 0 的最长子数组。</p>
+<p>这是怎么想出来的？</p>
+<p><strong>前置知识：前缀和。</strong></p>
+<p>设 0 在的 <code>nums</code> 中的个数前缀和数组为 <span class="math inline">\(S_0\)</span>：如果 <code>nums[i] = 0</code> 则视作
+1，否则视作 0，计算这个序列的前缀和数组。</p>
+<p>同理，设 1 在的 <code>nums</code> 中的个数前缀和数组为 <span class="math inline">\(S_1\)</span>。</p>
+<p>子数组 <span class="math inline">\([l, r)\)</span> 中的 1 和 0
+的出现次数相等，即</p>
+<p><span class="math display">\[S_1[r] - S_1[l] = S_0[r] -
+S_0[l]\]</span></p>
+<p>移项得</p>
+<p><span class="math display">\[S_1[r] - S_0[r] = S_1[l] -
+S_0[l]\]</span></p>
+<p>定义数组 <span class="math inline">\(sum[i] = S_1[i] -
+S_0[i]\)</span>，问题变成：</p>
+<ul>
+<li>计算数组 <code>sum</code> 中的一对相等元素的最远距离。（注意子数组
+<span class="math inline">\([l, r)\)</span> 的长度是 <span class="math inline">\(r - l\)</span>，无需加一。）</li>
+</ul>
+<p>枚举右，维护左。维护 <code>sum[i]</code> 首次出现的下标，再次遇到
+<code>sum[i]</code> 时，用 <span class="math inline">\(i\)</span> 减去
+<code>sum[i]</code>
+首次出现的下标，即为子数组长度，更新答案的最大值。</p>
+<p>从 <span class="math inline">\(sum[i] = S_1[i] - S_0[i]\)</span>
+这个定义可以看出来，如果把原数组中的 0 视作 -1，我们计算的就是和为 0
+的最长子数组。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">Solution</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">findMaxLength</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> nums<span class="token punctuation">:</span> List<span class="token punctuation">[</span><span class="token builtin">int</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">int</span><span class="token punctuation">:</span>
+        nums <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token number">1</span> <span class="token keyword">if</span> num <span class="token keyword">else</span> <span class="token operator">-</span><span class="token number">1</span> <span class="token keyword">for</span> num <span class="token keyword">in</span> nums<span class="token punctuation">]</span>
+        summations <span class="token operator">=</span> <span class="token builtin">list</span><span class="token punctuation">(</span>accumulate<span class="token punctuation">(</span>nums<span class="token punctuation">,</span> initial<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        d <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+        ans <span class="token operator">=</span> <span class="token number">0</span>
+        <span class="token keyword">for</span> i <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>summations<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+            <span class="token keyword">if</span> summations<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token keyword">in</span> d<span class="token punctuation">:</span>
+                ans <span class="token operator">=</span> <span class="token builtin">max</span><span class="token punctuation">(</span>ans<span class="token punctuation">,</span> i <span class="token operator">-</span> d<span class="token punctuation">[</span>summations<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+            <span class="token keyword">else</span><span class="token punctuation">:</span>
+                d<span class="token punctuation">[</span>summations<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">]</span> <span class="token operator">=</span> i
+        <span class="token keyword">return</span> ans<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="leetcode-3129.-找出所有稳定的二进制数组-i">LeetCode 3129.
+找出所有稳定的二进制数组 I</h2>
+<p>给你 3 个正整数 zero ，one 和 limit 。</p>
+<p>一个 二进制数组 arr 如果满足以下条件，那么我们称它是 稳定的 ：</p>
+<p>0 在 arr 中出现次数 恰好 为 zero 。 1 在 arr 中出现次数 恰好 为 one
+。 arr 中每个长度超过 limit 的 子数组 都 同时 包含 0 和 1 。 请你返回
+稳定 二进制数组的 总 数目。</p>
+<p>由于答案可能很大，将它对 109 + 7 取余 后返回。</p>
+<p>示例 1：</p>
+<p>输入：zero = 1, one = 1, limit = 2</p>
+<p>输出：2</p>
+<p>解释：</p>
+<p>两个稳定的二进制数组为 [1,0] 和 [0,1] ，两个数组都有一个 0 和一个 1
+，且没有子数组长度大于 2 。</p>
+<p>示例 2：</p>
+<p>输入：zero = 1, one = 2, limit = 1</p>
+<p>输出：1</p>
+<p>解释：</p>
+<p>唯一稳定的二进制数组是 [1,0,1] 。</p>
+<p>二进制数组 [1,1,0] 和 [0,1,1] 都有长度为 2
+且元素全都相同的子数组，所以它们不稳定。</p>
+<p>示例 3：</p>
+<p>输入：zero = 3, one = 3, limit = 2</p>
+<p>输出：14</p>
+<p>解释：</p>
+<p>所有稳定的二进制数组包括 [0,0,1,0,1,1] ，[0,0,1,1,0,1]
+，[0,1,0,0,1,1] ，[0,1,0,1,0,1] ，[0,1,0,1,1,0] ，[0,1,1,0,0,1]
+，[0,1,1,0,1,0] ，[1,0,0,1,0,1] ，[1,0,0,1,1,0] ，[1,0,1,0,0,1]
+，[1,0,1,0,1,0] ，[1,0,1,1,0,0] ，[1,1,0,0,1,0] 和 [1,1,0,1,0,0] 。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">```
+
+<span class="token operator">-</span><span class="token operator">-</span><span class="token operator">-</span>
+
+<span class="token comment"># 付费题</span>
+
+<span class="token comment">## LeetCode 1056 - 易混淆数</span>
+
+<span class="token operator">**</span>原题描述：<span class="token operator">**</span> 判断旋转 <span class="token number">180</span>° 后是否得到有效且不同的数。<span class="token number">0</span>→<span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span>→<span class="token number">1</span><span class="token punctuation">,</span><span class="token number">6</span>→<span class="token number">9</span><span class="token punctuation">,</span><span class="token number">8</span>→<span class="token number">8</span><span class="token punctuation">,</span><span class="token number">9</span>→<span class="token number">6</span>，其他无效。
+
+<span class="token operator">**</span>解法：<span class="token operator">**</span> 建立映射，将数字翻转并逐位转换，检查是否有效且与原数不同。
+
+```python
+<span class="token keyword">def</span> <span class="token function">confusingNumber</span><span class="token punctuation">(</span>n<span class="token punctuation">:</span> <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">bool</span><span class="token punctuation">:</span>
     m <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token number">0</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">:</span> <span class="token number">9</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">:</span> <span class="token number">8</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">:</span> <span class="token number">6</span><span class="token punctuation">&#125;</span>
     x<span class="token punctuation">,</span> orig <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">,</span> n
     <span class="token keyword">while</span> n<span class="token punctuation">:</span>
@@ -2471,7 +2654,7 @@ min、max。</p>
             <span class="token keyword">return</span> <span class="token boolean">False</span>
         x <span class="token operator">=</span> x <span class="token operator">*</span> <span class="token number">10</span> <span class="token operator">+</span> m<span class="token punctuation">[</span>d<span class="token punctuation">]</span>
         n <span class="token operator">//=</span> <span class="token number">10</span>
-    <span class="token keyword">return</span> x <span class="token operator">!=</span> orig<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+    <span class="token keyword">return</span> x <span class="token operator">!=</span> orig<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <hr>
 <h2 id="leetcode-1427---字符串的左右移">LeetCode 1427 -
 字符串的左右移</h2>
@@ -2999,7 +3182,7 @@ q.popleft()  # 用法和list类似
 <h2 id="技巧">技巧</h2>
 <h3 id="快速的矩阵转置方法">快速的矩阵转置方法</h3>
 <pre class="line-numbers language-python" data-language="python"><code class="language-python">mat_t <span class="token operator">=</span> <span class="token builtin">zip</span><span class="token punctuation">(</span><span class="token operator">*</span>mat<span class="token punctuation">)</span>  <span class="token comment"># 将mat转置的方法</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<h3 id="zip解释">zip解释</h3>
+<h4 id="zip解释">zip解释</h4>
 <p><code>zip</code> 是 Python
 中一个非常强大且常用的内置函数，用来<strong>将多个可迭代对象"压缩"在一起</strong>。</p>
 <p>基本用法：</p>
@@ -3071,6 +3254,79 @@ nums<span class="token punctuation">,</span> letters <span class="token operator
 </tr>
 </tbody>
 </table>
+<h3 id="进制转换">进制转换</h3>
+<p>二进制字符串转十进制：在Python中，将二进制字符串转换为整数（int）的最简单方法是使用内置的
+int() 函数，并将基数（base）参数设置为 2。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">binary_str <span class="token operator">=</span> <span class="token string">"1101"</span>
+decimal_int <span class="token operator">=</span> <span class="token builtin">int</span><span class="token punctuation">(</span>binary_str<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>decimal_int<span class="token punctuation">)</span>  <span class="token comment"># 输出: 13</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>int转二进制字符串:</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">num <span class="token operator">=</span> <span class="token number">10</span>
+
+<span class="token comment"># 1. 使用 bin() 函数 (结果为 '0b1010')</span>
+bin_str1 <span class="token operator">=</span> <span class="token builtin">bin</span><span class="token punctuation">(</span>num<span class="token punctuation">)</span> 
+<span class="token comment"># 去除 '0b' 前缀: '1010'</span>
+bin_str1_clean <span class="token operator">=</span> <span class="token builtin">bin</span><span class="token punctuation">(</span>num<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">:</span><span class="token punctuation">]</span> 
+
+<span class="token comment"># 2. 使用 format() 函数 (直接得到 '1010')</span>
+bin_str2 <span class="token operator">=</span> <span class="token builtin">format</span><span class="token punctuation">(</span>num<span class="token punctuation">,</span> <span class="token string">'b'</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 3. 使用 f-string (直接得到 '1010')</span>
+bin_str3 <span class="token operator">=</span> <span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">&#123;</span>num<span class="token punctuation">:</span><span class="token format-spec">b</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span>
+
+<span class="token comment"># 4. 补齐位数的二进制 (例如 8 位: '00001010')</span>
+bin_str4 <span class="token operator">=</span> <span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">&#123;</span>num<span class="token punctuation">:</span><span class="token format-spec">08b</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="accumulate">accumulate</h3>
+<p>参考<a target="_blank" rel="noopener" href="https://gairuo.com/p/python-itertools-accumulate">https://gairuo.com/p/python-itertools-accumulate</a></p>
+<p>itertools.accumulate() 是 Python 中 itertools
+模块提供的一个函数，用于创建一个迭代器，该迭代器对输入的可迭代对象中的元素进行累积操作。默认情况下，累积操作是指将前一个元素与当前元素应用某个二元函数，并将结果作为下一个元素输出。</p>
+<p>语法为 itertools.accumulate(iterable[, func, *,
+initial=None])，与类似函数 functools.reduce()
+机制差不多，但它不返回一个最终累积值，而是把累积的过程结果形成一个可迭代对象，可以理解这个序列里的内容是计算过程。</p>
+<p>大致相当于：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">def</span> <span class="token function">accumulate</span><span class="token punctuation">(</span>iterable<span class="token punctuation">,</span> func<span class="token operator">=</span>operator<span class="token punctuation">.</span>add<span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">,</span> initial<span class="token operator">=</span><span class="token boolean">None</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token string">'Return running totals'</span>
+    <span class="token comment"># accumulate([1,2,3,4,5]) --> 1 3 6 10 15</span>
+    <span class="token comment"># accumulate([1,2,3,4,5], initial=100) --> 100 101 103 106 110 115</span>
+    <span class="token comment"># accumulate([1,2,3,4,5], operator.mul) --> 1 2 6 24 120</span>
+    it <span class="token operator">=</span> <span class="token builtin">iter</span><span class="token punctuation">(</span>iterable<span class="token punctuation">)</span>
+    total <span class="token operator">=</span> initial
+    <span class="token keyword">if</span> initial <span class="token keyword">is</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+        <span class="token keyword">try</span><span class="token punctuation">:</span>
+            total <span class="token operator">=</span> <span class="token builtin">next</span><span class="token punctuation">(</span>it<span class="token punctuation">)</span>
+        <span class="token keyword">except</span> StopIteration<span class="token punctuation">:</span>
+            <span class="token keyword">return</span>
+    <span class="token keyword">yield</span> total
+    <span class="token keyword">for</span> element <span class="token keyword">in</span> it<span class="token punctuation">:</span>
+        total <span class="token operator">=</span> func<span class="token punctuation">(</span>total<span class="token punctuation">,</span> element<span class="token punctuation">)</span>
+        <span class="token keyword">yield</span> total<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>例如：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token operator">>></span><span class="token operator">></span> data <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">7</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">]</span>
+<span class="token operator">>></span><span class="token operator">></span> <span class="token builtin">list</span><span class="token punctuation">(</span>accumulate<span class="token punctuation">(</span>data<span class="token punctuation">,</span> operator<span class="token punctuation">.</span>mul<span class="token punctuation">)</span><span class="token punctuation">)</span>     <span class="token comment"># running product</span>
+<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">12</span><span class="token punctuation">,</span> <span class="token number">72</span><span class="token punctuation">,</span> <span class="token number">144</span><span class="token punctuation">,</span> <span class="token number">144</span><span class="token punctuation">,</span> <span class="token number">1296</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">]</span>
+<span class="token operator">>></span><span class="token operator">></span> <span class="token builtin">list</span><span class="token punctuation">(</span>accumulate<span class="token punctuation">(</span>data<span class="token punctuation">,</span> <span class="token builtin">max</span><span class="token punctuation">)</span><span class="token punctuation">)</span>              <span class="token comment"># running maximum</span>
+<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">]</span>
+
+<span class="token comment"># Amortize a 5% loan of 1000 with 4 annual payments of 90</span>
+<span class="token operator">>></span><span class="token operator">></span> cashflows <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token number">1000</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">90</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">90</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">90</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">90</span><span class="token punctuation">]</span>
+<span class="token operator">>></span><span class="token operator">></span> <span class="token builtin">list</span><span class="token punctuation">(</span>accumulate<span class="token punctuation">(</span>cashflows<span class="token punctuation">,</span> <span class="token keyword">lambda</span> bal<span class="token punctuation">,</span> pmt<span class="token punctuation">:</span> bal<span class="token operator">*</span><span class="token number">1.05</span> <span class="token operator">+</span> pmt<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">[</span><span class="token number">1000</span><span class="token punctuation">,</span> <span class="token number">960.0</span><span class="token punctuation">,</span> <span class="token number">918.0</span><span class="token punctuation">,</span> <span class="token number">873.9000000000001</span><span class="token punctuation">,</span> <span class="token number">827.5950000000001</span><span class="token punctuation">]</span>
+
+<span class="token comment"># Chaotic recurrence relation https://en.wikipedia.org/wiki/Logistic_map</span>
+<span class="token operator">>></span><span class="token operator">></span> logistic_map <span class="token operator">=</span> <span class="token keyword">lambda</span> x<span class="token punctuation">,</span> <span class="token keyword">_</span><span class="token punctuation">:</span>  r <span class="token operator">*</span> x <span class="token operator">*</span> <span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">-</span> x<span class="token punctuation">)</span>
+<span class="token operator">>></span><span class="token operator">></span> r <span class="token operator">=</span> <span class="token number">3.8</span>
+<span class="token operator">>></span><span class="token operator">></span> x0 <span class="token operator">=</span> <span class="token number">0.4</span>
+<span class="token operator">>></span><span class="token operator">></span> inputs <span class="token operator">=</span> repeat<span class="token punctuation">(</span>x0<span class="token punctuation">,</span> <span class="token number">36</span><span class="token punctuation">)</span>     <span class="token comment"># 仅使用初始值</span>
+<span class="token operator">>></span><span class="token operator">></span> <span class="token punctuation">[</span><span class="token builtin">format</span><span class="token punctuation">(</span>x<span class="token punctuation">,</span> <span class="token string">'.2f'</span><span class="token punctuation">)</span> <span class="token keyword">for</span> x <span class="token keyword">in</span> accumulate<span class="token punctuation">(</span>inputs<span class="token punctuation">,</span> logistic_map<span class="token punctuation">)</span><span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token string">'0.40'</span><span class="token punctuation">,</span> <span class="token string">'0.91'</span><span class="token punctuation">,</span> <span class="token string">'0.30'</span><span class="token punctuation">,</span> <span class="token string">'0.81'</span><span class="token punctuation">,</span> <span class="token string">'0.60'</span><span class="token punctuation">,</span> <span class="token string">'0.92'</span><span class="token punctuation">,</span> <span class="token string">'0.29'</span><span class="token punctuation">,</span> <span class="token string">'0.79'</span><span class="token punctuation">,</span> <span class="token string">'0.63'</span><span class="token punctuation">,</span>
+ <span class="token string">'0.88'</span><span class="token punctuation">,</span> <span class="token string">'0.39'</span><span class="token punctuation">,</span> <span class="token string">'0.90'</span><span class="token punctuation">,</span> <span class="token string">'0.33'</span><span class="token punctuation">,</span> <span class="token string">'0.84'</span><span class="token punctuation">,</span> <span class="token string">'0.52'</span><span class="token punctuation">,</span> <span class="token string">'0.95'</span><span class="token punctuation">,</span> <span class="token string">'0.18'</span><span class="token punctuation">,</span> <span class="token string">'0.57'</span><span class="token punctuation">,</span>
+ <span class="token string">'0.93'</span><span class="token punctuation">,</span> <span class="token string">'0.25'</span><span class="token punctuation">,</span> <span class="token string">'0.71'</span><span class="token punctuation">,</span> <span class="token string">'0.79'</span><span class="token punctuation">,</span> <span class="token string">'0.63'</span><span class="token punctuation">,</span> <span class="token string">'0.88'</span><span class="token punctuation">,</span> <span class="token string">'0.39'</span><span class="token punctuation">,</span> <span class="token string">'0.91'</span><span class="token punctuation">,</span> <span class="token string">'0.32'</span><span class="token punctuation">,</span>
+ <span class="token string">'0.83'</span><span class="token punctuation">,</span> <span class="token string">'0.54'</span><span class="token punctuation">,</span> <span class="token string">'0.95'</span><span class="token punctuation">,</span> <span class="token string">'0.20'</span><span class="token punctuation">,</span> <span class="token string">'0.60'</span><span class="token punctuation">,</span> <span class="token string">'0.91'</span><span class="token punctuation">,</span> <span class="token string">'0.30'</span><span class="token punctuation">,</span> <span class="token string">'0.80'</span><span class="token punctuation">,</span> <span class="token string">'0.60'</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h2 id="概念">概念</h2>
+<h3 id="前缀树trie树字典树">前缀树，Trie树，字典树</h3>
+<p><a target="_blank" rel="noopener" href="https://oi-wiki.org/string/trie/#__tabbed_1_2">OI
+Wiki</a></p>
 
     </div>
 
@@ -3141,13 +3397,13 @@ nums<span class="token punctuation">,</span> letters <span class="token operator
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">839k</span>
+    <span title="站点总字数">858k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">25:25</span>
+    <span title="站点阅读时长">26:01</span>
   </span>
 </div>
 <div class="busuanzi-count">
