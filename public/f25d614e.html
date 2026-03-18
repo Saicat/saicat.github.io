@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Muon的全称是MomentUm Orthogonalized by Newton-schulz。 AdamW的问题 对于Transformer模型，大部分待优化的参数都是以矩阵的形式存在。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Muon优化器">
+<meta property="og:url" content="https://saicat.github.io/f25d614e.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="Muon的全称是MomentUm Orthogonalized by Newton-schulz。 AdamW的问题 对于Transformer模型，大部分待优化的参数都是以矩阵的形式存在。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
+<meta property="og:image" content="https://saicat.github.io/images/wechat.png">
+<meta property="article:published_time" content="2026-03-12T14:45:02.000Z">
+<meta property="article:modified_time" content="2026-03-18T11:55:57.032Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/images/qrcode.jpg">
+
+
+<link rel="canonical" href="https://saicat.github.io/f25d614e.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/f25d614e.html","path":"f25d614e.html","title":"Muon优化器"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Muon优化器 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊AI技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#adamw%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">AdamW的问题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%A2%AF%E5%BA%A6%E7%9F%A9%E9%98%B5%E7%9A%84%E4%BD%8E%E7%A7%A9"><span class="nav-number">2.</span> <span class="nav-text">梯度矩阵的低秩</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#condition-number%E7%9F%A9%E9%98%B5%E7%9A%84%E7%97%85%E6%80%81%E7%A8%8B%E5%BA%A6"><span class="nav-number">2.1.</span> <span class="nav-text">Condition
+Number：矩阵的&quot;病态程度&quot;</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#muon-%E7%9A%84%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3%E8%B0%B1%E5%9D%87%E8%A1%A1%E5%8C%96spectral-whitening"><span class="nav-number">3.</span> <span class="nav-text">Muon
+的核心思想——谱均衡化（Spectral Whitening）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#newton-schulz-%E8%BF%AD%E4%BB%A3%E9%AB%98%E6%95%88%E5%AE%9E%E7%8E%B0%E4%B8%8E%E7%B3%BB%E6%95%B0%E4%BC%98%E5%8C%96"><span class="nav-number">4.</span> <span class="nav-text">Newton-Schulz
+迭代——高效实现与系数优化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E7%94%A8-svd"><span class="nav-number">4.1.</span> <span class="nav-text">为什么不用 SVD？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ns-%E8%BF%AD%E4%BB%A3%E7%9A%84%E6%95%B0%E5%AD%A6%E5%8E%9F%E7%90%86%E4%B8%8E%E7%B3%BB%E6%95%B0%E6%9D%A5%E6%BA%90"><span class="nav-number">4.2.</span> <span class="nav-text">NS 迭代的数学原理与系数来源</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#marchenko-pastur-%E5%88%86%E5%B8%83%E9%9A%8F%E6%9C%BA%E7%9F%A9%E9%98%B5%E7%9A%84%E6%99%AE%E9%80%82%E5%88%86%E5%B8%83"><span class="nav-number">4.3.</span> <span class="nav-text">Marchenko-Pastur
+分布：随机矩阵的&quot;普适分布&quot;</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#preconditioning%E6%8A%8A%E6%89%81%E5%B1%B1%E8%B0%B7%E5%8F%98%E6%88%90%E5%9C%86%E5%B1%B1%E8%B0%B7"><span class="nav-number">4.3.1.</span> <span class="nav-text">Preconditioning：把&quot;扁山谷&quot;变成&quot;圆山谷&quot;</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BC%A9%E6%94%BE%E5%9B%A0%E5%AD%90%E4%BB%8E%E5%88%9D%E5%A7%8B%E5%8C%96%E5%88%B0%E6%9B%B4%E6%96%B0%E5%B0%BA%E5%BA%A6"><span class="nav-number">5.</span> <span class="nav-text">缩放因子：从初始化到更新尺度</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E5%88%9D%E5%A7%8B%E5%8C%96%E8%A6%81%E7%BC%A9%E6%94%BExavierkaiming%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">5.1.</span> <span class="nav-text">为什么初始化要缩放？（Xavier&#x2F;Kaiming初始化）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%B1%E8%8C%83%E6%95%B0spectral-norm%E4%B8%8E%E7%9F%A9%E9%98%B5%E5%BD%A2%E7%8A%B6"><span class="nav-number">5.2.</span> <span class="nav-text">谱范数（Spectral
+Norm）与矩阵形状</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#msign-%E7%A0%B4%E5%9D%8F%E4%BA%86%E5%B0%BA%E5%BA%A6%E5%85%B3%E7%B3%BB"><span class="nav-number">5.3.</span> <span class="nav-text">msign 破坏了尺度关系</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#kellerjordan-%E7%BC%A9%E6%94%BE%E6%81%A2%E5%A4%8D-jacobian-%E4%B8%80%E8%87%B4%E6%80%A7"><span class="nav-number">5.4.</span> <span class="nav-text">KellerJordan 缩放：恢复
+Jacobian 一致性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#moonlight-%E7%BC%A9%E6%94%BE%E4%B8%8E-adamw-%E7%9A%84-update-rms-%E5%AF%B9%E9%BD%90"><span class="nav-number">5.5.</span> <span class="nav-text">Moonlight 缩放：与
+AdamW 的 Update RMS 对齐</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B7%B7%E5%90%88%E4%BD%BF%E7%94%A8"><span class="nav-number">6.</span> <span class="nav-text">混合使用</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%8C%E6%95%B4%E9%85%8D%E7%BD%AE%E8%84%9A%E6%9C%AC"><span class="nav-number">6.1.</span> <span class="nav-text">完整配置脚本</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B3%E4%BA%8Espectral-norm"><span class="nav-number">8.</span> <span class="nav-text">*关于Spectral Norm</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">9.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">83</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/f25d614e.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Muon优化器 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Muon优化器
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-03-12 22:45:02" itemprop="dateCreated datePublished" datetime="2026-03-12T22:45:02+08:00">2026-03-12</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-03-18 19:55:57" itemprop="dateModified" datetime="2026-03-18T19:55:57+08:00">2026-03-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>12k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>23 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>Muon的全称是MomentUm Orthogonalized by Newton-schulz。</p>
+<h1 id="adamw的问题">AdamW的问题</h1>
+<p>对于Transformer模型，大部分待优化的参数都是以矩阵的形式存在。</p>
+<p>而Adam优化器的对模型参数的更新是element-wise的，也就是每个参数单独更新。回想一下，Adam里的每个参数有自己的一阶动量二阶动量：</p>
+<p><span class="math display">\[
+\begin{aligned}
+m_t &amp;= β_1 \cdot m_{t-1} + (1-β_1) \cdot g_t \\
+v_t &amp;= β_2 \cdot v_{t-1} + (1-β_2) \cdot g_t^2 \\
+\hat{m}_t &amp;= \frac{m_t}{1-β_1^t}, \quad \hat{v}_t =
+\frac{v_t}{1-β_2^t} \\
+θ_{t+1} &amp;= θ_t - \frac{η}{\sqrt{\hat{v}_t} + ϵ} \hat{m}_t
+\end{aligned}
+\]</span></p>
+<p>但是各个参数之间的更新却没有关联。</p>
+<p>苏神在分析Muon的博客里从多个角度进行了分析，大致来说，就是element-wise的更新方式忽略了矩阵参数的结构特性：</p>
+<ul>
+<li>比如矩阵的对角线元素和非对角线元素地位不对等<br>
+</li>
+<li>矩阵乘法涉及的行空间和列空间有特定几何关系</li>
+</ul>
+<p>因此简单地按元素处理，无法区分优化的"重要方向"和"次要方向"。</p>
+<p>再理解一下：在 AdamW 的 element-wise
+视角中，'重要'仅仅由梯度绝对值大小决定。但苏神指出，从矩阵几何视角，奇异值大的方向（主导方向）和奇异值小的方向（稀有方向）都应被平等对待——因为后者往往对应着数据中的稀有模式或细粒度特征。</p>
+<p>从这个角度，个人想法：训练数据本身就极可能是分布不均衡的：常见模式和稀有模式的比例差异很大，而如果鼓励平等对待所有模式，那么就可能对训练数据的质量提出了更高的要求，因为这种情况下一旦引入噪音或者错误数据（错误的稀有模式），被Muon跟主流末流一视同仁，就会对训练效果影响更大。</p>
+<h1 id="梯度矩阵的低秩">梯度矩阵的低秩</h1>
+<p>AdamW在过去几年一直是最主流的优化器，甚至是唯一的选择。但是使用AdamW训练的模型，梯度矩阵却都展现出低秩的特性。实际上（训练后期）梯度矩阵的低秩特性，正是LoRA可行的理论基础：在增量训练中，梯度矩阵的秩很低，因此干脆只更新一个增量的低秩矩阵即可。</p>
+<p>一些其他的文献也有提到相关的观察，比如：</p>
+<ol type="1">
+<li>《Gradients are Not All You Need》 (2021，Google Research 团队)
+发现：在大型 Transformer 中，梯度矩阵的数值秩（numerical
+rank）通常只有名义维度的
+1-10%。一个2048*2048的矩阵，有效秩可能只有200或者20甚至更少。这是实际情况的观察。<br>
+</li>
+<li>《On the Low-Rank Structure of Gradient Matrices in Deep
+Learning》：发现：越深层，梯度的秩越低（直观理解，深层的特征更抽象，抽象的特征就更稀疏）；训练初期秩较高，后期迅速降低（比如LLM的输出分类，大部分的概率都集中在top10或者top50，其他大量类别在数值上都是接近0）。这个也是实际观察到的情况。<br>
+</li>
+<li>《Large Batch Optimization of Deep Neural
+Networks》：这篇论文里提到大batch
+size导致梯度协方差矩阵的低秩近似更粗糙，解释了为什么大批量容易陷入 sharp
+minima。怎么理解呢？小 batch
+的梯度噪声具有'正则化'效果：噪声掩盖了真实梯度的极端低秩结构，使得优化轨迹在各方向上相对分散，客观上起到了探索更广参数空间的作用，使得秩相对真实的梯度矩阵更高，缓解了梯度更新过于集中的问题，也就是搜索的范围更广，更不容易陷入局部最优；而大
+batch
+下，噪声减小，真实梯度的病态低秩结构暴露无遗，优化器被迫在极度狭窄的子空间内更新，容易陷入
+sharp minima。</li>
+</ol>
+<h2 id="condition-number矩阵的病态程度">Condition
+Number：矩阵的"病态程度"</h2>
+<p>Condition Number（通常记作 <span class="math inline">\(\kappa\)</span>）衡量的是矩阵在各个方向上的"不均衡程度"或"病态程度"。它表示"矩阵的健康程度"——condition越好（数值越小），矩阵越容易处理；条件越差（数值越大），数值计算越困难。</p>
+<p>直观理解：想象你在一个山谷中寻找最低点（优化损失函数）：</p>
+<ul>
+<li>低条件数（<span class="math inline">\(\kappa \approx
+1\)</span>）：山谷是圆形的，往哪个方向走都一样容易，一步就能找到谷底<br>
+</li>
+<li>高条件数（<span class="math inline">\(\kappa \gg
+1\)</span>）：山谷是极扁的椭圆形，沿长轴走很慢，沿短轴走会来回震荡，优化困难</li>
+</ul>
+<p>数学定义：</p>
+<p><span class="math display">\[\kappa =
+\frac{\sigma_{\max}}{\sigma_{\min}} =
+\frac{\text{最大奇异值}}{\text{最小奇异值}}\]</span></p>
+<p>梯度矩阵的低秩意味着 <span class="math inline">\(\sigma_{\min}
+\approx 0\)</span>，因此 <span class="math inline">\(\kappa \to
+\infty\)</span>（极度病态）。AdamW
+试图在这个"极度压扁"的空间里寻找方向，就容易导致某些方向更新过度，某些方向更新不足。</p>
+<h1 id="muon-的核心思想谱均衡化spectral-whitening">Muon
+的核心思想——谱均衡化（Spectral Whitening）</h1>
+<p>面对 AdamW 无法处理梯度低秩的困境，Muon
+的核心洞察是：既然梯度矩阵的病态性来源于奇异值（singular
+values）的极端不均衡，那么干脆丢弃奇异值的大小信息，只保留方向信息。</p>
+<p>想象你在一个极度扭曲的山谷中行走（loss landscape）：</p>
+<ul>
+<li>AdamW：按照坡度最陡的方向走，但山谷在某些方向极其狭窄（陡峭），某些方向极其平坦。你很容易被困在狭窄的沟壑里，来回震荡，而看不到旁边宽阔的平原。<br>
+</li>
+<li>Muon：先把山谷"拉平"——不管原本多陡或多平，都统一成 45
+度坡。这样你每一步在各个方向上走的距离是一样的，不会在某个方向走太多，也不会在另一个方向走太少。</li>
+</ul>
+<p>数学上，对于 SGD-momentum 累积的动量矩阵 <span class="math inline">\(M \in \mathbb{R}^{n \times m}\)</span>，首先考虑其
+SVD 分解：</p>
+<p><span class="math display">\[M = U \Sigma V^\top = \sum_{i=1}^r
+\sigma_i u_i v_i^\top\]</span></p>
+<p>其中 <span class="math inline">\(\sigma_1 \geq \sigma_2 \geq \dots
+\geq \sigma_r\)</span> 是奇异值，<span class="math inline">\(u_i\)</span> 和 <span class="math inline">\(v_i\)</span> 分别是左、右奇异向量。AdamW
+的更新量正比于 <span class="math inline">\(M\)</span>，意味着 <span class="math inline">\(\sigma_1\)</span>
+对应的方向（主导方向）获得最大更新幅度，而 <span class="math inline">\(\sigma_r\)</span>
+方向（稀有方向）几乎被数值忽略——这就是"富者愈富，穷者愈穷"的马太效应。</p>
+<p>Muon 定义的msign（matrix sign function）为：</p>
+<p><span class="math display">\[\text{msign}(M) = UV^\top = \sum_{i=1}^r
+u_i v_i^\top\]</span></p>
+<p>这相当于将所有奇异值强制置为 1，实现各向同性更新（isotropic
+update）。从几何上看，如果原始动量 <span class="math inline">\(M\)</span>
+将一个单位球映射为一个极度扁平的椭球（条件数 <span class="math inline">\(\kappa \gg 1\)</span>），那么 <span class="math inline">\(\text{msign}(M)\)</span>
+将其映射为一个正交归一的球体，在所有方向上给予同等的更新幅度。</p>
+<p>关键性质：</p>
+<ul>
+<li><span class="math inline">\(\text{msign}(M)\)</span> 是 <span class="math inline">\(M\)</span> 的最优正交近似：<span class="math inline">\(\arg\min_{O^\top O=I} \|M - O\|_F\)</span><br>
+</li>
+<li>对于正定矩阵，<span class="math inline">\(\text{msign}(M) =
+(MM^\top)^{-1/2}M = M(M^\top M)^{-1/2}\)</span></li>
+</ul>
+<p>直观理解：如果 <span class="math inline">\(M\)</span>
+是一个"压扁的椭球"，<span class="math inline">\(\text{msign}(M)\)</span>
+就是"同样方向但压成球"的版本。</p>
+<h1 id="newton-schulz-迭代高效实现与系数优化">Newton-Schulz
+迭代——高效实现与系数优化</h1>
+<p>直接用 SVD 计算 <span class="math inline">\(UV^\top\)</span>
+的复杂度为 <span class="math inline">\(O(\min(nm^2,
+n^2m))\)</span>，每步优化都做一次 SVD 对训练开销不小。因此 Muon
+采用Newton-Schulz（NS）迭代来近似 <span class="math inline">\(\text{msign}(M)\)</span>。</p>
+<h2 id="为什么不用-svd">为什么不用 SVD？</h2>
+<ul>
+<li>计算成本：SVD 需要 <span class="math inline">\(O(n^3)\)</span>
+迭代，无法利用 GPU 的矩阵乘法优化（matrix multiplication 是 GPU
+的强项，SVD 不是）<br>
+</li>
+<li>精度要求：SVD 通常需要 float32 精度以保证数值稳定性，而 NS
+迭代可以在 bfloat16 下稳定运行（这应该是一个比较重要的点）</li>
+<li>内存占用：SVD 需要存储中间矩阵 <span class="math inline">\(U,
+\Sigma, V\)</span></li>
+</ul>
+<h2 id="ns-迭代的数学原理与系数来源">NS 迭代的数学原理与系数来源</h2>
+<p>目标：计算 <span class="math inline">\(X =
+(MM^\top)^{-1/2}M\)</span>，即 <span class="math inline">\(M\)</span>
+的"逆平方根"形式。</p>
+<p>思路来源：对于标量 <span class="math inline">\(x\)</span>，<span class="math inline">\(\text{sign}(x) = x / \sqrt{x^2} = x \cdot
+(x^2)^{-1/2}\)</span>。矩阵版本就是：</p>
+<p><span class="math display">\[\text{msign}(M) = M(M^\top
+M)^{-1/2}\]</span></p>
+<p>标准 NS 迭代源于对 <span class="math inline">\(f(t) =
+t^{-1/2}\)</span> 在 <span class="math inline">\(t=1\)</span> 处的
+Taylor 展开：</p>
+<p><span class="math display">\[t^{-1/2} \approx \frac{15 - 10t +
+3t^2}{8}\]</span></p>
+<p>这给出理论系数 <span class="math inline">\((a, b, c) = (1.875, -1.25,
+0.375)\)</span>。但 Keller Jordan
+发现这个系数收敛太慢，需要数十步才能稳定。</p>
+<p>实际系数的优化过程（针对 Marchenko-Pastur 分布）：</p>
+<p>设单个奇异值的迭代函数为：</p>
+<p><span class="math display">\[\varphi(x) = x + \kappa x(x^2 -
+x_1^2)(x^2 - x_2^2)\]</span></p>
+<p>其中 <span class="math inline">\(x_1 &lt; 1 &lt; x_2\)</span>
+是不动点。通过网格搜索（Grid Search）或梯度下降优化 <span class="math inline">\((\kappa, x_1, x_2)\)</span>，使得在固定 <span class="math inline">\(T=5\)</span> 步内，最小化： <span class="math display">\[\mathbb{E}_{\sigma \sim
+\text{MP分布}}[(\varphi^T(\sigma) - 1)^2]\]</span></p>
+<p>优化后的系数牺牲了对所有 <span class="math inline">\(\sigma \in
+[0,1]\)</span> 的均匀收敛性，换取了对常见梯度分布（Marchenko-Pastur
+分布）的快速收敛。实际 5 步后，奇异值收敛到 <span class="math inline">\(U[0.5, 1.5]\)</span> 而非精确的
+1，但这在实践中不影响模型性能。</p>
+<p>实际使用的经验优化系数 <span class="math inline">\((3.4445, -4.7750,
+2.0315)\)</span> 是针对 square matrix 和 <span class="math inline">\(T=5\)</span> 的近似最优解。</p>
+<p>PyTorch 实现代码（from Kimi）：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">def</span> <span class="token function">zeropower_via_newtonschulz</span><span class="token punctuation">(</span>G<span class="token punctuation">,</span> steps<span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">,</span> eps<span class="token operator">=</span><span class="token number">1e-7</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""
+    计算矩阵 G 的零次幂（即正交化）
+    返回近似 UV^T
+    """</span>
+    <span class="token keyword">assert</span> G<span class="token punctuation">.</span>ndim <span class="token operator">==</span> <span class="token number">2</span>
+    a<span class="token punctuation">,</span> b<span class="token punctuation">,</span> c <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token number">3.4445</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">4.7750</span><span class="token punctuation">,</span> <span class="token number">2.0315</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># 使用 bfloat16 加速，且 NS 迭代在此精度下数值稳定</span>
+    X <span class="token operator">=</span> G<span class="token punctuation">.</span>bfloat16<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># 归一化，确保最大奇异值 &lt;= 1</span>
+    X <span class="token operator">/=</span> <span class="token punctuation">(</span>X<span class="token punctuation">.</span>norm<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> eps<span class="token punctuation">)</span>
+    
+    <span class="token comment"># 如果行数 > 列数，转置以减小计算量（因为计算 X @ X.T）</span>
+    transpose <span class="token operator">=</span> G<span class="token punctuation">.</span>size<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">></span> G<span class="token punctuation">.</span>size<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> transpose<span class="token punctuation">:</span>
+        X <span class="token operator">=</span> X<span class="token punctuation">.</span>T
+    
+    <span class="token comment"># NS 迭代</span>
+    <span class="token keyword">for</span> _ <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>steps<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        A <span class="token operator">=</span> X @ X<span class="token punctuation">.</span>T           <span class="token comment"># X X^T</span>
+        B <span class="token operator">=</span> b <span class="token operator">*</span> A <span class="token operator">+</span> c <span class="token operator">*</span> A @ A  <span class="token comment"># 多项式中间项</span>
+        X <span class="token operator">=</span> a <span class="token operator">*</span> X <span class="token operator">+</span> B @ X      <span class="token comment"># 更新</span>
+    
+    <span class="token keyword">if</span> transpose<span class="token punctuation">:</span>
+        X <span class="token operator">=</span> X<span class="token punctuation">.</span>T
+    
+    <span class="token keyword">return</span> X<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h2 id="marchenko-pastur-分布随机矩阵的普适分布">Marchenko-Pastur
+分布：随机矩阵的"普适分布"</h2>
+<p>在讨论 Newton-Schulz
+迭代系数优化时，我们提到了Marchenko-Pastur（MP）分布。这是随机矩阵理论中的一个核心结果，描述的是大随机矩阵的奇异值会呈现什么样的统计分布。</p>
+<p>想象你有一个巨大的矩阵，里面的每个元素都是独立随机采样的（比如从高斯分布
+<span class="math inline">\(\mathcal{N}(0,1)\)</span>
+中随机抽取）。当你计算这个矩阵的奇异值（SVD）时，这些奇异值不会均匀分布，而是中间高两边低，而且是有偏的（MP分布）。</p>
+<p>在深度学习中的体现：</p>
+<ul>
+<li>大的梯度矩阵（特别是训练初期或随机初始化时）的奇异值近似服从 MP
+分布<br>
+</li>
+<li>训练后期，由于低秩结构的出现，大奇异值会"跳出" MP
+边界（outliers），形成几个很大的奇异值，其余集中在 0 附近</li>
+</ul>
+<p>这就是为什么 NS 迭代的系数要针对 MP
+分布优化——针对最常见、最自然的梯度分布进行优化。</p>
+<h3 id="preconditioning把扁山谷变成圆山谷">Preconditioning：把"扁山谷"变成"圆山谷"</h3>
+<p>在理解 Muon 和 Shampoo 之前，先理解Preconditioning。</p>
+<p>核心思想：通过坐标变换，把病态的优化问题（高条件数）转化为良态的问题（条件数接近
+1）。</p>
+<p>类比：你有一张被压扁的橡皮泥（梯度矩阵），某些方向被压缩了 1000
+倍，某些方向被拉伸了 1000
+倍。预条件化就是把它重新捏成标准的球体，让各个方向尺度一致。</p>
+<p>数学操作：</p>
+<p>对于梯度 <span class="math inline">\(G\)</span>，预条件化更新为 <span class="math inline">\(\Delta W = P^{-1} G\)</span>，其中 <span class="math inline">\(P\)</span> 是Preconditioner。理想情况下 <span class="math inline">\(P\)</span> 应该接近 Hessian
+矩阵，但计算太贵。Shampoo 和 Muon 都在寻找计算可行且有效的预条件子。</p>
+<h1 id="缩放因子从初始化到更新尺度">缩放因子：从初始化到更新尺度</h1>
+<p>实际使用中，不仅要对动量进行msign操作，还有一个对msign的缩放因子要乘上。</p>
+<p>有4个版本的缩放选择：</p>
+<p>对于矩阵 <span class="math inline">\(W \in \mathbb{R}^{d_{out} \times
+d_{in}}\)</span>（注意 PyTorch Linear 层是 <span class="math inline">\(d_{out} \times d_{in}\)</span>）：</p>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 31%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>版本</th>
+<th>缩放公式</th>
+<th>适用场景</th>
+<th>学习率调整</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>朴素版（Naive）</td>
+<td><span class="math inline">\(1\)</span></td>
+<td>理论研究</td>
+<td>需大幅调参</td>
+</tr>
+<tr class="even">
+<td>KellerJordan 版</td>
+<td><span class="math inline">\(\sqrt{\max(1,
+d_{out}/d_{in})}\)</span></td>
+<td>追求层间一致性</td>
+<td>需放大 5-10 倍</td>
+</tr>
+<tr class="odd">
+<td>MuP 版</td>
+<td><span class="math inline">\(\sqrt{d_{out}/d_{in}}\)</span></td>
+<td>跨模型尺寸迁移</td>
+<td>需配合 MuP 调参</td>
+</tr>
+<tr class="even">
+<td>Moonlight 版</td>
+<td><span class="math inline">\(0.2 \times \sqrt{\max(d_{out},
+d_{in})}\)</span></td>
+<td>零成本迁移</td>
+<td>直接使用 AdamW lr</td>
+</tr>
+</tbody>
+</table>
+<p>关键区别示例：</p>
+<p>对于 <span class="math inline">\(W \in \mathbb{R}^{1024 \times
+4096}\)</span>（矮胖，<span class="math inline">\(d_{out} &lt;
+d_{in}\)</span>）：</p>
+<ul>
+<li>KellerJordan：<span class="math inline">\(\sqrt{\max(1, 0.25)} =
+1\)</span>（不放大）<br>
+</li>
+<li>Moonlight：<span class="math inline">\(0.2 \times \sqrt{4096} =
+12.8\)</span>（大幅放大，补偿 msign 的收缩）</li>
+</ul>
+<p>为什么有这么个缩放呢？理解 Muon
+的缩放因子需要从神经网络初始化的最基本原则开始推导。</p>
+<h2 id="为什么初始化要缩放xavierkaiming初始化">为什么初始化要缩放？（Xavier/Kaiming初始化）</h2>
+<p>想象一个简单的线性网络 <span class="math inline">\(h_{l+1} = W_l
+h_l\)</span>。如果 <span class="math inline">\(W_{ij} \sim
+\mathcal{N}(0, 1)\)</span>（标准正态，方差=1）：</p>
+<ul>
+<li>经过矩阵乘法，<span class="math inline">\(h_{l+1}\)</span>
+的方差变为 <span class="math inline">\(d_{in} \cdot
+\sigma_l^2\)</span>（<span class="math inline">\(d_{in}\)</span>
+个输入累加）<br>
+</li>
+<li>经过 <span class="math inline">\(L\)</span> 层，方差变为 <span class="math inline">\(d_{in}^L\)</span>，指数级爆炸</li>
+</ul>
+<p>为了保持前向传播中信号的方差恒定，必须让 <span class="math inline">\(\mathbb{E}[W_{ij}^2] \approx
+\frac{1}{d_{in}}\)</span>，即方差反比于输入维度。这就是 Xavier/Kaiming
+初始化。</p>
+<h2 id="谱范数spectral-norm与矩阵形状">谱范数（Spectral
+Norm）与矩阵形状</h2>
+<p>在 Xavier 初始化下（<span class="math inline">\(W_{ij} \sim
+\mathcal{N}(0, 1/d_{in})\)</span>），矩阵的谱范数（最大奇异值，即 <span class="math inline">\(\|W\|_2\)</span>）满足：</p>
+<p><span class="math display">\[\|W\|_2 \approx \begin{cases}
+\sqrt{\frac{d_{out}}{d_{in}}} &amp; \text{if } d_{out} \gg d_{in}
+\text{（高瘦）} \\
+1 &amp; \text{if } d_{out} \ll d_{in} \text{（矮胖）}
+\end{cases}\]</span></p>
+<p>直观理解：</p>
+<ul>
+<li>高瘦矩阵（<span class="math inline">\(d_{out} &gt;
+d_{in}\)</span>）：把少量输入"扩张"到大量输出，需要更大的"放大系数"来填充输出空间，因此谱范数
+<span class="math inline">\(\propto \sqrt{d_{out}/d_{in}}\)</span><br>
+</li>
+<li>矮胖矩阵（<span class="math inline">\(d_{out} &lt;
+d_{in}\)</span>）：把大量输入"压缩"到少量输出，天然具有信息瓶颈，谱范数保持
+<span class="math inline">\(O(1)\)</span></li>
+</ul>
+<h2 id="msign-破坏了尺度关系">msign 破坏了尺度关系</h2>
+<p>Muon 使用 <span class="math inline">\(\text{msign}(M) =
+UV^\top\)</span>，这相当于将所有奇异值设为 1（或接近
+1），完全抹去了原始矩阵与维度相关的尺度信息。</p>
+<p>问题：</p>
+<ul>
+<li>如果不加缩放，高瘦矩阵（需要扩张能力）和矮胖矩阵（需要压缩能力）获得完全相同的更新幅度<br>
+</li>
+<li>这违背了网络架构的原始设计：高瘦层需要更强的"驱动力"来填充高维输出空间</li>
+</ul>
+<h2 id="kellerjordan-缩放恢复-jacobian-一致性">KellerJordan 缩放：恢复
+Jacobian 一致性</h2>
+<p>KellerJordan 的缩放因子 <span class="math inline">\(\sqrt{\max(1,
+d_{out}/d_{in})}\)</span> 源于 MuP（Maximal Update Parametrization）
+理论：</p>
+<ul>
+<li>当 <span class="math inline">\(d_{out} &gt;
+d_{in}\)</span>（高瘦）：乘以 <span class="math inline">\(\sqrt{d_{out}/d_{in}} &gt;
+1\)</span>，放大，补偿扩张需求<br>
+</li>
+<li>当 <span class="math inline">\(d_{out} \le
+d_{in}\)</span>（矮胖或方阵）：保持
+1，不进行压缩（避免进一步削弱矮胖层）</li>
+</ul>
+<p>目的：确保不同形状的权重矩阵在正交化后，其"影响力"（对网络输出的作用能力）与架构设计时一致。</p>
+<h2 id="moonlight-缩放与-adamw-的-update-rms-对齐">Moonlight 缩放：与
+AdamW 的 Update RMS 对齐</h2>
+<p>问题：KellerJordan 版需要重新调参（通常学习率要放大 5-10 倍）。</p>
+<p>解决思路：通过对齐 Update RMS（Root Mean Square of Update）
+来自动确定缩放因子。</p>
+<p>推导：</p>
+<ol type="1">
+<li>AdamW 在稳定期的 Update RMS <span class="math inline">\(\approx \eta
+\times 0.2\)</span><br>
+</li>
+<li><span class="math inline">\(\text{msign}(M)\)</span>
+的元素期望幅值为 <span class="math inline">\(1/\sqrt{\max(d_{in},
+d_{out})}\)</span><br>
+</li>
+<li>为了对齐，需要缩放因子 <span class="math inline">\(c = 0.2 \times
+\sqrt{\max(d_{in}, d_{out})}\)</span></li>
+</ol>
+<p>优势：直接使用 AdamW 的学习率，无需重新 grid search。</p>
+<h1 id="混合使用">混合使用</h1>
+<p>实际使用中，AdamW和Muon要配合起来，一起使用。两个优化器分别优化不同的参数。</p>
+<p>为什么必须混合使用？</p>
+<p>实证发现（Keller Jordan 博客 &amp; Moonlight 论文）：<br>
+- Embedding 层：使用 Muon 效果差甚至不稳定（sparse
+lookup，不满足稠密矩阵假设）<br>
+- LM Head / 分类头：大词表下梯度极度稀疏（只有 top-k 有值），Muon 的
+full-matrix 假设不适用<br>
+- Bias / LayerNorm：1D 向量，Muon 退化为 SignSGD，效果不如 AdamW</p>
+<p>推荐配置：</p>
+<ul>
+<li>Muon 用于：所有 Hidden Layers 的 Linear / Dense
+权重（2D，稠密矩阵乘法）<br>
+</li>
+<li>AdamW 用于：Embedding、LM Head、Bias、LayerNorm 参数</li>
+</ul>
+<p>性能基准：<br>
+- NanoGPT（GPT-2 规模）：达到同等验证 loss 的步数减少 30-40%<br>
+- 1.5B 参数模型：10 小时 vs AdamW 13.3 小时（8×H100）<br>
+- 稳定性：Moonlight 版在大学习率下比原版更稳定，loss 曲线更平滑</p>
+<h2 id="完整配置脚本">完整配置脚本</h2>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># 参数自动分组（Moonlight 版推荐配置）</span>
+muon_params <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+adam_params <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+
+<span class="token keyword">for</span> name<span class="token punctuation">,</span> p <span class="token keyword">in</span> model<span class="token punctuation">.</span>named_parameters<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># Embedding 和输出层用 AdamW（稀疏访问）</span>
+    <span class="token keyword">if</span> <span class="token string">'embed'</span> <span class="token keyword">in</span> name <span class="token keyword">or</span> <span class="token string">'lm_head'</span> <span class="token keyword">in</span> name <span class="token keyword">or</span> <span class="token string">'head'</span> <span class="token keyword">in</span> name<span class="token punctuation">:</span>
+        adam_params<span class="token punctuation">.</span>append<span class="token punctuation">(</span>p<span class="token punctuation">)</span>
+    <span class="token comment"># Bias 和 Norm 用 AdamW（1D 向量）</span>
+    <span class="token keyword">elif</span> p<span class="token punctuation">.</span>ndim <span class="token operator">&lt;=</span> <span class="token number">1</span> <span class="token keyword">or</span> <span class="token string">'bias'</span> <span class="token keyword">in</span> name <span class="token keyword">or</span> <span class="token string">'norm'</span> <span class="token keyword">in</span> name<span class="token punctuation">:</span>
+        adam_params<span class="token punctuation">.</span>append<span class="token punctuation">(</span>p<span class="token punctuation">)</span>
+    <span class="token comment"># 2D 矩阵参数用 Muon（稠密矩阵乘法）</span>
+    <span class="token keyword">elif</span> p<span class="token punctuation">.</span>ndim <span class="token operator">==</span> <span class="token number">2</span><span class="token punctuation">:</span>
+        muon_params<span class="token punctuation">.</span>append<span class="token punctuation">(</span>p<span class="token punctuation">)</span>
+    <span class="token keyword">else</span><span class="token punctuation">:</span>
+        adam_params<span class="token punctuation">.</span>append<span class="token punctuation">(</span>p<span class="token punctuation">)</span>
+
+<span class="token comment"># Moonlight 版 Muon（对齐 AdamW 学习率，零成本迁移）</span>
+optimizer_muon <span class="token operator">=</span> Muon<span class="token punctuation">(</span>
+    muon_params<span class="token punctuation">,</span> 
+    lr<span class="token operator">=</span><span class="token number">3e-4</span><span class="token punctuation">,</span>  <span class="token comment"># 直接使用 AdamW 的学习率，无需调整</span>
+    momentum<span class="token operator">=</span><span class="token number">0.95</span><span class="token punctuation">,</span>
+    weight_decay<span class="token operator">=</span><span class="token number">0.01</span><span class="token punctuation">,</span>
+    scale_mode<span class="token operator">=</span><span class="token string">'moonlight'</span>
+<span class="token punctuation">)</span>
+
+optimizer_adam <span class="token operator">=</span> torch<span class="token punctuation">.</span>optim<span class="token punctuation">.</span>AdamW<span class="token punctuation">(</span>
+    adam_params<span class="token punctuation">,</span>
+    lr<span class="token operator">=</span><span class="token number">3e-4</span><span class="token punctuation">,</span>
+    betas<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">0.9</span><span class="token punctuation">,</span> <span class="token number">0.95</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    weight_decay<span class="token operator">=</span><span class="token number">0.01</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># 分布式训练注意事项</span>
+<span class="token comment"># 张量并行（Tensor Parallelism）下，Muon 需要 all-gather 完整梯度矩阵</span>
+<span class="token comment"># 这会增加通信开销，是超大规模训练的主要工程挑战</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h1 id="总结">总结</h1>
+<p>Muon 代表了优化器设计从 Element-wise 到 Matrix-wise 的范式转变。通过
+Newton-Schulz 迭代高效近似 matrix sign
+function，强制梯度更新在各奇异方向上均衡分布，从而：</p>
+<ol type="1">
+<li>打破低秩陷阱：防止优化被少数主导方向垄断，挽救稀有特征的学习机会；而通常来说，超高质量数据占比少，就属于稀有特征，因此在困难任务的优化上有优势<br>
+</li>
+<li>尊重矩阵几何：利用谱范数（Spectral Norm）而非 F-范数，通过左右 Gram
+矩阵分别处理输入/输出空间的几何结构，将病态的优化 landscape（高
+Condition Number）转化为良态（<span class="math inline">\(\kappa \approx
+1\)</span>）<br>
+</li>
+<li>preconditioning视角：通过 <span class="math inline">\(L^{-1/4} G
+R^{-1/4}\)</span> 的几何操作（解耦与均衡），或简化为 <span class="math inline">\(\text{msign}(G)\)</span>
+的谱均衡化，实现矩阵参数的有效更新（其实不是很懂，还得多看苏神文章）<br>
+</li>
+<li>工程实用性：相比 Shampoo 的 <span class="math inline">\(O(m^3+n^3)\)</span> 复杂度，Muon 通过 NS
+迭代将每步开销控制在 <span class="math inline">\(O(mn \cdot
+\min(m,n))\)</span>，且支持 bfloat16 快速计算</li>
+</ol>
+<p>在实践中，Moonlight 版 Muon 通过对齐 AdamW 的 Update RMS（<span class="math inline">\(0.2 \times \sqrt{\max(d_{in}, d_{out})}\)</span>
+缩放因子），实现了从 AdamW
+的零成本迁移——保持学习率不变，只更换优化器，即可享受矩阵结构感知的优化优势。对于已有
+AdamW 配置的用户，这是目前最平滑的升级路径。</p>
+<h1 id="关于spectral-norm">*关于Spectral Norm</h1>
+<p>谱范数 <span class="math inline">\(\|W\|_2\)</span>
+定义为矩阵的最大奇异值 <span class="math inline">\(\sigma_{\max}(W)\)</span>，等价于矩阵作为线性算子的算子范数：<span class="math inline">\(\|W\|_2 = \sup_{\|x\|=1}
+\|Wx\|\)</span>。它刻画了矩阵对输入向量的最大拉伸倍数，直接决定前向传播时信号可能达到的最大增益。</p>
+<p>F范数 <span class="math inline">\(\|W\|_F\)</span>
+定义为矩阵所有元素平方和的平方根，即 <span class="math inline">\(\|W\|_F
+= \sqrt{\sum_{i,j} W_{ij}^2}\)</span>。若对 <span class="math inline">\(W\)</span>
+进行奇异值分解，F范数也可表示为所有奇异值的平方和开根：<span class="math inline">\(\|W\|_F = \sqrt{\sum_k
+\sigma_k^2}\)</span>。因此，F范数反映的是矩阵的整体能量或总变化幅度，而非单一方向的极值。</p>
+<p>两者关系</p>
+<p>对任意 <span class="math inline">\(d_{out} \times d_{in}\)</span>
+矩阵 <span class="math inline">\(W\)</span>（设秩为 <span class="math inline">\(r\)</span>），两个范数满足如下不等式链：</p>
+<p><span class="math display">\[\|W\|_2 \leq \|W\|_F \leq \sqrt{r}
+\|W\|_2 \leq \sqrt{\min(d_{out}, d_{in})} \|W\|_2\]</span></p>
+<p>下界表明最大奇异值不会超过总能量；上界则表明当矩阵秩为1时两者相等，随着秩增加，F范数可能显著大于谱范数，但至多不超过
+<span class="math inline">\(\sqrt{r}\)</span> 倍。</p>
+<p>Xavier初始化下的谱范数</p>
+<p>Xavier初始化将权重设为 <span class="math inline">\(W_{ij} \sim
+\mathcal{N}(0, 1/d_{in})\)</span>。这等价于 <span class="math inline">\(W = \frac{1}{\sqrt{d_{in}}}X\)</span>，其中 <span class="math inline">\(X\)</span> 为元素服从标准正态分布 <span class="math inline">\(\mathcal{N}(0,1)\)</span> 的随机矩阵。</p>
+<p>根据随机矩阵理论（Marchenko-Pastur定律），当维度较大时，高斯随机矩阵
+<span class="math inline">\(X\)</span> 的最大奇异值几乎必然收敛于 <span class="math inline">\(\sigma_{\max}(X) \approx \sqrt{d_{out}} +
+\sqrt{d_{in}}\)</span>。代入Xavier的缩放因子，得到：</p>
+<p><span class="math display">\[\|W\|_2 \approx \frac{\sqrt{d_{out}} +
+\sqrt{d_{in}}}{\sqrt{d_{in}}} = 1 +
+\sqrt{\frac{d_{out}}{d_{in}}}\]</span></p>
+<p>由此产生两种典型情况：</p>
+<ol type="1">
+<li><p>矮胖矩阵（<span class="math inline">\(d_{out} \ll
+d_{in}\)</span>，如降维层）：此时 <span class="math inline">\(\sqrt{d_{out}/d_{in}} \approx 0\)</span>，故 <span class="math inline">\(\|W\|_2 \approx
+1\)</span>。输入维度高于输出维度，矩阵主要起压缩作用，最大拉伸倍数被限制在1附近，信号传播稳定。</p></li>
+<li><p>高瘦矩阵（<span class="math inline">\(d_{out} \gg
+d_{in}\)</span>，如升维层）：此时常数项1可忽略，<span class="math inline">\(\|W\|_2 \approx
+\sqrt{d_{out}/d_{in}}\)</span>。输出维度显著高于输入维度时，即使采用Xavier初始化，矩阵的最大奇异值仍会随宽高比的平方根增长。例如，当输出维度是输入的100倍时，谱范数约为10，意味着特定方向的信号可能被放大100倍（方差放大100倍）。</p></li>
+</ol>
+<p>对神经网络训练的影响</p>
+<p>这一结果揭示了Xavier初始化在不同网络结构中的局限性。对于包含大量升维层（如扩散模型中的某些架构）的网络，仅靠
+<span class="math inline">\(1/\sqrt{d_{in}}\)</span>
+的方差缩放无法控制谱范数，可能导致前向信号爆炸或反向梯度异常。实践中需配合LayerNorm、BatchNorm或谱归一化（Spectral
+Normalization）等技术，强制控制每一层的最大拉伸倍数，确保训练稳定。</p>
+<h1 id="reference">Reference</h1>
+<p>【1】Muon: An optimizer for hidden layers in neural
+networks，https://kellerjordan.github.io/posts/muon/<br>
+【2】Muon优化器赏析：从向量到矩阵的本质跨越，https://kexue.fm/archives/10592<br>
+【3】Muon优化器指南：快速上手与关键细节，https://www.spaces.ac.cn/archives/11416<br>
+【4】Deriving Muon，https://jeremybernste.in/writing/deriving-muon，Muon
+作者的数学推导博客，解释 MuP（Maximal Update Parametrization）与 Muon
+的关系</p>
+<hr>
+<p>博客：<a target="_blank" rel="noopener" href="http://www.linsight.cn/">http://www.linsight.cn/</a><br>
+知乎：<a target="_blank" rel="noopener" href="https://www.zhihu.com/people/us4ever">Linsight</a><br>
+微信公众号：Linsight<br>
+<img src="/images/qrcode.jpg"> 博主微信号(添加请注明来意)：<br>
+<img src="/images/wechat.png"></p>
+<hr>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/44c62dc5.html">DeepResearch的报告生成方法</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7c2f9dcb.html">从RAG到DeepSearch</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f7d600f3.html">阿里通义Lab:
+WebWalker,WebDancer和WebSailor</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/72150a83.html">Agent评测数据集</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/226b059f.html">agent调研(1)--MetaGPT,OpenManus和OWL</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f93b3aaf.html">Devin和Anthropic的Agent开发经验</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 训练框架<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe0adaa5.html">LLM训练框架：从优化器和精度讲到ZeRO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4cd8532f.html">LLM训练各种并行策略</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 论文阅读：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e96c7aac.html">最近阅读--关于数据合成、agent、reasoning和多任务</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/af7f9363.html">最近阅读2-关于自适应深度思考、context
+engineering和模型训练</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/f25d614e.html" title="Muon优化器">https://saicat.github.io/f25d614e.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/b0e0d6c4.html" rel="prev" title="最近阅读3-关于蒸馏，attention结构改动，和模型对齐">
+                  <i class="fa fa-angle-left"></i> 最近阅读3-关于蒸馏，attention结构改动，和模型对齐
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/9cb56255.html" rel="next" title="腾讯的Training-Free GRPO">
+                  腾讯的Training-Free GRPO <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">868k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">26:18</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

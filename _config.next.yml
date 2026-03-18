@@ -1,0 +1,11 @@
+# NexT 主题独立配置文件
+# 仅包含需要覆盖的配置项，其余使用主题默认值
+# 详见: https://theme-next.js.org/docs/getting-started/configuration
+
+# 代码块 - 使用 Prism.js，启用更鲜明的配色主题
+codeblock:
+  prism:
+    # 浅色：prism-coy 或 prism 有清晰的语法配色
+    light: prism-coy
+    # 深色
+    dark: prism-tomorrow

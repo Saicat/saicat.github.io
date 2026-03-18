@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="腾讯优图提出的Training-Free Group Relative Policy Optimization（Training-Free GRPO）方法，仅用8-18美元和100条样本，就让671B参数的DeepSeek-V3.1-Terminus在AIME数学竞赛任务上获得显著提升，甚至超过花费数万美元微调的32B模型。 从&quot;调参&quot;到&quot;给经验&quot; RL的困境">
+<meta property="og:type" content="article">
+<meta property="og:title" content="腾讯的Training-Free GRPO">
+<meta property="og:url" content="https://saicat.github.io/9cb56255.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="腾讯优图提出的Training-Free Group Relative Policy Optimization（Training-Free GRPO）方法，仅用8-18美元和100条样本，就让671B参数的DeepSeek-V3.1-Terminus在AIME数学竞赛任务上获得显著提升，甚至超过花费数万美元微调的32B模型。 从&quot;调参&quot;到&quot;给经验&quot; RL的困境">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-03-18T13:07:42.000Z">
+<meta property="article:modified_time" content="2026-03-18T13:57:25.406Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://saicat.github.io/9cb56255.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/9cb56255.html","path":"9cb56255.html","title":"腾讯的Training-Free GRPO"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>腾讯的Training-Free GRPO | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊AI技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%8E%E8%B0%83%E5%8F%82%E5%88%B0%E7%BB%99%E7%BB%8F%E9%AA%8C"><span class="nav-number">1.</span> <span class="nav-text">从&quot;调参&quot;到&quot;给经验&quot;</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#rl%E7%9A%84%E5%9B%B0%E5%A2%83"><span class="nav-number">1.1.</span> <span class="nav-text">RL的困境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9F%A5%E8%AF%86-vs-%E5%8F%82%E6%95%B0"><span class="nav-number">1.2.</span> <span class="nav-text">知识 vs 参数</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%8E%E6%95%B0%E5%80%BC%E4%BC%98%E5%8A%BF%E5%88%B0%E8%AF%AD%E4%B9%89%E4%BC%98%E5%8A%BF"><span class="nav-number">2.</span> <span class="nav-text">从数值优势到语义优势</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#grpo%E7%9A%84%E5%9B%9E%E9%A1%BE"><span class="nav-number">2.1.</span> <span class="nav-text">GRPO的回顾</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#training-free-grpo%E7%9A%84%E8%8C%83%E5%BC%8F%E8%BD%AC%E6%8D%A2"><span class="nav-number">2.2.</span> <span class="nav-text">Training-Free GRPO的范式转换</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#step-1-%E7%BB%84%E5%86%85%E9%87%87%E6%A0%B7%E4%B8%8E%E5%A5%96%E5%8A%B1%E5%88%A4%E5%AE%9A"><span class="nav-number">2.2.1.</span> <span class="nav-text">Step 1: 组内采样与奖励判定</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#step-2-%E8%BD%A8%E8%BF%B9%E6%91%98%E8%A6%81trajectory-summarization"><span class="nav-number">2.2.2.</span> <span class="nav-text">Step 2:
+轨迹摘要（Trajectory Summarization）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#step-3-%E6%8F%90%E5%8F%96%E8%AF%AD%E4%B9%89%E4%BC%98%E5%8A%BF"><span class="nav-number">2.2.3.</span> <span class="nav-text">Step 3: 提取语义优势</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#step-4-%E6%9B%B4%E6%96%B0%E7%BB%8F%E9%AA%8C%E5%BA%93"><span class="nav-number">2.2.4.</span> <span class="nav-text">Step 4: 更新经验库</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82prompt"><span class="nav-number">3.</span> <span class="nav-text">实现细节：Prompt</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#prompt-1-%E8%BD%A8%E8%BF%B9%E6%91%98%E8%A6%81"><span class="nav-number">3.1.</span> <span class="nav-text">Prompt 1: 轨迹摘要</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#prompt-2-%E8%AF%AD%E4%B9%89%E4%BC%98%E5%8A%BF%E6%8F%90%E5%8F%96"><span class="nav-number">3.2.</span> <span class="nav-text">Prompt 2: 语义优势提取</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#prompt-3-%E6%89%B9%E6%AC%A1%E6%95%B4%E5%90%88%E4%B8%8E%E7%BB%8F%E9%AA%8C%E5%BA%93%E6%9B%B4%E6%96%B0"><span class="nav-number">3.3.</span> <span class="nav-text">Prompt 3:
+批次整合与经验库更新</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9B%9B%E7%A7%8D%E6%93%8D%E4%BD%9C%E7%9A%84%E5%8F%82%E6%95%B0%E8%AF%A6%E8%A7%A3"><span class="nav-number">3.3.1.</span> <span class="nav-text">四种操作的参数详解</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E7%BB%86%E8%8A%82"><span class="nav-number">4.</span> <span class="nav-text">其他细节</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%97%A0ground-truthwo-ground-truths%E6%9C%BA%E5%88%B6"><span class="nav-number">4.1.</span> <span class="nav-text">无Ground Truth（w&#x2F;o ground
+truths）机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E9%AA%8C%E6%95%88%E6%9E%9C%E6%88%90%E6%9C%AC%E4%B8%8E%E6%80%A7%E8%83%BD%E7%9A%84%E5%8F%8C%E9%87%8D%E9%AA%8C%E8%AF%81"><span class="nav-number">4.2.</span> <span class="nav-text">实验效果：成本与性能的双重验证</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8E%E4%BC%A0%E7%BB%9Frl%E7%9A%84%E6%88%90%E6%9C%AC%E5%AF%B9%E6%AF%94"><span class="nav-number">4.2.1.</span> <span class="nav-text">与传统RL的成本对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B6%88%E8%9E%8D%E5%AE%9E%E9%AA%8C%E9%AA%8C%E8%AF%81%E6%AF%8F%E4%B8%AA%E7%BB%84%E4%BB%B6"><span class="nav-number">4.2.2.</span> <span class="nav-text">消融实验：验证每个组件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%88%E7%8E%87%E6%8F%90%E5%8D%87%E4%B8%8D%E4%BB%85%E5%87%86%E8%80%8C%E4%B8%94%E5%BF%AB"><span class="nav-number">4.2.3.</span> <span class="nav-text">效率提升：不仅准，而且快</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E7%BB%84group"><span class="nav-number">4.3.</span> <span class="nav-text">为什么需要&quot;组&quot;（Group）？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%8F%E9%AA%8C%E5%BA%93%E7%9A%84%E8%A7%84%E6%A8%A1%E4%B8%8E%E6%94%B6%E6%95%9B%E6%80%A7"><span class="nav-number">4.4.</span> <span class="nav-text">经验库的规模与收敛性</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%80%82%E7%94%A8%E5%9C%BA%E6%99%AF%E4%B8%8E%E5%B1%80%E9%99%90%E6%80%A7"><span class="nav-number">5.</span> <span class="nav-text">适用场景与局限性</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E4%BD%B3%E9%80%82%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">5.1.</span> <span class="nav-text">最佳适用场景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B1%80%E9%99%90%E6%80%A7"><span class="nav-number">5.2.</span> <span class="nav-text">局限性</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">83</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/9cb56255.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="腾讯的Training-Free GRPO | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          腾讯的Training-Free GRPO
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2026-03-18 21:07:42 / 修改时间：21:57:25" itemprop="dateCreated datePublished" datetime="2026-03-18T21:07:42+08:00">2026-03-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>12k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>22 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>腾讯优图提出的Training-Free Group Relative Policy
+Optimization（Training-Free
+GRPO）方法，仅用8-18美元和100条样本，就让671B参数的DeepSeek-V3.1-Terminus在AIME数学竞赛任务上获得显著提升，甚至超过花费数万美元微调的32B模型。</p>
+<h1 id="从调参到给经验">从"调参"到"给经验"</h1>
+<h2 id="rl的困境">RL的困境</h2>
+<p>当前的LLM Agent优化，主流路径是参数层面的学习：</p>
+<ol type="1">
+<li>SFT（监督微调）：准备高质量轨迹数据，进行训练<br>
+</li>
+<li>RL（强化学习）：用PPO/GRPO等算法，基于奖励信号优化policy</li>
+</ol>
+<p>这两条路径都有明显的成本门槛：</p>
+<ul>
+<li>数据门槛：需要数千到数万条高质量训练样本<br>
+</li>
+<li>计算门槛：需要多卡并行训练数小时到数天<br>
+</li>
+<li>过拟合风险：微调后的模型往往在特定任务上过拟合，通用能力下降<br>
+</li>
+<li>领域隔离：在一个领域训练的模型，难以直接迁移到另一个领域</li>
+</ul>
+<h2 id="知识-vs-参数">知识 vs 参数</h2>
+<p>想象这样一个场景：你是一个资深程序员（相当于基础模型），现在要接一个金融量化项目（没有训练过的新任务）。你有两种学习方式：</p>
+<p>方式A（传统微调）：通过某种"手术"直接改变你的大脑神经连接（修改参数），让你懂量化。</p>
+<p>方式B（Training-Free）：给你一本经验手册（外部知识库），里面记录着："当遇到波动率计算时，应该先查X数据再算Y"；"当策略回撤超过5%时，应该考虑Z因素"。你不需要改变大脑结构，只需要在做项目时查阅这本手册，输出分布自然就变了。</p>
+<p>Training-Free
+GRPO的核心洞察就是：LLM的输出分布可以通过"注入经验知识"来改变，而不需要调整任何参数：</p>
+<blockquote>
+<p>Large language models (LLMs) can utilize knowledge as a token prior
+to shift their output distributions, eliminating the need for parameter
+updates</p>
+</blockquote>
+<h1 id="从数值优势到语义优势">从数值优势到语义优势</h1>
+<h2 id="grpo的回顾">GRPO的回顾</h2>
+<p>为了理解Training-Free GRPO的创新，我们先回顾下GRPO。</p>
+<p>GRPO是DeepSeek提出的RL算法，解决的是PPO中critic模型难以训练的问题。它的关键
+trick 是组内相对优势估计：</p>
+<p>对于同一个问题 <span class="math inline">\(q\)</span>，采样 <span class="math inline">\(G\)</span> 个输出 <span class="math inline">\(\{o_1, o_2, ..., o_G\}\)</span>，每个获得奖励
+<span class="math inline">\(r_i\)</span>。第 <span class="math inline">\(i\)</span> 个输出的优势值计算为：</p>
+<p><span class="math display">\[\hat{A}_{i}=\frac{r_{i}-\text{mean}(r)}{\text{std}(r)}\]</span></p>
+<p>这个数值 <span class="math inline">\(\hat{A}_i\)</span>
+告诉模型：相对于同组的平均水平，这个输出好多少。然后通过梯度上升，让策略网络
+<span class="math inline">\(\pi_\theta\)</span>
+倾向于生成高优势的输出。</p>
+<p>这里 <span class="math inline">\(\hat{A}_i\)</span>
+是一个数值，用于更新参数 <span class="math inline">\(\theta\)</span>。</p>
+<h2 id="training-free-grpo的范式转换">Training-Free GRPO的范式转换</h2>
+<p>Training-Free GRPO 做了一个大胆的替换：</p>
+<p>不再计算数值 <span class="math inline">\(\hat{A}_i\)</span>，而是生成自然语言的"语义优势"
+<span class="math inline">\(A_{\text{text}}\)</span>。</p>
+<p>具体流程如下：</p>
+<h3 id="step-1-组内采样与奖励判定">Step 1: 组内采样与奖励判定</h3>
+<p>对于问题 <span class="math inline">\(q\)</span>，从当前策略采样 <span class="math inline">\(G=5\)</span> 条轨迹，每条轨迹 <span class="math inline">\(o_i\)</span>
+包含推理过程、工具调用和最终答案。</p>
+<p>奖励信号 <span class="math inline">\(r\)</span> 的获取：</p>
+<ul>
+<li>默认设置：二元奖励 <span class="math inline">\(r \in \{0,
+1\}\)</span>（正确/错误）<br>
+</li>
+<li>判断者（Verifier）：
+<ul>
+<li>数学任务：与Ground Truth比对（Exact Match）<br>
+</li>
+<li>代码任务：Sandbox执行验证（单元测试通过与否）<br>
+</li>
+<li>搜索任务：Programmatic metrics（如是否找到目标信息）</li>
+</ul></li>
+</ul>
+<p>多维度奖励扩展：虽然论文实验主要使用二元奖励，但框架支持多种奖励的加权合并：</p>
+<p><span class="math display">\[R_{\text{total}} = \lambda_{\text{fmt}}
+R_{\text{fmt}} + \lambda_{\text{cls}} R_{\text{cls}} +
+\dots\]</span></p>
+<p>常见组件包括格式奖励（是否遵循<code>&lt;think&gt;</code>标签规范）、正确性奖励等。但与传统GRPO不同，这些奖励不直接代入数值公式，而是用于确定组内相对优劣（哪条轨迹更好），进而引导语义提取。</p>
+<h3 id="step-2-轨迹摘要trajectory-summarization">Step 2:
+轨迹摘要（Trajectory Summarization）</h3>
+<p>由于完整轨迹可能很长（包含多步工具调用），因此先进行压缩：</p>
+<p><span class="math display">\[s_{i}=M(p_{\text{summary}}, q,
+o_{i})\]</span></p>
+<p>这里 <span class="math inline">\(M\)</span>
+是LLM（保持参数冻结），<span class="math inline">\(p_{\text{summary}}\)</span>
+是摘要提示词。关键在于：摘要过程中会通过<code>&lt;evaluation&gt;</code>标签隐式注入奖励信号（"correct"或"wrong"），让模型知道这条轨迹最终是成功还是失败。</p>
+<h3 id="step-3-提取语义优势">Step 3: 提取语义优势</h3>
+<p>将组内所有摘要 <span class="math inline">\(\{s_1, s_2, ...,
+s_G\}\)</span> 和当前经验库 <span class="math inline">\(E\)</span>
+输入模型：</p>
+<p><span class="math display">\[A_{\text{text}}=M(p_{\text{extract}}, q,
+s_{i}, E)\]</span></p>
+<p>提示词 <span class="math inline">\(p_{\text{extract}}\)</span>
+的设计让模型扮演"分析师"角色，比较组内轨迹的优劣。这里的组比较是关键——模型会看到"Attempt
+1（正确）做了X，Attempt 2（错误）做了Y"，从而提取出：</p>
+<blockquote>
+<p>"在解决几何问题时，先画图标注已知条件（如用户X的做法）比直接列公式（如用户Y的做法）更容易得到正确答案。建议：遇到几何题先调用绘图工具可视化。"</p>
+</blockquote>
+<p>这个 <span class="math inline">\(A_{\text{text}}\)</span>
+就是语义优势——它编码了"为什么这个输出更好"的可解释知识。</p>
+<h3 id="step-4-更新经验库">Step 4: 更新经验库</h3>
+<p>经验库 <span class="math inline">\(E\)</span>（初始化为 <span class="math inline">\(\emptyset\)</span>）通过四种操作动态更新：</p>
+<ul>
+<li>Add：追加 <span class="math inline">\(A_{\text{text}}\)</span>
+描述的新经验<br>
+</li>
+<li>Delete：基于 <span class="math inline">\(A_{\text{text}}\)</span>
+移除低质量经验<br>
+</li>
+<li>Modify：利用 <span class="math inline">\(A_{\text{text}}\)</span>
+洞察精炼现有经验（替换内容，保留ID）<br>
+</li>
+<li>Keep：保持 <span class="math inline">\(E\)</span> 不变</li>
+</ul>
+<p>更新后的 <span class="math inline">\(E\)</span> 作为token
+prior在后续LLM API调用时注入上下文，实现输出分布 <span class="math inline">\(\pi_\theta(y|q,E)\)</span> 的偏移，而基础模型参数
+<span class="math inline">\(\theta\)</span> 保持冻结。</p>
+<h1 id="实现细节prompt">实现细节：Prompt</h1>
+<p>Training-Free
+GRPO的本质是通过精心设计的Prompt链，将RL的信用分配机制转化为自然语言操作。</p>
+<h2 id="prompt-1-轨迹摘要">Prompt 1: 轨迹摘要</h2>
+<p>功能：将原始轨迹压缩为结构化文本，定位关键决策点。</p>
+<p>输入参数：</p>
+<table>
+<thead>
+<tr class="header">
+<th>参数</th>
+<th>来源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>query</code></td>
+<td>训练集</td>
+<td>当前问题</td>
+</tr>
+<tr class="even">
+<td><code>full_output</code></td>
+<td>LLM生成</td>
+<td>完整轨迹 <span class="math inline">\(o_i\)</span>（含推理过程、工具调用）</td>
+</tr>
+<tr class="odd">
+<td><code>evaluation</code></td>
+<td>奖励模型</td>
+<td>"correct" 或 "wrong"（基于<span class="math inline">\(r_i\)</span>）</td>
+</tr>
+<tr class="even">
+<td><code>groundtruth</code></td>
+<td>训练集</td>
+<td>标准答案（用于对比分析）</td>
+</tr>
+</tbody>
+</table>
+<p>Prompt模板：</p>
+<pre class="line-numbers language-none"><code class="language-none">An agent system may be provided with some experiences, and then it produces the following trajectory to solve the given problem. Please summarize the trajectory step-by-step:
+
+1. For each step, describe what action is being taken, and which experience has been used in this step.
+2. Given the grading of this rollout and the correct answer, identify and explain any steps that represent detours, errors, or backtracking.
+3. Maintain all the core outcome of each step, even if it was part of a flawed process.
+
+&lt;trajectory&gt;&#123;full_output&#125;&lt;&#x2F;trajectory&gt;
+&lt;evaluation&gt;&#123;evaluation&#125;&lt;&#x2F;evaluation&gt;
+&lt;groundtruth&gt;&#123;groundtruth&#125;&lt;&#x2F;groundtruth&gt;
+
+Only return the trajectory summary of each step.<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>设计要点：</p>
+<ul>
+<li>步骤级分解：强制模型回顾每步决策，而非仅看结果<br>
+</li>
+<li>错误定位：要求指出弯路（detours）和回溯（backtracking）<br>
+</li>
+<li>经验关联：追踪使用了哪条经验（用于后续Modify/Delete）</li>
+</ul>
+<p>输出去向：生成文本摘要 <span class="math inline">\(s_i\)</span>，进入下一阶段。</p>
+<h2 id="prompt-2-语义优势提取">Prompt 2: 语义优势提取</h2>
+<p>功能：比较组内轨迹，提取可泛化的经验（即语义优势 <span class="math inline">\(A_{\text{text}}\)</span>）。</p>
+<p>输入参数：</p>
+<table>
+<thead>
+<tr class="header">
+<th>参数</th>
+<th>来源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>query</code></td>
+<td>训练集</td>
+<td>当前问题</td>
+</tr>
+<tr class="even">
+<td><code>trajectory_summaries</code></td>
+<td>Stage 1输出</td>
+<td>组内所有轨迹摘要及正确性标记</td>
+</tr>
+<tr class="odd">
+<td><code>current_library</code></td>
+<td>全局状态</td>
+<td>当前经验库 <span class="math inline">\(E\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Prompt模板：</p>
+<pre class="line-numbers language-none"><code class="language-none">You are an expert analyst reviewing problem-solving attempts. Given a group of trajectory summaries (some correct, some wrong) and the current experience library, 
+analyze the patterns and extract semantic advantages.
+
+&lt;problem&gt;&#123;query&#125;&lt;&#x2F;problem&gt;
+
+&lt;attempts&gt;
+Attempt 1 (Result: Correct): &#123;s_1&#125;
+Attempt 2 (Result: Wrong): &#123;s_2&#125;
+Attempt 3 (Result: Correct): &#123;s_3&#125;
+...
+&lt;&#x2F;attempts&gt;
+
+&lt;current_experience_library&gt;&#123;E&#125;&lt;current_experience_library&gt;
+
+Analyze:
+1. What key decisions distinguish correct attempts from wrong ones?
+2. Which existing experiences were helpful or misleading?
+3. What new strategic insights can be extracted?
+
+Output your analysis as a natural language description (semantic advantage) focusing on generalizable problem-solving patterns. Do not output JSON yet.<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>输出示例：</p>
+<pre class="line-numbers language-none"><code class="language-none">The correct attempts successfully recognized that for Diophantine equations, enumerating possible factorizations after algebraic rearrangement is more reliable than direct formula application. Wrong attempts immediately applied 
+quadratic formulas without considering integer constraints. Current experience G17 about &quot;checking discriminants&quot; was insufficient - we need specific guidance on integer constraint handling.<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<h2 id="prompt-3-批次整合与经验库更新">Prompt 3:
+批次整合与经验库更新</h2>
+<p>功能：输出的语义优势 <span class="math inline">\(A_{\text{text}}\)</span>，决定如何操作经验库。</p>
+<p>输入参数：</p>
+<table>
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>参数</th>
+<th>来源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>semantic_advantage</code></td>
+<td>Stage 2输出</td>
+<td>自然语言分析结论 <span class="math inline">\(A_{\text{text}}\)</span></td>
+</tr>
+<tr class="even">
+<td><code>current_library</code></td>
+<td>全局状态</td>
+<td>当前经验库 <span class="math inline">\(E\)</span></td>
+</tr>
+<tr class="odd">
+<td><code>problem</code></td>
+<td>训练集</td>
+<td>当前问题（用于上下文）</td>
+</tr>
+</tbody>
+</table>
+<p>Prompt模板：</p>
+<pre class="line-numbers language-none"><code class="language-none">Based on the following semantic analysis of problem-solving attempts, decide how to update the experience library.
+
+&lt;semantic_analysis&gt;&#123;A_text&#125;&lt;&#x2F;semantic_analysis&gt;
+
+&lt;current_library&gt;&#123;E&#125;&lt;&#x2F;current_library&gt;
+
+Decide on actions:
+- Add: Create new experience if novel insight found
+- Delete: Remove if experience proven wrong or obsolete  
+- Modify: Refine existing experience if partial match
+- Keep: No change if existing experiences sufficient
+
+Requirements:
+- Each experience ≤32 words
+- Focus on strategic patterns, not specific numbers
+- Begin with context (e.g., &quot;For integer equations...&quot;)
+
+Return JSON format:
+[
+  &#123;&quot;option&quot;: &quot;add&quot;, &quot;experience&quot;: &quot;...&quot;&#125;,
+  &#123;&quot;option&quot;: &quot;modify&quot;, &quot;modified_from&quot;: &quot;G17&quot;, &quot;experience&quot;: &quot;...&quot;&#125;,
+  &#123;&quot;option&quot;: &quot;delete&quot;, &quot;delete_id&quot;: &quot;G5&quot;&#125;
+]<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<ul>
+<li>Prompt 2输出的是分析性文本（为什么好/坏）</li>
+<li>Prompt 3输出的是操作性JSON（具体增删改哪条）</li>
+</ul>
+<p>这两个阶段也可以合并为一个prompt。论文实现中采用的是合并方式（end-to-end）：</p>
+<pre class="line-numbers language-none"><code class="language-none">You are an expert analyst reviewing an AI agent&#39;s problem-solving attempts. 
+Your task is to analyze a group of trajectories (some correct, some incorrect), identify key patterns, and update the experience library accordingly.
+
+&lt;problem&gt;
+&#123;query&#125;
+&lt;&#x2F;problem&gt;
+
+&lt;attempts&gt;
+Attempt 1 (Answer: Correct):
+&#123;summary_1&#125;
+
+Attempt 2 (Answer: Wrong):  
+&#123;summary_2&#125;
+
+Attempt 3 (Answer: Correct):
+&#123;summary_3&#125;
+...
+&lt;&#x2F;attempts&gt;
+
+&lt;ground_truth&gt;
+&#123;correct_answer&#125;
+&lt;&#x2F;ground_truth&gt;
+
+&lt;current_experience_library&gt;
+&#123;E&#125;
+&lt;&#x2F;current_experience_library&gt;
+
+Analyze the trajectories:
+1. Compare correct vs wrong attempts: What key decisions or strategies distinguish success from failure?
+2. Review existing experiences: Which were helpful? Which were ignored or led astray? What&#39;s missing?
+3. Extract generalizable insights: Focus on strategic thinking patterns applicable to similar problems.
+
+Then update the experience library:
+- **add**: Create new experience for novel successful strategies not in current library
+- **delete**: Remove experiences proven wrong, misleading, or obsolete  
+- **modify**: Refine existing experiences that were partially correct but incomplete
+- **keep**: No action if current library is sufficient
+
+Requirements for each experience:
+- Begin with context (e.g., &quot;For geometry problems...&quot;, &quot;When using tools...&quot;)
+- Focus on strategic decisions, NOT specific calculations or numbers
+- Maximum 32 words per experience
+- Use action verbs (Check, Verify, Use, Apply, Consider)
+
+Output strictly in JSON format:
+[
+  &#123;
+    &quot;option&quot;: &quot;modify&quot;,
+    &quot;modified_from&quot;: &quot;G17&quot;, 
+    &quot;experience&quot;: &quot;For polynomial equations, verify discriminant before solving and ensure solution count matches theoretical maximum&quot;
+  &#125;,
+  &#123;
+    &quot;option&quot;: &quot;add&quot;,
+    &quot;experience&quot;: &quot;When encountering integer constraints, prioritize factorization over direct formula application&quot;
+  &#125;,
+  &#123;
+    &quot;option&quot;: &quot;delete&quot;,
+    &quot;delete_id&quot;: &quot;G5&quot;
+  &#125;
+]<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>输出约束（Output Constraints）：</p>
+<ul>
+<li>强制JSON格式（便于程序化更新 <span class="math inline">\(E\)</span>）<br>
+</li>
+<li>32词限制（强制抽象化）<br>
+</li>
+<li>动词开头（保证可操作性）</li>
+</ul>
+<h3 id="四种操作的参数详解">四种操作的参数详解</h3>
+<p>LLM输出JSON格式的操作指令，具体参数如下：</p>
+<table>
+<thead>
+<tr class="header">
+<th>操作</th>
+<th>必要字段</th>
+<th>类型</th>
+<th>具体行为</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Add</strong></td>
+<td><code>experience</code></td>
+<td>string</td>
+<td>新增经验，系统自动分配ID（如G42）</td>
+</tr>
+<tr class="even">
+<td><strong>Delete</strong></td>
+<td><code>delete_id</code></td>
+<td>string</td>
+<td>移除指定ID的经验条目（如"G17"）</td>
+</tr>
+<tr class="odd">
+<td><strong>Modify</strong></td>
+<td><code>modified_from</code></td>
+<td>string</td>
+<td><strong>源经验ID</strong>（被修改的对象）</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>experience</code></td>
+<td>string</td>
+<td><strong>新经验的完整内容</strong>（替换原内容，保留ID）</td>
+</tr>
+<tr class="odd">
+<td><strong>Merge</strong></td>
+<td><code>merged_from</code></td>
+<td>array</td>
+<td>源经验ID数组（如["G5", "G12"]）</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>experience</code></td>
+<td>string</td>
+<td>合并后的通用经验文本</td>
+</tr>
+</tbody>
+</table>
+<p>Modify操作的本质：</p>
+<ul>
+<li>不是增量更新，而是全量替换<br>
+</li>
+<li>保留原ID（<code>modified_from</code>指向的旧ID），更新内容<br>
+</li>
+<li>实现经验的渐进式精炼（generalized or refined）</li>
+</ul>
+<p>示例：</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token comment">// 原经验 G17: "For quadratic equations, check discriminant"</span>
+<span class="token punctuation">&#123;</span>
+  <span class="token property">"option"</span><span class="token operator">:</span> <span class="token string">"modify"</span><span class="token punctuation">,</span>
+  <span class="token property">"modified_from"</span><span class="token operator">:</span> <span class="token string">"G17"</span><span class="token punctuation">,</span>
+  <span class="token property">"experience"</span><span class="token operator">:</span> <span class="token string">"For quadratic and polynomial equations, verify discriminant before solving and ensure solution count matches theoretical maximum"</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>系统会将G17的内容更新为新的更长版本，实现从"二次方程"到"多项式方程"的泛化。</p>
+<h1 id="其他细节">其他细节</h1>
+<h2 id="无ground-truthwo-ground-truths机制">无Ground Truth（w/o ground
+truths）机制</h2>
+<p>这是消融实验中的关键配置，指奖励信号不依赖标准答案，而是通过组内自举（bootstrapping）获得：</p>
+<ol type="1">
+<li>答案聚类：对 <span class="math inline">\(G\)</span>
+个输出进行答案提取（如从 <code>\boxed&#123;&#125;</code> 中提取）<br>
+</li>
+<li>多数表决：出现频率最高的答案被视为"伪正确答案"<br>
+</li>
+<li>二元标记：
+<ul>
+<li>与多数答案一致的轨迹 <span class="math inline">\(r=1\)</span>（正确）<br>
+</li>
+<li>与多数答案不一致的轨迹 <span class="math inline">\(r=0\)</span>（错误）<br>
+</li>
+</ul></li>
+<li>语义提取：基于这个"伪标签"进行组间比较</li>
+</ol>
+<p>发现即使没有标准答案（w/o ground
+truths），在AIME24上仍达到79.1%（对比有GT的79.6%），证明其对奖励噪声具有鲁棒性，可利用模型自身的Self-Consistency作为监督信号。</p>
+<h2 id="实验效果成本与性能的双重验证">实验效果：成本与性能的双重验证</h2>
+<h3 id="与传统rl的成本对比">与传统RL的成本对比</h3>
+<table>
+<colgroup>
+<col style="width: 10%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 27%">
+<col style="width: 27%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>方法</th>
+<th>训练成本</th>
+<th>模型规模</th>
+<th>AIME24 Mean@32</th>
+<th>AIME25 Mean@32</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ReTool（传统RL）</td>
+<td>~$10,000</td>
+<td>32B</td>
+<td>低于基线</td>
+<td>低于基线</td>
+</tr>
+<tr class="even">
+<td>DeepSeek-V3.1基线</td>
+<td>API费用</td>
+<td>671B冻结</td>
+<td>74.8%</td>
+<td>61.5%</td>
+</tr>
+<tr class="odd">
+<td><strong>Training-Free GRPO</strong></td>
+<td><strong>~$8-18</strong></td>
+<td><strong>671B冻结</strong></td>
+<td><strong>79.6%</strong></td>
+<td><strong>68.5%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>成本：从约10,000美元降至8-18美元（3个epoch，100条样本）</p>
+<h3 id="消融实验验证每个组件">消融实验：验证每个组件</h3>
+<table>
+<colgroup>
+<col style="width: 21%">
+<col style="width: 28%">
+<col style="width: 28%">
+<col style="width: 21%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>配置</th>
+<th>AIME24</th>
+<th>AIME25</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ReAct基线</td>
+<td>74.8%</td>
+<td>61.5%</td>
+<td>无经验注入</td>
+</tr>
+<tr class="even">
+<td>ReAct+自生成经验</td>
+<td>78.0%</td>
+<td>65.1%</td>
+<td><strong>无组比较</strong>（<span class="math inline">\(G=1\)</span>），直接生成</td>
+</tr>
+<tr class="odd">
+<td><strong>Training-Free GRPO（无Ground Truth）</strong></td>
+<td><strong>79.1%</strong></td>
+<td><strong>67.7%</strong></td>
+<td>仅用多数投票/自判别</td>
+</tr>
+<tr class="even">
+<td><strong>Training-Free GRPO（完整版）</strong></td>
+<td><strong>79.6%</strong></td>
+<td><strong>68.5%</strong></td>
+<td>使用标准答案奖励</td>
+</tr>
+</tbody>
+</table>
+<p>关键洞察：</p>
+<ol type="1">
+<li>组内比较是必要的：单轨迹自生成经验（第二行）效果显著差于组比较（第三、四行），证明"有对比才有鉴别"<br>
+</li>
+<li>奖励信号鲁棒：即使没有标准答案，仅靠组内多数投票也能达到79.1%</li>
+</ol>
+<h3 id="效率提升不仅准而且快">效率提升：不仅准，而且快</h3>
+<p>在3轮学习过程中，平均工具调用次数从8.4次降至6.7次，同时准确率提升。这说明模型学会了更简洁高效地使用工具，而非盲目增加计算量。</p>
+<h2 id="为什么需要组group">为什么需要"组"（Group）？</h2>
+<p>核心原因在于相对性。</p>
+<p>单条轨迹的奖励 <span class="math inline">\(r\)</span>
+是绝对的（比如0.8分），但0.8分到底算好还是差？没有参照系很难判断。而组内比较提供了相对参照系：</p>
+<ul>
+<li>如果组内其他输出都得0分，你的0.8分就是优秀<br>
+</li>
+<li>如果组内其他输出都得1分，你的0.8分就是不足</li>
+</ul>
+<p>这也是GRPO的核心思想。</p>
+<h2 id="经验库的规模与收敛性">经验库的规模与收敛性</h2>
+<p>经验库的增长遵循边际递减规律：</p>
+<ul>
+<li>100条训练样本通常生成 20-40条经验（去重后）<br>
+</li>
+<li>收敛曲线：
+<ul>
+<li>Epoch 1：快速增长（0 → ~25条），覆盖主要错误模式<br>
+</li>
+<li>Epoch 2：增长放缓（25 → ~35条），开始精细化<br>
+</li>
+<li>Epoch 3：趋于稳定（35 → ~40条），以Modify和Delete为主</li>
+</ul></li>
+</ul>
+<p>性能饱和点：经验库规模在 30-50条 时，AIME24/25性能趋于 plateau。</p>
+<h1 id="适用场景与局限性">适用场景与局限性</h1>
+<h2 id="最佳适用场景">最佳适用场景</h2>
+<ol type="1">
+<li><strong>长尾细分场景</strong>：任务有价值但数据量不足以支撑传统微调（如特定领域的客服、专业工具使用）<br>
+</li>
+<li><strong>快速迭代场景</strong>：策略需要频繁更新，无法承受每次训练数小时的延迟<br>
+</li>
+<li><strong>预算受限团队</strong>：个人开发者、中小企业、学术研究者<br>
+</li>
+<li><strong>黑盒API场景</strong>：无法获取模型权重（如调用第三方API）进行微调</li>
+</ol>
+<h2 id="局限性">局限性</h2>
+<ol type="1">
+<li><strong>基础模型能力依赖</strong>：在QwQ-32B上效果不佳（Pass@1仅25.5%），说明方法依赖基础模型的推理能力<br>
+</li>
+<li><strong>上下文长度</strong>：经验库 <span class="math inline">\(E\)</span>
+会占用token（通常限制在50条以内），对长上下文模型更友好<br>
+</li>
+<li><strong>提示工程敏感</strong>：<span class="math inline">\(p_{\text{summary}}\)</span> 和 <span class="math inline">\(p_{\text{extract}}\)</span>
+的设计影响效果，需要一定调优</li>
+</ol>
+<h1 id="reference">Reference</h1>
+<p>【1】Training-Free Group Relative Policy
+Optimization，https://arxiv.org/pdf/2510.08191</p>
+<hr>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/44c62dc5.html">DeepResearch的报告生成方法</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7c2f9dcb.html">从RAG到DeepSearch</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f7d600f3.html">阿里通义Lab:
+WebWalker,WebDancer和WebSailor</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/72150a83.html">Agent评测数据集</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/226b059f.html">agent调研(1)--MetaGPT,OpenManus和OWL</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f93b3aaf.html">Devin和Anthropic的Agent开发经验</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 训练框架<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f25d614e.html">Muon优化器</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe0adaa5.html">LLM训练框架：从优化器和精度讲到ZeRO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4cd8532f.html">LLM训练各种并行策略</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 论文阅读：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e96c7aac.html">最近阅读--关于数据合成、agent、reasoning和多任务</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/af7f9363.html">最近阅读2-关于自适应深度思考、context
+engineering和模型训练</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/9cb56255.html" title="腾讯的Training-Free GRPO">https://saicat.github.io/9cb56255.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/f25d614e.html" rel="prev" title="Muon优化器">
+                  <i class="fa fa-angle-left"></i> Muon优化器
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">868k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">26:18</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

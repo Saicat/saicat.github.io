@@ -1,0 +1,3618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="项目详细内容。 Agent落地 – DeepResearch  背景：智能助手用户需求日渐复杂，且需求细节各异，workflow方案难以支持。为此开发DeepResearch，为旅游规划、研报等复杂任务提供长篇报告结果。 主要工作：①DeepSearch，支持general和domain search，拆解复杂任务，迭代收集信息。②Report生成：信息整合，格式排版，支持多种格式的图文并茂rep">
+<meta property="og:type" content="article">
+<meta property="og:title" content="projects">
+<meta property="og:url" content="https://saicat.github.io/5c93b3a4.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="项目详细内容。 Agent落地 – DeepResearch  背景：智能助手用户需求日渐复杂，且需求细节各异，workflow方案难以支持。为此开发DeepResearch，为旅游规划、研报等复杂任务提供长篇报告结果。 主要工作：①DeepSearch，支持general和domain search，拆解复杂任务，迭代收集信息。②Report生成：信息整合，格式排版，支持多种格式的图文并茂rep">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://saicat.github.io/5c93b3a4/survey_timeline.png">
+<meta property="article:published_time" content="2022-02-22T14:06:47.000Z">
+<meta property="article:modified_time" content="2026-02-27T14:18:13.964Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="interview">
+<meta property="article:tag" content="project">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://saicat.github.io/5c93b3a4/survey_timeline.png">
+
+
+<link rel="canonical" href="https://saicat.github.io/5c93b3a4.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/5c93b3a4.html","path":"5c93b3a4.html","title":"projects"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>projects | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊AI技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#agent%E8%90%BD%E5%9C%B0-deepresearch"><span class="nav-number">1.</span> <span class="nav-text">Agent落地 – DeepResearch</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#plan-reflect"><span class="nav-number">1.1.</span> <span class="nav-text">Plan &amp; Reflect</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#deepsearch"><span class="nav-number">1.2.</span> <span class="nav-text">DeepSearch</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#report%E7%94%9F%E6%88%90"><span class="nav-number">1.3.</span> <span class="nav-text">Report生成</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8A%A5%E5%91%8A%E7%9A%84%E7%89%B9%E7%82%B9"><span class="nav-number">1.3.1.</span> <span class="nav-text">报告的特点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#deepsearch%E7%9A%84%E7%BB%93%E6%9E%9C"><span class="nav-number">1.3.2.</span> <span class="nav-text">DeepSearch的结果</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#step1%E6%96%87%E5%AD%97%E7%89%88%E7%9A%84%E5%88%9D%E7%A8%BF"><span class="nav-number">1.3.3.</span> <span class="nav-text">step1：文字版的初稿</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%9B%B4%E6%8E%A5%E7%94%9F%E6%88%90%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">1.3.3.1.</span> <span class="nav-text">直接生成的问题</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%A4%A7%E7%BA%B2%E7%94%9F%E6%88%90"><span class="nav-number">1.3.3.2.</span> <span class="nav-text">大纲生成</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%A1%AB%E5%85%85%E7%BB%86%E8%8A%82"><span class="nav-number">1.3.3.3.</span> <span class="nav-text">填充细节</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#step2%E5%9B%BE%E6%96%87%E6%8A%A5%E5%91%8A"><span class="nav-number">1.3.4.</span> <span class="nav-text">step2：图文报告</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%9B%BE%E7%9A%84%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.3.4.1.</span> <span class="nav-text">图的类型</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%8A%A0%E5%85%A5%E5%9B%BE%E7%9A%84%E6%96%B9%E6%B3%95"><span class="nav-number">1.3.4.2.</span> <span class="nav-text">加入图的方法</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%9B%BE%E8%A1%A8%E7%94%9F%E6%88%90"><span class="nav-number">1.3.4.3.</span> <span class="nav-text">图表生成</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E6%90%9C%E7%B4%A2%E6%BA%90%E7%9A%84%E5%9B%BE"><span class="nav-number">1.3.4.4.</span> <span class="nav-text">其他搜索源的图</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8A%A5%E5%91%8A%E7%9A%84%E6%A0%BC%E5%BC%8F"><span class="nav-number">1.3.5.</span> <span class="nav-text">报告的格式</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B"><span class="nav-number">1.3.5.0.1.</span> <span class="nav-text">评测</span></a></li></ol></li><li class="nav-item nav-level-5"><a class="nav-link" href="#llm%E5%9F%BA%E5%BA%A7%E6%A8%A1%E5%9E%8B%E5%BC%80%E5%8F%91"><span class="nav-number">1.3.5.1.</span> <span class="nav-text">LLM基座模型开发</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83%E7%BB%8F%E9%AA%8C"><span class="nav-number">1.4.</span> <span class="nav-text">预训练经验</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">1.4.1.</span> <span class="nav-text">模型初始化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E6%95%B0%E6%8D%AE"><span class="nav-number">1.4.2.</span> <span class="nav-text">训练数据</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83"><span class="nav-number">1.4.3.</span> <span class="nav-text">训练</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B-1"><span class="nav-number">1.4.4.</span> <span class="nav-text">评测</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%A1%A5%E5%85%85"><span class="nav-number">1.4.5.</span> <span class="nav-text">补充</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83%E6%A8%A1%E5%9E%8B%E6%95%B4%E7%90%86"><span class="nav-number">1.5.</span> <span class="nav-text">预训练模型整理</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E8%AE%AD%E7%BB%83%E6%96%B9%E6%A1%88%E7%9A%84%E6%BC%94%E5%8F%98%E8%B6%8B%E5%8A%BF%E4%B8%8E%E9%98%B6%E6%AE%B5%E6%80%A7%E7%BB%93%E8%AE%BA"><span class="nav-number">1.5.1.</span> <span class="nav-text">数据、结构、训练方案的演变趋势与阶段性结论</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE"><span class="nav-number">1.5.1.1.</span> <span class="nav-text">数据</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%BB%93%E6%9E%84"><span class="nav-number">1.5.1.2.</span> <span class="nav-text">结构</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E6%96%B9%E6%A1%88"><span class="nav-number">1.5.1.3.</span> <span class="nav-text">训练方案</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%80%BB%E4%BD%93"><span class="nav-number">1.5.1.4.</span> <span class="nav-text">总体</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE-1"><span class="nav-number">1.6.</span> <span class="nav-text">数据</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BC%80%E6%BA%90%E6%95%B0%E6%8D%AE%E9%9B%86"><span class="nav-number">1.6.1.</span> <span class="nav-text">开源数据集</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%8B%B1%E6%96%87"><span class="nav-number">1.6.1.1.</span> <span class="nav-text">英文</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%AD%E6%96%87"><span class="nav-number">1.6.1.2.</span> <span class="nav-text">中文</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%95%B0%E5%AD%A6"><span class="nav-number">1.6.1.3.</span> <span class="nav-text">数学</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81"><span class="nav-number">1.6.1.4.</span> <span class="nav-text">代码</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E6%B8%85%E6%B4%97"><span class="nav-number">1.6.2.</span> <span class="nav-text">数据清洗</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%94%9F%E6%88%90"><span class="nav-number">1.6.3.</span> <span class="nav-text">数据生成</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E6%95%B0%E6%8D%AE%E7%94%9F%E6%88%90"><span class="nav-number">1.6.3.1.</span> <span class="nav-text">代码数据生成</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%95%B0%E5%AD%A6%E6%95%B0%E6%8D%AE%E7%94%9F%E6%88%90"><span class="nav-number">1.6.3.2.</span> <span class="nav-text">数学数据生成</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B-2"><span class="nav-number">1.7.</span> <span class="nav-text">评测</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B%E6%96%B9%E5%BC%8F%E8%AF%B4%E6%98%8E"><span class="nav-number">1.7.1.</span> <span class="nav-text">评测方式说明</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#ppl-%E4%B8%8E-gen-%E7%9A%84%E5%90%AB%E4%B9%89"><span class="nav-number">1.7.1.1.</span> <span class="nav-text">PPL 与 GEN 的含义</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%93%AA%E4%BA%9B%E6%95%B0%E6%8D%AE%E9%9B%86%E5%8F%AF%E4%BB%A5%E7%94%A8-ppl"><span class="nav-number">1.7.1.2.</span> <span class="nav-text">哪些数据集可以用 PPL？</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#gen-%E6%96%B9%E5%BC%8F%E4%B8%8B%E5%A6%82%E4%BD%95%E5%88%A4%E6%96%AD%E6%A8%A1%E5%9E%8B%E7%94%9F%E6%88%90%E7%BB%93%E6%9E%9C%E5%AF%B9%E4%B8%8D%E5%AF%B9"><span class="nav-number">1.7.1.3.</span> <span class="nav-text">GEN
+方式下，如何判断模型生成结果对不对？</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E8%83%BD%E5%8A%9Bcode"><span class="nav-number">1.7.2.</span> <span class="nav-text">代码能力（Code）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E5%AD%A6%E8%83%BD%E5%8A%9Bmath"><span class="nav-number">1.7.3.</span> <span class="nav-text">数学能力（Math）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%AD%E8%A8%80%E8%83%BD%E5%8A%9Blanguage"><span class="nav-number">1.7.4.</span> <span class="nav-text">语言能力（Language）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9Breasoning"><span class="nav-number">1.7.5.</span> <span class="nav-text">推理能力（Reasoning）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%90%86%E8%A7%A3-%E9%98%85%E8%AF%BB%E7%90%86%E8%A7%A3understanding"><span class="nav-number">1.7.6.</span> <span class="nav-text">理解 &#x2F;
+阅读理解（Understanding）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%9F%A5%E8%AF%86knowledge%E4%B8%8E%E5%9E%82%E7%9B%B4%E9%A2%86%E5%9F%9F"><span class="nav-number">1.7.7.</span> <span class="nav-text">知识（Knowledge）与垂直领域</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%BB%BC%E5%90%88%E7%9F%A5%E8%AF%86"><span class="nav-number">1.7.7.1.</span> <span class="nav-text">综合知识</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%8C%BB%E5%AD%A6"><span class="nav-number">1.7.7.2.</span> <span class="nav-text">医学</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%B3%95%E5%BE%8B-%E9%87%91%E8%9E%8D"><span class="nav-number">1.7.7.3.</span> <span class="nav-text">法律 &#x2F; 金融</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%8C%96%E5%AD%A6-%E6%9D%90%E6%96%99-%E7%94%9F%E7%89%A9"><span class="nav-number">1.7.7.4.</span> <span class="nav-text">化学 &#x2F; 材料 &#x2F; 生物</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%80%83%E8%AF%95%E4%B8%8E%E7%AB%9E%E8%B5%9Bexamination"><span class="nav-number">1.7.8.</span> <span class="nav-text">考试与竞赛（Examination）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%95%BF%E6%96%87%E6%9C%AClong-context"><span class="nav-number">1.7.9.</span> <span class="nav-text">长文本（Long Context）</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%99%BA%E8%83%BD%E5%8A%A9%E6%89%8B-%E9%AB%98%E6%95%88%E7%9A%84%E5%A4%9A%E4%BB%BB%E5%8A%A1%E5%9F%BA%E5%BA%A7%E6%A8%A1%E5%9E%8B-%E6%8E%A8%E7%90%86%E6%A1%86%E6%9E%B6"><span class="nav-number">2.</span> <span class="nav-text">智能助手 –
+高效的多任务基座模型 &amp; 推理框架</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%99%BA%E8%83%BD%E8%AE%BE%E5%A4%87%E8%AE%B0%E5%BF%86%E7%B3%BB%E7%BB%9F"><span class="nav-number">3.</span> <span class="nav-text">智能设备记忆系统</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%A4%E6%98%93"><span class="nav-number">4.</span> <span class="nav-text">交易</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">83</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/5c93b3a4.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="projects | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          projects
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-02-22 22:06:47" itemprop="dateCreated datePublished" datetime="2022-02-22T22:06:47+08:00">2022-02-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-02-27 22:18:13" itemprop="dateModified" datetime="2026-02-27T22:18:13+08:00">2026-02-27</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/interview/" itemprop="url" rel="index"><span itemprop="name">interview</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/interview/project/" itemprop="url" rel="index"><span itemprop="name">project</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>45k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1:22</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>项目详细内容。</p>
+<h2 id="agent落地-deepresearch">Agent落地 – DeepResearch</h2>
+<blockquote>
+<p>背景：智能助手用户需求日渐复杂，且需求细节各异，workflow方案难以支持。为此开发DeepResearch，为旅游规划、研报等复杂任务提供长篇报告结果。
+主要工作：①DeepSearch，支持general和domain
+search，拆解复杂任务，迭代收集信息。②Report生成：信息整合，格式排版，支持多种格式的图文并茂report生成。③Plan&amp;Reflect：多轮规划迭代，配合预算，做到效果成本平衡。</p>
+</blockquote>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/1936367642064693029">A
+Comprehensive Survey of Deep Research: Systems, Methodologies, and
+Applications</a></p>
+<h3 id="plan-reflect">Plan &amp; Reflect</h3>
+<p>简单：单跳、多跳（有确定答案）</p>
+<p>复杂，开放问题： - 信息密集型：行业研报、学术综述、政策解读 -
+规划密集型：旅行形成、饮食方案、健身计划 -
+对比决策：产品选型、投资分析、风险评估</p>
+<p>任务规划，二级分解</p>
+<h3 id="deepsearch">DeepSearch</h3>
+<p>把检索任务分为三类：<br>
+- 单跳：单次检索就能收集到答案，比如“今天天气情况”<br>
+-
+多跳：需要根据第一次搜索结果再决定下一轮搜索query的，比如“2025年全球GDP前20的国家的人口数分别是多少”，需要先找到这些国家，再分别检索这些国家的人口<br>
+-
+开放：没有可观答案的任务，比如“2025年中国经济情况”，需要先检索对应话题有哪些维度，再从这些维度分别拆解详细任务，分别获取信息</p>
+<h3 id="report生成">Report生成</h3>
+<p>《图文研报生成》：</p>
+<p>可以粗暴认为DeepResearch主要就由DeepSearch +
+报告生成这两大模块组成。当然这个过程还可以由planner +
+reflect循环调度。</p>
+<p>这篇略过DeepSearch，先看看「报告生成」的模块。</p>
+<p>假设我们已经有了比较合理、丰富的搜索结果了，那报告要怎么生成呢？</p>
+<h4 id="报告的特点">报告的特点</h4>
+<p>1、长度较长</p>
+<p>DeepResearch的报告首先长度是比较长的，一般至少在几千个token，甚至上万token或者更长，具体就取决于话题和任务的复杂度。</p>
+<p>2、图文并茂</p>
+<p>除了大量的文字，报告还应该是图文并茂的。这里的「图」包含图片和数据图表（比如折线图、扇形图、表格等）。</p>
+<p>3、排版和格式</p>
+<p>为了提供给用户提供更好的阅读体验，报告应该支持比较好的排版。具体的排版就和输出报告的格式有关，常用的就是html、pdf、ppt。</p>
+<p>比如我用coze空间做一份旅游攻略，prompt是：</p>
+<pre class="line-numbers language-none"><code class="language-none">给我做一份端午节出国旅行的攻略，东南亚，两个人，悠闲一点，预算6000<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>跑了差不多半个小时之后就获得了一份html版本的图文攻略：</p>
+
+<p>上面这个图还没截完整，后面还有好几个不同国家的出行方案。</p>
+<h4 id="deepsearch的结果">DeepSearch的结果</h4>
+<p>DeepSearch是报告生成的起点，先看下它都提供了什么。</p>
+<p>1、general search</p>
+<p>目前DeepSearch的结果主要是一系列网页搜索的结果，每个网页包含以下字段：</p>
+<ul>
+<li>title：网页标题<br>
+</li>
+<li>content：完整正文的「文本」内容<br>
+</li>
+<li>url：原文链接<br>
+</li>
+<li>summary：正文的简短总结<br>
+</li>
+<li>images：网页中的图片列表，包含图片的url和对应的caption</li>
+</ul>
+<p>其中title、content和url是常规的网页搜索结果字段，就不说了。</p>
+<p>summary是额外添加的，在报告生成的处理逻辑里，对于不需要网页细节内容的部分，就可以使用summary进行处理，从而减少处理的token，节省时间和成本。</p>
+<p>个人认为，成本问题是DeepResearch一个很重要的方向。如果DeepResearch要向大众推广，那么开发过程中，60%以上的时间都会在考虑怎么节省成本。</p>
+<p>图片的caption也是搜索到网页后增加的，用于后续在报告中添加图片。</p>
+<p>2、domain search</p>
+<p>除了general search，还会有一些常用场景需要的搜索源，比如：</p>
+<ul>
+<li>导航工具：用于获取特定地点之间的交通信息，包括驾车、航班和火车，一般旅游攻略对这个有强需求。<br>
+</li>
+<li>美食工具：获取美食的价格评分和地点还有评价，也是旅游场景的所需要的。</li>
+</ul>
+<p>除了用现有工具，也可以针对自有数据建设向量搜索。</p>
+<p>这些都可以整合成general
+search的结果格式：标题、正文、摘要，url和图像是optional的。</p>
+<h4 id="step1文字版的初稿">step1：文字版的初稿</h4>
+<p>从搜索结果到最终报告，中间需要多个步骤。（有没有大佬已经在做一步端到端的生成？把所有数据都塞给模型，要求一步到位生成图文结果。目前这样做的效果比较差，模型窗口长度限制也是个问题）</p>
+<p>报告的目标格式一般包含选择html、pdf和ppt，这些格式用户使用起来比较熟悉。</p>
+<p>转成目标格式之前，首先要生成一份逻辑通顺，行文流畅，内容完整，包含文字和图片的初稿。</p>
+<p>而这个初稿的生成又分为「生成文字」和「增加图像」两个阶段。</p>
+<p>第一步我们就是要获得文字版本的初稿。</p>
+<p>这里选择用markdown格式来生成文字初稿。因为markdown格式比较简单（能少用点token），模型生成的效果也好，支持多级的标题，公式以及图片的插入，基本能够满足我们的需求。</p>
+<h5 id="直接生成的问题">直接生成的问题</h5>
+<p>这个文字版本也没法一步直接生成。稍微讲一下直接生成的问题：</p>
+<ul>
+<li>搜索结果太多，假设一个网页平均有1000 token，那100个搜索结果就要100k
+token，已经超过或者接近很多模型的窗口上限了；参考秘塔AI，经常出现100个200个甚至更多的网页引用，所以100k级别的输入并不会是少见的情况。<br>
+</li>
+<li>即使模型的窗口可以接受这个长度或者更长的输入，也容易出现lost in the
+middle的情况；对于需要使用到原文细节信息的情况（比如旅行规划中的车次/航班号，出发时间，或者经济研报中多个地区多个维度的数据），要在大量的文本中准确捞到正确的内容是一个容易出错的事情。<br>
+</li>
+<li>目前大部分模型支持的生成长度在2k到4k，在更大长度的内容输出上，容易出现截断。</li>
+</ul>
+<h5 id="大纲生成">大纲生成</h5>
+<p>直接生成会遇到问题，那么更好一点的做法是先生成文档的大纲（即各级标题），再根据大纲去填充细节。</p>
+<p>生成大纲这一步就可以用上搜索结果中的summary了，因为生成大纲并不需要关注太多细节。</p>
+<p>比如在制定旅游攻略的任务下，我们搜索到的内容基本可以分为交通、住宿、美食、景点、通讯等，我们只要让模型根据搜索内容的summary指定report的大纲就可以了。类似地，研究NLP深度模型的发展模型也可以根据搜索结果分为embedding模型、Bert时代、GPT时代、Agent等。</p>
+<p>假设一个summary是30个token，那么即使有200个搜索结果，长度也只有6k
+token，模型可以轻松处理。</p>
+<p>生成大纲时，也有一些细节限制：</p>
+<ul>
+<li>要限定每级标题的数量，防止模型生成过多，并且限定标题级别数量，比如最多只能使用到3级标题。<br>
+</li>
+<li>要求各级标题之间尽量不要有overlap。<br>
+</li>
+<li>标题要起得明确清晰，让人单独看到这个标题也知道是什么意思（因为这些标题在设计上可能是要在报告完成前，展示给用户看的）。</li>
+</ul>
+<p>举一个例子。输入query =
+"上海至东京国庆购物攻略：8000元预算五天四夜经济型方案"</p>
+<p>制订的大纲各级标题是：</p>
+<pre class="line-numbers language-none"><code class="language-none">[&quot;一、行程规划与交通安排\n1.1 机票选择策略\n1.2 机场至市区交通方案&quot;,
+&quot;二、住宿选择与区位分析\n2.1 银座商圈高性价比酒店\n2.2 新宿商圈经济型住宿&quot;,
+&quot;三、购物商圈深度攻略\n3.1 银座高端购物路线\n3.2 新宿平价消费指南\n3.3 表参道特色品牌挖掘&quot;,
+&quot;四、预算分配与消费控制\n4.1 8000元预算分解模型\n4.2 免税政策与退税实操&quot;,
+&quot;五、行程优化建议\n5.1 交通卡券组合方案\n5.2 错峰购物时段建议&quot;]<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>上面这个例子共有5个一级标题，也就是5个大的chapter。</p>
+<p>大纲格式也可以自行设计，结构化的也可以，只要模型能准确遵循就行。</p>
+<p>这一步里其实有很多细节可以优化，比如传给LLM的搜索结果的排序和筛选，或者利用多次采样再合并获取更合理的大纲等。</p>
+<h5 id="填充细节">填充细节</h5>
+<p>得到大纲的标题之后，就要根据搜索结果填充每个chapter的细节。</p>
+<p>这里可以并行来做：每个chapter调一个模型来填充细节。</p>
+<p>prompt是类似这样的（简化版）：</p>
+<pre class="line-numbers language-none"><code class="language-none">你需要根据用户的要求，和文档的大纲，完成分配给你的章节的撰写。
+
+你需要根据搜索结果来完成这一章节。
+
+用户query: &#123;query&#125;
+
+大纲: &#123;outline&#125;
+
+分配给你的章节: &#123;chapter&#125;
+
+搜索结果: &#123;search_results&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>前面分析了，全量的搜索结果过多，一起都塞给模型，可能导致结果不佳，成本也高。因此在这一步也不宜直接把所有搜索结果扔给模型去完成细节的编写，而是先从搜索结果里找到和当前要写的这个章节相关的条目。</p>
+<p>比如在旅游规划任务下，有一个chapter是交通相关的内容。200个搜索结果里有40个涉及了飞机火车的班次信息，以及景点之间的交通工具推荐。那么在写这一个chapter的时候，就只需要给模型输入这40个搜索结果，而不需要200个搜索结果都给。</p>
+<p>那怎么找到相关搜索条目呢？可以用BGE或者小的LLM给每个文档做一个打分或者匹配，以此筛选搜索结果。也可以在生成大纲的时候就要求模型把对应的条目编号和标题一同给出。</p>
+<p>这一步同样有很多细节可以优化，比如：</p>
+<ul>
+<li>如果觉得以一级标题进行搜索结果匹配还是有太多结果，那可以进行二级或者三级标题的匹配，把章节拆得更细，从而减少每个章节编写的难度。<br>
+</li>
+<li>为了方便编写细节的模型理解，可以在生成大纲的时候增加一个长一点的解释，限定这一章需要补充的信息。<br>
+</li>
+<li>把章节细节的编写也设计成迭代的模型，逐步完善。</li>
+</ul>
+<p>值得单独拎出来说的，是关于字母和数字的细节。涉及字母和数字的通常是比较严谨的信息，比如火车/航班的班次，出发/到达时间，或者路途的公里数，开车所需的时间和住宿价格等。一方面，这些内容错一个字母或者数字就会给用户带来比较大的困惑，另一方面，数字通常涉及计算，而LLM的"口算"并不是很可靠。针对这些问题，可以额外添加一个利用计算器或者python代码验证字母和数字的环节，并把结果提供给章节编写的模型，从而减少计算错误和幻觉带来的问题。</p>
+<p>最后，记得让模型给出reference，用于展示给用户。</p>
+<h4 id="step2图文报告">step2：图文报告</h4>
+<p>上面这几步做完之后，就有一个纯文本的report初稿了。但是呈现给用户，光有字不够，还得有图。</p>
+<h5 id="图的类型">图的类型</h5>
+<p>report里都有什么图？先来分个类。</p>
+<p>1、来自检索结果（网页）的图</p>
+<p>检索结果中包含一些可以直接使用的图片，这些图片可以直接插入到report的适当位置。</p>
+<p>一种是如旅游景点的风景图，地标建筑照片等。这一类图片的特点是，插入到report时，在准确度上的要求相对比较低，只要别出现明显的图文不匹配（比如文字在介绍山，但是图片是海景），都还可以接受。</p>
+<p>另外，也有可能出现对准确度有一些要求的情况，比如路线导航，车次的信息表。这类信息如果出错（火车的章节配了个航班的图）可能就会让用户的体验大打折扣。</p>
+<p>再进一步，比如对于经济调研的研报，那么就有可能出现很多折线图、柱状图、扇形图或者信息密集的表格，这种图表每个字母每个数字都很重要，不能出错，不能和文本的信息对不上。</p>
+<p>这些来自检索结果文档的图片，插入report的关键在于 -
+要用对图，比如搜索的时候有可能搜到有矛盾的信息，那么LLM在总结完文本之后，我们需要知道应该用哪些文档的图片，不应该用哪些文档的图片
+- 插对位置，这就要求我们知道每张图片的主要信息是什么</p>
+<p>2、从其他来源获得的图</p>
+<p>有些时候搜索结果文档里只有文字，或者文档中的图不是我们想要的图，那我们就可能需要根据用户需求和文本报告内容，自己从另外的来源获取合适的图。</p>
+<p>（1）来源1：自己画数据图表</p>
+<p>如果report中有一系列数据，比如某地不同月份的温度，或者不同厂商的市场占比，那么这些数据就可以生成图表，方便用户直观阅读。比如不同月份的温度可以画成折线图，不同厂商的占比可以画成扇形图。根据数据的类型，也可以制成柱状图、表格或者其他图表。</p>
+<p>（2）来源2：图片搜索接口</p>
+<p>假设我们在给用户制作旅游攻略的时候，查到有一处古镇适合游玩，我们想把这个古镇的资料作为攻略的一部分进行介绍，但是恰好搜到的网页只有文字，那么我们可以在制作report的时候，拿这个古镇的文字介绍去搜索图片，然后把搜到的图片插入到report中。</p>
+<p>3、各种图的难度</p>
+<p>上面分出来的这几种图片和图表，按开发难度排个序：</p>
+<ul>
+<li>level 1：常规的图表生成，如折线图、柱状图、表格等<br>
+</li>
+<li>level 2：插入来自文档的图片和图表<br>
+</li>
+<li>level 3：插入来自其他搜索源的图</li>
+</ul>
+<h5 id="加入图的方法">加入图的方法</h5>
+<p>先说下插入「来自文档的图片」的方法。大致的思路就是和之前在<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a>中介绍的InternLM-XComposer类似。</p>
+<p>InternLM-XComposer生成图文并茂文档的做法是这样的：</p>
+<ul>
+<li>（1）生成纯文本文档<br>
+</li>
+<li>（2）找到文本结果中可以/需要插入图像的位置，并生成对应的caption<br>
+</li>
+<li>（3）用上一步的caption进行图像检索，获得候选，并选择最符合的图像，获得最终结果</li>
+</ul>
+<p>稍微有点不同的是，InternLM-XComposer由于图片库比较大，所以它的做法是“假设某个位置需要图，并生成这张假想的图的caption”，然后根据这个caption去图库里找。</p>
+<p>而在我们这个report生成的场景下，我们的图片库相对比较小。假设我们平均每个章节用到了30个搜索结果，每个搜索结果平均有3张图，那么我们的图库就有90张。如果按InternLM-XComposer的做法，很难在这么小的图库里找到对应的图，因此我们反过来，先跑出图库所有的图的caption，再把这些caption都提供给LLM，让模型来决定在哪里可以插入哪些图片。</p>
+<h5 id="图表生成">图表生成</h5>
+<p>要生成图表，一个方法是要求模型在report中包含数字的地方，判断是否适合插入图表，适合插入什么图表，然后调用工具或者写python代码生成图表，最后把生成结果贴到对应位置上就行。</p>
+<p>而如果报告的目标格式是html，那么也可以在生成html的prompt中，直接要求模型判断和插入图表，html
++ css基本可以所有我们想要的图表。</p>
+<h5 id="其他搜索源的图">其他搜索源的图</h5>
+<p>假设我们在旅游攻略的展示策略上，要求一定要有足够的景点图，而搜索文档中又刚好没有符合要求的，那我们可以单独去搜索我们想要的图。</p>
+<p>首先我们需要知道搜什么图。prompt可能是类似这样的：</p>
+<pre class="line-numbers language-none"><code class="language-none">你是一个配图专家，你的任务是给文本配上合适的图。
+
+你可以调用图片搜索工具，并利用关键字进行图片搜索。
+
+&#123;工具description&#125;
+
+请根据一下的文本，给出工具调用名称和关键词：
+
+&#123;chapter&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这部分的逻辑相对来说就比较定制化了。</p>
+<h4 id="报告的格式">报告的格式</h4>
+<p>报告常用的格式就是html，ppt和pdf了。其中html和ppt都可以转pdf，所以理论上只要支持html和ppt就可以了。</p>
+<p>1、html</p>
+<p>之前发现html的生成有一个不错的工具叫deepsite，<a target="_blank" rel="noopener" href="https://enzostvs-deepsite.hf.space/">https://enzostvs-deepsite.hf.space/</a>。可以根据输入prompt直接生成漂亮的页面。后来发现后台其实就是DeepSeek。</p>
+<p>试了在DeepSeek-R1和DeepSeek-V3上要求直接根据文案生成网页，效果不错，而且V3的效果比R1更好。前几天又发现Qwen
+Chat也专门针对WebDev做了优化，Qwen3能够直接给出比较好的网页设计了。</p>
+<p>随便给V3输了一组数据，生成的网页就挺漂亮的：</p>
+
+<p>不过直接大模型生成html目前也有一些问题：</p>
+<ul>
+<li>对指令的遵循会比较差，容易出现幻觉，比如上面这个图，下面那行字就是模型自己加的。<br>
+</li>
+<li>复杂的页面设计，html代码很长，生成时间很久，还容易出现截断。</li>
+</ul>
+<p>2、ppt</p>
+<p>ppt的生成就得靠专业的接口了，这个头部的几家AI公司都有这个能力。</p>
+<h6 id="评测">评测</h6>
+<p>Agent评测数据集：<a target="_blank" rel="noopener" href="http://localhost:4000/72150a83.html">Agent评测数据集</a></p>
+<p>自研DeepResearch主要用：<br>
+- BrowseComp/BrowseComp-ZH - GPQA -
+自制数据集包括研报、旅行规划、减肥健身计划等数据集</p>
+<h5 id="llm基座模型开发">LLM基座模型开发</h5>
+<blockquote>
+<p>背景：业务使用开源LLM时，存在领域知识不匹配、规模覆盖不全、商用许可等问题。为提升业务模型定制能力，对LLM预训练进行探索，提升业务所需能力效果。
+主要工作：①整合10T预训练语料，合成100B+代码和数学领域数据。②探索模型参数初始化方法scale-up/down/out，将达到相同评测指标所需训练量缩减至10%。③分步退火：对多类任务使用多步退火策略，提升最终整体指标。④长窗口能力：上下文窗口提升至256k，支持业务落地。</p>
+</blockquote>
+<p>部分内容可看《预训练经验》博文：</p>
+<h3 id="预训练经验">预训练经验</h3>
+<h4 id="模型初始化">模型初始化</h4>
+<p>随机初始化模型参数，进行大规模预训练，收敛到较好效果所需的token数太多了。</p>
+<p>早期用Qwen1.5-0.5B之类的小模型结构做实验，训了很多T
+token的通用数据，效果也才勉勉强强，不能说差，但是没有什么特别的惊喜，而成本实在是太高了。训练量相比一两T的训练量的提升不是很多，至少在没有用高质量数据退火的时候，收益比较小。</p>
+<p>这时老板开始问，"能不能用上已有的模型"。一个方法是直接接着开源模型继续训，但是这样的问题是，没有办法定制我们想要的模型。</p>
+<p>比如开源模型有7B的，有4B的，有1.5B的，而业务上需要一个3B参数量模型，这时就没法直接用开源模型训了。另外即使参数规模对得上，有些也有版权问题，比如Qwen2.5-4B就没有商用许可，所以直接用也有风险。</p>
+<p>那么用已有的模型参数进行新模型参数的初始化是一个可行的方法。</p>
+<p>1、大模型 → 小模型</p>
+<p>比如14B模型可商用，那可以想办法用它来初始化一个初始效果比较好的3B模型。</p>
+<p>Sheared LLaMA和Weight
+Subcloning这两个初始化方法的效果都比较好。这两个方法都是通过参数裁剪，把大的模型裁剪成一个小模型。</p>
+<p>Sheared
+LLaMA要训练一个mask，通过mask给参数的重要性进行打分，然后保留重要性高的。mask所需的训练量并不大，几B到几十B的token就足够了。</p>
+<p>一个注意点，mask的训练需要选择质量高的token，比如代码数学知识之类的，不要混太多简单的、质量一般的数据。这个数据的选择和我们训练模型的目的相关，如果你是要做一个代码模型，那么自然在选择的时候就应该使用更多code数据，以保留更多对code数据敏感的参数。</p>
+<p>而Weight
+Subcloning不需要训练，直接用公式计算各个neuron和层的重要度，然后联合相关维度，保留重要度高的就行。计算神经元的重要性的时候，同样需要根据输入的数据来获得激活值。输入数据的选择原则和Sheared
+LLaMA一样。</p>
+<p>Sheared LLaMA由于有训练，裁剪完之后刚开始训练的loss比Weight
+Subcloning低（Sheared
+LLaMA跑个几十步就能到2.x的样子），但是跑个一万step左右基本就都收敛到相同水平了，甚至Weight
+Subcloning在后期的loss还略略低一点（但是在评测任务效果上基本是持平的）。</p>
+<p>Sheared LLaMA和Weight
+Subcloning都有一个限制，就是模型的高矮胖瘦可以改，比如hidden size，head
+num，layer
+num，但是模块的类型不能改，比如激活函数或者attention类型，大模型是什么类型，小模型就还得是什么类型。</p>
+<p>实践中，把模型参数量裁剪到原模型的1/5甚至再小一点（14B →
+7B、4B、3B、2B）都还是work的。</p>
+<p>相比随机初始化，Sheared LLaMA和Weight
+Subcloning达到相同loss和下游任务评测指标所需的token数，要少很多。原本很多T
+token才能达到的效果（以预训练loss为指标），结合高效初始化和蒸馏，基本500B就能达到。</p>
+<p>一个经验，至少在0.5B~72B这个范围并没有发现从零初始化模型在效果上的优势，所以可以放心使用已有模型的参数进行初始化，而不用担心随机初始化的优化空间更大的情况出现。</p>
+<p>2、小模型 → 大模型</p>
+<p>上面是针对大规模预训练，从大模型初始化小模型的方法。也有从小模型初始化大模型的方法，比如Bert2BERT和Llama
+Pro，在一些场景下效果也还可以。</p>
+<p>虽然思路比较旧，做法比较简单，但是可迁移性还可以。</p>
+<p>个人觉得，这些小模型 →
+大模型的方法主要适合小容量、方向明确的训练。通过提升少量参数，获取复杂任务下的一点提升。比如现在要做某个封闭域的对话能力，而且训练数据量比较多可以用来做预训练，那么用这种方法就可以。</p>
+<p>但是不要对最终效果抱太高的期望，一般顶多是在一两个点这样的提升水平。</p>
+<p>3、dense → sparse</p>
+<p>MoE的训练也探索了。MoE模型随机初始化相比Dense更容易遭遇不稳定的loss，经常出现很大的spike，然后需要很长的时间来恢复（不会几百几千步能恢复的，基本上相当于从化神回到筑基水平）。</p>
+<p>因为router的存在，MoE模型整体对精度更加敏感。尝试过简单地把混合精度训练改成全单精度训练，整个过程就会稳定很多，但是这样效率也很低，GPU的利用率连50%都不到，不可scale。</p>
+<p>一个经典的初始化方法是Sparse Upcycling。Sparse
+Upcycling方法很稳，至少是一个效果效率都不错的基线方法。</p>
+<p>Sparse
+Upcycling一般是用同层数、同attention设置的dense模型，通过FFN复制的方式来获得MoE模型。</p>
+<p>几个注意点：</p>
+<ul>
+<li>（1）现在都是使用细粒度专家，一个FFN会被裁剪成多份专家，裁剪之前需要做一些neuron粒度的顺序打乱来帮助打破专家对称性；<br>
+</li>
+<li>（2）另外会需要对部分FFN参数进行随机初始化，我们实验了50%<sub>99.5%的原参数保留比例，也就是有0.5%到50%的随机参数进行重新随机初始化，结果是50%</sub>70%的收敛效果和收敛速度是比较好的。</li>
+</ul>
+<p>关于各种初始化的详细内容，可看<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/_3-hX3e1TqGEOo6O41JJ_A?token=1318369845&amp;lang=zh_CN">LLM高效预训练(一)</a>，<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/S_Nx5I4C2gxwumG4GMxkDg?token=1318369845&amp;lang=zh_CN">LLM高效预训练(二)</a>。</p>
+<h4 id="训练数据">训练数据</h4>
+<p>包含多个阶段的训练数据。</p>
+<p>1、phase1：通用预训练数据</p>
+<p>这一阶段数据大部分是真实数据，一些特定领域的比如代码、数学会有合成数据。合成数据的量相对少，而且目的更明确，就是针对下游某些能力的。先看真实数据，合成数据的处理后面讲。</p>
+<p>（1）基础清洗</p>
+<p>这部分比较老生常谈了。个人经验是，现在能够收集到的数据量已经非常足够，所以基础清洗可以狠一点，不怕错杀：</p>
+<ul>
+<li>ppl：太高和太低的都不要<br>
+</li>
+<li>格式：太多分行的，太多短词的（比如疑似网页导航栏），通通不要<br>
+</li>
+<li>长度：太短的不要<br>
+</li>
+<li>其他规则：url/数据类型/字符比例/安全相关字词/日志识别/带太多重复内容的（引起LLM复读机）<br>
+</li>
+<li>...等等等等</li>
+</ul>
+<p>再加上人工打标数据训练出来的二分类模型（轻量级的比如fasttext），把低质量的筛掉。</p>
+<p>更多细节可参考<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/bgg0HKaKokRVhXixrlQRhg?token=1318369845&amp;lang=zh_CN">Llama3.1--预训练要点一览</a>和<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/5MfmrrcYeK4d6gfaDL8GWA?token=1318369845&amp;lang=zh_CN">Qwen2技术报告</a>细节。</p>
+<p>（2）去重</p>
+<p>去重可以说是提升通用数据质量最为重要的一步，用minhash做文章/段落粒度的去重。minhash的效率还是比较可以的，如果有集群可用。可以先把minhash都算出来，再进行去重处理。</p>
+<p>去重的原则是宁杀错不放过，因为重复数据对模型的能力影响很大。</p>
+<p>（3）分类</p>
+<p>代码数据、数学数据、高教育性数据(比如chinese-fineweb-edu这种)的挖掘，还有通用数据的标签打标，比如体育、音乐、时政等等。好消息是这些基本有可用的体系和模型，可以在已有资源的基础上稍作修改就行。</p>
+<p>经验上是提高education
+score，代码、数学、知识类数据的比例对整体效果有一些帮助，用更少的训练量就可以达到更低的loss。</p>
+<p>个人经验，配比可以不用做得那么细，比如在第一阶段中代码数学数据到底占30%好还是40%好，不是最重要的，反正比自然比例高就可以了。在预训练的早期，还是需要通用数据来提升模型基础语言能力的，没有这个为基础，直接学难度大的效果并不好。</p>
+<p>2、长文本预训练数据</p>
+<p>长上下文的训练所需的数据比较少，业界经验是几B到几十B就完全足够了。</p>
+<p>把多个不怎么相关的文档拼接在一起，可以用，但是效果不好。因为这样相当于只是训练了位置编码，和Positional
+Skip-wise的效果差不多。</p>
+<p>略好一点的方法是拼接相关文档，比如论文，把有reference关系的文章拼接在一起。</p>
+<p>更好的长文本数据是天然的长文本、有长上下文依赖的文本，比如书籍，特别是大学课本这种，逻辑清晰的。另外，github的项目也是长文本。</p>
+<p>长数据在领域分布上有bias，因此筛选的时候记得统计一些这些数据的领域分布情况，需要的时候调整一下，避免分布过于集中。</p>
+<p>有一些文章提出构造阅读理解之类的长文本，比如拼接10篇文章，然后再最后提几道题，每道题需要阅读不同的文章来回答。实践上，预训练加这种数据没什么太大的提升。</p>
+<p>长文本的相关内容可看<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/VpX8ODoSTzw4FJmzB9kTug">Qwen2.5-1M技术解析</a>，<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/Ci9tAMIER0Aj96sK81HNcw?token=1318369845&amp;lang=zh_CN">LLM长上下文的问题</a>，<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/FTewPxSr5fcwkxAgRZm7Wg?token=1318369845&amp;lang=zh_CN">解锁大模型长上下文能力</a>，<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/NaTtwURRw7lsG55QTIaVsA?token=1318369845&amp;lang=zh_CN">大模型推理窗口-从有限到无限大</a>。</p>
+<p>3、退火阶段数据</p>
+<p>很多模型都证明了，LR退火阶段对提升模型最终效果很重要。而这个阶段提升数据质量的收益很大。模型在使用时所需的能力主要是语言能力、知识储备和推理能力。</p>
+<p>推理能力主要来自数学和代码数据，知识储备主要来自educational
+data（比如学科试题、教科书），语言能力则是高质量网页数据。</p>
+<p>高质量网页数据主要是从真实数据里用比较严格的阈值筛选的，教科书也都是真实数据，除此之外，学科试题、数学、代码都混了大量的合成数据。</p>
+<p>总结下学科试题、数学和代码数据的合成，合成数据都是使用LLM生成的。</p>
+<p>（1）多样性</p>
+<p>合成数据最重要的就是多样性。没错，先不谈格式、类型、质量，最重要的就是多样性。因为用LLM合成数据，结果都和模型预训练学到分布很相关。</p>
+<p>一个提升多样性的方法是利用解码的随机性，提高温度，提高top k/top
+p等。这是一个方法，但是为了保持合成数据质量，随机性也不能提得太高，特别是针对数学和代码这种准确性要求比较高的场景。基本上通过解码生成多条之后再进行质量筛选，也就能留下几条，而且这几条相似度还是高的。</p>
+<p>另一个方法就是通过prompt来提升多样性。同样的prompt输出的结果相似，那就用很多种prompt。腾讯的Persona
+Hub就很好用。Persona
+Hub给了10亿个不同的人物描述，我们可以把这些不同的描述加到prompt里，比如生成数学题：</p>
+<pre class="line-numbers language-none"><code class="language-none">
+prompt &#x3D; &quot;&quot;&quot;
+
+根据以下任务的描述，想象一个其日常生活中的场景，出一道和这个场景相关的数学应用题。
+
+人物描述：&#123;persona&#125;
+&quot;&quot;&quot;
+
+person &#x3D; [
+  &quot;一个23岁的卡车司机，身高178cm，短头发，单身，爱吃海鲜...&quot;,
+  &quot;小A，一个化学家，北京人，本科就读于...&quot;,
+  ...
+]
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>由于人物的描述各不相同，最终输出的结果多样性就比较高。</p>
+<p>在这个基础上，还可以加入其他维度的参数，提升多样性。比如：</p>
+<ul>
+<li>难度等级：题目的难度，低、中、高，或者小学，初中，高中，大学，考研等，再细一点也可以<br>
+</li>
+<li>话题：可以从persona提取top
+k个人物关键词，比如"职业"、"学习"、"日常"、"水果"等，然后随机选择一个，要求模型出题必须和这个或者几个关键词相关<br>
+</li>
+<li>few-shot
+example：我们已经有一些高质量题目数据集了，可以从里面随机挑几条，排列组合，和persona一起，一方面提升多样性，一方面也能提升合成数据的质量<br>
+</li>
+<li>etc.</li>
+</ul>
+<p>总结来说，就是生成的prompt里需要有一个随机数，这个随机数是以自然语言的形式存在的，这个随机数约多样，生成多样性越好。</p>
+<p>（2）质量</p>
+<p>对于数学、代码和知识考题类的数据：</p>
+<ul>
+<li>模型越大，效果越好<br>
+</li>
+<li>专门模型比通用模型效果好</li>
+</ul>
+<p>质量评判的时候可以直接LLM-as-judge来给数据质量打分。也可以用已有的开源模型打分，比如huggingface上就有给代码/数学质量打分的模型。</p>
+<p>代码还可以通过执行反馈来确定代码是否正确，OpenAI有提供工具。</p>
+<p>在这个基础上，一些数据进化的方法也可以用来提升数据的质量和难度，不过这个最好根据数据类型来定制进化的流程。</p>
+<p>更详细内容看<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/R1DbxO9lF3xSp2j-Q5-IKQ?token=1318369845&amp;lang=zh_CN">训练数据合成(一)</a>，<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/B6CclTLHvjI03itaSySj9Q?token=1318369845&amp;lang=zh_CN">训练数据合成(二)</a>，<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/LRy0zC9fen8m7XpK1TsB7A?token=1318369845&amp;lang=zh_CN">训练数据合成(三)</a>。</p>
+<h4 id="训练">训练</h4>
+<p>1、蒸馏</p>
+<p>就是student模型学习teacher模型的logits。</p>
+<p>随机初始化的模型所需的token数多，蒸馏起来成本高。但是用大模型初始化的模型，所需的训练token小很多(&lt;=10%)，因此蒸馏是个好选择。</p>
+<p>一个好的选择是蒸馏的teacher模型和用于初始化小模型的大模型是同一个，或者用同系列的更大模型，这样出来的效果相比直接训练有提升。</p>
+<p>蒸馏温度有个先高后低的设置，这样训练的前期学习的范围更广，而后期专注收敛到更好的水平。</p>
+<p>2、Maximal Update Parameterization (µP)</p>
+<p>MuP是个模型参数化的方法，通俗地说就是设计模型的超参。用这个方法初始化的模型可以保证在不同规模下，训练的LR和BS可以通用。</p>
+<p>这个方法的本意是利用小模型调参，然后直接迁移到巨大的模型，从而减少调参成本。不过MuP的参数化方法和通常的模型有些不同，这就可能导致模型最终收敛的效果不一定和通常的模型一致。</p>
+<p>不过实验下来确实MuP的训练超参迁移能力不错，大小模型之间的一致性比较强。</p>
+<p>而如果要训练的模型比较小，直接网格搜就行了（比如用10B数据），然后看哪个组合loss下降地快，简单粗暴有效。</p>
+<p>3、LR：WSD和Cosine</p>
+<p>一般训练的LR是warmup + cosine。</p>
+<p>WSD的好处是方便做实验。因为cosine要预先设置训练步数，而WSD可以在中间任何时候进入下一个阶段。</p>
+<p>效果上，同样的训练token数下，WSD是不如cosine的，至少在S阶段时这样。要把WSD的效果提上来，D的阶段要足够长，最终的LR要足够低，期间的数据质量要提高。</p>
+<p>4、多阶段退火</p>
+<p>这个是比较重要的。</p>
+<p>LR退火阶段是提升模型效果指标的关键。这个阶段要提升数学、代码、学科、和高质量通用数据的比例。</p>
+<p>但是实践中，发现退火阶段直接把多种高质量数据混在一起，无论怎么调比例，都会出现跷跷板效应：代码数学加多了，可能通用能力就变差了，或者学科数据加多了，数学就受影响了。</p>
+<p>因此退火阶段不直接混在一起训，而是分成多个小阶段，每个小阶段主要训一种数据，这样还可以调LR和BS。</p>
+<p>训练单一一种数据的时候，还需要调配内部的数据比例。比如代码数据，合成的要多少，python要多少，其他语言要多少，题目要多少，github项目要多少，这些都需要搜索配比。</p>
+<p>确定了配比之后，先分别用单一一种数据，测出每种数据的最佳LR。业界现在的经验是：</p>
+<p>学科 &gt; 数学 &gt; code &gt; 通用 (&gt; Tool Use)</p>
+<p>因此小阶段的训练也按这个顺序来排，最先训学科，最后训通用。</p>
+<p>（1）step 1：学科</p>
+<p>这一阶段主要提升学科能力，对标的评测数据主要是MMLU、Ceval和CMMLU这种。</p>
+<p>这一阶段使用较大的LR（3e-4），数据主要包含教材（30%），合成的学科选择题（50%），小部分的通用选择题（10%），还有小部分的通用数据（10%），总共xxxB
+token的数据。（虽然总的数据有这么多，但是最佳checkpoint往往在训练完一遍数据前就达到了。）</p>
+<p>通用数据主要是维持一下模型的语言能力，不要因为学习学科知识和做选择题给搞得不会说话了。</p>
+<p>以Qwen2.5为基座，训完这一阶段之后，MMLU、Ceval的效果其实就已经明显超过Qwen官方模型了。</p>
+<p>（2）step 2：加上数学</p>
+<p>在第一阶段的基础上，加入60%的数学数据。这里做过实验，发现再进一步提升数学数据的比例，效果也不会有进一步提高了，甚至有点下降，并且由于学科数据更少，导致学科能力也下降更多。因此从全局分数的出发点考虑，只加入了60%的数学数据。整体的数据比例是
+学科：数学 = 40%：60%。</p>
+<p>这一阶段训练中，学科能力得分会比第一阶段低，但是会比传统那种一开始就直接混合多种数据的做法要高。这一阶段训练完之后Ceval还能比Qwen2.5基线高6分左右。</p>
+<p>这一阶段训个xxB
+token，数学能力也达到最佳，而学科能力略下降之后也稳定了。</p>
+<p>加入的数学数据里依然有大量的合成数学题，主要覆盖中学和大学的各种数学考题。学习率上，发现小一点更好，比如业界训通用数据基本上用1e-4比较多，那对于数学LR=8e-5就比1e-4好。</p>
+<p>（3）step 3：加上代码</p>
+<p>一个在业界已经验证了的规律：数学和代码能力有一定的相关性，也就是数学能力的提升有助于提升代码能力，反过来也一样。因此这一阶段使用的代码数据比例没有特别高，差不多40%就可以了。整体的数据比例是
+学科：数学：代码 = 20%：40%：40%。</p>
+<p>学科减少的比例更大一些，因为学科数据在退火阶段训练的时间最长（各个step都有），而且早期的LR更大，所以整体来看，即使在后面的阶段减少比例，学科能力也不会下降太多。</p>
+<p>这一阶段LR = 5e-5，训练量也是几十B token。</p>
+<p>（4）step 4：综合提升</p>
+<p>这是退火的最后阶段，也是预训练的最后阶段，这一阶段会加上一些通用的数据，用来保持语言能力，也会加上一些SFT阶段的数据，让模型的评测效果进一步提升。比如我们想要增强模型的Tool
+Use能力，所以加入的SFT数据就有不少function call的数据。</p>
+<p>大致的数据比例是 学科：数学：代码：通用：SFT =
+15%：25%：25%：10%：30%。</p>
+<p>LR = 3e-5，一直decay到0了，总共也是训练了几十B数据。</p>
+<p>注意这么多阶段中，没有一条数据是重复使用的，所以准备退火数据的时候要预留多一点。</p>
+<p>5、batch内数据分配</p>
+<p>训练中，每个batch都是按我们想要的数据比例混合。</p>
+<p>在构造batch的时候，会一直跟踪各类数据的token数据，保证比例是按预定比例来的。</p>
+<h4 id="评测-1">评测</h4>
+<p>评测的数据主要是两类。一类是opencompass的数据集，主要测试模型的代码、数学、语言、知识能力。还有一类是更具体的下游任务数据，比如Tool
+Use任务的评测集，或者业务相关的数据集。</p>
+<p>评测的时候，既要看opencompass的通用能力指标，也要SFT之后看下游任务的指标。要注意的是，这二者的关系并不总是正相关的。</p>
+<p>另外预训练loss和任务的评测指标也不总是正相关，大致上来说是“loss低不一定效果好，但是loss高效果一定不好”。</p>
+<h4 id="补充">补充</h4>
+<ul>
+<li>裁剪初始化+蒸馏：蒸馏所用方式就是最简单的student model学习teacher
+model的logits输出，teacher的logits是实时前向计算的。</li>
+<li>sheared llama说只需3%的训练量就能达到相同的效果；而weight
+subcloning论文则说可以提速4x，并且效果更好；实际实验下来，裁剪初始化+蒸馏可以做到10x的提速（按token数计算）。</li>
+<li>dense初始化MoE的方法是sparse upcycling。</li>
+</ul>
+<h3 id="预训练模型整理">预训练模型整理</h3>
+<table>
+<colgroup>
+<col style="width: 16%">
+<col style="width: 22%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>模型名</th>
+<th>公司/机构</th>
+<th>发布时间</th>
+<th>模型规模</th>
+<th>模型要点</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Llama 1</strong></td>
+<td>Meta</td>
+<td>2023-02</td>
+<td>7B / 13B / 33B / 65B</td>
+<td><strong>数据</strong>：纯公开数据（Common Crawl、Wikipedia、C4），7B
+训 1T、33B/65B 训 1.4T
+token。<strong>结构</strong>：RoPE、SwiGLU（当时不少模型仍用
+ReLU/GeLU）。<strong>重要点</strong>：13B 在多 benchmark 超
+GPT-3（175B），说明在公开数据与合理规模下，<strong>数据质量与架构比单纯参数量更关键</strong>；仅研究许可，为
+Llama 2 商用与 4k 铺垫。</td>
+</tr>
+<tr class="even">
+<td><strong>Phi-1</strong></td>
+<td>微软</td>
+<td>2023-06</td>
+<td>350M / 1.3B</td>
+<td><strong>数据</strong>：当时 scaling law 强调「数据量」；Phi-1
+反其道用<strong>仅 7B token</strong>（6B 筛选 web + <strong>1B GPT-3.5
+合成教科书</strong>），主打「Textbooks Are All You
+Need」。<strong>原因</strong>：代码场景可精确定义「教科书级」、小模型容量有限更受益于高信噪比；先用
+GPT-4 打分子集 100k 再训 classifier 筛 35M
+文件，避免噪声稀释；合成时限定
+topic/目标观众注入多样性。<strong>结构</strong>：RoPE
+只加在半维（dim=32）在极小模型下省参数仍保留位置信息。</td>
+</tr>
+<tr class="odd">
+<td><strong>InternLM 1.0</strong></td>
+<td>上海 AI Lab（书生·浦语）</td>
+<td>2023-06</td>
+<td>7B / 20B / 104B（后升级 123B）</td>
+<td><strong>结构</strong>：当时 7B/13B 多为 32–40
+层；<strong>InternLM-20B 做到 60 层、hidden
+5120</strong>，采用「深而窄」而非主要加宽。<strong>原因</strong>：同参数量下深度+阶段式学习率退火，在
+2.3T 数据下达到 70B
+级表现，说明深度与数据阶段的配合可替代部分规模。多阶段预训练、每阶段独立学习率退火；SFT
+约 5M 条（含 self-instruct）+ RLHF。博客《InternLM系列模型》。</td>
+</tr>
+<tr class="even">
+<td><strong>InternLM-20B</strong></td>
+<td>上海 AI Lab</td>
+<td>2023-09</td>
+<td>20B</td>
+<td><strong>延续 1.0 的「深而窄」</strong>：60 层、hidden 5120、16k
+语境，2.3T token。在理解/推理/数学/编程上对齐 Llama2-70B，<strong>用约
+1/3 参数量达到 70B 级效果</strong>，说明在 2.3T
+数据规模下，加深层数比单纯加宽更有效。</td>
+</tr>
+<tr class="odd">
+<td><strong>InternLM2</strong></td>
+<td>上海 AI Lab</td>
+<td>2024-01</td>
+<td>1.8B / 7B / 20B</td>
+<td><strong>数据</strong>：2.0T–2.6T
+token。<strong>长上下文</strong>：当时多数为 8k–32k；2.0 训练
+32k、评测支持约 200k，把长文本作为明确能力线，为 2.5 的 1M
+做铺垫。技术报告 arXiv:2403.17297。</td>
+</tr>
+<tr class="even">
+<td><strong>InternLM2.5</strong></td>
+<td>上海 AI Lab</td>
+<td>2024-07</td>
+<td>7B / 20B</td>
+<td><strong>长上下文</strong>：从 2.0 的 32k 训/200k 评测推到** 1M
+超长上下文**，配合复杂推理与联网，长文本从「评测能力」变为可产品化；增强复杂推理、支持互联网搜索。</td>
+</tr>
+<tr class="odd">
+<td><strong>Llama 2</strong></td>
+<td>Meta</td>
+<td>2023-07</td>
+<td>7B / 13B / 70B</td>
+<td><strong>数据</strong>：2T token（较 1 的 1.4T 增约
+40%），<strong>上下文从 2k 翻倍到 4k</strong>，当时多数开源仍 2k
+级。<strong>结构</strong>：仅 70B 用 GQA（7B/13B 仍 MHA），因大模型推理
+KV 压力大、小模型保留 MHA 保效果。<strong>对齐</strong>：SFT +
+RLHF、超百万人类标注，把对话质量押在人类反馈规模上；开放商用、Azure
+首发。</td>
+</tr>
+<tr class="even">
+<td><strong>Phi-1.5</strong></td>
+<td>微软</td>
+<td>2023-09</td>
+<td>1.3B（同 phi-1 结构）</td>
+<td><strong>数据</strong>：在 phi-1 的 7B
+基础上<strong>大幅加合成数据</strong>（约 20B、2 万
+topic），扩展至代码+常识推理；prompt 注入 web sample
+提高多样性、避免模型复制。<strong>原因</strong>：教科书式数据可控制难度与领域，小模型容量下集中学推理模式更有效。<strong>训练</strong>：150B
+总 token，20% phi-1 / 80% 新合成；phase2 以合成为主。另做
+<strong>filtered web-only
+版</strong>（95B）验证：仅靠过滤不加合成仍优于很多模型，说明<strong>过滤策略本身即能显著抬升质量</strong>。</td>
+</tr>
+<tr class="odd">
+<td><strong>Yuan2.0</strong></td>
+<td>智源（IEIT）</td>
+<td>2023-11</td>
+<td>2B / 51B / 102B</td>
+<td><strong>结构</strong>：当时 attention 多为纯 MHA 或 EMA；Yuan2.0
+引入 <strong>LFA</strong>——在 attention
+前加<strong>两个单向一维卷积</strong>，显式建模相邻 token
+局部依赖（"short of neighbouring local
+associations"）。<strong>原因</strong>：长程交给
+attention、局部用卷积更高效；与 EMA
+比参数与计算更省。<strong>数据</strong>：书籍、百科、代码、数学；Code/Math/Chat
+指令微调。Tokenizer：SentencePiece Unigram，多语合并约 13.5
+万词表。</td>
+</tr>
+<tr class="even">
+<td><strong>Yi</strong></td>
+<td>01.AI / 零一万物</td>
+<td>2023-11</td>
+<td>6B / 9B / 34B</td>
+<td><strong>数据</strong>：当时 Chinchilla 建议约 1T；Yi 用
+<strong>3.1T</strong> 且多步过滤+聚类，说明在高质量前提下** overtrain
+仍有效<strong>。</strong>结构<strong>：全系 GQA、RoPE base
+10M；</strong>FFN 中间维度从常见 4h 改为 8/3h<strong>，补偿 GQA
+减少的参数量、保持总参数量与 7B/34B 对齐。</strong>训练<strong>：4k
+基座仅</strong>约 100 步<strong>长上下文继续预训练即达 200k
+大海捞针，说明 4k 基座已具长程潜力、轻量解锁即可；SFT 仅 &lt;10k
+条，靠格式/复述/Step-Back
+与打标、比例搜索保证质量，说明</strong>对齐阶段质量优于数量**。</td>
+</tr>
+<tr class="odd">
+<td><strong>Phi-2</strong></td>
+<td>微软</td>
+<td>2023-12</td>
+<td>2.7B</td>
+<td><strong>Scale
+up</strong>：当时放大模型多为<strong>从头训</strong>；Phi-2 从 phi-1.5
+用 <strong>weight reuse（WR）+
+tiling</strong>（大矩阵多出部分用小矩阵重复填满）扩展层数/维度，<strong>不从头训</strong>。<strong>原因</strong>：延续教科书级数据收益、节省算力；推理时只用
+head1，多出的 head 可作 draft 用于投机解码。</td>
+</tr>
+<tr class="even">
+<td><strong>Mixtral 8×7B</strong></td>
+<td>Mistral AI</td>
+<td>2023-12</td>
+<td>47B 总 / 13B 激活</td>
+<td><strong>结构</strong>：当时开源大模型多为 dense 70B 级；Mixtral 用
+<strong>MoE 47B 总/13B 激活</strong>，同激活量下多数任务优于
+Llama2-70B、推理约 6× 快。<strong>原因</strong>：稀疏激活降推理成本；8
+专家激活 2 在表达力与效率间折中；router 用简单线性+softmax 即可。32k
+上下文。</td>
+</tr>
+<tr class="odd">
+<td><strong>DeepSeek 67B（V1）</strong></td>
+<td>深度求索</td>
+<td>2024-01</td>
+<td>7B / 67B</td>
+<td><strong>定位</strong>：当时国内开源多为 7B–13B；DeepSeek 首推
+<strong>67B 且免费商用</strong>，2T 中英文预训练，代码/数学/推理超
+LLaMA-2-70B。<strong>原因</strong>：证明国产可做大规模开源、为后续 V2 的
+MLA+MoE 与 scaling 铺路。对齐用 SFT + DPO。</td>
+</tr>
+<tr class="even">
+<td><strong>Phi-3</strong></td>
+<td>微软</td>
+<td>2024-04</td>
+<td>3.8B / 7B / 14B（mini/small/medium）</td>
+<td><strong>数据</strong>：phi-3-mini 约 3.3T，<strong>heavily filtered
+web + 合成推理</strong>；按「educational
+level」分类，<strong>原因</strong>：提出「data
+optimal」——某规模下存在最优数据量，小模型需剔除噪声为推理等能力腾容量；phase2
+用高质量子集+合成。<strong>结构</strong>：GQA、LongRoPE 至
+128k；<strong>blocksparse attention</strong>——每头只保留部分 KV block
+压缓存，使 128k 可部署端侧。</td>
+</tr>
+<tr class="odd">
+<td><strong>Mixtral 8×22B</strong></td>
+<td>Mistral AI</td>
+<td>2024-04</td>
+<td>141B 总 / 39B 激活</td>
+<td>在 8×7B 上<strong>放大约 3× 总参与激活</strong>（141B/39B），64k
+上下文；数学/代码/多语言与 function call 更强。延续 8 专家激活 2
+的设计。</td>
+</tr>
+<tr class="even">
+<td><strong>JetMoE</strong></td>
+<td>MIT / Princeton 等</td>
+<td>2024-04</td>
+<td>8B 总 / 2B 激活</td>
+<td><strong>结构</strong>：当时 MoE 多在 <strong>FFN 层</strong>；JetMoE
+在 <strong>attention 层也做 MoE（MoA）</strong>，每 expert 独立
+Wq/Wo，<strong>K/V 全专家共享</strong>。<strong>原因</strong>：attention
+也稀疏化可进一步降成本，共享 K/V 控制参数量与计算；约 10w 美元、1.25T
+token 证明小团队可复现。WSD 学习率；frequency-based auxiliary loss +
+z-loss。</td>
+</tr>
+<tr class="odd">
+<td><strong>OpenELM</strong></td>
+<td>苹果</td>
+<td>2024-04</td>
+<td>270M / 450M / 1.1B / 3B</td>
+<td><strong>结构</strong>：当时各层多为<strong>均匀</strong>宽度；OpenELM
+采用
+<strong>层间非均匀缩放</strong>——低层少参数、高层多参数。<strong>原因</strong>：低层更多做通用特征、高层做任务相关，参数向高层倾斜可提升效率；1.1B
+同规模较 OLMo 高 2.36% 且预训练 token
+减半，验证该假设。完整训练/评估代码、MLX 转换支持端侧。</td>
+</tr>
+<tr class="even">
+<td><strong>DeepSeek-V2</strong></td>
+<td>深度求索</td>
+<td>2024-05</td>
+<td>236B（激活 21B）/ 15.7B-Lite</td>
+<td><strong>结构</strong>：当时 MoE 推理 KV 仍大；V2 引入
+<strong>MLA</strong>——K/V 经低秩联合压缩 + decoupled RoPE，KV cache
+约等于 2.5×GQA，<strong>在省缓存的同时效果不损甚至更好</strong>。MoE 含
+fine-grained + shared expert。<strong>负载均衡</strong>：Device-Limited
+Routing、Expert/Device/Communication Balance Loss、token-dropping（10%
+序列不 drop 保收敛）；<strong>仍用 auxiliary loss</strong>（V3 才改为
+expert bias）。<strong>数据</strong>：约 8.1T，12% 中文。4k 基座后 YaRN
+扩至 128k，length scaling 公式针对 MLA 调整。</td>
+</tr>
+<tr class="odd">
+<td><strong>Yuan2.0-M32</strong></td>
+<td>智源</td>
+<td>2024-05</td>
+<td>40B 总 / 3.7B 激活（MoE 32 选 2）</td>
+<td><strong>结构</strong>：当时 router
+多为<strong>内积</strong>选专家；Yuan2.0-M32 用 <strong>Attention
+Router</strong>——Q/K/V 由输入与专家参数得到 P=softmax(QK')V 再
+top-M，<strong>建模专家间关联</strong>而非独立打分。<strong>原因</strong>：多专家协同优于独立选
+2 个。基于 Yuan2.0-2B 的 MoE，保留 LFA。4k 预训练、16k 微调用 NTK-aware
+RoPE base 避免外推崩溃。</td>
+</tr>
+<tr class="even">
+<td><strong>Gemma2</strong></td>
+<td>Google</td>
+<td>2024-06</td>
+<td>2B / 9B / 27B</td>
+<td><strong>训练</strong>：当时小模型多为<strong>从头预训练</strong>；Gemma2
+的 2B/9B 用 <strong>on-policy 蒸馏</strong>——student 自己生成
+response、最小化与 teacher 的 KL。<strong>原因</strong>：offline 蒸馏用
+teacher 生成数据会带来 train-inference mismatch，on-policy 用 student
+生成则分布一致。27B 直接预训练作
+teacher。<strong>结构</strong>：每两层一层 <strong>sliding
+window</strong>（4096）降计算；<strong>logit soft-capping</strong>（tanh
+限 logits）稳训练防溢出；256k 词表与 Gemini 统一。</td>
+</tr>
+<tr class="odd">
+<td><strong>Qwen2</strong></td>
+<td>阿里 / 通义</td>
+<td>2024-06/07</td>
+<td>0.5B / 1.5B / 7B / 32B（Dense）；57B-A14B（MoE）</td>
+<td><strong>数据</strong>：约 7T；<strong>0.5B 试过 12T
+未更优</strong>，说明小模型存在数据上限。<strong>长上下文</strong>：DCA
++ YaRN + <strong>QKV bias</strong>（苏神做法）提升 RoPE 外推，32k
+训→131k。<strong>MoE</strong>：从 7B dense
+<strong>upcycling</strong>，fine-grained + shared
+expert；<strong>中间维度 shuffle、50%
+参数随机覆盖</strong>促专家分化，<strong>原因</strong>：从 dense
+直接复制会导致专家同质，随机覆盖迫使各专家学不同模式。</td>
+</tr>
+<tr class="even">
+<td><strong>SkyworkMoE（天工 MoE）</strong></td>
+<td>昆仑万维</td>
+<td>2024-06</td>
+<td>146B 总 / 22B 激活（16 专家×13B，激活 2）</td>
+<td><strong>训练</strong>：当时千亿级 MoE
+多为<strong>从头训</strong>；SkyworkMoE 从 <strong>Skywork-13B 中间
+checkpoint 做 MoE Upcycling</strong>（扩展为 16
+专家），<strong>首个完整落地</strong>。<strong>原因</strong>：复用已训好的表示、节省算力；Gating
+Logits 归一化 + 自适应 Aux Loss 稳负载。同 22B 激活下性能接近 70B
+dense、推理成本约降 3×；单机 8×4090 FP8 可推（权重约 146GB）。</td>
+</tr>
+<tr class="odd">
+<td><strong>index-1.9B</strong></td>
+<td>bilibili</td>
+<td>2024-06</td>
+<td>1.9B（base / pure / chat / character）</td>
+<td><strong>数据</strong>：2.8T 中英文（中英约 4:5，代码
+6%）；书籍/百科/论文等精选约
+10%。<strong>变体</strong>：当时小模型很少做指令消融；index 做
+<strong>pure
+版</strong>（过滤所有指令相关数据）作<strong>对照</strong>，直接验证「指令数据对基座能力的影响」。character
+用 RAG 做角色扮演（内置「三三」）。</td>
+</tr>
+<tr class="even">
+<td><strong>Llama3.1</strong></td>
+<td>Meta</td>
+<td>2024-07</td>
+<td>8B / 70B / 405B</td>
+<td><strong>数据</strong>：15.6T token，128k；约 50% 通用、25%
+数学推理、17% 代码、8% 多语言；data mix 用 <strong>scaling law
+实验</strong>定。<strong>结构</strong>：<strong>Document
+mask</strong>——防跨文档关注，长上下文时避免把无关文档当上下文；RoPE base
+500k；128k 词表（100k tiktoken+28k
+非英）提高压缩率。<strong>训练</strong>：三阶段（initial→long-context→<strong>annealing</strong>）；annealing
+阶段高质量数据上采样，<strong>原因</strong>：末尾高质量数据可提升关键
+benchmark；<strong>checkpoint
+平均</strong>得最终模型提升稳定性。<strong>405B 坚持
+dense</strong>：追求能力上限、训练稳定，不做 MoE。</td>
+</tr>
+<tr class="odd">
+<td><strong>MiniCPM</strong></td>
+<td>面壁智能 &amp; 清华</td>
+<td>2024</td>
+<td>1.2B / 2.4B（及 128K、MoE 等）</td>
+<td><strong>训练</strong>：当时超参多凭经验；MiniCPM 用
+<strong>「风洞实验」</strong>——仅 0.09B token 贝叶斯搜超参，得到
+<strong>optimal batch size 与 loss 关系 bs∝1/L^6.24</strong>（目标是最小
+token 达最低 loss，而非最少 step）；<strong>lr=0.01
+在缩放时基本不变</strong>（Tensor
+Program）。<strong>原因</strong>：小模型可低成本搜超参再外推。<strong>Warmup-Stable-Decay</strong>
+显式分 high-lr 与 decay 两阶段；QK-Norm、independent weight decay 降 lr
+敏感度。</td>
+</tr>
+<tr class="even">
+<td><strong>GLM4</strong></td>
+<td>智谱</td>
+<td>2024</td>
+<td>9B 等</td>
+<td><strong>结构</strong>：当时多数模型<strong>全层 bias</strong>；GLM4
+<strong>No bias except
+QKV</strong>，实测提速且长度外推略好，<strong>原因</strong>：其余 bias
+对效果贡献有限、去掉可提速。<strong>2D RoPE</strong> 替代
+1D，更好处理二维结构（如表格）。FFN 用
+<strong>10/3×hidden</strong>（非常见的 4h）在配合 GQA
+时保总参数量。<strong>数据</strong>：约 10T；exact+fuzzy 去重，re-weight
+提高 wiki/books 占比；byte-level BPE 150k（基于 tiktoken
+cl100k）。对齐：LongAlign 至 128k；Self-Contrast、AgentTuning。</td>
+</tr>
+<tr class="odd">
+<td><strong>DeepSeek-V3</strong></td>
+<td>深度求索</td>
+<td>2024-12</td>
+<td>671B 总 / 37B 激活</td>
+<td><strong>结构</strong>：当时 MoE 负载均衡多用 <strong>auxiliary
+loss</strong>；V3 改用 <strong>expert bias</strong>（每步按负载调
+bias）<strong>无 auxiliary loss</strong>，<strong>原因</strong>：aux
+loss 不直接优化效果、权重过大会损害表现。Sigmoid gating 再 top-k
+归一化；<strong>Node-Limited Routing</strong> 限每 token 最多 M
+个节点以利通信。<strong>训练</strong>：<strong>MTP（多 token
+预测）</strong>——附加损失一次预测多词，<strong>原因</strong>：提升远距离依赖、训练更高效；推理只用
+head1。<strong>Best-fit packing</strong> 减 padding；约 10%
+<strong>FIM</strong> 增强代码补全；<strong>subword
+regularization</strong>（随机切分 token）缓解 token boundary
+bias（如冒号被拆导致生成错误）。14.8T 数据。</td>
+</tr>
+<tr class="even">
+<td><strong>Phi-4</strong></td>
+<td>微软</td>
+<td>2024-12</td>
+<td>14B</td>
+<td><strong>数据</strong>：9.8T
+token，<strong>合成数据贯穿训练</strong>（非仅末尾）、数据质量策略贯穿全程。<strong>原因</strong>：Phi-3
+已用 3.3T；Phi-4 拉高总量且把合成与质量前移，结构相对 Phi-3
+改动小仍大幅提升（MMLU 84.8%、MATH 56.1%、HumanEval
+82.6%），说明<strong>数据与训练策略主导</strong>。</td>
+</tr>
+<tr class="odd">
+<td><strong>Qwen2.5-1M</strong></td>
+<td>阿里 / 通义</td>
+<td>2025-01</td>
+<td>7B / 14B-Instruct-1M；Turbo（MoE，API）</td>
+<td><strong>长上下文</strong>：当时多为 32k–128k；Qwen2.5-1M <strong>5
+阶段渐进</strong>至 262k 训（4k→32k→65k→131k→262k），RoPE base
+随阶段增大。推理用 DCA + YaRN + <strong>MInference</strong>（动态稀疏
+attention 三种 pattern）+ <strong>chunked prefill</strong>（prefill 与
+decode 混批提吞吐）+ <strong>Sparsity Refinement</strong> 至
+1M。<strong>数据</strong>：真实长文档少，用
+<strong>FIM、检索、段落重排</strong>等合成；<strong>Qwen-Agent</strong>（RAG→分块阅读→多跳推理）生成长文档
+QA 做 SFT。8k DPO 对长文本也有迁移。</td>
+</tr>
+<tr class="even">
+<td><strong>DeepSeek-R1</strong></td>
+<td>深度求索</td>
+<td>2025-01</td>
+<td>基于 V3 基座（671B/37B 激活）</td>
+<td><strong>定位</strong>：推理/思考链对齐模型，与 V3
+同基座。<strong>后训练</strong>：long CoT
+数据、<strong>GRPO</strong>（Group Relative Policy Optimization）替代
+PPO，<strong>原因</strong>：在思考链场景下组内相对奖励更稳。thinking /
+non-thinking
+双模式可配置，兼顾推理深度与延迟。博客《深度求索DeepSeek-R1详解》。</td>
+</tr>
+<tr class="odd">
+<td><strong>Phi-4-reasoning / plus</strong></td>
+<td>微软</td>
+<td>2025-04</td>
+<td>14B</td>
+<td><strong>训练</strong>：推理专用；SFT 用 <strong>o3-mini
+生成推理示范</strong>（约 16B token、32×H100、2.5 天），plus 版加
+RL。<strong>原因</strong>：把强推理模型的链式推理蒸馏到
+14B，用少量高质量示范+RL 逼近 R1
+级数学/科学/代码表现，证明推理能力可蒸馏到小模型。</td>
+</tr>
+<tr class="even">
+<td><strong>Llama 4</strong></td>
+<td>Meta</td>
+<td>2025-04</td>
+<td>Scout: 109B 总/17B 激活；Maverick: 400B 总/17B 激活</td>
+<td><strong>结构</strong>：Llama3.1 为 405B
+<strong>dense</strong>；Llama 4 转为<strong>全系 MoE</strong>（Scout 16
+专家、Maverick 128
+专家），<strong>原因</strong>：同成本下扩大总参数、控制激活成本，兼顾能力与推理成本。<strong>10M
+token</strong> 上下文、原生多模态（文本+图像+视频）。</td>
+</tr>
+<tr class="odd">
+<td><strong>Qwen3</strong></td>
+<td>阿里 / 通义</td>
+<td>2025-05</td>
+<td>0.6B~32B（Dense）；30B-A3B / 235B-A22B（MoE）</td>
+<td><strong>结构</strong>：当时 MoE 普遍用 <strong>共享专家</strong>（如
+V2、Gemma2）；Qwen3 <strong>无共享专家</strong>，用 <strong>global-batch
+load balancing</strong>
+做负载与能力平衡，<strong>原因</strong>：探索去掉共享专家是否仍可稳住效果。去
+QKV bias、加 <strong>QK-Norm</strong>
+提升稳定与外推。<strong>后训练</strong>：旗舰 32B/235B 全流程 4
+阶段；其余用 <strong>strong-to-weak
+蒸馏</strong>（logits），<strong>原因</strong>：logits
+蒸馏效果优于多阶段 SFT、成本约 1/10。Reward 分 model-based / rule-based
+/ reference-answer 三类。<strong>数据</strong>：约 36T；Qwen2.5-VL
+提文档、Qwen2.5/Coder/Math 合成 T 级数据。</td>
+</tr>
+<tr class="even">
+<td><strong>Mistral Small 3.2</strong></td>
+<td>Mistral AI</td>
+<td>2025-06</td>
+<td>—</td>
+<td>128k 上下文、function calling、文档 AI；定价约 $0.1–0.3/M
+token，替代 8×7B/8×22B，作为低成本、长上下文入口。</td>
+</tr>
+<tr class="odd">
+<td><strong>Mistral Large 3</strong></td>
+<td>Mistral AI</td>
+<td>2025-12</td>
+<td>675B 总 / 41B 激活（MoE）</td>
+<td>256k 上下文、多模态、<strong>开源 Apache 2.0</strong>；40+
+语言；3k×H200 训练。当时 frontier 级开放权重中许可最松、规模与 V3/Qwen3
+同档。</td>
+</tr>
+<tr class="even">
+<td><strong>Ministral 3</strong></td>
+<td>Mistral AI</td>
+<td>2025</td>
+<td>3B / 8B / 14B（Dense）</td>
+<td>Mistral 3 家族中的 <strong>dense</strong> 小模型，Apache 2.0；与
+Large 3 MoE 形成大小与形态搭配，dense 便于端侧与低延迟场景。</td>
+</tr>
+<tr class="odd">
+<td><strong>GLM4.6</strong></td>
+<td>智谱</td>
+<td>2025-09</td>
+<td>355–357B（MoE）</td>
+<td><strong>能力</strong>：200k 输入 / 128k 输出；较 4.5 约 15% token
+效率提升、代码与中英双语更强；CC-Bench 近 Claude Sonnet
+4。<strong>许可</strong>：<strong>MIT</strong>、可企业自托管，当时
+frontier 级开放权重中许可最松，满足「可自建、无供应商锁定」需求。</td>
+</tr>
+<tr class="even">
+<td><strong>DeepSeek-V3.2</strong></td>
+<td>深度求索</td>
+<td>2025-12</td>
+<td>延续 V3 基座</td>
+<td><strong>重要变化</strong>：此前推理模型（如 R1）在 thinking
+模式下<strong>无法调用工具</strong>；V3.2 <strong>thinking 与 tool-use
+融合</strong>——思考/非思考模式均可调用工具，<strong>原因</strong>：解决「深度推理与工具使用」断点，支持复杂
+agent 流程。大规模 agent 任务合成（1800+ 环境、8.5 万+
+指令）做后训练。</td>
+</tr>
+<tr class="odd">
+<td><strong>Kimi 2.5（K2.5）</strong></td>
+<td>月之暗面（Moonshot）</td>
+<td>2026-01</td>
+<td>1T 总 / 32B 激活（MoE），384 专家激活 8</td>
+<td><strong>结构</strong>：<strong>MLA</strong>（与 DeepSeek 同路）降
+KV；<strong>MoonViT</strong> 400M 视觉编码器；256k 上下文；61 层（含 1
+dense）。<strong>数据</strong>：15T 视觉+文本
+token。原生多模态（图/视频/文本）、Agent 编排（最多约 100
+agent）、双思考/即时模式。开源 Modified MIT。</td>
+</tr>
+<tr class="even">
+<td><strong>Qwen3.5</strong></td>
+<td>阿里 / 通义</td>
+<td>2026-02</td>
+<td>397B-A17B（MoE）</td>
+<td><strong>效率</strong>：17B 激活，推理较 Qwen3-Max 约 8.6–19×
+提升，<strong>原因</strong>：延续「大总参、低激活」路线，进一步压激活参数以降低推理成本。<strong>能力</strong>：原生多模态与
+Agent、<strong>201 语言</strong>（从 3.0 的 119 扩展）；early fusion
+多模态训练。开放权重 + API（Qwen3.5-Plus）、1M 上下文。</td>
+</tr>
+</tbody>
+</table>
+<h4 id="数据结构训练方案的演变趋势与阶段性结论">数据、结构、训练方案的演变趋势与阶段性结论</h4>
+<p>基于上表及近期文献，从<strong>数据</strong>、<strong>结构</strong>、<strong>训练方案</strong>三方面归纳业界演变与当前共识（截至
+2025–2026）。</p>
+<h5 id="数据">数据</h5>
+<p><strong>演变趋势</strong></p>
+<ul>
+<li><strong>规模</strong>：从 1T 级（Llama1/2）→ 2–3T（InternLM、Yi）→
+8–15T（V2、Llama3.1、Phi-4）→ 30T+（Qwen3、DeepSeek-V3
+14.8T）。小模型存在<strong>数据上限</strong>（如 Qwen2 的 0.5B 试 12T
+未更优）；大模型继续向 10T+ 推进，且与「数据最优」并存（Phi
+系列强调某规模下存在最优数据量）。</li>
+<li><strong>质量 vs 数量</strong>：早期 Chinchilla 强调 token 数；Phi-1
+用 7B 高筛选+合成证明<strong>小模型更吃质量</strong>；InternLM/Yi 用
+2–3T 多阶段+退火达到 70B
+级效果，说明<strong>深度+阶段与数据配合可替代部分规模</strong>。当前共识：<strong>过滤、去重、re-weight</strong>（提高
+wiki/books 等占比）与 <strong>scaling law 实验定 data
+mix</strong>（Llama3.1）并重。</li>
+<li><strong>合成数据</strong>：从「仅末尾加一点」→「贯穿训练」（Phi-4）、教科书/推理合成（Phi
+系列）、代码/数学/长文档合成（Qwen2.5-1M、Qwen3）。文献结论：合成数据遵循与自然数据类似的
+<strong>scaling law</strong>；<strong>rephrased
+类合成</strong>与自然数据约 1:2 混合可在更大数据预算下带来约 5–10×
+训练加速；教科书式合成在小数据预算下易在部分下游 domain 上 loss
+偏高，需控制比例与阶段；<strong>无单一通用配方</strong>，需联合优化生成方式、混合比、模型规模与数据预算。</li>
+<li><strong>领域配比</strong>：通用 + 代码 + 数学 +
+多语言成为标配；Llama3.1 约 50% 通用、25% 数学推理、17% 代码、8%
+多语言；Qwen3/DeepSeek 等明显提高代码与推理数据比例。<strong>Data
+mixture 优化</strong>（如 RegMix、Data Mixing
+Laws）可用小模型预测最优配比再外推大模型，减少盲目试错。</li>
+<li><strong>长上下文数据</strong>：真实长文档稀缺；主流做法是
+<strong>FIM、检索、段落重排、Agent 生成长文档 QA</strong>
+等合成（Qwen2.5-1M），配合 5 阶段渐进长度训练。128k 级扩展约需
+<strong>5e8–5e9 token</strong> 的 continued
+pretraining，且需与高质量短上下文数据平衡，不能只堆长文档。</li>
+</ul>
+<p><strong>阶段性结论</strong></p>
+<ul>
+<li>数据规模继续上升，但<strong>质量与配比</strong>至少与总量同等重要；小模型更依赖高信噪比与「数据最优」。</li>
+<li><strong>合成数据</strong>已从补丁变为主菜之一，需控制类型与比例（如
+rephrased 约 30%
+有实证）；教科书/推理合成适合小模型与推理线，大模型更多用合成做长文档/代码/多语言。</li>
+<li><strong>Data mix</strong> 可数据驱动（scaling law、RegMix
+等）而非纯人工；长上下文依赖合成长文档 + 渐进训练。</li>
+</ul>
+<hr>
+<h5 id="结构">结构</h5>
+<p><strong>演变趋势</strong></p>
+<ul>
+<li><strong>Dense → MoE</strong>：从 70B 级 dense（Llama2）到
+8×7B/8×22B（Mixtral），再到 400B+ 总参、17–41B
+激活（Llama4、Qwen3、V3、Mistral Large 3）。<strong>MoE 成为 frontier
+标配</strong>，同算力下总参数大幅增加、激活受控，推理成本与 dense 70B
+相当或更低。Dense 仍保留在小模型与端侧（Ministral、Phi、OpenELM）。</li>
+<li><strong>Attention</strong>：MHA → <strong>GQA</strong>（Llama2 仅
+70B，后全系 GQA）→ <strong>MLA</strong>（DeepSeek V2/V3、Kimi
+2.5）低秩压缩 K/V + decoupled RoPE，KV cache 约 2.5×GQA
+且效果不损或更好。<strong>Sliding
+window</strong>（Gemma2）、<strong>blocksparse</strong>（Phi-3 128k
+端侧）用于长上下文省缓存。</li>
+<li><strong>位置与长上下文</strong>：RoPE 一统；base 从 10k 到
+500k（Llama3.1）、随阶段增大（Qwen2.5-1M）；<strong>YaRN/DCA</strong>
+外推；<strong>2D
+RoPE</strong>（GLM4）处理表格等二维结构；<strong>Document
+mask</strong>（Llama3.1）防跨文档关注。</li>
+<li><strong>FFN</strong>：SwiGLU 普及；中间维度从 4h 出现
+<strong>8/3h</strong>（Yi）、<strong>10/3h</strong>（GLM4）等，在 GQA
+下补偿参数量；MoE 中 <strong>fine-grained + shared
+expert</strong>（V2、Qwen2）→ <strong>无共享专家</strong>（Qwen3）用
+global-batch load balancing 探索简化。</li>
+<li><strong>MoE 路由与负载</strong>：从 <strong>auxiliary
+loss</strong>（V2）→ <strong>expert bias 动态调</strong>（V3）无 aux
+loss，避免对主目标的干扰；<strong>Attention
+Router</strong>（Yuan2.0-M32）、<strong>Node-Limited
+Routing</strong>、<strong>sigmoid gating + top-k 归一化</strong>
+等；<strong>MoA</strong>（JetMoE）在 attention 层也做 MoE、K/V
+共享。</li>
+<li><strong>其他</strong>：<strong>No bias except
+QKV</strong>（GLM4）提速且外推略好；<strong>层间非均匀缩放</strong>（OpenELM）把参数向高层倾斜；<strong>QK-Norm</strong>
+提升稳定与外推（Qwen3、MiniCPM）。</li>
+</ul>
+<p><strong>阶段性结论</strong></p>
+<ul>
+<li><strong>MoE</strong> 在 100B+
+总参场景已是主流；存在<strong>最优稀疏度</strong>（参数量/算力约束下），且
+MoE 在相同训练算力下泛化优于同算力 dense。</li>
+<li><strong>KV 压缩</strong>（MLA/GQA）与 <strong>RoPE
+外推/阶段扩展</strong> 是长上下文标配；Document mask、2D RoPE
+等针对具体场景补充。</li>
+<li><strong>负载均衡</strong> 从 aux loss 向 <strong>expert
+bias</strong>
+等更直接的方式演进；共享专家非必须，无共享+负载均衡也可达到同档效果。</li>
+</ul>
+<hr>
+<h5 id="训练方案">训练方案</h5>
+<p><strong>演变趋势</strong></p>
+<ul>
+<li><strong>多阶段/课程</strong>：从单阶段 1T →
+<strong>多阶段+每阶段学习率退火</strong>（InternLM）→
+<strong>三阶段</strong>（initial → long-context →
+<strong>annealing</strong>，Llama3.1）末尾高质量上采样；长上下文
+<strong>4k→32k→…→262k</strong>
+渐进（Qwen2.5-1M）。<strong>Annealing</strong> 被验证可提升关键
+benchmark，<strong>checkpoint 平均</strong> 提升稳定性。</li>
+<li><strong>多 token 预测（MTP）</strong>：DeepSeek-V3 采用
+<strong>MTP</strong> 附加损失（一次预测多词），推理只用 head1。文献：MTP
+提升样本效率与远距离依赖，4-token 预测可结合 self-speculative decoding
+带来约 3× 推理加速；小模型需 <strong>curriculum</strong>（从 next-token
+逐步过渡到 MTP）否则易训崩。</li>
+<li><strong>蒸馏</strong>：从 <strong>offline 蒸馏</strong>（teacher
+生成）→ <strong>on-policy 蒸馏</strong>（Gemma2，student 生成、最小化与
+teacher 的 KL，避免 train-inference mismatch）；<strong>strong-to-weak
+logits 蒸馏</strong>（Qwen3）成本约 1/10、效果优于多阶段
+SFT；Phi-4-reasoning 用 o3-mini 生成推理链蒸馏到 14B。</li>
+<li><strong>超参与
+scaling</strong>：<strong>风洞实验</strong>（MiniCPM）用极少 token
+贝叶斯搜超参，得到 <strong>optimal batch size ∝ 1/L^α</strong>、lr
+在缩放时基本不变（Tensor
+Program），小模型可先搜再外推。<strong>Warmup-Stable-Decay</strong>、QK-Norm、independent
+weight decay 等降敏感度。</li>
+<li><strong>效率与正则</strong>：<strong>Best-fit packing</strong> 减
+padding；<strong>FIM</strong>（约 10%）增强代码；<strong>subword
+regularization</strong> 缓解 token boundary bias；<strong>length
+scaling</strong> 针对 MLA 等结构调整（V2）。</li>
+<li><strong>MoE
+相关</strong>：<strong>Upcycling</strong>（Qwen2、SkyworkMoE）从 dense
+或 checkpoint 扩展为 MoE，中间维度
+shuffle、部分参数随机覆盖促专家分化；<strong>无 aux loss + expert
+bias</strong>（V3）成为新选项。</li>
+</ul>
+<p><strong>阶段性结论</strong></p>
+<ul>
+<li><strong>多阶段 + annealing + 长上下文渐进</strong>
+是主流配方；末尾高质量数据与 checkpoint 平均已被广泛采用。</li>
+<li><strong>MTP</strong> 在大模型上验证有效（效率与长程依赖），小模型需
+curriculum；推理端可只用单 head 并配合 speculative decoding。</li>
+<li><strong>蒸馏</strong>：on-policy 优于 offline；logits
+蒸馏在小模型/多规格扩展上成本效益高；推理能力可蒸馏到 14B 级。</li>
+<li><strong>数据与训练策略</strong> 对同结构下的提升 often
+大于单纯改结构（如 Phi-4 相对 Phi-3），数据
+mix、阶段、正则与超参联合优化成为必选项。</li>
+</ul>
+<hr>
+<h5 id="总体">总体</h5>
+<ul>
+<li><strong>数据</strong>：规模继续涨，质量、配比、合成比例与阶段安排和规模匹配；小模型更依赖「数据最优」与高信噪比。</li>
+<li><strong>结构</strong>：MoE 主导大模型；KV 压缩（MLA/GQA）与 RoPE
+扩展支撑长上下文；负载均衡与共享专家设计仍在迭代。</li>
+<li><strong>训练</strong>：多阶段 + annealing + 渐进长上下文 +
+MTP（大模型）+ 蒸馏（多规格/推理）形成可复用的组合；超参与 data mix
+可数据驱动（风洞、RegMix、scaling law）以降低成本。</li>
+</ul>
+<h3 id="数据-1">数据</h3>
+<h4 id="开源数据集">开源数据集</h4>
+<h5 id="英文">英文</h5>
+<table>
+<colgroup>
+<col style="width: 12%">
+<col style="width: 4%">
+<col style="width: 4%">
+<col style="width: 53%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>发布时间</th>
+<th>Token数量</th>
+<th>简介描述</th>
+<th>论文/来源</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>C4</strong></td>
+<td>2019年10月</td>
+<td>~180B</td>
+<td>Google构建的Colossal Clean Crawled Corpus，从Common
+Crawl中清洗得到的英文网页文本，用于T5模型训练，采用启发式规则过滤低质量内容</td>
+<td>Raffel et al., 2019. JMLR</td>
+</tr>
+<tr class="even">
+<td><strong>OpenWebText</strong></td>
+<td>2019年</td>
+<td>-</td>
+<td>OpenAI
+WebText的开源复现版，抓取Reddit上获得至少3个赞的网页链接内容，强调文档质量</td>
+<td>Gokaslan et al., 2019</td>
+</tr>
+<tr class="odd">
+<td><strong>The Pile</strong></td>
+<td>2020年12月</td>
+<td>300B</td>
+<td>EleutherAI发布的825GB多样化英文语料库，整合22个不同领域子集（网页、学术、书籍、代码、对话等），旨在推动大规模语言模型研究</td>
+<td>Gao et al., 2020. arXiv:2101.00027</td>
+</tr>
+<tr class="even">
+<td><strong>RefinedWeb</strong></td>
+<td>2023年6月</td>
+<td>600B</td>
+<td>TII发布的纯网页数据集，从Common
+Crawl中严格过滤和去重，淘汰率近90%，证明仅网页数据也能训练出高性能模型（Falcon系列）</td>
+<td>Penedo et al., 2023. arXiv:2306.01116</td>
+</tr>
+<tr class="odd">
+<td><strong>RedPajama-Data-1T</strong></td>
+<td>2023年4月</td>
+<td>1.2T</td>
+<td>Together
+AI复现LLaMA训练数据分布的开源数据集，包含CommonCrawl、C4、GitHub、arXiv、Wikipedia和StackExchange等子集</td>
+<td>Together AI, 2023</td>
+</tr>
+<tr class="even">
+<td><strong>SlimPajama</strong></td>
+<td>2023年6月</td>
+<td>627B</td>
+<td>Cerebras对RedPajama的深度清洗版本，采用MinHash和局部敏感哈希去重，过滤49.6%重复Tokens，提高训练效率</td>
+<td>Soboleva et al., 2023</td>
+</tr>
+<tr class="odd">
+<td><strong>Dolma</strong></td>
+<td>2024年1月</td>
+<td>3T</td>
+<td>AI2发布的开放语料库，支持商用，包含网页、学术文献、代码、书籍和百科等，采用两阶段过滤流程确保质量</td>
+<td>Soldaini et al., 2024. arXiv:2402.00159</td>
+</tr>
+<tr class="even">
+<td><strong>Common Pile</strong></td>
+<td>2024年6月</td>
+<td>2.1T</td>
+<td>EleutherAI发布的完全开放许可语料库，从30个来源筛选，仅保留CC
+BY、CC0等许可数据，解决版权风险，已训练Comma系列模型</td>
+<td>Kandpal et al., 2025. arXiv:2506.05209</td>
+</tr>
+<tr class="odd">
+<td><strong>FineWeb</strong></td>
+<td>2024年6月</td>
+<td>15T</td>
+<td>HuggingFace发布的目前最大开源英文网页数据集，基于Common
+Crawl（2007-2024），采用CCNet管道和严格去重过滤，质量极高</td>
+<td>Penedo et al., 2024. arXiv:2406.17557</td>
+</tr>
+<tr class="even">
+<td><strong>FineWeb 2</strong></td>
+<td>2024年</td>
+<td>-</td>
+<td>FineWeb的多语言扩展版，覆盖1,915种语言，采用与FineWeb相同的数据处理流程</td>
+<td>HuggingFaceFW, 2024</td>
+</tr>
+<tr class="odd">
+<td><strong>ROOTS</strong></td>
+<td>2023年3月</td>
+<td>1.61TB</td>
+<td>BigScience项目构建的多语言语料库，涵盖46种自然语言和13种编程语言，用于训练BLOOM模型</td>
+<td>BigScience, 2023</td>
+</tr>
+<tr class="even">
+<td><strong>DCLM-baseline</strong></td>
+<td>2024年7月</td>
+<td>4T</td>
+<td>苹果ML团队发布的DataComp for Language Models基线数据集，从Common
+Crawl清洗而来，提供严格的数据处理流程</td>
+<td>mlfoundations, 2024</td>
+</tr>
+</tbody>
+</table>
+<h5 id="中文">中文</h5>
+<table>
+<colgroup>
+<col style="width: 25%">
+<col style="width: 4%">
+<col style="width: 11%">
+<col style="width: 39%">
+<col style="width: 18%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>发布时间</th>
+<th>Token数量</th>
+<th>简介描述</th>
+<th>论文/来源</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>WuDaoCorpora</strong></td>
+<td>2021年3月</td>
+<td>120B</td>
+<td>智源研究院发布的全球最大中文语料库，包含文本、对话、图文对和视频文本对，旨在推动中文大模型发展</td>
+<td>Yuan et al., 2021</td>
+</tr>
+<tr class="even">
+<td><strong>TigerBot pretrain</strong></td>
+<td>2023年5月</td>
+<td>2TB (开源100GB)</td>
+<td>虎博科技发布的中文预训练数据，基于GPT-3数据分布设计，包含中文书籍、互联网和百科内容</td>
+<td>TigerBot, 2023</td>
+</tr>
+<tr class="odd">
+<td><strong>SkyPile-150B</strong></td>
+<td>2024年</td>
+<td>150B</td>
+<td>天工发布的大规模中文网页数据集，经过严格的质量过滤和去重处理，专注于高质量中文内容</td>
+<td>Skywork, 2024</td>
+</tr>
+<tr class="even">
+<td><strong>Chinese FineWeb</strong></td>
+<td>-</td>
+<td>-</td>
+<td>FineWeb的中文版本，专注高质量中文网页内容</td>
+<td>HuggingFaceFW, 2024</td>
+</tr>
+<tr class="odd">
+<td><strong>ChineseWebText</strong></td>
+<td>2023年</td>
+<td>50B</td>
+<td>中科院自动化所发布的中文网页文本数据集，提供质量评分，支持按不同质量级别筛选使用</td>
+<td>CASIA-LM, 2023</td>
+</tr>
+<tr class="even">
+<td><strong>微信公众号文章</strong></td>
+<td>2024年买的</td>
+<td>几百B</td>
+<td>跟数据供应商买的</td>
+<td>-</td>
+</tr>
+<tr class="odd">
+<td><strong>知乎文章</strong></td>
+<td>2024年买的</td>
+<td>几十B</td>
+<td>跟数据供应商买的</td>
+<td>-</td>
+</tr>
+<tr class="even">
+<td><strong>BAAI-CCI 2.0</strong></td>
+<td>2024年4月</td>
+<td>-</td>
+<td>智源研究院发布的高质量中文互联网语料库，规模500GB</td>
+<td>BAAI, 2024</td>
+</tr>
+<tr class="odd">
+<td><strong>MAP-CC</strong></td>
+<td>2024年</td>
+<td>80B</td>
+<td>多语言学术与专业中文语料库，包含博客、新闻、论文、图书等多种类型，注重学术和专业领域</td>
+<td>m-a-p, 2024</td>
+</tr>
+<tr class="even">
+<td><strong>Matrix</strong></td>
+<td>2024年5月</td>
+<td>4.69T</td>
+<td>大规模中英双语预训练数据集，包含Common
+Crawl、代码、学术论文、书籍和百科等多种来源</td>
+<td>m-a-p, 2024</td>
+</tr>
+<tr class="odd">
+<td><strong>IndustryCorpus</strong></td>
+<td>2024年6月</td>
+<td>3.4TB (中文1TB/英文2.4TB)</td>
+<td>智源研究院发布的行业专用语料库，涵盖18个行业分类，支持行业大模型训练</td>
+<td>BAAI, 2024</td>
+</tr>
+<tr class="even">
+<td><strong>IndustryCorpus2</strong></td>
+<td>2024年11月</td>
+<td>200B</td>
+<td>IndustryCorpus升级版，扩展至31个行业分类，新增代码和数学数据，质量评级更精细</td>
+<td>BAAI, 2024</td>
+</tr>
+<tr class="odd">
+<td><strong>chinese-cosmopedia</strong></td>
+<td>2024年9月</td>
+<td>60B</td>
+<td>参考CosMopedia创建的中文合成预训练数据集，通过合成数据生成技术扩充中文语料</td>
+<td>OpenCSG, 2024</td>
+</tr>
+<tr class="even">
+<td><strong>Fineweb-Edu-Chinese-V2.1</strong></td>
+<td>-</td>
+<td>1.5TB</td>
+<td>FineWeb教育版的中文扩展，包含46亿高质量中文教育领域语料，适合教育大模型训练</td>
+<td>-</td>
+</tr>
+<tr class="odd">
+<td><strong>Ultra-FineWeb</strong></td>
+<td>-</td>
+<td>120B</td>
+<td>最新过滤技术处理的中文网页数据集，在FineWeb基础上进一步优化中文内容质量</td>
+<td>-</td>
+</tr>
+<tr class="even">
+<td><strong>OpenNewsArchive</strong></td>
+<td>2024年5月</td>
+<td>880万篇</td>
+<td>OpenDataLab发布的多国新闻文章数据集，以中文为主，涵盖不同主题和新闻来源</td>
+<td>OpenDataLab, 2024</td>
+</tr>
+<tr class="odd">
+<td><strong>TeleChat-PTD</strong></td>
+<td>2024年</td>
+<td>-</td>
+<td>中国电信发布的中文预训练数据集，包含高质量中文网页和对话数据</td>
+<td>-</td>
+</tr>
+<tr class="even">
+<td><strong>CCI 1.0</strong></td>
+<td>2023年11月</td>
+<td>-</td>
+<td>智源研究院发布的中文互联网语料库1.0版，强调高质量和高可信度，包含104GB中文文本</td>
+<td>BAAI, 2023</td>
+</tr>
+<tr class="odd">
+<td><strong>CCI 2.0</strong></td>
+<td>2024年4月</td>
+<td>-</td>
+<td>CCI升级版，规模扩大至500GB，涵盖1.25亿个网页，进一步提升数据质量和覆盖范围</td>
+<td>BAAI, 2024</td>
+</tr>
+<tr class="even">
+<td><strong>CCI 3.0</strong></td>
+<td>2024年9月</td>
+<td>200B</td>
+<td>CCI最新版，数据规模近翻倍至1000GB，数据来源扩展至20多家合作伙伴，质量更高</td>
+<td>BAAI, 2024</td>
+</tr>
+<tr class="odd">
+<td><strong>CCI 3.0-HQ</strong></td>
+<td>2024年9月</td>
+<td>500GB</td>
+<td>CCI
+3.0的高质量子集，采用两阶段混合过滤策略，从1000GB中精选出最高质量部分</td>
+<td>BAAI, 2024</td>
+</tr>
+<tr class="even">
+<td><strong>CCI 4.0</strong></td>
+<td>2025年6月</td>
+<td>35T</td>
+<td>智源研究院最新双语预训练数据集，包含5.2TB中文网页语料和22.5TB英文Nemotron-CC数据，以及45亿CoT模板，专注推理能力增强</td>
+<td>Liu et al., 2025. arXiv:2506.07463</td>
+</tr>
+</tbody>
+</table>
+<h5 id="数学">数学</h5>
+<table>
+<colgroup>
+<col style="width: 28%">
+<col style="width: 4%">
+<col style="width: 6%">
+<col style="width: 36%">
+<col style="width: 22%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>发布时间</th>
+<th>样本数</th>
+<th>简介描述</th>
+<th>论文</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>OpenWebMath</strong></td>
+<td>2023年10月</td>
+<td>14.7B Tokens</td>
+<td>从Common
+Crawl中提取的数学相关网页文档集合，包含630万份数学内容，涵盖数学公式、定理和推导过程</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h5 id="代码">代码</h5>
+<table>
+<colgroup>
+<col style="width: 16%">
+<col style="width: 5%">
+<col style="width: 9%">
+<col style="width: 45%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>发布时间</th>
+<th>Token/规模</th>
+<th>简介描述</th>
+<th>论文/来源</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>The Stack</strong></td>
+<td>2022年</td>
+<td>6TB (v1)</td>
+<td>BigCode项目发布的permissive许可源代码数据集，涵盖30+编程语言，用于训练StarCoder等代码大模型</td>
+<td>Kocetkov et al., 2022. arXiv:2211.15533</td>
+</tr>
+<tr class="even">
+<td><strong>The Stack v2</strong></td>
+<td>2024年</td>
+<td>30TB</td>
+<td>The
+Stack的升级版，扩展至600+编程语言，包含更多源代码和更全面的语言覆盖，用于训练StarCoder2</td>
+<td>Lozhkov et al., 2024. arXiv:2402.19173</td>
+</tr>
+<tr class="odd">
+<td><strong>StarCoder Dataset</strong></td>
+<td>2023年</td>
+<td>783GB (Python为主)</td>
+<td>基于The Stack构建的代码数据集，主要包含Python代码，用于训练StarCoder
+15.5B代码模型</td>
+<td>Li et al., 2023. arXiv:2305.06161</td>
+</tr>
+<tr class="even">
+<td><strong>StarCoder 2 Dataset</strong></td>
+<td>2024年</td>
+<td>-</td>
+<td>基于The Stack
+v2构建，支持600+编程语言，用于训练StarCoder2系列模型（7B/15B/3B）</td>
+<td>Lozhkov et al., 2024. arXiv:2402.19173</td>
+</tr>
+<tr class="odd">
+<td><strong>CodeParrot</strong></td>
+<td>2021年</td>
+<td>115M文件/1TB</td>
+<td>Hugging
+Face发布的GitHub代码清洗数据集，专注于Python代码，用于训练CodeParrot模型</td>
+<td>-</td>
+</tr>
+<tr class="even">
+<td><strong>OpenCoder Dataset</strong></td>
+<td>2024年</td>
+<td>-</td>
+<td>完全开源的代码大模型数据集，包含预训练数据和指令调优数据</td>
+<td>Huang et al., 2024. arXiv:2411.04905</td>
+</tr>
+</tbody>
+</table>
+<h4 id="数据清洗">数据清洗</h4>
+<p>细节看前面的《预训练经验》。</p>
+<p>大致上来说：</p>
+<ul>
+<li>去重：simhash</li>
+<li>规则清洗：乱码比例、长度、url、重复内容（容易引起复读机）</li>
+<li>模型清洗：ppl（太高和太低的都不要）、质量分类（轻量级模型，从fasttext到小规模GPT/Bert）</li>
+</ul>
+<h4 id="数据生成">数据生成</h4>
+<p>《A Survey on Data Synthesis and Augmentation for Large Language
+Models》(2024.10)：数据的生成分成两大类：data augmentation和data
+synthesis。</p>
+<p>data
+augmentation是一种“数据-&gt;类似数据”的做法，并在这个过程中保持原始数据的显著特征。最典型的做法就是CV领域中对图像数据做的各种畸变，如旋转翻转调整histogram等，但是并不破坏原图的重要内容；除此之外，借助较强的大模型，通过CoT等方式对无标签数据进行打标也是一种数据增强的方式，这个过程中还可以通过和人类标注结合进一步提升效果和效率。</p>
+<p>data synthesis是创造全新数据的方法，文中把它分成三大类：<br>
+- general model
+distillation：借助强大的通用模型如GPT-4，生成可增强较弱模型的数据，典型的例子就是Phi系列<br>
+- domain model
+distillation：在一些领域如数学或者代码领域，通用模型的效果可能不够好，就需要借助专门模型来生成数据<br>
+- model
+self-improvment：比如基于现有文本数据，生成不同难度或者不同风格的文本数据</p>
+<img src="/5c93b3a4/survey_timeline.png" class title="数据合成">
+<h5 id="代码数据生成">代码数据生成</h5>
+<p>（其他一些代码数据合成工作的整理：<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html?highlight=wave">训练数据合成(三)</a>
+）</p>
+<p>如今业界已有共识，代码数据能够极大提升模型的数理逻辑和推理能力，因此趋势是代码相关数据比例提升。</p>
+<p>1、语言基础</p>
+<p>大学教科书里的代码类书籍、代码文档网页（通用预训练数据里也有）已经足够模型学习，能够具备基础的语法的编程能力。</p>
+<p>2、代码能力</p>
+<p>开源代码数据集涵盖多种项目，足够模型达到较好的代码能力。</p>
+<p>3、逻辑能力</p>
+<p>基座模型的评测里，代码主要以做题为主。</p>
+<p>要构造的数据是题目+代码+解析。先生成题目，再根据题目，给出正确答案，并且给出解析。</p>
+<p>（1）生成题目</p>
+<p>基于Persona Hub，进一步完善人物特性和日常事件，获得完整人物描述。</p>
+<p>从代码数据里随机抽取代码片段，结合人物描述，构造代码应用题，以及对应的代码。</p>
+<p>（2）题目进化</p>
+<p>参考evol-instruct，在现有题目的基础上提高难度：LLM基于现有的题目和代码，进行数据集进化：
+-
+增加限制，比如不能用某个方法，或者只能用某些方法，内存数据变成流式数据等
+- 增加步骤，比如在当前任务的基础上，增加下一步需求 -
+增加难度，比如两数之和-&gt;三数之和</p>
+<p>（3）获取答案&amp;答案验证</p>
+<p>使用已有的效果较好的代码模型生成代码，并用human-eval中的代码验证模块进行验证。</p>
+<blockquote>
+<p>human_eval.execution.check_correctness 是单次验证的核心：</p>
+</blockquote>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> human_eval<span class="token punctuation">.</span>execution <span class="token keyword">import</span> check_correctness
+
+result <span class="token operator">=</span> check_correctness<span class="token punctuation">(</span>
+    problem<span class="token operator">=</span>problem_dict<span class="token punctuation">,</span>   <span class="token comment"># 题目</span>
+    completion<span class="token operator">=</span>completion_str<span class="token punctuation">,</span>  <span class="token comment"># 模型/你的答案</span>
+    timeout<span class="token operator">=</span><span class="token number">3.0</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+<span class="token comment"># result = &#123;"task_id": "...", "passed": True/False, "result": "passed"|"timed out"|"failed: ...", "completion_id": ...&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>（4）（难度）过滤&amp;去重</p>
+<p>合成的数据往往混杂着badcase，因此数据过滤就很重要。</p>
+<ul>
+<li><p>基于规则：比如太长的行、太长的文件、字母字符太少等过滤规则。另外还是有SimHash
++ LSH的去重。</p></li>
+<li><p>基于interpreter：通过代码解释器执行反馈。这个前面上一步已经有。</p></li>
+<li><p>基于SLM：使用小模型进行数据过滤，效果可以超过规则或者代码解释器的方法。</p>
+<ul>
+<li>《Superfiltering: Weak-to-strong data filtering for fast
+instruction-tuning》评估了弱模型和强模型之间的一致性，以确定指令调优样本的难度，证明指令遵循难度
+(IFD) 分数在捕捉样本复杂性方面优于困惑度。</li>
+<li>《Instruction mining: Instruction data selection for tuning large
+language models》利用自然语言指标来预测推理损失，这比微调 LLM
+提供了更有效的评估数据的方法。</li>
+<li>《CodeBERTScore: Evaluating code generation with pretrained models
+of code》用bert计算相似度。</li>
+<li>《WaveCoder》利用 KCenterGreedy
+算法来选择近似于完整分布的数据子集。</li>
+<li>Llama-3则是利用fasttext、Roberta等来识别高质量的token。</li>
+</ul></li>
+<li><p>基于LLM</p>
+<ul>
+<li>《Alpagasus: Training a better alpaca with fewer data》利用 ChatGPT
+作为评分器。</li>
+<li>《ICE-score: Instructing large language models to evaluate
+code》通过 LLM 评估代码有用性和功能正确性。</li>
+<li>《WaveCoder》使用 GPT-4 作为鉴别器来分析和过滤指令数据，利用 CoT
+推理逐步评估每个实例，将它们分类为有效或无效。</li>
+<li>Llama-3用早期的Llama版本对代码的正确定和风格进行打分。</li>
+</ul></li>
+</ul>
+<p>4、项目级别</p>
+<p>todo</p>
+<h5 id="数学数据生成">数学数据生成</h5>
+<p>类似代码数据，生成</p>
+<h3 id="评测-2">评测</h3>
+<h4 id="评测方式说明">评测方式说明</h4>
+<h5 id="ppl-与-gen-的含义">PPL 与 GEN 的含义</h5>
+<table>
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>方式</th>
+<th>含义</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>PPL</strong></td>
+<td>判别式评测</td>
+<td>将「题干 +
+每个选项」分别拼成序列，计算模型在各序列上的困惑度（perplexity），选困惑度<strong>最低</strong>的选项作为答案；无需生成文本，后处理简单、确定性高。</td>
+</tr>
+<tr class="even">
+<td><strong>GEN</strong></td>
+<td>生成式评测</td>
+<td>以题干为输入，模型续写/生成完整答案；需后处理（提取答案或送 LLM
+Judge）再与标准答案比较。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>OpenCompass
+实践</strong>：基座模型的<strong>单项选择题</strong>推荐用
+PPL；对话模型通常所有任务都用
+GEN。配置文件命名：<code>&#123;数据集名&#125;_&#123;评测方式&#125;_&#123;prompt版本号&#125;.py</code>，无版本号时指向该方式下最新推荐配置。</p>
+<h5 id="哪些数据集可以用-ppl">哪些数据集可以用 PPL？</h5>
+<p><strong>原则</strong>：只要题目是<strong>单选题/多选题</strong>（题干
++ 固定选项 + 标准答案），理论上都<strong>可以</strong>用
+PPL。做法是把「题干 + 选项 A」「题干 + 选项 B」…
+分别输入模型算困惑度，选最低的。</p>
+<p>具体是否在 OpenCompass 里提供 PPL 配置，以仓库
+<code>configs/datasets/&lt;数据集名&gt;/</code> 下是否存在
+<code>*_ppl*.py</code> 为准。例如
+<strong>CLUE_afqmc</strong>、<strong>CLUE_cmnli</strong>、<strong>MMLU</strong>、<strong>GLUE/CoLA、MRPC、QQP</strong>、<strong>XCOPA</strong>
+等文档或仓库中都有 PPL 配置；不少选择题数据集目前只放了 GEN
+的推荐配置，但若数据格式是选项式，可参考已有 PPL 数据集自行加 PPL
+配置。</p>
+<h5 id="gen-方式下如何判断模型生成结果对不对">GEN
+方式下，如何判断模型生成结果对不对？</h5>
+<p>OpenCompass
+按<strong>标准答案类型</strong>和<strong>任务</strong>选择评测器与判分方式，<strong>不是</strong>一律用
+BLEU 或 LLM Judge。常见对应关系如下：</p>
+<table>
+<colgroup>
+<col style="width: 33%">
+<col style="width: 17%">
+<col style="width: 22%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>答案/任务类型</th>
+<th>评测器</th>
+<th>判分方式</th>
+<th>典型数据集</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>选择题/分类/判断</strong></td>
+<td><code>ACCEvaluator</code></td>
+<td>后处理（如
+<code>first_capital_postprocess</code>）从生成文本中提取选项标识（A/B/C/D
+或首字母），与标准答案比较，算准确率。</td>
+<td>MMLU、C-EVAL、ARC、BBH、HellaSwag、commonsenseqa</td>
+</tr>
+<tr class="even">
+<td><strong>短语/填空/抽取式 QA</strong></td>
+<td><code>EMEvaluator</code> 或 <code>SquadEvaluator</code></td>
+<td>精确匹配（EM）或 F1：预测片段与标准答案比。</td>
+<td>DROP、CLUE_CMRC、CLUE_DRCD、SQuAD2.0</td>
+</tr>
+<tr class="odd">
+<td><strong>数学（数值/表达式）</strong></td>
+<td><code>MATHEvaluator</code></td>
+<td><code>math_postprocess</code>：从生成中提取 <code>\boxed&#123;...&#125;</code>
+或最终数值，与标准答案做等价性比较（如化简、单位统一）。</td>
+<td>MATH、GSM8K</td>
+</tr>
+<tr class="even">
+<td><strong>代码</strong></td>
+<td><code>HumanEvalEvaluator</code> / <code>MBPPEvaluator</code></td>
+<td><strong>执行</strong>：在沙箱中跑单元测试，通过即对；报告 pass@k
+或通过率。</td>
+<td>HumanEval、MBPP</td>
+</tr>
+<tr class="odd">
+<td><strong>翻译/句子级生成</strong></td>
+<td><code>BleuEvaluator</code></td>
+<td>BLEU 与参考译文比较。</td>
+<td>Flores、IWSLT2017、GovRepcrs、SummScreen</td>
+</tr>
+<tr class="even">
+<td><strong>摘要</strong></td>
+<td><code>RougeEvaluator</code> / <code>JiebaRougeEvaluator</code></td>
+<td>ROUGE 与参考摘要比较。</td>
+<td>LCSTS、Xsum、XLSum、TruthfulQA</td>
+</tr>
+<tr class="odd">
+<td><strong>难以规则判定</strong>（开放、事实复杂、无固定格式）</td>
+<td><code>GenericLLMEvaluator</code></td>
+<td><strong>LLM as Judge</strong>：将题目、标准答案、模型输出交给另一个
+LLM，按约定输出 A（正确）/ B（错误），再统计准确率。</td>
+<td>部分 GPQA、DROP、MATH、AIME、MedQA 等提供的
+<code>*_llmjudge_gen</code> 配置</td>
+</tr>
+<tr class="even">
+<td><strong>规则 + LLM 混合</strong></td>
+<td><code>CascadeEvaluator</code></td>
+<td>先用规则判，规则判错的再送 LLM Judge 复核，兼顾成本与准确率。</td>
+<td>部分数学/阅读数据集</td>
+</tr>
+</tbody>
+</table>
+<p>因此：<strong>客观题、有明确标准答案的，多用规则（Acc/EM/MATH/执行/BLEU/ROUGE）；开放或规则难写的，用
+LLM Judge。</strong> 各表「GEN 判分方式」列会标出该数据集在 OpenCompass
+中使用的评测器或是否提供 LLM Judge 配置。</p>
+<hr>
+<h4 id="代码能力code">代码能力（Code）</h4>
+<p>代码类均为<strong>生成式任务</strong>，无选择题，故<strong>仅
+GEN</strong>。判分方式均为<strong>执行通过率</strong>（沙箱跑测试，pass@k
+或通过率），除非另有说明。</p>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>HumanEval</strong></td>
+<td>GEN</td>
+<td>执行 pass@k（HumanEvalEvaluator + humaneval_postprocess）</td>
+<td>164 道手写 Python 函数题。每题含：函数签名、docstring
+描述、函数体留空；模型补全函数体，再跑约 7.7
+个单元测试。<strong>样例</strong>：<code>def incr_list(l: list): """Return list with elements incremented by 1. &gt;&gt;&gt; incr_list([1,2,3]) [2,3,4] """</code>
+→ 模型需生成 <code>return [i+1 for i in l]</code>
+等通过测试的实现。</td>
+<td>早期支持</td>
+</tr>
+<tr class="even">
+<td><strong>HumanEval+</strong></td>
+<td>GEN</td>
+<td>执行 pass@k</td>
+<td>与 HumanEval
+同结构，但每题<strong>测试用例更多</strong>，通过判定更严，减少误判为通过。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>HumanEval Pro</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>在 HumanEval
+上增加「自调用」：先实现一个基础函数，再在另一题中调用该函数完成更复杂任务，考察渐进推理与代码复用。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>HumanEval-CN</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>题干与 docstring 为<strong>中文</strong>的 HumanEval
+风格题，任务形式同上。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>Multi-HumanEval</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>多<strong>编程语言</strong>版 HumanEval（如 Python 外还有 C++、Go
+等），同一任务多语言评测。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>HumanEval-X</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>多语言代码生成与跨语言迁移能力，题目来自/适配多种语言。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>MBPP</strong></td>
+<td>GEN</td>
+<td>执行通过率（MBPPEvaluator）</td>
+<td>约 1000 道题：给出<strong>自然语言描述</strong>或伪代码，要求写
+Python
+代码并通过测试。<strong>样例</strong>：描述「写一个函数，输入列表，返回每个元素加
+1 的新列表」→ 模型生成实现并跑测试。</td>
+<td>早期支持</td>
+</tr>
+<tr class="even">
+<td><strong>MBPP-CN</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>MBPP 的<strong>中文</strong>描述版，题目形式一致。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>MBPP-PLUS</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>MBPP 的扩充版，题目数与场景更多。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>MBPP Pro</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>与 HumanEval Pro 类似，增加多步与自调用式题目。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>APPS</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>竞赛风格编程题（来自 Codeforces
+等）：给题面与输入输出说明，要求生成<strong>完整可运行程序</strong>（含读入/输出），难度从入门到竞赛。题目较长，多步推理。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>APPS-mini</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>APPS 子集，用于快速评测。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>DS-1000</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>1000 道<strong>数据科学</strong>题：给定自然语言指令（如「用 Pandas
+读 CSV 并取前 5 行」），在固定库环境（NumPy/Pandas/Matplotlib
+等）下生成代码并执行验证。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>BigCodeBench</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>题干来自<strong>真实 GitHub 仓库</strong>：需理解
+issue/需求与代码上下文，生成符合仓库风格的补全或修复，依赖与环境更贴近实际。</td>
+<td>文档主推</td>
+</tr>
+<tr class="odd">
+<td><strong>LiveCodeBench</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td><strong>持续更新</strong>的代码评测：题目来自 LeetCode 等在线
+OJ，随时间的真实新题更新，防记忆。</td>
+<td>文档主推</td>
+</tr>
+<tr class="even">
+<td><strong>LiveCodeBench Pro</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>LiveCodeBench 的升级版，题目与难度更新。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>LCBench</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>OpenCompass/CodeBench 系列，多维度代码能力（实现、补全等）。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>CIBench</strong></td>
+<td>GEN</td>
+<td>执行/模板匹配</td>
+<td>含「根据描述生成代码」与「按模板填空」等子任务。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>Cloze Test-max/min</strong></td>
+<td>GEN</td>
+<td>概率/选择</td>
+<td><strong>代码填空</strong>：给带空缺的代码上下文，候选为若干
+token/片段，选使概率最大或最小的填空（偏判别式，但以 GEN
+配置呈现）。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>TACO</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>特定代码任务基准（如 API 使用、异常处理等）。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SciCode</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>科学计算场景：结合数学/物理公式与代码实现。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>MultiPL-E</strong></td>
+<td>GEN</td>
+<td>执行</td>
+<td>HumanEval 等题翻译到多语言，评测多语言程序合成。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>py150</strong></td>
+<td>GEN</td>
+<td>补全匹配/执行</td>
+<td>行级 <strong>Python
+代码补全</strong>：给定前缀若干行，补全下一行或片段，来自
+CodeXGLUE。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>InternSandbox</strong></td>
+<td>GEN</td>
+<td>沙箱执行</td>
+<td>推理+代码+Agent：在沙箱中完成多步操作与代码执行，综合评测。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="数学能力math">数学能力（Math）</h4>
+<p>数学题为<strong>开放式生成</strong>（写步骤+答案），<strong>仅
+GEN</strong>。判分多为 <strong>MATHEvaluator +
+math_postprocess</strong>（从生成中提 <code>\boxed&#123;...&#125;</code>
+或最终数值做等价比较）；部分提供 <strong>LLM Judge</strong> 配置（如
+OlymMATH、AIME）。</p>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>GSM8K</strong></td>
+<td>GEN</td>
+<td>MATHEvaluator + math_postprocess</td>
+<td>约 8.5k 道<strong>英文小学数学应用题</strong>，2～8
+步算术（加减乘除、分数、比例等），答案为数。<strong>样例</strong>：「Janet’s
+ducks lay 16 eggs per day. She eats 3 for breakfast and uses 4 for
+muffins. She sells the rest at $2 each. How much does she earn per
+day?」→ 模型给出步骤并得到 18（美元）。</td>
+<td>早期支持</td>
+</tr>
+<tr class="even">
+<td><strong>GSM-Hard</strong></td>
+<td>GEN</td>
+<td>同上</td>
+<td>GSM8K
+的<strong>困难子集</strong>：数字或表述更易混淆，需更强推理与抗干扰。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>MATH</strong></td>
+<td>GEN</td>
+<td>MATHEvaluator；另有 math_llm_judge_gen</td>
+<td>约 12.5k 道<strong>竞赛数学</strong>（AMC10/12、AIME 等），7
+个子方向（代数、数论、概率等），难度 1～5。题目与解答为 LaTeX，答案用
+<code>\boxed&#123;...&#125;</code> 标出。<strong>样例</strong>：解方程 <span class="math inline">\(81^{2x}=27^{3x-4}\)</span> → 答案 <span class="math inline">\(\boxed{x=12}\)</span>。</td>
+<td>早期支持</td>
+</tr>
+<tr class="even">
+<td><strong>MATH500</strong></td>
+<td>GEN</td>
+<td>MATHEvaluator；可选 LLM Judge</td>
+<td>从 PRM800k 取的 500 道题，带过程监督信号，形式同 MATH。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>MATH 401</strong></td>
+<td>GEN</td>
+<td>MATHEvaluator</td>
+<td><strong>高中数学/大学入门</strong>级数学，题型类似 MATH
+但难度偏前段。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>MathBench</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td>多<strong>难度层级</strong>（小学到竞赛）的数学题，中英等，ACL
+2024。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>LiveMathBench</strong></td>
+<td>GEN</td>
+<td>规则/执行</td>
+<td><strong>持续更新</strong>的数学题，防记忆、贴近新题。</td>
+<td>文档主推</td>
+</tr>
+<tr class="even">
+<td><strong>Mastermath2024v1</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td>2024 年<strong>竞赛/考试</strong>风格数学题。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>Game24</strong></td>
+<td>GEN</td>
+<td>结果匹配</td>
+<td><strong>24 点</strong>：给定 4 个数（如 4, 9, 10, 13），用 +−×÷ 得到
+24。模型输出表达式或序列，判结果是否为 24。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>SVAMP</strong></td>
+<td>GEN</td>
+<td>数值匹配</td>
+<td>数学应用题<strong>抗干扰</strong>版：同一逻辑下数字被替换，需正确列式并算对（避免背题）。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>TabMWP</strong></td>
+<td>GEN</td>
+<td>数值/表达式</td>
+<td><strong>表格+数学</strong>：给一个表格（如成绩表、价格表），问需要从表中取数并计算的问题（如「第三名比第一名少几分」）。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>Hungarian_Math</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td><strong>匈牙利高中毕业</strong>数学考试题，翻译为英文，含代数、几何等。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>OlymMATH</strong></td>
+<td>GEN</td>
+<td>LLM Judge（olymmath_llmjudeg_gen）</td>
+<td><strong>奥林匹克</strong>风格数学题，开放解答，用 LLM 判对错。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>Omni-MATH</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td>多来源、<strong>多语言</strong>数学题汇总，难度跨度大。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>BeyondAIME</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td>难度<strong>高于 AIME</strong> 的数学题扩展。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>MGSM</strong></td>
+<td>GEN</td>
+<td>数值匹配</td>
+<td><strong>多语言</strong>小学数学（含中文）：由 GSM8K
+翻译，题干与答案形式同 GSM8K。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="语言能力language">语言能力（Language）</h4>
+<p>本类多为<strong>分类/选择</strong>（NLI、匹配、词义、翻译质量等）。<strong>选择题</strong>在
+OpenCompass 中若提供 PPL 配置则可用 PPL，否则用 GEN；翻译/摘要为生成，仅
+GEN。</p>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>CLUE / AFQMC</strong></td>
+<td>PPL / GEN</td>
+<td>AccEvaluator（二分类）</td>
+<td><strong>中文</strong>句子对是否语义等价（蚂蚁金融问题匹配）。<strong>样例</strong>：题干「如何申请借款」「怎么申请贷款」→
+选项 等价/不等价。仓库有 <code>_ppl</code> 与 <code>_gen</code>
+配置。</td>
+<td>早期支持</td>
+</tr>
+<tr class="even">
+<td><strong>FewCLUE / CHID</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator</td>
+<td><strong>中文成语填空</strong>：给一句带空缺的句子和若干候选成语，选正确填入的成语。<strong>样例</strong>：句子「他___地完成了任务」，选项
+一丝不苟/马马虎虎/…。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>FewCLUE / CLUEWSC</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中文 Winograd
+Schema</strong>：句中代词指代哪个实体，二选一。<strong>样例</strong>：「盒子没放进包，因为[它]太小」→「它」指
+盒子 还是 包。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>FewCLUE / EPRSTMT</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中文情感/立场</strong>分类：短文本二分类或多分类。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>FewCLUE / TNEWS</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中文短文本</strong>分类（如新闻类别）。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>FewCLUE / CSL</strong></td>
+<td>GEN</td>
+<td>关键词/分类</td>
+<td><strong>中文</strong>关键词摘要或主题分类。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>CLUE / CMNLI</strong></td>
+<td>PPL / GEN</td>
+<td>AccEvaluator（三分类）</td>
+<td><strong>中文 NLI</strong>：前提+假设 →
+蕴含/矛盾/中立。<strong>样例</strong>：前提「A 是 B 的
+capital」，假设「A 是 B 的首都」→ 蕴含。有 ppl 配置。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>CLUE / OCNLI</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中文开放域 NLI</strong>，来源更多样。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>FewCLUE / OCNLI-FC</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td>OCNLI 的 FewCLUE 子集。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>FewCLUE / BUSTM</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中文短文本</strong>是否语义匹配（二分类）。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SuperGLUE / WiC</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>英文</strong>：同一词在两句中含义是否相同（True/False）。<strong>样例</strong>：「bank」在「river
+bank」与「bank account」中 → 不同。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>SuperGLUE / WSC</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>英文 Winograd Schema</strong>：代词指代判断，二选一。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>XCOPA</strong></td>
+<td>PPL（文档主推）/ GEN</td>
+<td>AccEvaluator</td>
+<td><strong>跨语言</strong>因果：给前提，选更合理的原因或结果（二选一）。<strong>样例</strong>：「地面湿了。因为___」→
+选项 下雨了 / 出太阳了。文档给出 PPL 配置。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>Flores</strong></td>
+<td>GEN</td>
+<td>BleuEvaluator</td>
+<td><strong>多语言翻译</strong>：给定源句，生成目标语译文，与参考译文算
+BLEU。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>TyDi-QA</strong></td>
+<td>GEN</td>
+<td>EM/F1 或 Acc</td>
+<td><strong>多语言 QA</strong>（含阿拉伯语等）：段落+问题，生成答案或选
+span，题型多样。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>ArabicMMLU</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator</td>
+<td><strong>阿拉伯语</strong> MMLU 风格：多学科选择题，四选一。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>IWSLT2017</strong></td>
+<td>GEN</td>
+<td>BleuEvaluator</td>
+<td><strong>口语翻译</strong>：演讲等语音转写文本，翻译到目标语言，BLEU
+评。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>PMMEval</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td><strong>多语言/多模态</strong>语言与理解评测。</td>
+<td>文档主推</td>
+</tr>
+<tr class="odd">
+<td><strong>SummEdits</strong></td>
+<td>GEN</td>
+<td>编辑距离/BLEU 等</td>
+<td><strong>摘要编辑</strong>：给摘要与编辑指令（如「缩短」「改风格」），模型输出修改后摘要，与参考比较。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="推理能力reasoning">推理能力（Reasoning）</h4>
+<p>多数为<strong>选择题</strong>（单选/多选），故<strong>PPL 与 GEN
+均可</strong>（以仓库是否提供 <code>*_ppl*.py</code>
+为准）；部分为开放式生成，仅 GEN。选择题多用
+<strong>ACCEvaluator</strong>；开放或复杂语义的提供 <strong>LLM
+Judge</strong> 配置。</p>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>BIG-Bench Hard (BBH)</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator；另有 bbh_llm_judge_gen</td>
+<td><strong>23
+个困难任务</strong>（逻辑、算术、因果、日期、计数、排序等），人类表现曾低于模型。<strong>样例</strong>：逻辑推理「若
+A 则 B，若 B 则 C，A
+成立，则___」；多步算术、日期理解、对象计数等。</td>
+<td>早期支持</td>
+</tr>
+<tr class="even">
+<td><strong>BIG-Bench Extra Hard (BBEH)</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td>比 BBH 更难的扩展任务集。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>ARC / ARC-C, ARC-E</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator</td>
+<td><strong>AI2
+科学推理</strong>：小学科学选择题，需从题干推理出答案。ARC-C
+为挑战集。<strong>样例</strong>：「哪种物体在水中会沉？」选项
+木块/石头/塑料/…。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>ARC Prize (ARC-AGI)</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td>ARC 竞赛的公开评测题，格式同 ARC。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SuperGLUE / AX_b, AX_g</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td>NLI
+<strong>诊断集</strong>：蕴含/非蕴含的二选或三选，考察推理一致性。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>SuperGLUE / CB</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>因果推理</strong>：前提+假设 → 蕴含/矛盾/中立，三分类。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SuperGLUE / COPA</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>因果选择</strong>：给前提，选更合理的原因或结果（二选一）。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>SuperGLUE / RTE</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>文本蕴含</strong>：句对是否蕴含，二分类。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>HellaSwag</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator</td>
+<td><strong>常识续写</strong>：给情境句，选最合理的下一句（四选一），干扰项与人类撰写、模型生成混合，抗背题。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>StrategyQA</strong></td>
+<td>GEN</td>
+<td>AccEvaluator 或 LLM Judge</td>
+<td><strong>多步是/否</strong>：需多步推理才能回答 Yes/No
+的开放题，模型生成答案后与标准比较或 LLM 判。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SocialIQA</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>社会常识</strong>：情境+问题，三选一（如「小明为什么迟到？」选项
+闹钟坏了/…）。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>StoryCloze</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>故事结尾</strong>：给故事前文，选合理的结尾句（二选一）。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>Adversarial NLI</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>对抗 NLI</strong>：专门设计为难模型的蕴含/矛盾题。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>NPHardEval</strong></td>
+<td>GEN</td>
+<td>AccEvaluator 或执行</td>
+<td><strong>算法/NP 风格</strong>推理：需形式推理或算法思维的题目。</td>
+<td>文档主推</td>
+</tr>
+<tr class="odd">
+<td><strong>TheoremQA</strong></td>
+<td>GEN</td>
+<td>AccEvaluator 或 LLM Judge</td>
+<td><strong>定理/数学推理</strong>：需学科知识与定理应用的题。</td>
+<td>文档主推</td>
+</tr>
+<tr class="even">
+<td><strong>CaLM</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>因果与逻辑</strong>推理基准。</td>
+<td>文档主推</td>
+</tr>
+<tr class="odd">
+<td><strong>KOR-Bench</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；可选 korbench_llm_judge_gen</td>
+<td><strong>韩语/多语言</strong>推理，选择题与开放题混合。</td>
+<td>文档主推</td>
+</tr>
+<tr class="even">
+<td><strong>LiveReasonBench</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td><strong>持续更新</strong>的推理题，防记忆。</td>
+<td>文档主推</td>
+</tr>
+<tr class="odd">
+<td><strong>MuSR</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；另有 musr_llm_judge_gen</td>
+<td><strong>多跳推理</strong>：需多步推理得到答案的题，可选 LLM
+Judge。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>CHARM</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td>因果与推理（charm_reason 子集）。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SciBench</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td><strong>科学推理</strong>：结合数学与逻辑的科学题。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>R-Bench</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td>综合推理基准。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>HLE (Humanity's Last Exam)</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td><strong>高难度综合</strong>推理考试风格。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>RULER</strong></td>
+<td>GEN</td>
+<td>见长文本</td>
+<td>长文本检索与推理，见「长文本」类。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="理解-阅读理解understanding">理解 /
+阅读理解（Understanding）</h4>
+<p><strong>选择题</strong>（MMLU、CMMLU、C-EVAL、BoolQ 等）可 PPL 或
+GEN，用
+<strong>ACCEvaluator</strong>；<strong>抽取式/短语答案</strong>（CMRC、DROP、SQuAD）用
+<strong>EMEvaluator /
+SquadEvaluator</strong>（EM、F1）；<strong>摘要</strong>用
+<strong>RougeEvaluator</strong>。</p>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>MMLU</strong></td>
+<td>PPL / GEN</td>
+<td>AccEvaluator（first_capital_postprocess）；另有
+mmlu_llm_judge_gen</td>
+<td><strong>57 科英文选择题</strong>，约 15.9k
+题，高中与大学知识（STEM、人文、社科等），四选一。<strong>样例</strong>：「求
+Q(√2, √3) 在 Q 上的次数。」A:0 B:4 C:2 D:6 → 答案 B。</td>
+<td>早期支持</td>
+</tr>
+<tr class="even">
+<td><strong>MMLU-Pro</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；可选 mmlu_pro_llm_judge_gen</td>
+<td>MMLU 升级版：题更难、<strong>选项增至约 10
+个</strong>、推理题比例更高，防记忆。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>MMLU-CF</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td>MMLU 的<strong>对抗/混淆</strong>版，选项或题干做混淆。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>MMMLU</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>多语言</strong> MMLU，多语种题干与选项。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>CMMLU</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator；可选 cmmlu_llm_judge_gen</td>
+<td><strong>中文</strong>多学科知识选择，形式同 MMLU，覆盖
+STEM、文史等。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>C-EVAL</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator</td>
+<td><strong>中文学科</strong>评测，多子集（数学、物理、法律等），选择题。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>CLUE / C3 (C³)</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中文</strong>选择题：给短文或上下文，基于理解选正确选项。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>CLUE / CMRC</strong></td>
+<td>GEN</td>
+<td>EMEvaluator</td>
+<td><strong>中文抽取式阅读</strong>：给文章+问题，答案为文中<strong>连续片段</strong>，判
+EM/F1。<strong>样例</strong>：文章介绍某事件时间地点，问「何时」→
+答案为一小段原文。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>CLUE / DRCD</strong></td>
+<td>GEN</td>
+<td>EMEvaluator</td>
+<td><strong>中文阅读</strong>（台湾繁体），形式同 CMRC，片段抽取。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>DROP</strong></td>
+<td>GEN</td>
+<td>EMEvaluator（EM/F1）；另有 drop_llm_judge_gen</td>
+<td><strong>英文</strong>离散推理阅读：文章中含数字、日期、实体，问题需<strong>数值运算、比较、计数</strong>等。<strong>样例</strong>：文章给某地各年龄段人口，问「青少年人口比
+20–29 岁成人多多少」→ 需定位数字并计算。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SQuAD2.0</strong></td>
+<td>GEN</td>
+<td>SquadEvaluator（F1/EM）</td>
+<td><strong>英文抽取式阅读</strong>：文章+问题，答案为 span
+或<strong>无答案</strong>（含不可回答题）。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>SuperGLUE / BoolQ</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>Yes/No 阅读</strong>：给段落+是非问，选 True/False。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SuperGLUE / MultiRC</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>多选阅读</strong>：一篇文章多题，每题多选。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>SuperGLUE / ReCoRD</strong></td>
+<td>GEN</td>
+<td>填空匹配</td>
+<td><strong>填空阅读</strong>：文中挖空，从候选词中选正确填入。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>LAMBADA</strong></td>
+<td>GEN</td>
+<td>词匹配/Acc</td>
+<td><strong>词预测</strong>：给长句，预测<strong>最后一个词</strong>，考察长程依赖。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>NarrativeQA</strong></td>
+<td>GEN</td>
+<td>EM/F1 或 LLM Judge</td>
+<td><strong>叙事长文</strong>：基于书籍/剧本摘要的问答，答案多为短语或短句。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SummScreen</strong></td>
+<td>GEN</td>
+<td>BleuEvaluator</td>
+<td><strong>剧本/摘要</strong>：根据剧本片段生成摘要或做理解，BLEU
+与参考比较。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>LCSTS</strong></td>
+<td>GEN</td>
+<td>JiebaRougeEvaluator</td>
+<td><strong>中文短文本摘要</strong>：给短新闻，生成摘要，ROUGE 评。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>XLSum</strong></td>
+<td>GEN</td>
+<td>RougeEvaluator</td>
+<td><strong>多语言</strong>摘要：多语种新闻等，生成摘要。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>Xsum</strong></td>
+<td>GEN</td>
+<td>RougeEvaluator</td>
+<td><strong>英文单句摘要</strong>：新闻→一句摘要，ROUGE 评。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>GLUE / CoLA</strong></td>
+<td>PPL（文档主推）/ GEN</td>
+<td>AccEvaluator</td>
+<td><strong>英文语法</strong>可接受性：句子是否语法正确，二分类。有 PPL
+配置。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>GLUE / MRPC</strong></td>
+<td>PPL / GEN</td>
+<td>AccEvaluator</td>
+<td><strong>Paraphrase</strong>：两句是否同义，二分类。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>GLUE / QQP</strong></td>
+<td>PPL / GEN</td>
+<td>AccEvaluator</td>
+<td><strong>Quora 问题对</strong>是否等价，二分类。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>SciEval</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；可选 SciEval_llm_judge_gen</td>
+<td><strong>科学</strong>领域理解与推理，中英，选择题或开放。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="知识knowledge与垂直领域">知识（Knowledge）与垂直领域</h4>
+<p>本类多为<strong>选择题或短答案</strong>。选择题可 PPL/GEN，用
+<strong>ACCEvaluator</strong>；开放或事实判定难的，提供 <strong>LLM
+Judge</strong> 配置。</p>
+<h5 id="综合知识">综合知识</h5>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>GPQA</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator；另有 gpqa_llm_judge_gen</td>
+<td><strong>高难度专家级</strong>选择题（钻石/主集），需深度领域知识，答案易有歧义，故常配
+LLM Judge。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>SuperGPQA</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td>GPQA 的扩展/加强版，题量与难度提升。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>CommonSenseQA</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator</td>
+<td><strong>英文常识</strong>多选：日常与物理/社会常识，五选一。<strong>样例</strong>：「人们通常在哪里存放冰块？」选项
+冰箱/烤箱/…。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>CommonSenseQA-CN</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中文</strong>常识问答，形式同 CommonSenseQA。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>OpenBookQA</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>开卷</strong>：给若干科学事实 +
+问题，四选一，需结合给定事实推理。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>NaturalQuestions</strong></td>
+<td>GEN</td>
+<td>EM/F1</td>
+<td><strong>谷歌自然问题</strong>：真实检索 query +
+维基段落，答案为长/短答案或 span。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>NaturalQuestions-CN</strong></td>
+<td>GEN</td>
+<td>EM/F1</td>
+<td>中文自然问题风格，抽取或短答。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>TriviaQA</strong></td>
+<td>GEN</td>
+<td>EM/F1 或 Acc</td>
+<td><strong>知识问答</strong>：需广泛事实知识，答案多为短语或实体。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>TriviaQA-RC</strong></td>
+<td>GEN</td>
+<td>EM/F1</td>
+<td>TriviaQA 的阅读理解子集：给段落+问，答案在文中。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>Chinese SimpleQA</strong></td>
+<td>GEN</td>
+<td>EM/Acc</td>
+<td><strong>中文简单</strong>事实问答，短答案。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>SimpleQA</strong></td>
+<td>GEN</td>
+<td>EM/Acc</td>
+<td>简单事实问答，实体或短语答案。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>SeedBench</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td>知识综合评测，多选或短答。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>Xiezhi (獬豸)</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator</td>
+<td><strong>中文多学科</strong>知识选择，覆盖文史哲法经等。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>WikiBench</strong></td>
+<td>GEN</td>
+<td>规则或 EM</td>
+<td>基于维基的知识题，答案与维基对照。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h5 id="医学">医学</h5>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>MedQA</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator；另有 MedQA_llmjudge_gen</td>
+<td><strong>美国医师执照</strong>风格：临床情境+多选（四选或五选），中英。<strong>样例</strong>：给主诉与检查，问最可能诊断/下一步处理。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>MedBench</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td>医学综合：多学科医学选择与简答。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>MedCalc_Bench</strong></td>
+<td>GEN</td>
+<td>数值/规则</td>
+<td>医学<strong>计算</strong>：用药剂量、肾小球滤过率等需公式的题。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>MedXpertQA</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；另有 MedXpertQA_llmjudge_gen</td>
+<td>医学<strong>专家级</strong>问答，难度高，可选 LLM Judge。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>ClinicBench</strong></td>
+<td>GEN</td>
+<td>LLM Judge（ClinicBench_llmjudge_gen）</td>
+<td><strong>临床</strong>场景问答，开放或复杂，建议 LLM Judge。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>ScienceQA</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；可选 ScienceQA_llmjudge_gen</td>
+<td>科学/医学问答，部分含<strong>图像</strong>，多选或短答。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>PubMedQA</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；另有 PubMedQA_llmjudge_gen</td>
+<td>给 <strong>PubMed
+摘要</strong>，问研究结论：yes/no/maybe，三选。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>CMB</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中文医学</strong>基准，选择题为主。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>CARDBiomedBench</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；另有 CARDBiomedBench_llmjudge_gen</td>
+<td><strong>生物医学</strong>综合，多选与开放，可选 LLM Judge。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>nejmaibench</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；另有 llmjudge</td>
+<td>基于 <strong>NEJM</strong> 的医学题，临床与科研。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>Medbullets</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；另有 llmjudge</td>
+<td>医学教育/考试风格，多选。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>medmcqa</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；另有 llmjudge</td>
+<td>医学多选（印度等考试风格）。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h5 id="法律-金融">法律 / 金融</h5>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>LawBench</strong></td>
+<td>GEN</td>
+<td>AccEvaluator 或 LLM Judge</td>
+<td><strong>中文法律</strong>：法条适用、推理、简答等，零样本/单样本。<strong>样例</strong>：给案情与选项，问适用条款或判决倾向。</td>
+<td>文档主推</td>
+</tr>
+<tr class="even">
+<td><strong>FinanceIQ</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中文金融</strong>知识问答，选择题或短答。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>OpenFinData</strong></td>
+<td>GEN</td>
+<td>AccEvaluator 或 EM</td>
+<td>开放<strong>金融数据</strong>相关 QA 与数值推理。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h5 id="化学-材料-生物">化学 / 材料 / 生物</h5>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>ChemBench</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>化学</strong>知识与推理，多选或开放。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>matbench</strong></td>
+<td>GEN</td>
+<td>数值/分类</td>
+<td><strong>材料科学</strong>：属性预测、分类等。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>ProteinLMBench</strong></td>
+<td>GEN</td>
+<td>AccEvaluator；另有 ProteinLMBench_llmjudge_gen</td>
+<td><strong>蛋白质/生物</strong>相关问答，专业性强，可选 LLM
+Judge。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="考试与竞赛examination">考试与竞赛（Examination）</h4>
+<p>多为<strong>选择题或标准答案</strong>，可 PPL/GEN，用
+<strong>ACCEvaluator</strong>；数学/开放题提供 <strong>LLM
+Judge</strong>（如 AIME）。</p>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>AGIEval</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator / AGIEvalEvaluator</td>
+<td><strong>中英考试题</strong>：高考、SAT、LSAT、司法考试等，多任务多学科，选择与填空。<strong>样例</strong>：高考语文阅读理解、数学选择、英语完形等。</td>
+<td>文档主推</td>
+</tr>
+<tr class="even">
+<td><strong>GAOKAOBench</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>中国高考</strong>：语文、数学、英语等学科，题型与高考一致。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>C-EVAL</strong></td>
+<td>GEN（可选 PPL）</td>
+<td>AccEvaluator</td>
+<td>中文学科考试风格，见「理解」类。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>RACE</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>英文阅读</strong>：来自中学考试，约 28k 篇、100k
+题，文章后跟多道选择。<strong>样例</strong>：一篇 200–400 词文章，每篇约
+4 题，四选一。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>AIME2024</strong></td>
+<td>GEN</td>
+<td>数值匹配；另有 aime2024_llmjudge_gen，支持 G-Pass@k</td>
+<td><strong>美国 AIME 2024</strong> 数学竞赛题：需写步骤与数值答案，支持
+n 次采样与 LLM Judge。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>cmo_fib</strong></td>
+<td>GEN</td>
+<td>填空匹配</td>
+<td>竞赛/考试<strong>填空</strong>题：补全句子或公式。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="长文本long-context">长文本（Long Context）</h4>
+<p>均为<strong>生成/选择</strong>类，<strong>仅
+GEN</strong>。判分按子任务：QA 用 EM/Acc，摘要用
+ROUGE，检索用命中率等。</p>
+<table>
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 28%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>数据集名称</th>
+<th>可用评测方式</th>
+<th>GEN 判分方式</th>
+<th>数据简介与题目样例</th>
+<th>加入时间</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>LongBench</strong></td>
+<td>GEN</td>
+<td>各子任务不同（EM/Acc/ROUGE 等）</td>
+<td><strong>中英长文本</strong>：单文档/多文档
+QA、摘要、少样本等，文档约 <strong>2k–32k
+token</strong>。<strong>样例</strong>：给一篇长报告，问「第 3
+节提到的政策何时生效」；或对长文做摘要。</td>
+<td>文档主推</td>
+</tr>
+<tr class="even">
+<td><strong>LongBench v2</strong></td>
+<td>GEN</td>
+<td>同上</td>
+<td>LongBench 第二版，任务与长度扩展。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>InfiniteBench (∞Bench)</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td><strong>超长上下文</strong>：多任务，考察百万级 token
+内的理解与推理。</td>
+<td>文档主推</td>
+</tr>
+<tr class="even">
+<td><strong>BABILong</strong></td>
+<td>GEN</td>
+<td>Acc/EM</td>
+<td>长文本<strong>推理与 QA</strong>，需在长文中定位与推理。</td>
+<td>文档主推</td>
+</tr>
+<tr class="odd">
+<td><strong>L-Eval</strong></td>
+<td>GEN</td>
+<td>各子任务</td>
+<td><strong>长文本综合</strong>：多任务（QA、摘要、信息检索等）。</td>
+<td>文档主推</td>
+</tr>
+<tr class="even">
+<td><strong>LV-Eval</strong></td>
+<td>GEN</td>
+<td>规则或 LLM Judge</td>
+<td>长文本理解与推理。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>QuALITY</strong></td>
+<td>GEN</td>
+<td>AccEvaluator</td>
+<td><strong>长文阅读</strong>：文章较长，多选，需理解全篇作答。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>Qasper</strong></td>
+<td>GEN</td>
+<td>EM/F1 或 Acc</td>
+<td><strong>学术论文
+QA</strong>：给论文全文或长节选，问与内容相关的问题，答案为 span
+或短句。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>Qasper-Cut</strong></td>
+<td>GEN</td>
+<td>同上</td>
+<td>Qasper 截断/子集，控制长度。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>Government Report</strong></td>
+<td>GEN</td>
+<td>BleuEvaluator</td>
+<td><strong>政府报告</strong>长文档：生成摘要或做理解，BLEU
+与参考比较。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>NeedleBench V1</strong></td>
+<td>GEN</td>
+<td>命中/位置</td>
+<td><strong>Needle-in-haystack</strong>：长文中插入一句「针」句，问该句内容或位置，测检索与定位。已
+Deprecated。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>NeedleBench V2</strong></td>
+<td>GEN</td>
+<td>命中/位置</td>
+<td>升级版长文检索与理解。</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><strong>RULER</strong></td>
+<td>GEN</td>
+<td>检索+QA 指标</td>
+<td><strong>长文本检索与推理</strong>统一评测：检索相关片段 +
+基于片段作答。</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><strong>S3Eval</strong></td>
+<td>GEN</td>
+<td>多任务指标</td>
+<td>长文本多任务评测。</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="智能助手-高效的多任务基座模型-推理框架">智能助手 –
+高效的多任务基座模型 &amp; 推理框架</h2>
+<blockquote>
+<p>背景：Transformer在NLP任务效果好，但在多任务系统中，资源消耗大成本高。设计多个任务共享模型主干，仅微调少量任务层参数的方案，提高效率，降低成本。
+主要工作：①优化模型结构，增大共享参数比例，完成基座模型预训练。②设计DAPT+TAPT+SFT的训练pipeline，引入任务Embedding，提供自动超参搜索，支持下游任务一键接入。③推动业务接入，线上效果平均提升6%，推理成本节省65%。</p>
+</blockquote>
+<h2 id="智能设备记忆系统">智能设备记忆系统</h2>
+<blockquote>
+<p>背景：手机等智能设备系统在获取用户数据方面具有优势；对用户数据进行记忆和整合，可以提升用户个性化服务、智能化服务的体验。
+主要工作：①设计设备级记忆系统方案，支持多来源数据，多记忆模块支持不同场景的使用。②设计记忆系统评测方案，构造评测数据，对记忆系统完成模块化评测。③基于记忆系统支持业务需求落地。</p>
+</blockquote>
+<h2 id="交易">交易</h2>
+<blockquote>
+<p>智能投顾Agent开发；代理人数据分析报告pipeline开发；k线分析工具开发。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/5c93b3a4.html" title="projects">https://saicat.github.io/5c93b3a4.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/interview/" rel="tag"><i class="fa fa-tag"></i> interview</a>
+              <a href="/tags/project/" rel="tag"><i class="fa fa-tag"></i> project</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/dd5035ac.html" rel="prev" title="LeetCode面试题解整理">
+                  <i class="fa fa-angle-left"></i> LeetCode面试题解整理
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/14e576c.html" rel="next" title="大规模对话模型：ChatGPT下的银牌选手们">
+                  大规模对话模型：ChatGPT下的银牌选手们 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">868k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">26:18</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

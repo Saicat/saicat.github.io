@@ -152,6 +152,8 @@ Qwen3的蒸馏主要分2个阶段：
 - **Off-policy Distillation**：将teacher模型在“/think”和“/no think”两种模式下生成的输出结合起来，用于蒸馏。这帮助轻量级学生模型培养基本的推理技能，以及在不同思维模式间切换的能力，为下一阶段的On-policy Distillation训练打基础。  
 - **On-policy Distillation**：具体操作是对prompt进行采样，学生模型以“/think”或“/no think”模式生成response，然后通过对齐其输出的logits与教师模型（Qwen3-32B或Qwen3-235B-A22B）的logits，最小化KL散度，实现学生模型的微调。  
 
+**Qwen3的蒸馏只用于post-training，pretrain各个规模的模型应该还是正常训练的。（配合我们自己的经验，pretrain阶段也可以用裁剪初始化+蒸馏的方式来提升效率和效果）**
+
 # 小结  
 
 Qwen3主要的变化的点：  
