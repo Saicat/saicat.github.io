@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://saicat.github.io/images/qrcode.jpg">
 <meta property="og:image" content="https://saicat.github.io/images/wechat.png">
 <meta property="article:published_time" content="2026-03-12T14:45:02.000Z">
-<meta property="article:modified_time" content="2026-03-16T15:44:34.009Z">
+<meta property="article:modified_time" content="2026-03-18T11:55:57.032Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
@@ -151,8 +151,7 @@ Number：矩阵的&quot;病态程度&quot;</span></a></li></ol></li><li class="n
 分布：随机矩阵的&quot;普适分布&quot;</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#preconditioning%E6%8A%8A%E6%89%81%E5%B1%B1%E8%B0%B7%E5%8F%98%E6%88%90%E5%9C%86%E5%B1%B1%E8%B0%B7"><span class="nav-number">4.3.1.</span> <span class="nav-text">Preconditioning：把&quot;扁山谷&quot;变成&quot;圆山谷&quot;</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BC%A9%E6%94%BE%E5%9B%A0%E5%AD%90%E4%BB%8E%E5%88%9D%E5%A7%8B%E5%8C%96%E5%88%B0%E6%9B%B4%E6%96%B0%E5%B0%BA%E5%BA%A6"><span class="nav-number">5.</span> <span class="nav-text">缩放因子：从初始化到更新尺度</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E5%88%9D%E5%A7%8B%E5%8C%96%E8%A6%81%E7%BC%A9%E6%94%BExavierkaiming%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">5.1.</span> <span class="nav-text">为什么初始化要缩放？（Xavier&#x2F;Kaiming初始化）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%B1%E8%8C%83%E6%95%B0spectral-norm%E4%B8%8E%E7%9F%A9%E9%98%B5%E5%BD%A2%E7%8A%B6"><span class="nav-number">5.2.</span> <span class="nav-text">谱范数（Spectral
 Norm）与矩阵形状</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#msign-%E7%A0%B4%E5%9D%8F%E4%BA%86%E5%B0%BA%E5%BA%A6%E5%85%B3%E7%B3%BB"><span class="nav-number">5.3.</span> <span class="nav-text">msign 破坏了尺度关系</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#kellerjordan-%E7%BC%A9%E6%94%BE%E6%81%A2%E5%A4%8D-jacobian-%E4%B8%80%E8%87%B4%E6%80%A7"><span class="nav-number">5.4.</span> <span class="nav-text">KellerJordan 缩放：恢复
 Jacobian 一致性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#moonlight-%E7%BC%A9%E6%94%BE%E4%B8%8E-adamw-%E7%9A%84-update-rms-%E5%AF%B9%E9%BD%90"><span class="nav-number">5.5.</span> <span class="nav-text">Moonlight 缩放：与
-AdamW 的 Update RMS 对齐</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B7%B7%E5%90%88%E4%BD%BF%E7%94%A8"><span class="nav-number">6.</span> <span class="nav-text">混合使用</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%8C%E6%95%B4%E9%85%8D%E7%BD%AE%E8%84%9A%E6%9C%AC"><span class="nav-number">6.1.</span> <span class="nav-text">完整配置脚本</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#muon-%E7%AE%97%E6%B3%95%E4%BC%AA%E4%BB%A3%E7%A0%81%E4%B8%8E-pytorch-%E5%AE%9E%E7%8E%B0"><span class="nav-number">7.</span> <span class="nav-text">Muon 算法伪代码与 PyTorch
-实现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">8.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B3%E4%BA%8Espectral-norm"><span class="nav-number">9.</span> <span class="nav-text">*关于Spectral Norm</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">10.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+AdamW 的 Update RMS 对齐</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B7%B7%E5%90%88%E4%BD%BF%E7%94%A8"><span class="nav-number">6.</span> <span class="nav-text">混合使用</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%8C%E6%95%B4%E9%85%8D%E7%BD%AE%E8%84%9A%E6%9C%AC"><span class="nav-number">6.1.</span> <span class="nav-text">完整配置脚本</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B3%E4%BA%8Espectral-norm"><span class="nav-number">8.</span> <span class="nav-text">*关于Spectral Norm</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">9.</span> <span class="nav-text">Reference</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -253,7 +252,7 @@ AdamW 的 Update RMS 对齐</span></a></li></ol></li><li class="nav-item nav-lev
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-03-16 23:44:34" itemprop="dateModified" datetime="2026-03-16T23:44:34+08:00">2026-03-16</time>
+      <time title="修改时间：2026-03-18 19:55:57" itemprop="dateModified" datetime="2026-03-18T19:55:57+08:00">2026-03-18</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -280,14 +279,14 @@ AdamW 的 Update RMS 对齐</span></a></li></ol></li><li class="nav-item nav-lev
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>14k</span>
+      <span>12k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>26 分钟</span>
+      <span>23 分钟</span>
     </span>
 </div>
 
@@ -311,7 +310,7 @@ v_t &amp;= β_2 \cdot v_{t-1} + (1-β_2) \cdot g_t^2 \\
 \end{aligned}
 \]</span></p>
 <p>但是各个参数之间的更新却没有关联。</p>
-<p>苏神在分析Muon博客里从多个角度进行了分析，大致来说，就是element-wise的更新方式忽略了矩阵参数的结构特性：</p>
+<p>苏神在分析Muon的博客里从多个角度进行了分析，大致来说，就是element-wise的更新方式忽略了矩阵参数的结构特性：</p>
 <ul>
 <li>比如矩阵的对角线元素和非对角线元素地位不对等<br>
 </li>
@@ -319,8 +318,8 @@ v_t &amp;= β_2 \cdot v_{t-1} + (1-β_2) \cdot g_t^2 \\
 </ul>
 <p>因此简单地按元素处理，无法区分优化的"重要方向"和"次要方向"。</p>
 <p>再理解一下：在 AdamW 的 element-wise
-视角中，'重要'仅仅由梯度绝对值大小决定。但苏剑林指出，从矩阵几何视角，奇异值大的方向（主导方向）和奇异值小的方向（稀有方向）都应被平等对待——因为后者往往对应着数据中的稀有模式或细粒度特征。</p>
-<p>从这个角度，我个人想法：训练数据本身就极可能是分布不均衡的：常见模式和稀有模式的比例差异很大，而如果鼓励平等对待所有模式，那么就可能对训练数据提出了高的质量要求，因为这种情况下引入噪音或者错误数据，就会对训练效果影响更大。</p>
+视角中，'重要'仅仅由梯度绝对值大小决定。但苏神指出，从矩阵几何视角，奇异值大的方向（主导方向）和奇异值小的方向（稀有方向）都应被平等对待——因为后者往往对应着数据中的稀有模式或细粒度特征。</p>
+<p>从这个角度，个人想法：训练数据本身就极可能是分布不均衡的：常见模式和稀有模式的比例差异很大，而如果鼓励平等对待所有模式，那么就可能对训练数据的质量提出了更高的要求，因为这种情况下一旦引入噪音或者错误数据（错误的稀有模式），被Muon跟主流末流一视同仁，就会对训练效果影响更大。</p>
 <h1 id="梯度矩阵的低秩">梯度矩阵的低秩</h1>
 <p>AdamW在过去几年一直是最主流的优化器，甚至是唯一的选择。但是使用AdamW训练的模型，梯度矩阵却都展现出低秩的特性。实际上（训练后期）梯度矩阵的低秩特性，正是LoRA可行的理论基础：在增量训练中，梯度矩阵的秩很低，因此干脆只更新一个增量的低秩矩阵即可。</p>
 <p>一些其他的文献也有提到相关的观察，比如：</p>
@@ -344,35 +343,33 @@ sharp minima。</li>
 </ol>
 <h2 id="condition-number矩阵的病态程度">Condition
 Number：矩阵的"病态程度"</h2>
-<p><strong>Condition Number</strong>（通常记作 <span class="math inline">\(\kappa\)</span>）衡量的是矩阵在各个方向上的"不均衡程度"或"病态程度"。它表示<strong>"矩阵的健康程度"</strong>——condition越好（数值越小），矩阵越容易处理；条件越差（数值越大），数值计算越困难。</p>
-<p><strong>直观理解</strong>：想象你在一个山谷中寻找最低点（优化损失函数）：</p>
+<p>Condition Number（通常记作 <span class="math inline">\(\kappa\)</span>）衡量的是矩阵在各个方向上的"不均衡程度"或"病态程度"。它表示"矩阵的健康程度"——condition越好（数值越小），矩阵越容易处理；条件越差（数值越大），数值计算越困难。</p>
+<p>直观理解：想象你在一个山谷中寻找最低点（优化损失函数）：</p>
 <ul>
-<li><strong>低条件数</strong>（<span class="math inline">\(\kappa
-\approx
-1\)</span>）：山谷是<strong>圆形</strong>的，往哪个方向走都一样容易，一步就能找到谷底<br>
+<li>低条件数（<span class="math inline">\(\kappa \approx
+1\)</span>）：山谷是圆形的，往哪个方向走都一样容易，一步就能找到谷底<br>
 </li>
-<li><strong>高条件数</strong>（<span class="math inline">\(\kappa \gg
-1\)</span>）：山谷是<strong>极扁的椭圆形</strong>（像平底锅），沿长轴走很慢，沿短轴走会来回震荡，优化极其困难</li>
+<li>高条件数（<span class="math inline">\(\kappa \gg
+1\)</span>）：山谷是极扁的椭圆形，沿长轴走很慢，沿短轴走会来回震荡，优化困难</li>
 </ul>
-<p><strong>数学定义</strong>：</p>
+<p>数学定义：</p>
 <p><span class="math display">\[\kappa =
 \frac{\sigma_{\max}}{\sigma_{\min}} =
 \frac{\text{最大奇异值}}{\text{最小奇异值}}\]</span></p>
 <p>梯度矩阵的低秩意味着 <span class="math inline">\(\sigma_{\min}
 \approx 0\)</span>，因此 <span class="math inline">\(\kappa \to
 \infty\)</span>（极度病态）。AdamW
-试图在这个"极度压扁"的空间里寻找方向，必然导致某些方向更新过度，某些方向更新不足。</p>
+试图在这个"极度压扁"的空间里寻找方向，就容易导致某些方向更新过度，某些方向更新不足。</p>
 <h1 id="muon-的核心思想谱均衡化spectral-whitening">Muon
 的核心思想——谱均衡化（Spectral Whitening）</h1>
 <p>面对 AdamW 无法处理梯度低秩的困境，Muon
-的核心洞察是：<strong>既然梯度矩阵的病态性来源于奇异值（singular
-values）的极端不均衡，那么干脆丢弃奇异值的大小信息，只保留方向信息</strong>。</p>
-<p>想象你在一个极度扭曲的山谷中行走（损失 landscape）：</p>
+的核心洞察是：既然梯度矩阵的病态性来源于奇异值（singular
+values）的极端不均衡，那么干脆丢弃奇异值的大小信息，只保留方向信息。</p>
+<p>想象你在一个极度扭曲的山谷中行走（loss landscape）：</p>
 <ul>
-<li><strong>AdamW</strong>：按照坡度最陡的方向走，但山谷在某些方向极其狭窄（陡峭），某些方向极其平坦。你很容易被困在狭窄的沟壑里，来回震荡，而看不到旁边宽阔的平原。<br>
+<li>AdamW：按照坡度最陡的方向走，但山谷在某些方向极其狭窄（陡峭），某些方向极其平坦。你很容易被困在狭窄的沟壑里，来回震荡，而看不到旁边宽阔的平原。<br>
 </li>
-<li><strong>Muon</strong>：先把山谷"拉平"——不管原本多陡或多平，都统一成
-45
+<li>Muon：先把山谷"拉平"——不管原本多陡或多平，都统一成 45
 度坡。这样你每一步在各个方向上走的距离是一样的，不会在某个方向走太多，也不会在另一个方向走太少。</li>
 </ul>
 <p>数学上，对于 SGD-momentum 累积的动量矩阵 <span class="math inline">\(M \in \mathbb{R}^{n \times m}\)</span>，首先考虑其
@@ -384,15 +381,14 @@ SVD 分解：</p>
 的更新量正比于 <span class="math inline">\(M\)</span>，意味着 <span class="math inline">\(\sigma_1\)</span>
 对应的方向（主导方向）获得最大更新幅度，而 <span class="math inline">\(\sigma_r\)</span>
 方向（稀有方向）几乎被数值忽略——这就是"富者愈富，穷者愈穷"的马太效应。</p>
-<p>Muon 定义的<strong>msign</strong>（matrix sign function）为：</p>
+<p>Muon 定义的msign（matrix sign function）为：</p>
 <p><span class="math display">\[\text{msign}(M) = UV^\top = \sum_{i=1}^r
 u_i v_i^\top\]</span></p>
-<p>这相当于<strong>将所有奇异值强制置为
-1</strong>，实现<strong>各向同性更新</strong>（isotropic
+<p>这相当于将所有奇异值强制置为 1，实现各向同性更新（isotropic
 update）。从几何上看，如果原始动量 <span class="math inline">\(M\)</span>
 将一个单位球映射为一个极度扁平的椭球（条件数 <span class="math inline">\(\kappa \gg 1\)</span>），那么 <span class="math inline">\(\text{msign}(M)\)</span>
 将其映射为一个正交归一的球体，在所有方向上给予同等的更新幅度。</p>
-<p><strong>关键性质</strong>：</p>
+<p>关键性质：</p>
 <ul>
 <li><span class="math inline">\(\text{msign}(M)\)</span> 是 <span class="math inline">\(M\)</span> 的最优正交近似：<span class="math inline">\(\arg\min_{O^\top O=I} \|M - O\|_F\)</span><br>
 </li>
@@ -406,17 +402,18 @@ update）。从几何上看，如果原始动量 <span class="math inline">\(M\)
 迭代——高效实现与系数优化</h1>
 <p>直接用 SVD 计算 <span class="math inline">\(UV^\top\)</span>
 的复杂度为 <span class="math inline">\(O(\min(nm^2,
-n^2m))\)</span>，每步优化都做一次 SVD 对训练开销不小。因此 Muon 采用
-<strong>Newton-Schulz（NS）迭代</strong>来近似 <span class="math inline">\(\text{msign}(M)\)</span>。</p>
+n^2m))\)</span>，每步优化都做一次 SVD 对训练开销不小。因此 Muon
+采用Newton-Schulz（NS）迭代来近似 <span class="math inline">\(\text{msign}(M)\)</span>。</p>
 <h2 id="为什么不用-svd">为什么不用 SVD？</h2>
 <ul>
-<li><strong>计算成本</strong>：SVD 需要 <span class="math inline">\(O(n^3)\)</span> 迭代，无法利用 GPU
-的矩阵乘法优化（matrix multiplication 是 GPU 的强项，SVD 不是）<br>
+<li>计算成本：SVD 需要 <span class="math inline">\(O(n^3)\)</span>
+迭代，无法利用 GPU 的矩阵乘法优化（matrix multiplication 是 GPU
+的强项，SVD 不是）<br>
 </li>
-<li><strong>精度要求</strong>：SVD 通常需要 float32
-精度以保证数值稳定性，而 NS 迭代可以在 <strong>bfloat16</strong>
-下稳定运行（这应该是一个比较重要的点）</li>
-<li><strong>内存占用</strong>：SVD 需要存储中间矩阵 <span class="math inline">\(U, \Sigma, V\)</span></li>
+<li>精度要求：SVD 通常需要 float32 精度以保证数值稳定性，而 NS
+迭代可以在 bfloat16 下稳定运行（这应该是一个比较重要的点）</li>
+<li>内存占用：SVD 需要存储中间矩阵 <span class="math inline">\(U,
+\Sigma, V\)</span></li>
 </ul>
 <h2 id="ns-迭代的数学原理与系数来源">NS 迭代的数学原理与系数来源</h2>
 <p>目标：计算 <span class="math inline">\(X =
@@ -433,23 +430,21 @@ Taylor 展开：</p>
 3t^2}{8}\]</span></p>
 <p>这给出理论系数 <span class="math inline">\((a, b, c) = (1.875, -1.25,
 0.375)\)</span>。但 Keller Jordan
-发现这个系数<strong>收敛太慢</strong>，需要数十步才能稳定。</p>
-<p><strong>实际系数的优化过程（针对 Marchenko-Pastur
-分布）</strong>：</p>
+发现这个系数收敛太慢，需要数十步才能稳定。</p>
+<p>实际系数的优化过程（针对 Marchenko-Pastur 分布）：</p>
 <p>设单个奇异值的迭代函数为：</p>
 <p><span class="math display">\[\varphi(x) = x + \kappa x(x^2 -
 x_1^2)(x^2 - x_2^2)\]</span></p>
 <p>其中 <span class="math inline">\(x_1 &lt; 1 &lt; x_2\)</span>
 是不动点。通过网格搜索（Grid Search）或梯度下降优化 <span class="math inline">\((\kappa, x_1, x_2)\)</span>，使得在固定 <span class="math inline">\(T=5\)</span> 步内，最小化： <span class="math display">\[\mathbb{E}_{\sigma \sim
 \text{MP分布}}[(\varphi^T(\sigma) - 1)^2]\]</span></p>
-<p>优化后的系数<strong>牺牲了对所有 <span class="math inline">\(\sigma
-\in [0,1]\)</span>
-的均匀收敛性</strong>，换取了对<strong>常见梯度分布</strong>（Marchenko-Pastur
+<p>优化后的系数牺牲了对所有 <span class="math inline">\(\sigma \in
+[0,1]\)</span> 的均匀收敛性，换取了对常见梯度分布（Marchenko-Pastur
 分布）的快速收敛。实际 5 步后，奇异值收敛到 <span class="math inline">\(U[0.5, 1.5]\)</span> 而非精确的
 1，但这在实践中不影响模型性能。</p>
-<p>实际使用的<strong>经验优化系数</strong> <span class="math inline">\((3.4445, -4.7750, 2.0315)\)</span> 是针对 square
-matrix 和 <span class="math inline">\(T=5\)</span> 的近似最优解。</p>
-<p>PyTorch 实现代码：</p>
+<p>实际使用的经验优化系数 <span class="math inline">\((3.4445, -4.7750,
+2.0315)\)</span> 是针对 square matrix 和 <span class="math inline">\(T=5\)</span> 的近似最优解。</p>
+<p>PyTorch 实现代码（from Kimi）：</p>
 <pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">def</span> <span class="token function">zeropower_via_newtonschulz</span><span class="token punctuation">(</span>G<span class="token punctuation">,</span> steps<span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">,</span> eps<span class="token operator">=</span><span class="token number">1e-7</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
     <span class="token triple-quoted-string string">"""
     计算矩阵 G 的零次幂（即正交化）
@@ -482,12 +477,11 @@ matrix 和 <span class="math inline">\(T=5\)</span> 的近似最优解。</p>
 <h2 id="marchenko-pastur-分布随机矩阵的普适分布">Marchenko-Pastur
 分布：随机矩阵的"普适分布"</h2>
 <p>在讨论 Newton-Schulz
-迭代系数优化时，我们提到了<strong>Marchenko-Pastur（MP）分布</strong>。这是随机矩阵理论中的一个核心结果，描述的是<strong>大随机矩阵的奇异值会呈现什么样的统计分布</strong>。</p>
+迭代系数优化时，我们提到了Marchenko-Pastur（MP）分布。这是随机矩阵理论中的一个核心结果，描述的是大随机矩阵的奇异值会呈现什么样的统计分布。</p>
 <p>想象你有一个巨大的矩阵，里面的每个元素都是独立随机采样的（比如从高斯分布
 <span class="math inline">\(\mathcal{N}(0,1)\)</span>
-中随机抽取）。当你计算这个矩阵的奇异值（SVD）时，这些奇异值<strong>不会均匀分布</strong>，而是会呈现出
-MP 分布的形状——像一座山，中间高两边低，有明确的边界。</p>
-<p><strong>在深度学习中的体现</strong>：</p>
+中随机抽取）。当你计算这个矩阵的奇异值（SVD）时，这些奇异值不会均匀分布，而是中间高两边低，而且是有偏的（MP分布）。</p>
+<p>在深度学习中的体现：</p>
 <ul>
 <li>大的梯度矩阵（特别是训练初期或随机初始化时）的奇异值近似服从 MP
 分布<br>
@@ -496,16 +490,15 @@ MP 分布的形状——像一座山，中间高两边低，有明确的边界�
 边界（outliers），形成几个很大的奇异值，其余集中在 0 附近</li>
 </ul>
 <p>这就是为什么 NS 迭代的系数要针对 MP
-分布优化——<strong>针对最常见、最自然的梯度分布进行优化，而不是针对理论上的均匀分布</strong>。</p>
+分布优化——针对最常见、最自然的梯度分布进行优化。</p>
 <h3 id="preconditioning把扁山谷变成圆山谷">Preconditioning：把"扁山谷"变成"圆山谷"</h3>
-<p>在理解 Muon 和 Shampoo
-之前，必须先理解<strong>Preconditioning</strong>这个概念。</p>
-<p><strong>核心思想</strong>：通过坐标变换，把病态的优化问题（高条件数）转化为良态的问题（条件数接近
+<p>在理解 Muon 和 Shampoo 之前，先理解Preconditioning。</p>
+<p>核心思想：通过坐标变换，把病态的优化问题（高条件数）转化为良态的问题（条件数接近
 1）。</p>
-<p><strong>类比</strong>：你有一张被压扁的橡皮泥（梯度矩阵），某些方向被压缩了
-1000 倍，某些方向被拉伸了 1000
+<p>类比：你有一张被压扁的橡皮泥（梯度矩阵），某些方向被压缩了 1000
+倍，某些方向被拉伸了 1000
 倍。预条件化就是把它重新捏成标准的球体，让各个方向尺度一致。</p>
-<p><strong>数学操作</strong>：</p>
+<p>数学操作：</p>
 <p>对于梯度 <span class="math inline">\(G\)</span>，预条件化更新为 <span class="math inline">\(\Delta W = P^{-1} G\)</span>，其中 <span class="math inline">\(P\)</span> 是Preconditioner。理想情况下 <span class="math inline">\(P\)</span> 应该接近 Hessian
 矩阵，但计算太贵。Shampoo 和 Muon 都在寻找计算可行且有效的预条件子。</p>
 <h1 id="缩放因子从初始化到更新尺度">缩放因子：从初始化到更新尺度</h1>
@@ -530,34 +523,34 @@ d_{in}}\)</span>（注意 PyTorch Linear 层是 <span class="math inline">\(d_{o
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>朴素版（Naive）</strong></td>
+<td>朴素版（Naive）</td>
 <td><span class="math inline">\(1\)</span></td>
 <td>理论研究</td>
 <td>需大幅调参</td>
 </tr>
 <tr class="even">
-<td><strong>KellerJordan 版</strong></td>
+<td>KellerJordan 版</td>
 <td><span class="math inline">\(\sqrt{\max(1,
 d_{out}/d_{in})}\)</span></td>
 <td>追求层间一致性</td>
 <td>需放大 5-10 倍</td>
 </tr>
 <tr class="odd">
-<td><strong>MuP 版</strong></td>
+<td>MuP 版</td>
 <td><span class="math inline">\(\sqrt{d_{out}/d_{in}}\)</span></td>
 <td>跨模型尺寸迁移</td>
 <td>需配合 MuP 调参</td>
 </tr>
 <tr class="even">
-<td><strong>Moonlight 版</strong></td>
+<td>Moonlight 版</td>
 <td><span class="math inline">\(0.2 \times \sqrt{\max(d_{out},
 d_{in})}\)</span></td>
-<td><strong>推荐，零成本迁移</strong></td>
-<td><strong>直接使用 AdamW lr</strong></td>
+<td>零成本迁移</td>
+<td>直接使用 AdamW lr</td>
 </tr>
 </tbody>
 </table>
-<p><strong>关键区别示例</strong>：</p>
+<p>关键区别示例：</p>
 <p>对于 <span class="math inline">\(W \in \mathbb{R}^{1024 \times
 4096}\)</span>（矮胖，<span class="math inline">\(d_{out} &lt;
 d_{in}\)</span>）：</p>
@@ -569,7 +562,7 @@ d_{in}\)</span>）：</p>
 12.8\)</span>（大幅放大，补偿 msign 的收缩）</li>
 </ul>
 <p>为什么有这么个缩放呢？理解 Muon
-的缩放因子需要从<strong>神经网络初始化</strong>的最基本原则开始推导。</p>
+的缩放因子需要从神经网络初始化的最基本原则开始推导。</p>
 <h2 id="为什么初始化要缩放xavierkaiming初始化">为什么初始化要缩放？（Xavier/Kaiming初始化）</h2>
 <p>想象一个简单的线性网络 <span class="math inline">\(h_{l+1} = W_l
 h_l\)</span>。如果 <span class="math inline">\(W_{ij} \sim
@@ -580,37 +573,35 @@ h_l\)</span>。如果 <span class="math inline">\(W_{ij} \sim
 \sigma_l^2\)</span>（<span class="math inline">\(d_{in}\)</span>
 个输入累加）<br>
 </li>
-<li>经过 <span class="math inline">\(L\)</span> 层，方差变为 <span class="math inline">\(d_{in}^L\)</span>，<strong>指数级爆炸</strong></li>
+<li>经过 <span class="math inline">\(L\)</span> 层，方差变为 <span class="math inline">\(d_{in}^L\)</span>，指数级爆炸</li>
 </ul>
 <p>为了保持前向传播中信号的方差恒定，必须让 <span class="math inline">\(\mathbb{E}[W_{ij}^2] \approx
-\frac{1}{d_{in}}\)</span>，即<strong>方差反比于输入维度</strong>。这就是
-Xavier/Kaiming 初始化。</p>
+\frac{1}{d_{in}}\)</span>，即方差反比于输入维度。这就是 Xavier/Kaiming
+初始化。</p>
 <h2 id="谱范数spectral-norm与矩阵形状">谱范数（Spectral
 Norm）与矩阵形状</h2>
 <p>在 Xavier 初始化下（<span class="math inline">\(W_{ij} \sim
-\mathcal{N}(0,
-1/d_{in})\)</span>），矩阵的<strong>谱范数</strong>（最大奇异值，即
-<span class="math inline">\(\|W\|_2\)</span>）满足：</p>
+\mathcal{N}(0, 1/d_{in})\)</span>），矩阵的谱范数（最大奇异值，即 <span class="math inline">\(\|W\|_2\)</span>）满足：</p>
 <p><span class="math display">\[\|W\|_2 \approx \begin{cases}
 \sqrt{\frac{d_{out}}{d_{in}}} &amp; \text{if } d_{out} \gg d_{in}
 \text{（高瘦）} \\
 1 &amp; \text{if } d_{out} \ll d_{in} \text{（矮胖）}
 \end{cases}\]</span></p>
-<p><strong>直观理解</strong>：</p>
+<p>直观理解：</p>
 <ul>
-<li><strong>高瘦矩阵</strong>（<span class="math inline">\(d_{out} &gt;
+<li>高瘦矩阵（<span class="math inline">\(d_{out} &gt;
 d_{in}\)</span>）：把少量输入"扩张"到大量输出，需要更大的"放大系数"来填充输出空间，因此谱范数
 <span class="math inline">\(\propto \sqrt{d_{out}/d_{in}}\)</span><br>
 </li>
-<li><strong>矮胖矩阵</strong>（<span class="math inline">\(d_{out} &lt;
+<li>矮胖矩阵（<span class="math inline">\(d_{out} &lt;
 d_{in}\)</span>）：把大量输入"压缩"到少量输出，天然具有信息瓶颈，谱范数保持
 <span class="math inline">\(O(1)\)</span></li>
 </ul>
 <h2 id="msign-破坏了尺度关系">msign 破坏了尺度关系</h2>
 <p>Muon 使用 <span class="math inline">\(\text{msign}(M) =
 UV^\top\)</span>，这相当于将所有奇异值设为 1（或接近
-1），<strong>完全抹去了原始矩阵与维度相关的尺度信息</strong>。</p>
-<p><strong>问题</strong>：</p>
+1），完全抹去了原始矩阵与维度相关的尺度信息。</p>
+<p>问题：</p>
 <ul>
 <li>如果不加缩放，高瘦矩阵（需要扩张能力）和矮胖矩阵（需要压缩能力）获得完全相同的更新幅度<br>
 </li>
@@ -619,25 +610,24 @@ UV^\top\)</span>，这相当于将所有奇异值设为 1（或接近
 <h2 id="kellerjordan-缩放恢复-jacobian-一致性">KellerJordan 缩放：恢复
 Jacobian 一致性</h2>
 <p>KellerJordan 的缩放因子 <span class="math inline">\(\sqrt{\max(1,
-d_{out}/d_{in})}\)</span> 源于 <strong>MuP（Maximal Update
-Parametrization）</strong> 理论：</p>
+d_{out}/d_{in})}\)</span> 源于 MuP（Maximal Update Parametrization）
+理论：</p>
 <ul>
 <li>当 <span class="math inline">\(d_{out} &gt;
 d_{in}\)</span>（高瘦）：乘以 <span class="math inline">\(\sqrt{d_{out}/d_{in}} &gt;
-1\)</span>，<strong>放大</strong>，补偿扩张需求<br>
+1\)</span>，放大，补偿扩张需求<br>
 </li>
 <li>当 <span class="math inline">\(d_{out} \le
 d_{in}\)</span>（矮胖或方阵）：保持
 1，不进行压缩（避免进一步削弱矮胖层）</li>
 </ul>
-<p><strong>目的</strong>：确保不同形状的权重矩阵在正交化后，其"影响力"（对网络输出的作用能力）与架构设计时一致。</p>
+<p>目的：确保不同形状的权重矩阵在正交化后，其"影响力"（对网络输出的作用能力）与架构设计时一致。</p>
 <h2 id="moonlight-缩放与-adamw-的-update-rms-对齐">Moonlight 缩放：与
 AdamW 的 Update RMS 对齐</h2>
-<p><strong>问题</strong>：KellerJordan 版需要重新调参（通常学习率要放大
-5-10 倍）。</p>
-<p><strong>解决思路</strong>：通过对齐 <strong>Update RMS（Root Mean
-Square of Update）</strong> 来自动确定缩放因子。</p>
-<p><strong>推导</strong>：</p>
+<p>问题：KellerJordan 版需要重新调参（通常学习率要放大 5-10 倍）。</p>
+<p>解决思路：通过对齐 Update RMS（Root Mean Square of Update）
+来自动确定缩放因子。</p>
+<p>推导：</p>
 <ol type="1">
 <li>AdamW 在稳定期的 Update RMS <span class="math inline">\(\approx \eta
 \times 0.2\)</span><br>
@@ -649,33 +639,27 @@ d_{out})}\)</span><br>
 <li>为了对齐，需要缩放因子 <span class="math inline">\(c = 0.2 \times
 \sqrt{\max(d_{in}, d_{out})}\)</span></li>
 </ol>
-<p><strong>优势</strong>：直接使用 AdamW 的学习率，无需重新 grid
-search。</p>
+<p>优势：直接使用 AdamW 的学习率，无需重新 grid search。</p>
 <h1 id="混合使用">混合使用</h1>
 <p>实际使用中，AdamW和Muon要配合起来，一起使用。两个优化器分别优化不同的参数。</p>
-<p><strong>为什么必须混合使用？</strong></p>
+<p>为什么必须混合使用？</p>
 <p>实证发现（Keller Jordan 博客 &amp; Moonlight 论文）：<br>
-- <strong>Embedding 层</strong>：使用 Muon 效果差甚至不稳定（sparse
+- Embedding 层：使用 Muon 效果差甚至不稳定（sparse
 lookup，不满足稠密矩阵假设）<br>
-- <strong>LM Head / 分类头</strong>：大词表下梯度极度稀疏（只有 top-k
-有值），Muon 的 full-matrix 假设不适用<br>
-- <strong>Bias / LayerNorm</strong>：1D 向量，Muon 退化为
-SignSGD，效果不如 AdamW</p>
-<p><strong>推荐配置</strong>：</p>
+- LM Head / 分类头：大词表下梯度极度稀疏（只有 top-k 有值），Muon 的
+full-matrix 假设不适用<br>
+- Bias / LayerNorm：1D 向量，Muon 退化为 SignSGD，效果不如 AdamW</p>
+<p>推荐配置：</p>
 <ul>
-<li><strong>Muon 用于</strong>：所有 Hidden Layers 的 Linear / Dense
+<li>Muon 用于：所有 Hidden Layers 的 Linear / Dense
 权重（2D，稠密矩阵乘法）<br>
 </li>
-<li><strong>AdamW 用于</strong>：Embedding、LM Head、Bias、LayerNorm
-参数</li>
+<li>AdamW 用于：Embedding、LM Head、Bias、LayerNorm 参数</li>
 </ul>
-<p><strong>性能基准</strong>：<br>
-- <strong>NanoGPT（GPT-2 规模）</strong>：达到同等验证 loss 的步数减少
-30-40%<br>
-- <strong>1.5B 参数模型</strong>：10 小时 vs AdamW 13.3
-小时（8×H100）<br>
-- <strong>稳定性</strong>：Moonlight 版在大学习率下比原版更稳定，loss
-曲线更平滑</p>
+<p>性能基准：<br>
+- NanoGPT（GPT-2 规模）：达到同等验证 loss 的步数减少 30-40%<br>
+- 1.5B 参数模型：10 小时 vs AdamW 13.3 小时（8×H100）<br>
+- 稳定性：Moonlight 版在大学习率下比原版更稳定，loss 曲线更平滑</p>
 <h2 id="完整配置脚本">完整配置脚本</h2>
 <pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># 参数自动分组（Moonlight 版推荐配置）</span>
 muon_params <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
@@ -713,132 +697,28 @@ optimizer_adam <span class="token operator">=</span> torch<span class="token pun
 <span class="token comment"># 分布式训练注意事项</span>
 <span class="token comment"># 张量并行（Tensor Parallelism）下，Muon 需要 all-gather 完整梯度矩阵</span>
 <span class="token comment"># 这会增加通信开销，是超大规模训练的主要工程挑战</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<h1 id="muon-算法伪代码与-pytorch-实现">Muon 算法伪代码与 PyTorch
-实现</h1>
-<p>以下是一个工业级的 Muon 实现，包含 Moonlight 缩放和 AdamW
-混合策略：</p>
-<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> torch
-
-<span class="token keyword">def</span> <span class="token function">zeropower_via_newtonschulz</span><span class="token punctuation">(</span>G<span class="token punctuation">,</span> steps<span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">,</span> eps<span class="token operator">=</span><span class="token number">1e-7</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
-    <span class="token triple-quoted-string string">"""
-    Newton-Schulz 迭代计算矩阵的零次幂（正交化）
-    返回近似 UV^T，使得所有奇异值接近 1
-    """</span>
-    <span class="token keyword">assert</span> G<span class="token punctuation">.</span>ndim <span class="token operator">==</span> <span class="token number">2</span>
-    <span class="token comment"># 经验优化的系数，针对5步迭代和MP分布收敛最快</span>
-    a<span class="token punctuation">,</span> b<span class="token punctuation">,</span> c <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token number">3.4445</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">4.7750</span><span class="token punctuation">,</span> <span class="token number">2.0315</span><span class="token punctuation">)</span>
-    
-    <span class="token comment"># 使用 bfloat16 加速且数值稳定</span>
-    X <span class="token operator">=</span> G<span class="token punctuation">.</span>bfloat16<span class="token punctuation">(</span><span class="token punctuation">)</span>
-    
-    <span class="token comment"># 归一化确保最大奇异值 &lt;= 1</span>
-    X <span class="token operator">/=</span> <span class="token punctuation">(</span>X<span class="token punctuation">.</span>norm<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> eps<span class="token punctuation">)</span>
-    
-    <span class="token comment"># 如果行数 > 列数，转置以减小计算量（优化矩阵乘法 X @ X.T）</span>
-    transpose <span class="token operator">=</span> G<span class="token punctuation">.</span>size<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">></span> G<span class="token punctuation">.</span>size<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
-    <span class="token keyword">if</span> transpose<span class="token punctuation">:</span>
-        X <span class="token operator">=</span> X<span class="token punctuation">.</span>T
-    
-    <span class="token comment"># 执行 NS 迭代</span>
-    <span class="token keyword">for</span> _ <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>steps<span class="token punctuation">)</span><span class="token punctuation">:</span>
-        A <span class="token operator">=</span> X @ X<span class="token punctuation">.</span>T
-        B <span class="token operator">=</span> b <span class="token operator">*</span> A <span class="token operator">+</span> c <span class="token operator">*</span> A @ A
-        X <span class="token operator">=</span> a <span class="token operator">*</span> X <span class="token operator">+</span> B @ X
-    
-    <span class="token keyword">if</span> transpose<span class="token punctuation">:</span>
-        X <span class="token operator">=</span> X<span class="token punctuation">.</span>T
-    
-    <span class="token keyword">return</span> X
-
-<span class="token keyword">class</span> <span class="token class-name">Muon</span><span class="token punctuation">(</span>torch<span class="token punctuation">.</span>optim<span class="token punctuation">.</span>Optimizer<span class="token punctuation">)</span><span class="token punctuation">:</span>
-    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> params<span class="token punctuation">,</span> lr<span class="token operator">=</span><span class="token number">1e-3</span><span class="token punctuation">,</span> momentum<span class="token operator">=</span><span class="token number">0.95</span><span class="token punctuation">,</span> weight_decay<span class="token operator">=</span><span class="token number">0.01</span><span class="token punctuation">,</span> 
-                 nesterov<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> ns_steps<span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">,</span> scale_mode<span class="token operator">=</span><span class="token string">'moonlight'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
-        <span class="token triple-quoted-string string">"""
-        scale_mode: 'moonlight' (推荐), 'kellerjordan', 'mup', 或 'naive'
-        """</span>
-        defaults <span class="token operator">=</span> <span class="token builtin">dict</span><span class="token punctuation">(</span>lr<span class="token operator">=</span>lr<span class="token punctuation">,</span> momentum<span class="token operator">=</span>momentum<span class="token punctuation">,</span> weight_decay<span class="token operator">=</span>weight_decay<span class="token punctuation">,</span>
-                       nesterov<span class="token operator">=</span>nesterov<span class="token punctuation">,</span> ns_steps<span class="token operator">=</span>ns_steps<span class="token punctuation">,</span> scale_mode<span class="token operator">=</span>scale_mode<span class="token punctuation">)</span>
-        <span class="token builtin">super</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>__init__<span class="token punctuation">(</span>params<span class="token punctuation">,</span> defaults<span class="token punctuation">)</span>
-    
-    <span class="token keyword">def</span> <span class="token function">get_scale</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> p<span class="token punctuation">,</span> mode<span class="token punctuation">)</span><span class="token punctuation">:</span>
-        <span class="token triple-quoted-string string">"""计算缩放因子"""</span>
-        d_out<span class="token punctuation">,</span> d_in <span class="token operator">=</span> p<span class="token punctuation">.</span>shape
-        <span class="token keyword">if</span> mode <span class="token operator">==</span> <span class="token string">'moonlight'</span><span class="token punctuation">:</span>
-            <span class="token comment"># Moonlight 版：对齐 AdamW 的 Update RMS</span>
-            <span class="token keyword">return</span> <span class="token number">0.2</span> <span class="token operator">*</span> <span class="token punctuation">(</span><span class="token builtin">max</span><span class="token punctuation">(</span>d_out<span class="token punctuation">,</span> d_in<span class="token punctuation">)</span> <span class="token operator">**</span> <span class="token number">0.5</span><span class="token punctuation">)</span>
-        <span class="token keyword">elif</span> mode <span class="token operator">==</span> <span class="token string">'kellerjordan'</span><span class="token punctuation">:</span>
-            <span class="token comment"># KellerJordan 版：基于维度比恢复 Jacobian 一致性</span>
-            <span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token builtin">max</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> d_out <span class="token operator">/</span> d_in<span class="token punctuation">)</span> <span class="token operator">**</span> <span class="token number">0.5</span><span class="token punctuation">)</span>
-        <span class="token keyword">elif</span> mode <span class="token operator">==</span> <span class="token string">'mup'</span><span class="token punctuation">:</span>
-            <span class="token comment"># MuP 版：基于维度比</span>
-            <span class="token keyword">return</span> <span class="token punctuation">(</span>d_out <span class="token operator">/</span> d_in<span class="token punctuation">)</span> <span class="token operator">**</span> <span class="token number">0.5</span>
-        <span class="token keyword">else</span><span class="token punctuation">:</span>  <span class="token comment"># naive</span>
-            <span class="token keyword">return</span> <span class="token number">1.0</span>
-    
-    <span class="token decorator annotation punctuation">@torch<span class="token punctuation">.</span>no_grad</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    <span class="token keyword">def</span> <span class="token function">step</span><span class="token punctuation">(</span>self<span class="token punctuation">)</span><span class="token punctuation">:</span>
-        <span class="token keyword">for</span> group <span class="token keyword">in</span> self<span class="token punctuation">.</span>param_groups<span class="token punctuation">:</span>
-            lr <span class="token operator">=</span> group<span class="token punctuation">[</span><span class="token string">'lr'</span><span class="token punctuation">]</span>
-            momentum <span class="token operator">=</span> group<span class="token punctuation">[</span><span class="token string">'momentum'</span><span class="token punctuation">]</span>
-            weight_decay <span class="token operator">=</span> group<span class="token punctuation">[</span><span class="token string">'weight_decay'</span><span class="token punctuation">]</span>
-            nesterov <span class="token operator">=</span> group<span class="token punctuation">[</span><span class="token string">'nesterov'</span><span class="token punctuation">]</span>
-            ns_steps <span class="token operator">=</span> group<span class="token punctuation">[</span><span class="token string">'ns_steps'</span><span class="token punctuation">]</span>
-            scale_mode <span class="token operator">=</span> group<span class="token punctuation">[</span><span class="token string">'scale_mode'</span><span class="token punctuation">]</span>
-            
-            <span class="token keyword">for</span> p <span class="token keyword">in</span> group<span class="token punctuation">[</span><span class="token string">'params'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
-                <span class="token keyword">if</span> p<span class="token punctuation">.</span>grad <span class="token keyword">is</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
-                    <span class="token keyword">continue</span>
-                
-                g <span class="token operator">=</span> p<span class="token punctuation">.</span>grad
-                state <span class="token operator">=</span> self<span class="token punctuation">.</span>state<span class="token punctuation">[</span>p<span class="token punctuation">]</span>
-                
-                <span class="token comment"># 初始化状态</span>
-                <span class="token keyword">if</span> <span class="token builtin">len</span><span class="token punctuation">(</span>state<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">:</span>
-                    state<span class="token punctuation">[</span><span class="token string">'momentum_buffer'</span><span class="token punctuation">]</span> <span class="token operator">=</span> torch<span class="token punctuation">.</span>zeros_like<span class="token punctuation">(</span>p<span class="token punctuation">)</span>
-                
-                buf <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">'momentum_buffer'</span><span class="token punctuation">]</span>
-                
-                <span class="token comment"># 动量更新</span>
-                buf<span class="token punctuation">.</span>mul_<span class="token punctuation">(</span>momentum<span class="token punctuation">)</span><span class="token punctuation">.</span>add_<span class="token punctuation">(</span>g<span class="token punctuation">)</span>
-                
-                <span class="token comment"># Nesterov 动量（可选）</span>
-                <span class="token keyword">if</span> nesterov<span class="token punctuation">:</span>
-                    g_update <span class="token operator">=</span> buf<span class="token punctuation">.</span>mul<span class="token punctuation">(</span>momentum<span class="token punctuation">)</span><span class="token punctuation">.</span>add<span class="token punctuation">(</span>g<span class="token punctuation">)</span>
-                <span class="token keyword">else</span><span class="token punctuation">:</span>
-                    g_update <span class="token operator">=</span> buf
-                
-                <span class="token comment"># 核心：Newton-Schulz 正交化</span>
-                orthogonalized <span class="token operator">=</span> zeropower_via_newtonschulz<span class="token punctuation">(</span>g_update<span class="token punctuation">,</span> steps<span class="token operator">=</span>ns_steps<span class="token punctuation">)</span>
-                
-                <span class="token comment"># 应用缩放因子（根据矩阵形状调整）</span>
-                scale <span class="token operator">=</span> self<span class="token punctuation">.</span>get_scale<span class="token punctuation">(</span>p<span class="token punctuation">,</span> scale_mode<span class="token punctuation">)</span>
-                orthogonalized<span class="token punctuation">.</span>mul_<span class="token punctuation">(</span>scale<span class="token punctuation">)</span>
-                
-                <span class="token comment"># 权重衰减和参数更新</span>
-                p<span class="token punctuation">.</span>data<span class="token punctuation">.</span>mul_<span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">-</span> lr <span class="token operator">*</span> weight_decay<span class="token punctuation">)</span>
-                p<span class="token punctuation">.</span>data<span class="token punctuation">.</span>add_<span class="token punctuation">(</span>orthogonalized<span class="token punctuation">,</span> alpha<span class="token operator">=</span><span class="token operator">-</span>lr<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <h1 id="总结">总结</h1>
-<p>Muon 代表了优化器设计从 <strong>Element-wise</strong> 到
-<strong>Matrix-wise</strong> 的范式转变。通过 Newton-Schulz 迭代高效近似
-matrix sign function，强制梯度更新在各奇异方向上均衡分布，从而：</p>
+<p>Muon 代表了优化器设计从 Element-wise 到 Matrix-wise 的范式转变。通过
+Newton-Schulz 迭代高效近似 matrix sign
+function，强制梯度更新在各奇异方向上均衡分布，从而：</p>
 <ol type="1">
-<li><strong>打破低秩陷阱</strong>：防止优化被少数主导方向垄断，挽救稀有特征的学习机会<br>
+<li>打破低秩陷阱：防止优化被少数主导方向垄断，挽救稀有特征的学习机会；而通常来说，超高质量数据占比少，就属于稀有特征，因此在困难任务的优化上有优势<br>
 </li>
-<li><strong>尊重矩阵几何</strong>：利用谱范数（Spectral Norm）而非
-F-范数，通过左右 Gram 矩阵分别处理输入/输出空间的几何结构，将病态的优化
-landscape（高 Condition Number）转化为良态（<span class="math inline">\(\kappa \approx 1\)</span>）<br>
+<li>尊重矩阵几何：利用谱范数（Spectral Norm）而非 F-范数，通过左右 Gram
+矩阵分别处理输入/输出空间的几何结构，将病态的优化 landscape（高
+Condition Number）转化为良态（<span class="math inline">\(\kappa \approx
+1\)</span>）<br>
 </li>
-<li><strong>preconditioning视角</strong>：通过 <span class="math inline">\(L^{-1/4} G R^{-1/4}\)</span>
-的几何操作（解耦与均衡），或简化为 <span class="math inline">\(\text{msign}(G)\)</span>
-的谱均衡化，实现矩阵参数的有效更新<br>
+<li>preconditioning视角：通过 <span class="math inline">\(L^{-1/4} G
+R^{-1/4}\)</span> 的几何操作（解耦与均衡），或简化为 <span class="math inline">\(\text{msign}(G)\)</span>
+的谱均衡化，实现矩阵参数的有效更新（其实不是很懂，还得多看苏神文章）<br>
 </li>
-<li><strong>工程实用性</strong>：相比 Shampoo 的 <span class="math inline">\(O(m^3+n^3)\)</span> 复杂度，Muon 通过 NS
+<li>工程实用性：相比 Shampoo 的 <span class="math inline">\(O(m^3+n^3)\)</span> 复杂度，Muon 通过 NS
 迭代将每步开销控制在 <span class="math inline">\(O(mn \cdot
 \min(m,n))\)</span>，且支持 bfloat16 快速计算</li>
 </ol>
-<p>在实践中，<strong>Moonlight 版 Muon</strong> 通过对齐 AdamW 的 Update
-RMS（<span class="math inline">\(0.2 \times \sqrt{\max(d_{in},
-d_{out})}\)</span> 缩放因子），实现了从 AdamW
+<p>在实践中，Moonlight 版 Muon 通过对齐 AdamW 的 Update RMS（<span class="math inline">\(0.2 \times \sqrt{\max(d_{in}, d_{out})}\)</span>
+缩放因子），实现了从 AdamW
 的零成本迁移——保持学习率不变，只更换优化器，即可享受矩阵结构感知的优化优势。对于已有
 AdamW 配置的用户，这是目前最平滑的升级路径。</p>
 <h1 id="关于spectral-norm">*关于Spectral Norm</h1>
@@ -850,14 +730,14 @@ AdamW 配置的用户，这是目前最平滑的升级路径。</p>
 = \sqrt{\sum_{i,j} W_{ij}^2}\)</span>。若对 <span class="math inline">\(W\)</span>
 进行奇异值分解，F范数也可表示为所有奇异值的平方和开根：<span class="math inline">\(\|W\|_F = \sqrt{\sum_k
 \sigma_k^2}\)</span>。因此，F范数反映的是矩阵的整体能量或总变化幅度，而非单一方向的极值。</p>
-<p><strong>两者关系</strong></p>
+<p>两者关系</p>
 <p>对任意 <span class="math inline">\(d_{out} \times d_{in}\)</span>
 矩阵 <span class="math inline">\(W\)</span>（设秩为 <span class="math inline">\(r\)</span>），两个范数满足如下不等式链：</p>
 <p><span class="math display">\[\|W\|_2 \leq \|W\|_F \leq \sqrt{r}
 \|W\|_2 \leq \sqrt{\min(d_{out}, d_{in})} \|W\|_2\]</span></p>
 <p>下界表明最大奇异值不会超过总能量；上界则表明当矩阵秩为1时两者相等，随着秩增加，F范数可能显著大于谱范数，但至多不超过
 <span class="math inline">\(\sqrt{r}\)</span> 倍。</p>
-<p><strong>Xavier初始化下的谱范数</strong></p>
+<p>Xavier初始化下的谱范数</p>
 <p>Xavier初始化将权重设为 <span class="math inline">\(W_{ij} \sim
 \mathcal{N}(0, 1/d_{in})\)</span>。这等价于 <span class="math inline">\(W = \frac{1}{\sqrt{d_{in}}}X\)</span>，其中 <span class="math inline">\(X\)</span> 为元素服从标准正态分布 <span class="math inline">\(\mathcal{N}(0,1)\)</span> 的随机矩阵。</p>
 <p>根据随机矩阵理论（Marchenko-Pastur定律），当维度较大时，高斯随机矩阵
@@ -868,14 +748,14 @@ AdamW 配置的用户，这是目前最平滑的升级路径。</p>
 \sqrt{\frac{d_{out}}{d_{in}}}\]</span></p>
 <p>由此产生两种典型情况：</p>
 <ol type="1">
-<li><p><strong>矮胖矩阵</strong>（<span class="math inline">\(d_{out}
-\ll d_{in}\)</span>，如降维层）：此时 <span class="math inline">\(\sqrt{d_{out}/d_{in}} \approx 0\)</span>，故 <span class="math inline">\(\|W\|_2 \approx
+<li><p>矮胖矩阵（<span class="math inline">\(d_{out} \ll
+d_{in}\)</span>，如降维层）：此时 <span class="math inline">\(\sqrt{d_{out}/d_{in}} \approx 0\)</span>，故 <span class="math inline">\(\|W\|_2 \approx
 1\)</span>。输入维度高于输出维度，矩阵主要起压缩作用，最大拉伸倍数被限制在1附近，信号传播稳定。</p></li>
-<li><p><strong>高瘦矩阵</strong>（<span class="math inline">\(d_{out}
-\gg d_{in}\)</span>，如升维层）：此时常数项1可忽略，<span class="math inline">\(\|W\|_2 \approx
+<li><p>高瘦矩阵（<span class="math inline">\(d_{out} \gg
+d_{in}\)</span>，如升维层）：此时常数项1可忽略，<span class="math inline">\(\|W\|_2 \approx
 \sqrt{d_{out}/d_{in}}\)</span>。输出维度显著高于输入维度时，即使采用Xavier初始化，矩阵的最大奇异值仍会随宽高比的平方根增长。例如，当输出维度是输入的100倍时，谱范数约为10，意味着特定方向的信号可能被放大100倍（方差放大100倍）。</p></li>
 </ol>
-<p><strong>对神经网络训练的影响</strong></p>
+<p>对神经网络训练的影响</p>
 <p>这一结果揭示了Xavier初始化在不同网络结构中的局限性。对于包含大量升维层（如扩散模型中的某些架构）的网络，仅靠
 <span class="math inline">\(1/\sqrt{d_{in}}\)</span>
 的方差缩放无法控制谱范数，可能导致前向信号爆炸或反向梯度异常。实践中需配合LayerNorm、BatchNorm或谱归一化（Spectral
@@ -1072,13 +952,13 @@ engineering和模型训练</a><br>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">858k</span>
+    <span title="站点总字数">856k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">26:01</span>
+    <span title="站点阅读时长">25:57</span>
   </span>
 </div>
 <div class="busuanzi-count">
