@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="VeRA：随机投影的极限压缩 时间：2023.10 VeRA &#x3D; Vector-based Random Matrix Adaptation">
+<meta property="og:type" content="article">
+<meta property="og:title" content="VeRA，LoRA-XS和TinyLoRA">
+<meta property="og:url" content="https://saicat.github.io/cc1c31d.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="VeRA：随机投影的极限压缩 时间：2023.10 VeRA &#x3D; Vector-based Random Matrix Adaptation">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-03-21T03:36:24.000Z">
+<meta property="article:modified_time" content="2026-03-21T15:08:30.753Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="LoRA">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://saicat.github.io/cc1c31d.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/cc1c31d.html","path":"cc1c31d.html","title":"VeRA，LoRA-XS和TinyLoRA"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>VeRA，LoRA-XS和TinyLoRA | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊AI技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#vera%E9%9A%8F%E6%9C%BA%E6%8A%95%E5%BD%B1%E7%9A%84%E6%9E%81%E9%99%90%E5%8E%8B%E7%BC%A9"><span class="nav-number">1.</span> <span class="nav-text">VeRA：随机投影的极限压缩</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#vera%E6%A0%B8%E5%BF%83%E6%9C%BA%E7%90%86%E5%86%BB%E7%BB%93%E9%9A%8F%E6%9C%BA%E7%9F%A9%E9%98%B5%E5%8F%AF%E8%AE%AD%E7%BB%83%E7%BC%A9%E6%94%BE"><span class="nav-number">1.1.</span> <span class="nav-text">VeRA核心机理：冻结随机矩阵+可训练缩放</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E7%AD%96%E7%95%A5%E7%BB%86%E8%8A%82"><span class="nav-number">1.2.</span> <span class="nav-text">初始化策略细节</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%8C%E5%90%91%E9%87%8F%E5%BF%85%E8%A6%81%E6%80%A7"><span class="nav-number">1.3.</span> <span class="nav-text">双向量必要性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E6%95%88%E7%8E%87%E7%9A%84%E6%8F%90%E5%8D%87"><span class="nav-number">1.4.</span> <span class="nav-text">参数效率的提升</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B1%E4%BA%ABvs%E7%8B%AC%E7%AB%8B%E7%9F%A9%E9%98%B5%E7%9A%84%E6%9D%83%E8%A1%A1"><span class="nav-number">1.5.</span> <span class="nav-text">共享vs独立矩阵的权衡</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B1%80%E9%99%90%E4%B8%8E%E6%9D%83%E8%A1%A1"><span class="nav-number">1.6.</span> <span class="nav-text">局限与权衡</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#lora-xs%E5%BC%95%E5%85%A5svd"><span class="nav-number">2.</span> <span class="nav-text">LoRA-XS：引入SVD</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E6%9C%BA%E7%90%86svd%E5%88%86%E8%A7%A3%E6%A0%B8%E5%BF%83%E7%9F%A9%E9%98%B5%E8%AE%AD%E7%BB%83"><span class="nav-number">2.1.</span> <span class="nav-text">核心机理：SVD分解+核心矩阵训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%AF%E8%AE%AD%E7%BB%83%E7%9F%A9%E9%98%B5r%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">2.2.</span> <span class="nav-text">可训练矩阵R的初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BD%95svd%E5%88%9D%E5%A7%8B%E5%8C%96%E6%9B%B4%E4%BC%98"><span class="nav-number">2.3.</span> <span class="nav-text">为何SVD初始化更优？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E6%95%88%E7%8E%87"><span class="nav-number">2.4.</span> <span class="nav-text">参数效率</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5"><span class="nav-number">2.5.</span> <span class="nav-text">参数分配策略</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#tinylora%E8%B7%A8%E5%B1%82%E5%85%B1%E4%BA%AB%E4%B8%8Erl%E7%9A%84%E5%8D%8F%E5%90%8C"><span class="nav-number">3.</span> <span class="nav-text">TinyLoRA：跨层共享与RL的协同</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E6%9C%BA%E7%90%86%E5%90%91%E9%87%8F%E6%8A%95%E5%BD%B1%E6%9E%81%E7%AB%AF%E5%85%B1%E4%BA%AB"><span class="nav-number">3.1.</span> <span class="nav-text">核心机理：向量投影+极端共享</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%BB%E7%BB%93%E7%A7%A9r%E7%9A%84%E9%80%89%E6%8B%A9r2"><span class="nav-number">3.2.</span> <span class="nav-text">冻结秩r的选择：r&#x3D;2</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E5%8F%91%E7%8E%B0rl-vs-sft"><span class="nav-number">3.3.</span> <span class="nav-text">关键发现：RL vs SFT</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AD%A6%E4%B9%A0%E7%8E%87"><span class="nav-number">3.4.</span> <span class="nav-text">学习率</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E5%88%86%E9%85%8Du%E4%B8%8En_tie%E7%9A%84%E6%9D%83%E8%A1%A1"><span class="nav-number">3.5.</span> <span class="nav-text">参数分配：u与n_tie的权衡</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%A7%84%E6%A8%A1%E7%9A%84%E8%A7%84%E5%BE%8B"><span class="nav-number">3.6.</span> <span class="nav-text">模型规模的规律</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94"><span class="nav-number">4.</span> <span class="nav-text">对比</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">96</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">85</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/cc1c31d.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="VeRA，LoRA-XS和TinyLoRA | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          VeRA，LoRA-XS和TinyLoRA
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2026-03-21 11:36:24 / 修改时间：23:08:30" itemprop="dateCreated datePublished" datetime="2026-03-21T11:36:24+08:00">2026-03-21</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>14 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="vera随机投影的极限压缩">VeRA：随机投影的极限压缩</h1>
+<p>时间：2023.10</p>
+<p>VeRA = Vector-based Random Matrix Adaptation</p>
+<p>LoRA虽然相比全量微调，训练的参数量大大减少，不过随着模型的增大（d增大），AB矩阵的规模也会线性增加。再加上场景增多，所需的LoRA参数也会增加。如果以后发展到每个用户一个LoRA，那这个储存量还是很可观的。</p>
+<p>面对LoRA的存储瓶颈，VeRA提出了一个洞察：如果低秩适配的方向可以预先确定，我们只需学习如何"调制"这些方向，而非学习方向本身。</p>
+<h2 id="vera核心机理冻结随机矩阵可训练缩放">VeRA核心机理：冻结随机矩阵+可训练缩放</h2>
+<p>VeRA的核心结构如下：</p>
+<p><span class="math display">\[
+h = W_0 x + \Lambda_b B \Lambda_d A x
+\]</span></p>
+<p>与LoRA不同，VeRA中的 <span class="math inline">\(B \in \mathbb{R}^{m
+\times r}\)</span> 和 <span class="math inline">\(A \in \mathbb{R}^{r
+\times n}\)</span>
+是冻结的随机矩阵，且跨所有层共享。真正可训练的是两个对角缩放向量：</p>
+<ul>
+<li><span class="math inline">\(b \in \mathbb{R}^{m}\)</span>：调制
+<span class="math inline">\(B\)</span> 的输出行<br>
+</li>
+<li><span class="math inline">\(d \in \mathbb{R}^{r}\)</span>：调制
+<span class="math inline">\(A\)</span> 的输入列</li>
+</ul>
+<p>这相当于用 <span class="math inline">\(\Lambda_b =
+\text{diag}(b)\)</span> 和 <span class="math inline">\(\Lambda_d =
+\text{diag}(d)\)</span>
+对随机投影进行"重新加权"。通过将某些缩放因子推向零，VeRA可以"关闭"随机矩阵中不重要的行或列；通过调整符号和幅度，它可以微调投影方向。</p>
+<p>这样一共只有2r个训练参数。</p>
+<h2 id="初始化策略细节">初始化策略细节</h2>
+<p>VeRA的性能对初始化高度敏感。消融实验发现：Kaiming
+Uniform显著优于Kaiming Normal和Uniform[0,0.1]。</p>
+<ul>
+<li>Kaiming Uniform：从均匀分布 <span class="math inline">\(U[-a,
+a]\)</span> 采样，<span class="math inline">\(a = \sqrt{6 /
+\text{fan\_in}}\)</span>，取值有确定边界，无极端值<br>
+</li>
+<li>Kaiming Normal：从正态分布 <span class="math inline">\(\mathcal{N}(0, \sigma^2)\)</span> 采样，<span class="math inline">\(\sigma = \sqrt{2 /
+\text{fan\_in}}\)</span>，存在长尾极端值</li>
+</ul>
+<p>VeRA选择Uniform，或者说Uniform更佳的原因在于：其随机矩阵是冻结的，模型只能依赖训练缩放向量来"选择"投影方向。Uniform分布的确定性边界确保了所有投影向量的范数在一定范围内，避免了Normal分布可能出现的极端值，使得缩放向量的优化空间更加"均匀"和可控。</p>
+<p>论文发现 <span class="math inline">\(d_{\text{init}} =
+10^{-1}\)</span> 或 <span class="math inline">\(10^{-7}\)</span>
+显著优于默认的 <span class="math inline">\(1.0\)</span>。<span class="math inline">\(d \in \mathbb{R}^r\)</span> 是调制矩阵 <span class="math inline">\(A\)</span> 输入列的缩放向量。<span class="math inline">\(d_{\text{init}}\)</span>
+是训练开始时的初始值。</p>
+<p>这背后的机理是：较小的初始值允许优化早期发生符号翻转（sign
+changes），为选中行提供更大的优化灵活性。如果 <span class="math inline">\(d_i\)</span>
+初始为较大的正值（如1.0），优化过程中它可能始终维持正号，限制了"关闭"（推向零）或"反转"（变负）该行投影的灵活性。而从小值（如0.1或<span class="math inline">\(10^{-7}\)</span>）开始，梯度可以更容易地推动 <span class="math inline">\(d_i\)</span> 穿过零点，实现更精细的方向调制。</p>
+<h2 id="双向量必要性">双向量必要性</h2>
+<p>VeRA的消融实验证明b和d两个缩放向量都必要，但重要性不同：</p>
+<ul>
+<li>仅训练 <span class="math inline">\(d\)</span>（固定 <span class="math inline">\(b\)</span>）：MRPC 89.7，RTE 67.0<br>
+</li>
+<li>仅训练 <span class="math inline">\(b\)</span>（固定 <span class="math inline">\(d\)</span>）：MRPC 81.6，RTE 64.3<br>
+</li>
+<li>训练 <span class="math inline">\(b + d\)</span>（完整VeRA）：MRPC
+90.5，RTE 85.8</li>
+</ul>
+<p>（MRPC和RTE都是自然语言推断任务。）</p>
+<p>这表明 <span class="math inline">\(d\)</span> 向量（调制 <span class="math inline">\(A\)</span> 矩阵输入侧）比 <span class="math inline">\(b\)</span>
+向量更具表达能力，因为它影响两个低秩矩阵的行。</p>
+<h2 id="参数效率的提升">参数效率的提升</h2>
+<table>
+<colgroup>
+<col style="width: 10%">
+<col style="width: 18%">
+<col style="width: 25%">
+<col style="width: 22%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>方法</th>
+<th>可训练参数</th>
+<th>与模型维度关系</th>
+<th>LLaMA-7B示例</th>
+<th>100万模型存储</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>LoRA</td>
+<td><span class="math inline">\(O(d \cdot r)\)</span></td>
+<td>线性依赖</td>
+<td>159.9M</td>
+<td>144TB</td>
+</tr>
+<tr class="even">
+<td><strong>VeRA</strong></td>
+<td><strong><span class="math inline">\(O(r)\)</span></strong></td>
+<td><strong>与<span class="math inline">\(d\)</span>无关</strong></td>
+<td><strong>1.6M (100×↓)</strong></td>
+<td><strong>96GB (1500×↓)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>在GLUE基准上，VeRA以0.061M参数（LoRA的1/13）达到持平的性能（87.8%）；在指令微调任务中，VeRA以1%参数（1.6M
+vs 159.9M）接近LoRA的表现（MT-Bench 4.77 vs 5.03）。</p>
+<h2 id="共享vs独立矩阵的权衡">共享vs独立矩阵的权衡</h2>
+<p>VeRA还探索了随机矩阵在所有层共享的影响：</p>
+<ul>
+<li>Shared（跨层共享）：MRPC 90.0，存储仅需保存随机种子<br>
+</li>
+<li>Unique（每层独立）：MRPC 90.7，需存储所有矩阵</li>
+</ul>
+<h2 id="局限与权衡">局限与权衡</h2>
+<p>VeRA的代价在于表达能力。由于随机矩阵固定且缺乏预训练先验，VeRA通常需要比LoRA更高的秩才能达到同等性能。此外，对初始化敏感，缩放向量的初始值选择对最终性能有显著影响。</p>
+<h1 id="lora-xs引入svd">LoRA-XS：引入SVD</h1>
+<p>时间：2024.05</p>
+<p>LoRA-XS：Low-Rank Adaptation with eXtremely Small number of
+parameters</p>
+<p>VeRA证明了"冻结投影+训练缩放"的可行性，但它使用随机投影，没有利用预训练权重中的先验信息。</p>
+<p>LoRA-XS提出了一个想法：既然LoRA的更新方向与预训练权重高度相关，为何不直接用预训练权重的奇异向量作为投影基？</p>
+<p>而《LoRA Learns Less and Forgets
+Less》中提到：LoRA的低秩更新不仅减少了参数，还通过"更新量少"的特性减缓了灾难性遗忘，保留了预训练阶段学到的通用知识。那么既然低秩更新本身有优势，我们能否进一步压缩秩的规模？</p>
+<h2 id="核心机理svd分解核心矩阵训练">核心机理：SVD分解+核心矩阵训练</h2>
+<p>LoRA-XS的结构如下：</p>
+<p><span class="math display">\[
+h = Wx + BRAx
+\]</span></p>
+<ul>
+<li><span class="math inline">\(A = U_r \Sigma_r\)</span>，<span class="math inline">\(B = V_r^T\)</span>：来自预训练权重 <span class="math inline">\(W\)</span> 的截断SVD（冻结）<br>
+</li>
+<li><span class="math inline">\(U_r, V_r\)</span>：前 <span class="math inline">\(r\)</span> 个左右奇异向量；<span class="math inline">\(\Sigma_r\)</span>：前 <span class="math inline">\(r\)</span> 个奇异值<br>
+</li>
+<li><span class="math inline">\(R \in \mathbb{R}^{r \times
+r}\)</span>：唯一的可训练矩阵</li>
+</ul>
+<p>这相当于在预训练权重的主导奇异方向上学习一个"重组矩阵" <span class="math inline">\(R\)</span>，对奇异值进行重新加权组合。论文将这种方法称为latent
+editing——在预训练权重的潜在空间中进行微调。</p>
+<h2 id="可训练矩阵r的初始化">可训练矩阵R的初始化</h2>
+<p>LoRA-XS中 <span class="math inline">\(R\)</span>
+矩阵的初始化采用高斯分布：</p>
+<p><span class="math display">\[
+R \sim \mathcal{N}(0, \sigma^2), \quad \sigma = 10^{-5}
+\]</span></p>
+<p>使用极小的初始化值（<span class="math inline">\(10^{-5}\)</span>）确保微调从接近原始预训练模型的状态开始，避免初始阶段过大的偏离。</p>
+<h2 id="为何svd初始化更优">为何SVD初始化更优？</h2>
+<p>消融实验比较了SVD初始化与随机初始化：</p>
+<table>
+<thead>
+<tr class="header">
+<th>任务</th>
+<th>秩</th>
+<th>SVD初始化</th>
+<th>随机初始化</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>CoLA</td>
+<td>4</td>
+<td><strong>60.52</strong></td>
+<td>56.65</td>
+</tr>
+<tr class="even">
+<td>SST-2</td>
+<td>4</td>
+<td><strong>94.84</strong></td>
+<td>93.92</td>
+</tr>
+<tr class="odd">
+<td>QNLI</td>
+<td>4</td>
+<td><strong>90.94</strong></td>
+<td>88.83</td>
+</tr>
+</tbody>
+</table>
+<p>SVD初始化不仅提升了最终性能，还加速了收敛——SVD初始化在前1-2个epoch即显现出优势，而随机初始化需要更多epoch才能稳定。</p>
+<h2 id="参数效率">参数效率</h2>
+<p>对于RoBERTa-large（<span class="math inline">\(d=1024,
+r=16\)</span>）：</p>
+<ul>
+<li>LoRA：1,572,864参数<br>
+</li>
+<li>VeRA：50,400参数<br>
+</li>
+<li>LoRA-XS：12,288参数（比LoRA少128倍，比VeRA少4倍）</li>
+</ul>
+<p>LoRA-XS的可训练参数规模为 <span class="math inline">\(O(r^2)\)</span>，与模型维度<span class="math inline">\(d\)</span>无关。因此模型越大，效率优势越大。</p>
+<h2 id="参数分配策略">参数分配策略</h2>
+<p>LoRA-XS的经验：当参数预算受限时，优先使用较低的秩 <span class="math inline">\(r\)</span>
+并增加适配模块的覆盖范围，而非集中参数于少数模块。</p>
+<p>论文将LoRA-XS应用于Query、Key、Value、Attention
+Output和MLP的投影矩阵（共7个模块 per layer），使用较小的 <span class="math inline">\(r\)</span>（如4-16），而非仅应用于Q/V矩阵。这种"广撒网"策略在总参数量相近时表现更优。</p>
+<h1 id="tinylora跨层共享与rl的协同">TinyLoRA：跨层共享与RL的协同</h1>
+<p>时间：2025.02</p>
+<p>LoRA-XS将参数压缩至 <span class="math inline">\(r^2\)</span>
+级别，但仍受限于"每层至少<span class="math inline">\(r^2\)</span>参数"的下界。对于80层的LLaMA-3
+70B，即使 <span class="math inline">\(r=1\)</span>
+也需要560参数。TinyLoRA提出了更激进的问题：能否用单个参数微调整个模型？以及，什么训练范式能支撑这种极限压缩？</p>
+<p>另外，随着参数规模缩减，学习率的调整变得至关重要：</p>
+<ul>
+<li>《LoRA Learns Less and Forgets
+Less》里提到：不同rank配置影响学习动态和超参数选择。<br>
+</li>
+<li>《LoRA Without
+Regret》做了LoRA在不同rank下的训练动态分析，指出低rank需要调整学习率以补偿参数容量的减少。</li>
+</ul>
+<h2 id="核心机理向量投影极端共享">核心机理：向量投影+极端共享</h2>
+<p>TinyLoRA的结构如下：</p>
+<p><span class="math display">\[
+W&#39; = W + U\Sigma \left(\sum_{i=1}^u v_i P_i\right) V^\top
+\]</span></p>
+<p>这是LoRA-XS的进一步压缩：</p>
+<ul>
+<li><span class="math inline">\(U, \Sigma,
+V\)</span>：来自SVD（冻结）<br>
+</li>
+<li><span class="math inline">\(P_i \in \mathbb{R}^{r \times
+r}\)</span>：固定随机张量（冻结），从标准随机初始化（如Kaiming
+Uniform或正态分布）生成后冻结<br>
+</li>
+<li><span class="math inline">\(v \in
+\mathbb{R}^u\)</span>：唯一的可训练向量，通过 <span class="math inline">\(\sum_{i=1}^u v_i P_i\)</span> 重构出 <span class="math inline">\(r \times r\)</span> 的变换矩阵</li>
+</ul>
+<p>更激进的是，TinyLoRA采用跨层、跨模块类型的全共享策略：所有Transformer层的所有适配模块（Attention的Q/K/V/Output
++ MLP的up/gate/down，共7个模块 per layer）共享同一个 <span class="math inline">\(v\)</span>。</p>
+<h2 id="冻结秩r的选择r2">冻结秩r的选择：r=2</h2>
+<p>TinyLoRA的消融实验确定了冻结SVD秩 <span class="math inline">\(r\)</span> 的最优值：</p>
+<table>
+<thead>
+<tr class="header">
+<th>冻结秩 <span class="math inline">\(r\)</span></th>
+<th>性能趋势</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(r=1\)</span></td>
+<td>基线可用</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(r=2\)</span></td>
+<td>最佳（主实验采用）</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(r&gt;2\)</span></td>
+<td>性能下降</td>
+</tr>
+</tbody>
+</table>
+<p>增加 <span class="math inline">\(r\)</span>
+从1到2带来适度增益，但更大的值会引入过多自由度，使得小向量 <span class="math inline">\(v\)</span> 的优化变得困难。因此，<span class="math inline">\(r=2\)</span> 是所有主实验的固定配置。</p>
+<h2 id="关键发现rl-vs-sft">关键发现：RL vs SFT</h2>
+<p>TinyLoRA还发现训练范式影响：</p>
+<table>
+<thead>
+<tr class="header">
+<th>训练方式</th>
+<th>13参数配置</th>
+<th>120参数配置</th>
+<th>1M参数配置</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>RL (GRPO)</td>
+<td>91% GSM8K (+15%)</td>
+<td>95% GSM8K (+19%)</td>
+<td>~95%</td>
+</tr>
+<tr class="even">
+<td>SFT</td>
+<td>83% (+7%)</td>
+<td>84% (+8%)</td>
+<td>~90%</td>
+</tr>
+</tbody>
+</table>
+<p>在极低参数（&lt;1000）场景下，RL比SFT高效100-1000倍。</p>
+<p>洞察：</p>
+<ul>
+<li><p>SFT需要吸收完整demonstration序列的信息，通过next-token
+prediction损失：<br>
+<span class="math display">\[
+\mathcal{L}_{\text{SFT}} = -\mathbb{E}_{(x,y)} \sum_{t=1}^{|y|} \log
+\pi_\theta(y_t | x, y_{&lt;t})
+\]</span>
+模型无法区分demonstration中的任务相关特征与无关噪声，必须存储所有token的信息。</p></li>
+<li><p>RL仅依赖稀疏的reward信号。策略梯度为：<br>
+<span class="math display">\[
+\nabla_\theta J(\theta) = \mathbb{E}_{x,y} \left[ \sum_{t=1}^{|y|}
+\nabla_\theta \log \pi_\theta(y_t | x, y_{&lt;t}) \cdot R(y) \right]
+\]</span> 有用的信息仅来自奖励 <span class="math inline">\(R(y)\)</span>（二元奖励仅需1 bit per
+sample），通过重采样放大与奖励相关的信号、抵消无关噪声。</p></li>
+</ul>
+<h2 id="学习率">学习率</h2>
+<p>由于参数规模变化影响有效学习率，TinyLoRA对每个更新规模进行网格搜索：</p>
+<p><span class="math display">\[
+\text{LR} \in \{10^{-7}, 5 \times 10^{-7}, 10^{-6}, 5 \times 10^{-6},
+10^{-5}, 10^{-4}, 2 \times 10^{-4}\}
+\]</span></p>
+<p>取每个更新规模下表现最佳的学习率，平均3个随机种子。极低参数场景通常需要<span class="math inline">\(10^{-3}\)</span>或<span class="math inline">\(10^{-4}\)</span>级别，远高于全量微调的<span class="math inline">\(10^{-5}\)</span>。</p>
+<h2 id="参数分配u与n_tie的权衡">参数分配：u与n_tie的权衡</h2>
+<p>实验表明，在固定参数预算下要提升效果：</p>
+<ul>
+<li>优先增加 <span class="math inline">\(u\)</span>（每模块的投影维度）<br>
+</li>
+<li>减少 <span class="math inline">\(n_{\text{tie}}\)</span>（共享因子，即减少共享程度）</li>
+</ul>
+<blockquote>
+<p>"Performance generally improves with larger <span class="math inline">\(u\)</span> and smaller <span class="math inline">\(n_{\text{tie}}\)</span>—that is, more expressive
+per-module updates with less sharing."</p>
+</blockquote>
+<h2 id="模型规模的规律">模型规模的规律</h2>
+<p>TinyLoRA发现，模型越大，达到同等性能所需的adapter参数越少。</p>
+<table>
+<thead>
+<tr class="header">
+<th>模型规模</th>
+<th>达到95%峰值性能所需参数</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>较小模型</td>
+<td>较多</td>
+</tr>
+<tr class="even">
+<td>Qwen2.5-7B</td>
+<td>13-120参数</td>
+</tr>
+<tr class="odd">
+<td>更大模型（理论）</td>
+<td>更少</td>
+</tr>
+</tbody>
+</table>
+<p>这暗示大模型在预训练阶段已内化推理能力，微调只是"激活"这些能力的开关。随着模型规模增长，"激活开关"所需的参数反而减少。</p>
+<h1 id="对比">对比</h1>
+<table>
+<colgroup>
+<col style="width: 10%">
+<col style="width: 26%">
+<col style="width: 31%">
+<col style="width: 31%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>维度</th>
+<th>VeRA (2023.10)</th>
+<th>LoRA-XS (2024.05)</th>
+<th>TinyLoRA (2025.02)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>核心思想</strong></td>
+<td>随机投影+缩放向量</td>
+<td>SVD先验+核心矩阵</td>
+<td>向量投影+极端共享+RL</td>
+</tr>
+<tr class="even">
+<td><strong>数学形式</strong></td>
+<td><span class="math inline">\(h=W_0x+\Lambda_b B \Lambda_d A
+x\)</span></td>
+<td><span class="math inline">\(h=Wx+BRAx\)</span></td>
+<td><span class="math inline">\(W&#39;=W+U\Sigma(\sum v_i
+P_i)V^\top\)</span></td>
+</tr>
+<tr class="odd">
+<td><strong>投影矩阵</strong></td>
+<td>随机，跨层共享</td>
+<td>SVD分解，层内冻结</td>
+<td>SVD分解+随机张量 <span class="math inline">\(P_i\)</span></td>
+</tr>
+<tr class="even">
+<td><strong>可训练参数</strong></td>
+<td><span class="math inline">\(b \in \mathbb{R}^m, d \in
+\mathbb{R}^r\)</span></td>
+<td><span class="math inline">\(R \in \mathbb{R}^{r \times
+r}\)</span></td>
+<td><span class="math inline">\(v \in \mathbb{R}^u\)</span></td>
+</tr>
+<tr class="odd">
+<td><strong>参数复杂度</strong></td>
+<td><span class="math inline">\(O(r)\)</span></td>
+<td><span class="math inline">\(O(r^2)\)</span></td>
+<td><span class="math inline">\(O(u)\)</span>（可降至1）</td>
+</tr>
+<tr class="even">
+<td><strong>与模型维度关系</strong></td>
+<td>无关</td>
+<td>无关</td>
+<td>无关</td>
+</tr>
+<tr class="odd">
+<td><strong>初始化关键</strong></td>
+<td><span class="math inline">\(d_{\text{init}}=10^{-1}\)</span>或<span class="math inline">\(10^{-7}\)</span>（便于符号翻转）</td>
+<td><span class="math inline">\(R \sim \mathcal{N}(0,
+10^{-10})\)</span>（极小值）</td>
+<td><span class="math inline">\(P_i\)</span>随机初始化后冻结</td>
+</tr>
+<tr class="even">
+<td><strong>随机矩阵类型</strong></td>
+<td>Kaiming Uniform &gt; Normal</td>
+<td>-</td>
+<td>标准随机（推测Kaiming）</td>
+</tr>
+<tr class="odd">
+<td><strong>最优配置</strong></td>
+<td><span class="math inline">\(r=256\)</span>（需较高秩）</td>
+<td><span class="math inline">\(r=2\)</span>（主成分对齐）</td>
+<td><span class="math inline">\(r=2, u=13\)</span>或<span class="math inline">\(120\)</span>（全共享vs轻共享）</td>
+</tr>
+<tr class="even">
+<td><strong>学习率策略</strong></td>
+<td>标准</td>
+<td>标准</td>
+<td><strong>必须搜索调整</strong>（参数规模影响有效LR）</td>
+</tr>
+<tr class="odd">
+<td><strong>训练范式</strong></td>
+<td>SFT/RL均可</td>
+<td>SFT/RL均可</td>
+<td><strong>RL必需</strong>（SFT在&lt;1K参数下失效）</td>
+</tr>
+<tr class="even">
+<td><strong>最佳场景</strong></td>
+<td>大规模个性化部署</td>
+<td>通用PEFT，需快速收敛</td>
+<td>RL训练，超大规模模型，极限压缩</td>
+</tr>
+<tr class="odd">
+<td><strong>典型压缩比</strong></td>
+<td>10-100×</td>
+<td>100-1000×</td>
+<td>1000-10000×</td>
+</tr>
+</tbody>
+</table>
+<h1 id="reference">Reference</h1>
+<p>【1】VeRA: Vector-based Random Matrix
+Adaptation，https://arxiv.org/pdf/2310.11454<br>
+【2】LoRA-XS: Low-Rank Adaptation with Extremely Small Number of
+Parameters, https://arxiv.org/pdf/2405.17604<br>
+【3】Learning to Reason in 13 Parameters,
+https://arxiv.org/pdf/2602.04118v1</p>
+<hr>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/44c62dc5.html">DeepResearch的报告生成方法</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7c2f9dcb.html">从RAG到DeepSearch</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f7d600f3.html">阿里通义Lab:
+WebWalker,WebDancer和WebSailor</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/72150a83.html">Agent评测数据集</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/226b059f.html">agent调研(1)--MetaGPT,OpenManus和OWL</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f93b3aaf.html">Devin和Anthropic的Agent开发经验</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9cb56255.html">腾讯的Training-Free
+GRPO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 训练框架<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f25d614e.html">Muon优化器</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe0adaa5.html">LLM训练框架：从优化器和精度讲到ZeRO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4cd8532f.html">LLM训练各种并行策略</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 论文阅读：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e96c7aac.html">最近阅读--关于数据合成、agent、reasoning和多任务</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/af7f9363.html">最近阅读2-关于自适应深度思考、context
+engineering和模型训练</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/cc1c31d.html" title="VeRA，LoRA-XS和TinyLoRA">https://saicat.github.io/cc1c31d.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+              <a href="/tags/LoRA/" rel="tag"><i class="fa fa-tag"></i> LoRA</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/9cb56255.html" rel="prev" title="腾讯的Training-Free GRPO">
+                  <i class="fa fa-angle-left"></i> 腾讯的Training-Free GRPO
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/5b81d487.html" rel="next" title="Attention Residuals">
+                  Attention Residuals <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">893k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">27:04</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
