@@ -19,15 +19,15 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="听到一个概念，harness engineering。 最早是有个老哥在博客My AI Adoption Journey里提到，大致是说chatbot已经不能满足工作的需求，agent才是适合形态。而要让agent听话，就要harness engineering。 然后是OpenAI发布了实验报告工程技术：在智能体优先的世界中利用 Codex，介绍了内部一个纯用AI完成百万级项目代码编写的实验，也">
+    <meta name="description" content="新概念 最近都在聊一个概念，harness engineer。 查了下，最早是有个老哥在博客《My AI Adoption Journey》里提到，大致是说chatbot已经不能满足工作的需求，agent才是适合形态。而要让agent听话，就要harness engineer。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Harness Engineering">
+<meta property="og:title" content="Harness Engineer">
 <meta property="og:url" content="https://saicat.github.io/24a6683a.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="听到一个概念，harness engineering。 最早是有个老哥在博客My AI Adoption Journey里提到，大致是说chatbot已经不能满足工作的需求，agent才是适合形态。而要让agent听话，就要harness engineering。 然后是OpenAI发布了实验报告工程技术：在智能体优先的世界中利用 Codex，介绍了内部一个纯用AI完成百万级项目代码编写的实验，也">
+<meta property="og:description" content="新概念 最近都在聊一个概念，harness engineer。 查了下，最早是有个老哥在博客《My AI Adoption Journey》里提到，大致是说chatbot已经不能满足工作的需求，agent才是适合形态。而要让agent听话，就要harness engineer。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-03-23T13:04:43.000Z">
-<meta property="article:modified_time" content="2026-03-28T03:44:57.620Z">
+<meta property="article:modified_time" content="2026-03-30T14:54:08.079Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
@@ -39,10 +39,10 @@
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/24a6683a.html","path":"24a6683a.html","title":"Harness Engineering"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/24a6683a.html","path":"24a6683a.html","title":"Harness Engineer"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>Harness Engineering | Linsight</title><meta name="robots" content="noindex">
+<title>Harness Engineer | Linsight</title>
   
 
 
@@ -142,7 +142,8 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">1.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%96%B0%E6%A6%82%E5%BF%B5"><span class="nav-number">1.</span> <span class="nav-text">新概念</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%8Eprompt-engineer%E5%88%B0harness-engineer"><span class="nav-number">2.</span> <span class="nav-text">从Prompt Engineer到Harness
+Engineer</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#prompt-engineer"><span class="nav-number">2.1.</span> <span class="nav-text">Prompt Engineer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#context-engineer"><span class="nav-number">2.2.</span> <span class="nav-text">Context Engineer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#harness-engineer"><span class="nav-number">2.3.</span> <span class="nav-text">Harness Engineer</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#openai%E7%9A%84%E7%BB%8F%E9%AA%8C"><span class="nav-number">2.3.1.</span> <span class="nav-text">OpenAI的经验</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ralph-loop"><span class="nav-number">2.3.2.</span> <span class="nav-text">Ralph Loop</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">3.</span> <span class="nav-text">Reference</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -157,7 +158,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">99</span>
+          <span class="site-state-item-count">100</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -220,12 +221,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="Harness Engineering | Linsight">
+      <meta itemprop="name" content="Harness Engineer | Linsight">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Harness Engineering
+          Harness Engineer
         </h1>
 
         <div class="post-meta-container">
@@ -243,7 +244,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-03-28 11:44:57" itemprop="dateModified" datetime="2026-03-28T11:44:57+08:00">2026-03-28</time>
+      <time title="修改时间：2026-03-30 22:54:08" itemprop="dateModified" datetime="2026-03-30T22:54:08+08:00">2026-03-30</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -270,14 +271,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>1.1k</span>
+      <span>7.2k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>2 分钟</span>
+      <span>13 分钟</span>
     </span>
 </div>
 
@@ -287,20 +288,204 @@
     
     
     
-    <div class="post-body" itemprop="articleBody"><p>听到一个概念，harness engineering。</p>
-<p>最早是有个老哥在博客<a target="_blank" rel="noopener" href="https://mitchellh.com/writing/my-ai-adoption-journey">My AI
+    <div class="post-body" itemprop="articleBody"><h1 id="新概念">新概念</h1>
+<p>最近都在聊一个概念，harness engineer。</p>
+<p>查了下，最早是有个老哥在博客<a target="_blank" rel="noopener" href="https://mitchellh.com/writing/my-ai-adoption-journey">《My AI
 Adoption
-Journey</a>里提到，大致是说chatbot已经不能满足工作的需求，agent才是适合形态。而要让agent听话，就要harness
-engineering。</p>
-<p>然后是OpenAI发布了实验报告<a target="_blank" rel="noopener" href="https://openai.com/zh-Hans-CN/index/harness-engineering/">工程技术：在智能体优先的世界中利用
-Codex</a>，介绍了内部一个纯用AI完成百万级项目代码编写的实验，也提到了这个概念。</p>
+Journey》</a>里提到，大致是说chatbot已经不能满足工作的需求，agent才是适合形态。而要让agent听话，就要harness
+engineer。</p>
+<p>然后是OpenAI发布了实验报告<a target="_blank" rel="noopener" href="https://openai.com/zh-Hans-CN/index/harness-engineering/">《工程技术：在智能体优先的世界中利用
+Codex》</a>，介绍了内部一个纯用AI完成百万级项目代码编写的实验，就用了harness
+engineer来描述这个开发的方法。</p>
+<h1 id="从prompt-engineer到harness-engineer">从Prompt Engineer到Harness
+Engineer</h1>
+<p>Prompt Engineer -&gt; Context Engineer -&gt; Harness Engineer</p>
+<h2 id="prompt-engineer">Prompt Engineer</h2>
 <p>在LLM的使用上，最早有prompt
-engineering，针对的情况是如何让模型能够更好地遵循输入，进行单次的任务执行。这时关注的主要还是语言格式，表达的结构，以及调试输出的小技巧（比如lost
+engineer，针对的情况是如何让模型能够更好地遵循输入，进行单次的任务执行。这时关注的主要还是语言格式，表达的结构，以及调试输出的技巧（比如lost
 in the middle，prompt重复等）。</p>
-<p>然后有context
-engineering。因为随着任务的复杂程度增加，比如deepresearch，或者agentic
+<h2 id="context-engineer">Context Engineer</h2>
+<p>然后大概在2025年，就有了context
+engineer。因为随着任务的复杂程度增加，比如deepresearch任务，agentic
 search或者更复杂的形式，上下文的长度越来越长。这时怎么在整个流程里组织信息，压缩历史，提取关键内容，甚至确保KV
 cache的命中以提升效率，防止上下文腐坏/退化等，就很重要，因此就需要更多地engineering来处理context。</p>
+<p>context engineering是一个把prompt
+engineering涵盖在内的大概念。除了写prompt，在这些任务里我们往往还要搜索信息、读取大文件，调用工具获取进行操作，更新环境结果。这个过程要处理大量的信息，也就是大量的上下文context。按照这些信息的功能，context可以分成多类，比如：</p>
+<ul>
+<li>guiding context：规定模型行为准则的部分，比如system prompt。跟prompt
+engineering最为相关的部分。<br>
+</li>
+<li>information
+context：外部知识，比如从RAG搜索到的内容，也包括用户画像（agent记忆）等，和RAG跟为相关。<br>
+</li>
+<li>actionable context：比如tool
+description，以及工具调用的轨迹、结果等。</li>
+</ul>
+<p>(from <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/1938967453951571269">《Context
+Engineering，一篇就够了。》</a>)</p>
+<p>context
+engineering的目的就是设计合理的规则和流程，协调好各种信息输入给模型的方案。</p>
+<ul>
+<li>当搜索结果太多时，要怎么简化？可以做摘要压缩，可以分层展示，也可以分批处理。<br>
+</li>
+<li>当要跨长上下文进行对话时，可能还需要一个专门设计的记忆系统。现在很多对话agent都有做记忆系统，比如问一下豆包“我是什么样的人”，你就可以看到豆包的记忆系统记了你的什么信息。广义来说，这个记忆系统也算是context
+engineer的。<br>
+</li>
+<li>任务复杂时，agent往往需要拆解出子任务来。那么这些子任务之间怎么排布，信息怎么流通和交互，就更是重要的一环。直接都塞给main
+agent是一种方法，但是这样可能倒是长度太长，成本过高，或者效果不好，或者细节太多无法处理。</li>
+</ul>
+<p>之前在<a target="_blank" rel="noopener" href="https://www.linsight.cn/af7f9363.html#factor-agents">《最近阅读2-关于自适应深度思考、context
+engineering和模型训练》</a>里也分享过一些context
+engineer的设计建议：</p>
+<ul>
+<li>结构化<br>
+</li>
+<li>无状态<br>
+</li>
+<li>agen设计：小而精 &gt; 大而全<br>
+...</li>
+</ul>
+<p>coding agent，比如claude code和cursor，也包含了很多context
+engineer。</p>
+<h2 id="harness-engineer">Harness Engineer</h2>
+<p>为什么说那么多context engineer？因为其实harness
+engineer也还是在context
+engineer的概念范畴内，但是在实现上更工程更细致更具体了。</p>
+<p>大体来说，context
+engineer是一个很通用的概念，只要有上下文，就需要context
+engineer。而且之前更多关注在面向普通用户的场景。比如做一份研报，做一份PPT，做一个旅游规划，通过对话做一个小游戏等。这些任务可能上下文也很长，但是大部分的处理逻辑其实通用的，或者对于模型来说，标准是相对宽松的。而如果放到做一个商业级的软件项目，所要做的事情则“工程”得多，也细致得多：开发者需要用工程语言准确描述自己的需求，给出详细的设计文档，技术框架，任务拆解，每一个模块的输入输出，依赖关系，技术选型。当然这些事也可以用AI来做，但是归根到底，需要人来确认这些“脚手架”。只有合理的脚手架才能长出高质量的AI实现。</p>
+<p>我认为harness engineer其实就是context
+engineer在各个垂直领域专业化的结果。比如说软件工程，这是AI开发者最熟悉的领域，因此也最早被探索。为了在软件开发的过程更好更高效地使用AI，开发人员把人类的经验应用到了AI
+coding里，让AI能够在一个好的环境下进行开发。</p>
+<p>以后可能会发展成每个领域有自己一套harness
+engineer的框架。比如一个法律案件怎么来分析和准备，那么有律师已经把经验和规则都定好，AI能够自己按照sop去搜索资料，分析结果，对比条文，撰写文书，甚至能造一个agent进行模拟辩论。</p>
+<h3 id="openai的经验">OpenAI的经验</h3>
+<p>总结一下OpenAI在软件开发工程上的harness engineer经验<a target="_blank" rel="noopener" href="https://openai.com/zh-Hans-CN/index/harness-engineering/">https://openai.com/zh-Hans-CN/index/harness-engineering/</a>：</p>
+<ul>
+<li>范式变更：人类掌舵，AI执行。工程师主要工作不再是编写代码，而是设计环境、明确意图和构建反馈回路。这与
+Chad Fowler 提出的 "Relocating Rigor"（重新定位严谨性）
+呼应——严谨性不再主要体现在手动编写每行代码的谨慎，而是体现在设计约束系统、反馈机制和控制环境上。<br>
+</li>
+<li>任务拆解：将更大的目标拆解为更小的构建模块。不要对AI说"给我做个电商平台"这种大黑盒任务。要像流水线一样拆开：先设计数据库表结构
+→ 再写用户登录API → 再写登录页面组件 →
+...。每完成一小块，确认没问题，再解锁下一块。<br>
+</li>
+<li>知识管理：给AI"导航地图"，别给"百科全书"，要做知识分层。不要把内容全写到AGENTS.md里，AI看不过来，而且这周写的规则可能下周就过时了。正确做法：所有文档放在docs/目录里，有质量评分和验证状态（是否过期）。还有专门的"doc-gardening"智能体，定期扫描哪些文档和代码对不上了，自动发起修复。AGENTS.md：
+<ul>
+<li>需要并发控制？→ 看 docs/architecture/concurrent.md<br>
+</li>
+<li>需要数据验证？→ 看 docs/standards/zod-validation.md<br>
+</li>
+<li>...<br>
+</li>
+</ul></li>
+<li>可观测性：让环境对AI可读。比如接入Chrome
+DevTools，AI能自己截图、看DOM元素，发现"登录按钮点不了"，或者提供LogQL（查日志）和PromQL（查指标），AI能验证"服务启动是否&lt;800ms"。这样AI就能自己闭环修bug，不用人每次来帮忙看修好了没。<br>
+</li>
+<li>架构约束：给AI画好车道线，把开发的要求和规范用可明确检测的方式实现，比如写linter规则，如果UI层的代码文件试图import数据库驱动，直接报错，而不是仅仅在规则中要求。这是一种权衡，放弃"生成任何东西"的灵活性，换取可预测性和可靠性。<br>
+</li>
+<li>技术债务：人类高频（每天）跟踪AI是否犯错，之前给定的规则是否有漏洞，免得积累太多技术债。<br>
+</li>
+<li>反馈分层：小感冒AI自己吃药，大病人类建医院。测试挂了、编译错了、指标不达标——AI自己读错误日志、查监控、改代码、重试，自己迭代几十次直到成功。而如果AI在某类问题上反复卡壳（比如总是无法通过某项安全扫描），说明系统缺能力，需要人类接入，帮助诊断问题所在，增加工具，或者优化文档等。不是让人类和AI结对编程，而是"人类设计控制回路，AI在回路里跑，人类只在回路失效时修回路"。<br>
+</li>
+<li>代码审查：从人审AI，到AI审AI。项目的规则完善之后，人类的投入减少，90%以上的PR由AI审AI，人类只看关键架构决策。<br>
+</li>
+<li>现实限制：不要以为随便一个项目扔给AI就能自动跑。需要大量的尝试和经验。Martin
+Fowler 提醒，不应幻想"下一代模型会自动解决可维护性问题"。OpenAI
+的实践表明，即使拥有最先进的模型，仍需大量工程工作构建确定性的 Harness
+工具。<a target="_blank" rel="noopener" href="https://martinfowler.com/articles/exploring-gen-ai/harness-engineering.html">https://martinfowler.com/articles/exploring-gen-ai/harness-engineering.html</a></li>
+</ul>
+<p>新旧世界的分化 -- 假设 Harness 技术成熟，能把 AI
+自主性调到最高档：</p>
+<ul>
+<li>新建应用：从第一天就按 Harness 设计，享受高自主性维护<br>
+</li>
+<li>遗留系统： retrofitting（加装）Harness
+可能成本过高，特别是当代码库充满技术债、缺乏标准化时（就像在从未跑过静态分析的代码库上第一次启用，会被警报淹没）<br>
+</li>
+<li>结果：可能出现"前 AI 时代"与"后 AI 时代"应用维护的两极分化。</li>
+</ul>
+<h3 id="ralph-loop">Ralph Loop</h3>
+<p>看资料的过程中，看到有Ralph Loop这个东西。来源是《Everything is a
+Ralph
+Loop》。据说这篇文章的作者角色代码已死，现在已经去澳洲放羊了，也不知道真假。</p>
+<p>Ralph
+Loop大致的思路是说，只要给定好任务，定好目标，定好测试，那么剩下的就是让AI不断地循环开发，直到实现目标就可以了。</p>
+<p>Ralph 取自《辛普森一家》中的 Ralph
+Wiggum——笨拙、易错但永不放弃的角色。这隐喻了该方法的哲学：接受 AI
+会不断失败，但通过暴力循环让其最终收敛到正确结果。</p>
+<p>具体实现上，有一些技巧。</p>
+<p>Ralph Loop 通过状态外化实现跨实例持久化，避免依赖 AI 记忆（Context
+Rot）：</p>
+<table>
+<colgroup>
+<col style="width: 20%">
+<col style="width: 13%">
+<col style="width: 66%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>文件</th>
+<th>角色</th>
+<th>关键细节</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>PRD.md / prd.json</strong></td>
+<td><strong>契约（What）</strong></td>
+<td>人类编写的结构化任务清单，包含用户故事、验收标准、依赖关系。AI
+只更新 <code>passes: true/false</code> 状态，不修改规格本身。</td>
+</tr>
+<tr class="even">
+<td><strong>PROMPT.md</strong></td>
+<td><strong>操作手册（How）</strong></td>
+<td>模板化指令，告诉 AI 如何读取
+PRD、选择任务、运行测试、提交代码、何时标记完成。</td>
+</tr>
+<tr class="odd">
+<td><strong>progress.txt</strong></td>
+<td><strong>记忆（Memory）</strong></td>
+<td>追加式日志，记录失败模式与成功经验。每个全新 AI
+实例通过它了解历史尝试，但需人工定期审查以防止错误累积。</td>
+</tr>
+</tbody>
+</table>
+<p>文件关系流程：</p>
+<ul>
+<li>AI 实例启动 → 读取 PROMPT.md 获得行为指令<br>
+</li>
+<li>按指令读取 PRD → 找到最高优先级且 passes: false 的任务<br>
+</li>
+<li>实现任务 → 更新 PRD 状态 → 追加 progress.txt<br>
+</li>
+<li>提交代码（git commit）→ 进程退出<br>
+</li>
+<li>循环重启，全新 AI 实例重复上述流程</li>
+</ul>
+<p>另外还有个叫上下文高压锅（Context Pressure Cooker）的概念，这是 Ralph
+Loop 对抗"上下文腐烂"（Context Rot）的核心机制：</p>
+<ul>
+<li>机制：每次迭代都重新加载完整的 PRD，而非依赖 AI 的记忆<br>
+</li>
+<li>目的：强制 AI
+在"高压"下面对自己的错误，防止长会话中的遗忘与幻觉<br>
+</li>
+<li>效果：通过"故意低效"的上下文分配，确保早期约束不被后期迭代遗忘</li>
+</ul>
+<p>Ralph Loop的执行模式是严格的多实例隔离。每个任务由完全独立的 AI
+实例处理，实例间完全隔离。</p>
+<pre><code>迭代 1: 全新 AI 实例 → 实现任务 A → 提交 → 写入 progress → 进程结束
+迭代 2: 全新 AI 实例 → 读取 PRD + progress → 实现任务 B → 提交 → 进程结束</code></pre>
+<p>每次迭代都是全新 CLI 进程（甚至 Docker
+容器），上下文窗口清零。完全通过 Git 历史 + 文件系统，而非 AI
+内部记忆。失败任务被记录到
+progress，下次由全新实例用新策略重试，避免在同一会话中陷入死循环。</p>
+<p>每个任务必须小到能在一次上下文窗口内完成（约 15
+分钟内），且修改文件数 ≤ 3 个。</p>
+<p>Ralph Loop可以说是Spec Coding的暴力版了。总体来说，Ralph
+Loop比较适合小型的项目。</p>
+<p>（不过具体的实现反而没那么重要，中心思想是，只要环境合适，AI就能给你干完了。）</p>
 <h1 id="reference">Reference</h1>
 <p>【1】everything is a ralph loop，https://ghuntley.com/loop/<br>
 【2】工程技术：在智能体优先的世界中利用
@@ -314,8 +499,126 @@ Era，https://www.oneusefulthing.org/p/a-guide-to-which-ai-to-use-in-the<br>
 【6】My AI Adoption
 Journey，https://mitchellh.com/writing/my-ai-adoption-journey<br>
 【7】Context
-Engineering，一篇就够了，https://zhuanlan.zhihu.com/p/1938967453951571269</p>
-<!-- flag of hidden posts -->
+Engineering，一篇就够了，https://zhuanlan.zhihu.com/p/1938967453951571269<br>
+【8】最近阅读2-关于自适应深度思考、context engineering和模型训练
+，https://www.linsight.cn/af7f9363.html#factor-agents<br>
+【9】我的Harness
+Engineering实践心得，https://zhuanlan.zhihu.com/p/2020528036827636560</p>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5f0d3c82.html">字节的M3-Agent</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/44c62dc5.html">DeepResearch的报告生成方法</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7c2f9dcb.html">从RAG到DeepSearch</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f7d600f3.html">阿里通义Lab:
+WebWalker,WebDancer和WebSailor</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/72150a83.html">Agent评测数据集</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/226b059f.html">agent调研(1)--MetaGPT,OpenManus和OWL</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f93b3aaf.html">Devin和Anthropic的Agent开发经验</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cc1c31d.html">VeRA，LoRA-XS和TinyLoRA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9cb56255.html">腾讯的Training-Free
+GRPO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5b81d487.html">Attention
+Residuals</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 训练框架<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f25d614e.html">Muon优化器</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe0adaa5.html">LLM训练框架：从优化器和精度讲到ZeRO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4cd8532f.html">LLM训练各种并行策略</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 论文阅读：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e96c7aac.html">最近阅读--关于数据合成、agent、reasoning和多任务</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/af7f9363.html">最近阅读2-关于自适应深度思考、context
+engineering和模型训练</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+
     </div>
 
     
@@ -332,7 +635,7 @@ Engineering，一篇就够了，https://zhuanlan.zhihu.com/p/1938967453951571269
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://saicat.github.io/24a6683a.html" title="Harness Engineering">https://saicat.github.io/24a6683a.html</a>
+      <a href="https://saicat.github.io/24a6683a.html" title="Harness Engineer">https://saicat.github.io/24a6683a.html</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -348,6 +651,15 @@ Engineering，一篇就够了，https://zhuanlan.zhihu.com/p/1938967453951571269
 
         
 
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/5f0d3c82.html" rel="prev" title="字节的M3-Agent">
+                  <i class="fa fa-angle-left"></i> 字节的M3-Agent
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
     </footer>
   </article>
 </div>
@@ -377,13 +689,13 @@ Engineering，一篇就够了，https://zhuanlan.zhihu.com/p/1938967453951571269
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">916k</span>
+    <span title="站点总字数">924k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">27:46</span>
+    <span title="站点阅读时长">27:59</span>
   </span>
 </div>
 <div class="busuanzi-count">
