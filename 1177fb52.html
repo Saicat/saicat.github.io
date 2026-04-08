@@ -19,25 +19,29 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="AI | NLP">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Linsight">
-<meta property="og:url" content="https://saicat.github.io/archives/2021/06/index.html">
+    <meta name="description" content="LoRA 初始化 LoRA的公式是这样的，输入先过A矩阵，后过B矩阵：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大模型八股">
+<meta property="og:url" content="https://saicat.github.io/1177fb52.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="AI | NLP">
+<meta property="og:description" content="LoRA 初始化 LoRA的公式是这样的，输入先过A矩阵，后过B矩阵：">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2006-04-02T14:28:28.000Z">
+<meta property="article:modified_time" content="2026-04-07T14:00:30.887Z">
 <meta property="article:author" content="Lin">
+<meta property="article:tag" content="interview">
+<meta property="article:tag" content="八股">
 <meta name="twitter:card" content="summary">
 
 
-<link rel="canonical" href="https://saicat.github.io/archives/2021/06/">
+<link rel="canonical" href="https://saicat.github.io/1177fb52.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":false,"lang":"zh-CN","comments":"","permalink":"","path":"archives/2021/06/index.html","title":""}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/1177fb52.html","path":"1177fb52.html","title":"大模型八股"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>归档 | Linsight</title>
+<title>大模型八股 | Linsight</title>
   
 
 
@@ -70,7 +74,7 @@
 
     <a href="/" class="brand" rel="start">
       <i class="logo-line"></i>
-      <h1 class="site-title">Linsight</h1>
+      <p class="site-title">Linsight</p>
       <i class="logo-line"></i>
     </a>
       <p class="site-subtitle" itemprop="description">聊聊AI技术，也聊聊其他的</p>
@@ -124,7 +128,7 @@
   
   <aside class="sidebar">
 
-    <div class="sidebar-inner sidebar-overview-active">
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
       <ul class="sidebar-nav">
         <li class="sidebar-nav-toc">
           文章目录
@@ -137,6 +141,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#lora"><span class="nav-number">1.</span> <span class="nav-text">LoRA</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">1.1.</span> <span class="nav-text">初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E6%95%B0"><span class="nav-number">1.2.</span> <span class="nav-text">系数</span></a></li></ol></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -151,18 +156,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">100</span>
+          <span class="site-state-item-count">102</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-count">12</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">86</span>
+        <span class="site-state-item-count">87</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -190,51 +195,227 @@
 
     </div>
 
-    <div class="main-inner archive posts-collapse">
+    <div class="main-inner post posts-expand">
 
 
   
+
+
+<div class="post-block">
   
   
-  <div class="post-block">
-    <div class="post-content">
-      <div class="collection-title">
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/1177fb52.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="大模型八股 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          大模型八股
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2006-04-02 22:28:28" itemprop="dateCreated datePublished" datetime="2006-04-02T22:28:28+08:00">2006-04-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-04-07 22:00:30" itemprop="dateModified" datetime="2026-04-07T22:00:30+08:00">2026-04-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/interview/" itemprop="url" rel="index"><span itemprop="name">interview</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/interview/%E5%85%AB%E8%82%A1/" itemprop="url" rel="index"><span itemprop="name">八股</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="lora">LoRA</h1>
+<h2 id="初始化">初始化</h2>
+<p>LoRA的公式是这样的，输入先过A矩阵，后过B矩阵：</p>
+<p><span class="math display">\[W&#39; = W + \frac{\alpha}{r} \cdot
+BA\]</span></p>
+<p>AB =
+0可以保证初始时模型保持原性能。那么可以通过A=0，也可以通过B=0来实现。原文选择的是B=0来实现。为什么呢？</p>
+<p>先从方差讲起。设输入 <span class="math inline">\(x_j\)</span> 满足
+<span class="math inline">\(\text{Var}(x_j) = 1\)</span>，且 <span class="math inline">\(A_{ij} \sim \mathcal{N}(0, \sigma_A^2)\)</span>
+独立于 <span class="math inline">\(x\)</span>。</p>
+<p>计算 <span class="math inline">\(z = Ax\)</span>**：</p>
+<p><span class="math inline">\(z_i = \sum_{j=1}^{d_{in}} A_{ij}
+x_j\)</span></p>
+<p>先算单个乘积项的方差（乘法）：</p>
+<p><span class="math display">\[\text{Var}(A_{ij} x_j) =
+\mathbb{E}[A_{ij}^2]\mathbb{E}[x_j^2] = \sigma_A^2 \cdot 1 =
+\sigma_A^2\]</span></p>
+<p>再算求和后的方差（加法，各项独立）：</p>
+<p><span class="math display">\[\text{Var}(z_i) = \sum_{j=1}^{d_{in}}
+\text{Var}(A_{ij} x_j) = d_{in} \cdot \sigma_A^2\]</span></p>
+<p>那么这个时候方法变成了 <span class="math inline">\(d_{in}\)</span>
+倍。</p>
+<p>再计算 <span class="math inline">\(y = Bz\)</span>**：</p>
+<p><span class="math inline">\(y_k = \sum_{i=1}^{r} B_{ki}
+z_i\)</span>，其中 <span class="math inline">\(B_{ki} \sim
+\mathcal{N}(0, \sigma_B^2)\)</span> 独立于 <span class="math inline">\(A\)</span>（从而独立于 <span class="math inline">\(z\)</span>）。</p>
+<p>同样先算乘积项方差（乘法）：</p>
+<p><span class="math display">\[\text{Var}(B_{ki} z_i) = \sigma_B^2
+\cdot \text{Var}(z_i) = \sigma_B^2 \cdot d_{in}\sigma_A^2\]</span></p>
+<p>再算求和方差（加法）：</p>
+<p><span class="math display">\[\text{Var}(y_k) = \sum_{i=1}^{r}
+\text{Var}(B_{ki} z_i) = r \cdot \sigma_B^2 \cdot
+d_{in}\sigma_A^2\]</span></p>
+<p>为了使整个计算过程，各层的方差都能稳定，不容易出现梯度爆炸或者消失的情况，方差就要保持恒定。</p>
+<p>为使输出方差 <span class="math inline">\(\text{Var}(y_k) =
+\Theta(1)\)</span>（不随维度爆炸或消失），需要：</p>
+<p><span class="math display">\[r \sigma_B^2 d_{in} \sigma_A^2 =
+1\]</span></p>
+<ul>
+<li>如果 <span class="math inline">\(\sigma_A^2 =
+1/d_{in}\)</span>（标准 He/Xavier），则必须 <span class="math inline">\(\sigma_B^2 = 1/r\)</span><br>
+</li>
+<li>如果反过来让 <span class="math inline">\(B\)</span> 随机且用 <span class="math inline">\(1/d_{out}\)</span> 的小方差，则 <span class="math inline">\(\text{Var}(y_k) = r/d_{out} \ll
+1\)</span>，信号严重衰减；而<span class="math inline">\(\sigma_B^2 =
+1/r\)</span>又太大（为了补偿从低维 r
+到高维输出的映射，必须用大方差），导致初始梯度方差过大，对学习率极其敏感，训练不稳定。</li>
+</ul>
+<table>
+<colgroup>
+<col style="width: 16%">
+<col style="width: 28%">
+<col style="width: 55%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>候选方案</th>
+<th>随机侧所需方差</th>
+<th>对梯度的影响</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>方案 A</strong>：<span class="math inline">\(A\)</span>
+随机，<span class="math inline">\(B=0\)</span></td>
+<td><span class="math inline">\(\sigma_A^2 = 1/n\)</span>（极小，如
+<span class="math inline">\(1/4096\)</span>）</td>
+<td><span class="math inline">\(Ax\)</span> 方差可控（<span class="math inline">\(\Theta(1)\)</span>），梯度稳定</td>
+</tr>
+<tr class="even">
+<td><strong>方案 B</strong>：<span class="math inline">\(B\)</span>
+随机，<span class="math inline">\(A=0\)</span></td>
+<td><span class="math inline">\(\sigma_B^2 = 1/r\)</span>（大 256 倍，如
+<span class="math inline">\(1/16\)</span>）</td>
+<td><span class="math inline">\(B\)</span> 方差大，梯度 <span class="math inline">\(\frac{\partial \mathcal{L}}{\partial A} =
+B^T\delta\)</span> 初始噪声强</td>
+</tr>
+</tbody>
+</table>
+<h2 id="系数">系数</h2>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/1177fb52.html" title="大模型八股">https://saicat.github.io/1177fb52.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/interview/" rel="tag"><i class="fa fa-tag"></i> interview</a>
+              <a href="/tags/%E5%85%AB%E8%82%A1/" rel="tag"><i class="fa fa-tag"></i> 八股</a>
+          </div>
+
         
-        <span class="collection-header">很好! 目前共计 100 篇日志。 继续努力。</span>
-      </div>
 
-      
-    <div class="collection-year">
-      <span class="collection-header">2021</span>
-    </div>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-      <div class="post-meta-container">
-        <time itemprop="dateCreated"
-              datetime="2021-06-15T15:38:23+08:00"
-              content="2021-06-15">
-          06-15
-        </time>
-      </div>
-
-      <div class="post-title">
-        <a class="post-title-link" href="/e996bf25.html" itemprop="url">
-          <span itemprop="name">预训练经验</span>
-        </a>
-      </div>
-
-      
-    </header>
+          <div class="post-nav">
+            <div class="post-nav-item">
+            </div>
+            <div class="post-nav-item">
+                <a href="/dd5035ac.html" rel="next" title="LeetCode面试题解整理">
+                  LeetCode面试题解整理 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
   </article>
+</div>
 
 
-    </div>
-  </div>
-  
-  
-  
 
+
+
+
+    <div class="comments utterances-container"></div>
 </div>
   </main>
 
@@ -254,13 +435,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">924k</span>
+    <span title="站点总字数">929k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">27:59</span>
+    <span title="站点阅读时长">28:09</span>
   </span>
 </div>
 <div class="busuanzi-count">
