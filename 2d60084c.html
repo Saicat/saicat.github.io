@@ -19,15 +19,15 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="这AI圈的新概念真是比新概念英语的新概念还多。 Andrej Karpathy最近又提了一个LLM Wiki，这是一个使用LLM构建个人知识库的方法，这个idea相对high level，每个人在操作层面都可以有一些自己的设计。 RAG的问题 这几年遇到LLM+知识库检索的问题，比较通用的解决办法都是RAG。 Reference 【1】https:&#x2F;&#x2F;gist.github.com&#x2F;karpath">
+    <meta name="description" content="这AI圈的新概念真是比新概念英语的新概念还多。 Andrej Karpathy最近又提了一个概念，叫LLM Wiki。这是一个使用LLM构建个人知识库的方法，Karpathy在他的post开篇就说了，这是一个high level idea，每个人在操作层面都可以有一些自己的具体设计。 大致上来说，LLM Wiki是一套人与LLM&#x2F;Agent（用Claude Code就行）协作，逐步构建个人知识库的">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Karpathy所说的LLM Wiki">
 <meta property="og:url" content="https://saicat.github.io/2d60084c.html">
 <meta property="og:site_name" content="Linsight">
-<meta property="og:description" content="这AI圈的新概念真是比新概念英语的新概念还多。 Andrej Karpathy最近又提了一个LLM Wiki，这是一个使用LLM构建个人知识库的方法，这个idea相对high level，每个人在操作层面都可以有一些自己的设计。 RAG的问题 这几年遇到LLM+知识库检索的问题，比较通用的解决办法都是RAG。 Reference 【1】https:&#x2F;&#x2F;gist.github.com&#x2F;karpath">
+<meta property="og:description" content="这AI圈的新概念真是比新概念英语的新概念还多。 Andrej Karpathy最近又提了一个概念，叫LLM Wiki。这是一个使用LLM构建个人知识库的方法，Karpathy在他的post开篇就说了，这是一个high level idea，每个人在操作层面都可以有一些自己的具体设计。 大致上来说，LLM Wiki是一套人与LLM&#x2F;Agent（用Claude Code就行）协作，逐步构建个人知识库的">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-04-07T14:23:13.000Z">
-<meta property="article:modified_time" content="2026-04-08T13:38:04.444Z">
+<meta property="article:modified_time" content="2026-04-08T14:53:28.885Z">
 <meta property="article:author" content="Lin">
 <meta property="article:tag" content="NLP">
 <meta property="article:tag" content="LLM">
@@ -42,7 +42,7 @@
 <script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/2d60084c.html","path":"2d60084c.html","title":"Karpathy所说的LLM Wiki"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>Karpathy所说的LLM Wiki | Linsight</title><meta name="robots" content="noindex">
+<title>Karpathy所说的LLM Wiki | Linsight</title>
   
 
 
@@ -142,7 +142,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#rag%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">RAG的问题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">2.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">1.</span> <span class="nav-text">Reference</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -157,7 +157,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">102</span>
+          <span class="site-state-item-count">103</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -243,7 +243,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-04-08 21:38:04" itemprop="dateModified" datetime="2026-04-08T21:38:04+08:00">2026-04-08</time>
+      <time title="修改时间：2026-04-08 22:53:28" itemprop="dateModified" datetime="2026-04-08T22:53:28+08:00">2026-04-08</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -270,14 +270,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>1.9k</span>
+      <span>7.3k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>4 分钟</span>
+      <span>13 分钟</span>
     </span>
 </div>
 
@@ -288,16 +288,234 @@
     
     
     <div class="post-body" itemprop="articleBody"><p>这AI圈的新概念真是比新概念英语的新概念还多。</p>
-<p>Andrej Karpathy最近又提了一个LLM
-Wiki，这是一个使用LLM构建个人知识库的方法，这个idea相对high
-level，每个人在操作层面都可以有一些自己的设计。</p>
-<h1 id="rag的问题">RAG的问题</h1>
-<p>这几年遇到LLM+知识库检索的问题，比较通用的解决办法都是RAG。</p>
+<p>Andrej Karpathy最近又提了一个概念，叫LLM
+Wiki。这是一个使用LLM构建个人知识库的方法，Karpathy在他的post开篇就说了，这是一个high
+level idea，每个人在操作层面都可以有一些自己的具体设计。</p>
+<p>大致上来说，LLM Wiki是一套人与LLM/Agent（用Claude
+Code就行）协作，逐步构建个人知识库的“动态过程”。为什么强调动态过程，因为LLM
+Wiki不是一次构建就固化使用的概念，而是不断迭代，持续更新的方案。</p>
+<p>比如说，我现在要系统学习LLM，那我首先要去搜索一些论文，学习一些概念，形成体系。在这个过程中，一个经典的做法可以把这些文献构造成一个数据库，然后借用RAG的能力来学习，比如用腾讯的IMA。</p>
+<p>RAG确实可以解决很多问题，但是也存在一些约束。比如说我要学习模型架构的发展，一开始怎么在RNN里开始加上attention，然后出了Transformer，之后有BERT和GPT，期间Pre-Norm和Post-Norm如何对比，MHA怎么发展到MQA、GQA和MLA，MoE又是什么起源，位置编码怎么从绝对迁移到相对。这些概念都交织到一起，如果想获得这些概念的全景图，或者顺着一个概念一直联系相关概念学习下去，仅用RAG可能就没法获得很好的效果。</p>
+<p>RAG为什么处理不好这些问题呢？因为离散式的搜索召回，本身就很难把这些相关概念正确地组织起来。可能有人说，不会啊，模型自己就能知道这些概念都和模型结构相关，因此搜索的时候可以通过生成覆盖面足够大的query
+list来召回。且不说模型能不能在规划搜索的时候做到完善，如果面对的概念不是预训练的数据库中已经较好学习过的，比如是最新最前沿的科学概念，那模型明显就缺失了相关背景知识，从而难以覆盖应有的概念。</p>
+<p>另外，即使搜索到了足够多的信息，要从离散的片段里，正确地梳理好这些知识，本身就不容易。再者，问过的问题好不容易用了很多知识回答好了，但是下次再问又得从头做了。</p>
+<p>那么能不能把这些知识联系和组织的工作提前做好，并且还能不断更新呢。诶，LLM
+Wiki就是为此而生的。与其在查询时从原始文档中检索，LLM
+Wiki增量式地构建和维护一个持久的wiki——一个结构化的、相互链接的 markdown
+文件集合。当你添加新资料时，LLM
+Wiki不只是为后续检索建立索引。它会阅读资料，提取关键信息，并将其整合到现有wiki中——更新实体页面，修订主题摘要，标注新数据与旧数据的矛盾。知识被重新整合，保持最新，而不是在每次查询时重新推导。</p>
+<p>爽的是，这一切操作都不用自己动手，而是让LLM来干就行了。用户只需要把操作的原则设定好就行。</p>
+<p>具体来说LLM Wiki的架构有三部分：</p>
+<ul>
+<li>原始资料：源文档集合，文章、论文、图片、数据文件。这些是不可变的，LLM
+从中读取但从不修改它们。这是你的真相来源。<br>
+</li>
+<li>Wiki：LLM 生成的 markdown
+文件目录。摘要、实体页面、概念页面、比较、概览、综合等。LLM
+完全拥有这一层的权限。<br>
+</li>
+<li>Schema：一个文档（例如 Claude Code 的 CLAUDE.md 或 Codex 的
+AGENTS.md），告诉 LLM wiki
+如何结构化，约定是什么，以及在摄入资料、回答问题或维护 wiki
+时要遵循什么工作流程。这是关键配置文件——它让 LLM 成为一个有纪律的 wiki
+维护者，而不是一个通用聊天机器人。你和 LLM 随时间共同演进这个文件。</li>
+</ul>
+<p>一个schema的样例：</p>
+<pre class="line-numbers language-none"><code class="language-none"># LLM Wiki Schema
+
+## 项目结构
+- &#96;raw&#x2F;&#96; — 不可变的源文档。严禁修改。
+- &#96;wiki&#x2F;&#96; — LLM 生成的 Wiki。你拥有其完全所有权。
+- &#96;wiki&#x2F;index.md&#96; — 主目录。每次摄取时更新。
+- &#96;wiki&#x2F;log.md&#96; — 仅限追加的活动日志。
+
+## 页面规范
+每个 Wiki 页面必须包含 YAML frontmatter：
+&#96;&#96;&#96;
+---
+title: Page Title
+type: concept | entity | source-summary | comparison
+sources: [引用的 raw&#x2F; 文件列表]
+related: [链接的 Wiki 页面列表]
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+confidence: high | medium | low
+---
+&#96;&#96;&#96;
+
+## 摄取工作流
+当我说 &quot;ingest [文件名]&quot; 时：
+1. 读取 raw&#x2F; 中的源文件
+2. 与我讨论核心要点
+3. 在 wiki&#x2F;sources&#x2F; 中创建&#x2F;更新摘要页面
+4. 更新 wiki&#x2F;index.md
+5. 更新所有相关的概念和实体页面
+6. 在 wiki&#x2F;log.md 中追加一条记录
+
+## 查询工作流
+当我提问时：
+1. 阅读 wiki&#x2F;index.md 以查找相关页面
+2. 阅读这些页面
+3. 综合答案并附上 [[wiki-link]] 引用
+4. 如果答案有价值，提议将其归档为
+   一个新的 wiki 页面
+
+## Lint 工作流
+当我说 &quot;lint&quot; 时：
+1. 检查页面之间是否存在矛盾
+2. 查找没有入站链接的孤立页面
+3. 列出已提及但缺少独立页面的概念
+4. 检查被新来源取代的陈旧主张
+5. 建议下一步要调研的问题<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>一开始收集资料，就让LLM/Agent按照schema的要求对所有资料进行处理，后续再进来新的资料，也同样操作。</p>
+<p>所构建成的wiki directory样例：</p>
+<pre class="line-numbers language-none"><code class="language-none">wiki&#x2F;
+  index.md                 # Master catalog of all pages
+  log.md                  # Chronological activity record
+  overview.md             # High-level synthesis
+  concepts&#x2F;
+    attention-mechanism.md
+    mixture-of-experts.md
+    scaling-laws.md
+    tokenization.md
+  entities&#x2F;
+    openai.md
+    anthropic.md
+    google-deepmind.md
+  sources&#x2F;
+    summary-attention-revisited.md
+    summary-scaling-update.md
+  comparisons&#x2F;
+    gpt4-vs-claude-vs-gemini.md
+    rag-vs-finetuning.md<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>schema里的raw和wiki就是三部分架构里的另外两个。schema里还提到index.md和log.md两个部分。log.md很好理解，就是wiki的变化日志，用于追溯每个变化都是哪个文献引起的。</p>
+<p>index.md则是wiki中所有内容的目录。有query的时候，LLM/Agent首先就看index.md，然后找相关的内容。index.md长这样：</p>
+<pre class="line-numbers language-none"><code class="language-none"># Wiki Index
+
+## Concepts
+- [[attention-mechanism]] — 自注意力、多头
+  注意力及其变体 (12 个来源)
+- [[mixture-of-experts]] — 稀疏 MoE 架构，
+  路由策略 (8 个来源)
+- [[scaling-laws]] — Chinchilla、Kaplan 定律，
+  计算最优训练 (15 个来源)
+- [[tokenization]] — BPE、SentencePiece、tiktoken
+  (3 个来源)
+
+## 实体
+- [[openai]] — GPT 系列，组织历史
+  (20 个来源)
+- [[anthropic]] — Claude 系列，宪法 AI
+  (14 个来源)
+- [[google-deepmind]] — Gemini, PaLM, AlphaFold
+  (18 个来源)
+
+## 来源摘要
+- [[summary-attention-revisited]] — 2026-03-15
+- [[summary-moe-efficiency]] — 2026-04-01
+- [[summary-scaling-update]] — 2026-04-02
+
+## 对比
+- [[moe-routing-strategies]] — 归档自查询 2026-04-04
+- [[rag-vs-finetuning]] — 权衡与使用场景<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在操作上，Karpathy 定义了三个核心操作。</p>
+<p>1、Ingest</p>
+<p>这是最重要的操作。单次 ingest 不仅仅是创建一个新页面 — 它会波及整个
+wiki。如果你 ingest 了一篇关于新 transformer 变体的论文，LLM
+可能会：</p>
+<ul>
+<li>为该论文创建一个新的摘要页面<br>
+</li>
+<li>使用新变体更新 “Attention Mechanism” 概念页面<br>
+</li>
+<li>如果论文包含新的基准测试，则更新 “Scaling Laws” 页面<br>
+</li>
+<li>更新论文作者或其所属机构的实体页面<br>
+</li>
+<li>如果论文针对已知模型进行了基准测试，则更新对比页面<br>
+</li>
+<li>从引用新内容的现有页面中添加链接<br>
+</li>
+<li>使用新页面更新索引<br>
+</li>
+<li>在log中记录导入 (ingest)</li>
+</ul>
+<p>示例：</p>
+<pre class="line-numbers language-none"><code class="language-none"># 你将一篇新文章放入 raw&#x2F; 目录
+
+&gt; 我刚刚在 raw&#x2F;articles&#x2F; 中添加了一篇新文章
+&gt;   2026-04-mixture-of-experts-efficiency.md
+&gt; 请导入它。
+
+# LLM 读取它，然后回复：
+
+本文的核心要点：
+1. MoE 模型在相同质量下实现了 4 倍的吞吐量
+2. 路由效率比 Switch Transformer 提高了 23%
+3. 与我们 wiki 中关于稠密模型 (dense models) 的说法相矛盾：
+   即在 10B 参数以下总是更高效
+
+我将执行以下操作：
+- 创建 wiki&#x2F;sources&#x2F;summary-moe-efficiency-2026.md
+- 更新 wiki&#x2F;concepts&#x2F;mixture-of-experts.md
+- 更新 wiki&#x2F;concepts&#x2F;scaling-laws.md (新增基准测试)
+- 在 wiki&#x2F;concepts&#x2F;dense-vs-sparse.md 中标记矛盾点
+- 更新 wiki&#x2F;index.md
+- 追加到 wiki&#x2F;log.md<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>2、query</p>
+<p>直接对LLM/Agent提问就行，但是有一个关键点：优秀的答案可以作为新页面归档回
+wiki 中。</p>
+<p>示例：</p>
+<pre class="line-numbers language-none"><code class="language-none">&gt; 对比我们所有来源中
+&gt; MoE 模型的路由策略。哪种方法具有最佳的效率&#x2F;
+&gt; 质量权衡？
+
+# LLM 读取 wiki&#x2F;concepts&#x2F;mixture-of-experts.md，
+# wiki&#x2F;sources&#x2F;summary-moe-*.md，并生成分析
+
+[LLM 生成带有表格的详细对比]
+
+&gt; 太棒了。将其归档为 wiki 页面。
+
+# LLM 创建 wiki&#x2F;comparisons&#x2F;moe-routing-strategies.md
+# 更新 index.md，从相关页面添加链接<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>3、Lint</p>
+<p>定期让 LLM 对 wiki
+进行健康检查。比如看有没有矛盾的信息、孤立的信息、缺失的信息。</p>
+<p>Karpathy提出了一些检查类型：</p>
+<pre class="line-numbers language-none"><code class="language-none">&gt; Lint the wiki.
+
+Wiki Health Report (2026-04-04):
+
+CONTRADICTIONS (2):
+- concepts&#x2F;dense-vs-sparse.md claims dense &gt; sparse
+  below 10B, but sources&#x2F;summary-moe-efficiency.md
+  shows opposite. Recommend: update with nuance.
+- entities&#x2F;openai.md says GPT-5 is 200B params,
+  but sources&#x2F;summary-gpt5-leak.md says 300B.
+
+ORPHAN PAGES (3):
+- concepts&#x2F;tokenization.md (no inbound links)
+- sources&#x2F;summary-old-bert-paper.md (no references)
+- comparisons&#x2F;old-gpu-benchmark.md (outdated)
+
+MISSING PAGES (4):
+- &quot;RLHF&quot; mentioned 12 times, no concept page
+- &quot;Constitutional AI&quot; mentioned 8 times, no page
+- &quot;KV Cache&quot; referenced in 5 sources, no page
+- &quot;Speculative Decoding&quot; mentioned 3 times, no page
+
+SUGGESTED INVESTIGATIONS:
+- No sources on inference optimization post-2025
+- Entity page for Meta AI is thin (only 1 source)
+- The &quot;Scaling Laws&quot; page hasn&#39;t been updated in 3 weeks<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>LLM
+Wiki大致的构建和维护思路就是这样。schema的设计，directory的设计也仅供参考，用户完全可以自定适合自己的一套。</p>
+<p>Karpathy提到他是用Obsidian来做文档转换和链接可视化的，并且最好一点一点构建数据库，这样可以边构建边学习。</p>
 <h1 id="reference">Reference</h1>
 <p>【1】https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f<br>
 【2】Karpathy's LLM Wiki：其 Idea File
-全方位指南，https://antigravity.codes/zh/blog/karpathy-llm-wiki-idea-file<br>
-【3】</p>
+全方位指南，https://antigravity.codes/zh/blog/karpathy-llm-wiki-idea-file</p>
 <hr>
 <p>【推荐文章】<br>
 - Agent：<br>
@@ -334,6 +552,7 @@ routing</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
 - 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e996bf25.html">预训练经验</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
 <a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
@@ -415,7 +634,7 @@ Transformer</a><br>
 engineering和模型训练</a><br>
 - 大模型算法题：<br>
 <a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
-<!-- flag of hidden posts -->
+
     </div>
 
     
@@ -448,6 +667,15 @@ engineering和模型训练</a><br>
 
         
 
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/b3f8d798.html" rel="prev" title="O-MEM">
+                  <i class="fa fa-angle-left"></i> O-MEM
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
     </footer>
   </article>
 </div>
@@ -477,13 +705,13 @@ engineering和模型训练</a><br>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">929k</span>
+    <span title="站点总字数">936k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">28:09</span>
+    <span title="站点阅读时长">28:22</span>
   </span>
 </div>
 <div class="busuanzi-count">
