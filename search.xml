@@ -39380,6 +39380,17 @@ LoRA 叠加。</li>
 <li><strong>DoRA 兼容性</strong>：DoRA 与 QLoRA 兼容，可在阶段二同时开启
 <code>quantization_bit: 4</code> 进一步节省显存。</li>
 </ol>
+<h3 id="实践经验">实践经验</h3>
+<p>用LlamaFactory跑DoRA就是配置里加一个use_dora:
+true就行。但是用Qwen3.5跑DoRA的时候发现有问题，loss一直是0，grad
+norm一直是nan。</p>
+<p>后来发现Qwen3.5是 Hybrid Attention-Mamba 架构（前24层混合了
+linear_attention + full_attention），里面的in_proj_a, in_proj_b,
+in_proj_z,
+in_proj_qkv这几个层是能使用DoRA，因为他们不是标准的nn.Linear，而是状态空间的选择性投影层。</p>
+<p>因此需要把lora_target从all改成仅包含这七个就可以：<br>
+- q_proj, k_proj, v_proj, o_proj — 标准 Attention 投影 - gate_proj,
+up_proj, down_proj — MLP 层</p>
 ]]></content>
       <categories>
         <category>CS</category>
