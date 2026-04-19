@@ -39060,7 +39060,7 @@ Transformer</a><br>
       </tags>
   </entry>
   <entry>
-    <title>大模型八股</title>
+    <title>大模型八股 &amp; 经验</title>
     <url>/1177fb52.html</url>
     <content><![CDATA[<h1 id="lora">LoRA</h1>
 <h2 id="初始化">初始化</h2>
@@ -39140,7 +39140,246 @@ B^T\delta\)</span> 初始噪声强</td>
 </tr>
 </tbody>
 </table>
-<h2 id="系数">系数</h2>
+<h2 id="缩放系数">缩放系数</h2>
+<p><span class="math display">\[W&#39; = W + \frac{\alpha}{r} \cdot
+BA\]</span></p>
+<p>公式里<span class="math inline">\(\frac{\alpha}{r}\)</span>是缩放系数，一般是设置为2。</p>
+<p>LoRA论文与工程实践（特别是Hugging Face
+PEFT库）中，<code>alpha/r = 2</code>
+的默认设定源于<strong>方差守恒（Variance Scaling）</strong>的考量：</p>
+<ul>
+<li><strong>初始化时</strong>：<span class="math inline">\(A\)</span>
+的初始化标准差通常为 <span class="math inline">\(\sigma_A\)</span>，<span class="math inline">\(B\)</span> 初始化为零<br>
+</li>
+<li><strong>前向传播初期</strong>：<span class="math inline">\(B \cdot
+A\)</span> 的输出的方差约为 <span class="math inline">\(r \cdot
+\sigma_A^2\)</span>（假设独立同分布）</li>
+<li><strong>为了保持与预训练权重 <span class="math inline">\(W_0\)</span>
+相当的梯度更新幅度</strong>，需要引入缩放因子</li>
+</ul>
+<p>当设置 <span class="math inline">\(\frac{\alpha}{r} = 2\)</span>
+时：<br>
+- 实际等效的"学习率"或"更新步长"被放大2倍<br>
+- 这补偿了低秩分解（rank通常很小，如8、16、32）带来的表达能力限制<br>
+- 同时避免了 <span class="math inline">\(\alpha/r\)</span>
+过大导致的训练不稳定（梯度爆炸）或过小导致的欠拟合</p>
+<p>为什么一般两倍就足够？按道理r比d要小很多。因为实际更新时，d变化的rank其实也不高，真实的rank也不是d，而是远小于d。</p>
+<p>另外，前向后向都分别有系数，相当于有效梯度放大倍数是2的平方=4。</p>
+<p>实际训练中，这个比例的选择还需考虑：</p>
+<table>
+<colgroup>
+<col style="width: 27%">
+<col style="width: 27%">
+<col style="width: 45%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>配置</th>
+<th>特性</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong><span class="math inline">\(\alpha =
+2r\)</span></strong></td>
+<td>标准保守配置，梯度更新适中</td>
+<td>通用指令微调，数据量中等（10K-100K样本）</td>
+</tr>
+<tr class="even">
+<td><strong><span class="math inline">\(\alpha =
+r\)</span></strong></td>
+<td>更新幅度减半，更稳定</td>
+<td>数据量小（&lt;10K）或需要强正则化时</td>
+</tr>
+<tr class="odd">
+<td><strong><span class="math inline">\(\alpha = 4r\)</span>
+或更高</strong></td>
+<td>更新激进，拟合能力强</td>
+<td>数据量大（&gt;500K）或复杂任务，但需配合更低的学习率</td>
+</tr>
+</tbody>
+</table>
+<p>值得注意的是，<span class="math inline">\(\alpha/r\)</span>
+的最优值与<strong>基础学习率</strong>和<strong>优化器选择</strong>强相关：</p>
+<ul>
+<li>使用AdamW时，<span class="math inline">\(\alpha/r = 2\)</span> 配合
+<code>lr=1e-4</code> 是稳定组合</li>
+<li>若切换到<strong>Lion</strong>或<strong>Muon</strong>等二阶优化器，可能需要降低
+<span class="math inline">\(\alpha/r\)</span>
+到1，因为这些优化器本身具有更大的有效步长</li>
+<li>QLoRA（4-bit量化训练）中，由于量化噪声的存在，通常保持 <span class="math inline">\(\alpha=2r\)</span> 或略微提高到 <span class="math inline">\(\alpha=3r\)</span> 以补偿梯度精度损失</li>
+</ul>
+<p>为何Adam需要更大的系数？</p>
+<p><strong>Adam的二阶矩特性</strong>：</p>
+<p>Adam维护动量 <span class="math inline">\(m\)</span> 和方差 <span class="math inline">\(v\)</span> 两个状态，更新公式为： <span class="math display">\[\theta_{t+1} = \theta_t - \eta \cdot
+\frac{m_t}{\sqrt{v_t} + \epsilon}\]</span></p>
+<p><strong>关键问题</strong>：LoRA的初始化（<span class="math inline">\(A\)</span> 为Kaiming初始化，<span class="math inline">\(B=0\)</span>）导致<strong>早期梯度具有特殊结构</strong>——<span class="math inline">\(B\)</span> 的梯度 <span class="math inline">\(\nabla B \propto A^T\)</span>，而 <span class="math inline">\(A\)</span> 的梯度 <span class="math inline">\(\nabla A = 0\)</span>（因为 <span class="math inline">\(B=0\)</span>）。这种不对称性使得： 1.
+<strong>梯度方差估计偏低</strong>：Adam的 <span class="math inline">\(v\)</span>
+项在训练初期会严重低估LoRA参数的真实梯度方差，因为 <span class="math inline">\(B\)</span> 的梯度依赖于 <span class="math inline">\(A\)</span> 的随机投影。 2.
+<strong>有效学习率被抑制</strong>：由于 <span class="math inline">\(\sqrt{v_t}\)</span>
+的分母效应，Adam对LoRA参数的实际更新步长比SGD更小。</p>
+<p><strong>LoRA+的理论洞察</strong>：
+LoRA+论文严格证明，为了达到与全量微调相当的收敛速度，需要： - <span class="math inline">\(A\)</span> 的学习率：<span class="math inline">\(\eta_A = \eta_{base}\)</span> - <span class="math inline">\(B\)</span> 的学习率：<span class="math inline">\(\eta_B = \Theta(r) \cdot
+\eta_A\)</span>（实践中通常设为16倍）</p>
+<p>由于标准LoRA使用统一学习率，通过增大 <span class="math inline">\(\alpha\)</span>（即增大等效学习率）来<strong>补偿Adam在二阶矩估计上的保守性</strong>。</p>
+<p><strong>具体数值</strong>： - 全量微调（AdamW）：学习率 <span class="math inline">\(2 \times 10^{-5}\)</span> - LoRA（AdamW）：学习率
+<span class="math inline">\(1 \times
+10^{-4}\)</span>（<strong>5倍于全量微调</strong>）</p>
+<h2 id="微调经验---多阶段微调">微调经验 - 多阶段微调</h2>
+<p>大部分使用LoRA微调的场景，数据量其实都比较小（数据量很大的直接全量问题微调就行了）。</p>
+<p>在使用 LLaMA Factory + PEFT微调时，传统的单阶段 LoRA
+训练往往面临几个实际问题：</p>
+<ol type="1">
+<li><strong>Rank 选择困境</strong>：设小了（如
+r=8/16）表达能力受限，复杂任务拟合不足；设大了（如
+r=128）训练不稳定，容易过拟合或破坏预训练知识。</li>
+<li><strong>lr错误动量积累</strong>：前期冷启动阶段（B=0
+）的高方差梯度噪声被 Adam 的 momentum 和 variance
+持续记忆，导致后期即使学习率降低，优化器仍带着错误惯性震荡，无法在新初始化的优质子空间内精细收敛。<br>
+</li>
+<li><strong>初始化敏感</strong>：标准 LoRA
+使用随机高斯初始化，在低资源场景（&lt;10k
+样本）下收敛速度慢，最终性能依赖随机种子。</li>
+</ol>
+<p>第一个问题好理解。</p>
+<p>第三个问题：</p>
+<p>在小数据场景下，训练步数有限（如只有 500-1000 步）。由于 B
+从零开始，前几十步的更新完全依赖于 A 的随机初始值：<br>
+- A 的随机矩阵实际上定义了低维子空间的初始随机基（random basis）。<br>
+- 优化器只能在这个随机定义的子空间内进行搜索。<br>
+- 如果随机种子不好，A
+的初始方向恰好与任务需要的特征方向正交，模型需要花费大量步数"旋转"这个子空间，而小数据场景下没有足够步数完成这个调整。</p>
+<p>在大数据场景（&gt;100k
+样本）中，充足的迭代次数允许优化器逐渐"修正"初始的随机方向。但在小数据下，就很看随机种子了。</p>
+<p>第二个问题：</p>
+<p>类似地，由于步数不够，初始积累的动量对后续的影响很大。如果数据量很多，那么可以通过大量的后续step来纠正，但是如果步数不够，就可能纠正不过来。</p>
+<p>这些问题本质上是在<strong>单一训练阶段</strong>内试图解决<strong>探索</strong>与<strong>利用</strong>的矛盾。借鉴非凸优化中的多尺度策略，我们可以将训练拆分为多个阶段，每个阶段专注于特定目标。</p>
+<p>因此分段方案整个训练流程分为三个阶段，分别对应"粗调-精修-补漏"：</p>
+<table>
+<thead>
+<tr class="header">
+<th>阶段</th>
+<th>目标</th>
+<th>核心技术</th>
+<th>Rank 设置</th>
+<th>学习率</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>全局探索</td>
+<td>rsLoRA + NEFTune</td>
+<td>高（128）→ 快</td>
+<td>高（2e-4）→ 快</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>结构精修</td>
+<td>DoRA</td>
+<td>中（32）→ 准</td>
+<td>中（5e-5）→ 稳</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>边界强化</td>
+<td>Hard Example Mining</td>
+<td>低（16）→ 狠</td>
+<td>低（1e-5）→ 细</td>
+</tr>
+</tbody>
+</table>
+<p>阶段间通过<strong>权重合并（Weight
+Merge）</strong>实现知识固化，避免灾难性遗忘。</p>
+<h3 id="阶段一全局探索rslora-neftune">阶段一：全局探索（rsLoRA +
+NEFTune）</h3>
+<p><strong>rsLoRA</strong>（Rank-Stabilized LoRA）是 2024
+年提出的改进，核心是将缩放因子从 <span class="math inline">\(\alpha/r\)</span> 改为 <span class="math inline">\(\alpha/\sqrt{r}\)</span>。这使得我们可以安全使用更大的
+rank（如 128 甚至 256）而不会导致训练崩溃或破坏预训练权重。</p>
+<p><strong>NEFTune</strong>（Noisy Embedding
+Fine-Tuning）则是在输入嵌入层加入均匀噪声（<span class="math inline">\(\text{Uniform}[-0.5, 0.5] \times
+\alpha\)</span>），迫使模型学习更鲁棒的特征表示，减少过拟合。（LlamaFactory暂不支持）</p>
+<p>这个阶段的参数：<br>
+- <strong>rank=128 + rsLoRA</strong>：传统 <span class="math inline">\(\alpha=2r\)</span>
+的线性缩放会导致高秩时梯度过大，rsLoRA 的 <span class="math inline">\(\alpha/\sqrt{r}\)</span> 让高秩训练稳定。<br>
+- <strong>epoch=1</strong>：防止在探索阶段过拟合，只学粗粒度特征。<br>
+-
+<strong>NEFTune</strong>：相当于在嵌入空间做数据增强，提升泛化能力。</p>
+<h3 id="阶段二结构精修dora">阶段二：结构精修（DoRA）</h3>
+<p><strong>DoRA</strong>（Weight-Decomposed Low-Rank
+Adaptation）将权重更新解耦为<strong>幅度（Magnitude）</strong>和<strong>方向（Direction）</strong>两个分量：</p>
+<p><span class="math display">\[W = W_0 +
+\underbrace{m}_{\text{幅度向量}} \cdot
+\underbrace{\frac{BA}{\|BA\|}}_{\text{方向矩阵}}\]</span></p>
+<p>这种分解使得低秩（如 r=32）的表达能力接近传统 LoRA 的
+r=64，同时训练更稳定（方向更新与幅度更新解耦）。</p>
+<p>阶段二与阶段一的差别：</p>
+<table>
+<thead>
+<tr class="header">
+<th>维度</th>
+<th>阶段一（探索）</th>
+<th>阶段二（精修）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>缩放机制</td>
+<td><span class="math inline">\(\alpha/\sqrt{r}\)</span> (rsLoRA)</td>
+<td><span class="math inline">\(\alpha/r\)</span> (标准)</td>
+</tr>
+<tr class="even">
+<td>更新方式</td>
+<td>标准 BA 乘积</td>
+<td>幅度-方向解耦</td>
+</tr>
+<tr class="odd">
+<td>目标模块</td>
+<td>All（全层）</td>
+<td>仅 Attention</td>
+</tr>
+<tr class="even">
+<td>噪声</td>
+<td>有（NEFTune）</td>
+<td>无</td>
+</tr>
+<tr class="odd">
+<td>学习率</td>
+<td>2e-4（激进）</td>
+<td>5e-5（保守）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="阶段三边界强化hard-example-mining">阶段三：边界强化（Hard
+Example Mining）</h3>
+<p>利用阶段二模型在训练集上的 loss
+分布，筛选出<strong>困难样本</strong>（预测误差大的
+20%），进行针对性强化。这类似于 Boosting 中的残差补偿思想。</p>
+<h3 id="对比">对比</h3>
+<ul>
+<li>单阶段大 rank（128）反而效果差，因为没有 rsLoRA
+导致训练不稳定。<br>
+</li>
+<li>三阶段方案通过阶段一的 NEFTune 和阶段二的
+DoRA，实现了更好的泛化（验证集 Acc 提升 6.3%）。<br>
+</li>
+<li>阶段二合并操作减少了推理时的 adapter 层数，实际部署速度优于持续多
+LoRA 叠加。</li>
+</ul>
+<h3 id="实施建议">实施建议</h3>
+<ol type="1">
+<li><strong>必做前两阶段</strong>：阶段一（rsLoRA 探索）+ 阶段二（DoRA
+精修）是性价比最高的组合，能解决 90% 的场景。<br>
+</li>
+<li><strong>阶段三视情况</strong>：仅在数据分布不均（如长尾任务）或追求极致精度时启用，会增加约
+30% 训练时间。<br>
+</li>
+<li><strong>合并操作不可省</strong>：这是将"探索知识"固化为"模型本能"的关键，跳过合并直接阶段二等于从头训练。<br>
+</li>
+<li><strong>DoRA 兼容性</strong>：DoRA 与 QLoRA 兼容，可在阶段二同时开启
+<code>quantization_bit: 4</code> 进一步节省显存。</li>
+</ol>
 ]]></content>
       <categories>
         <category>CS</category>
