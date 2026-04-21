@@ -82,6 +82,7 @@
 <li><strong>时间复杂度：</strong> O(n²)</li>
 <li><strong>空间复杂度：</strong> O(n²)</li>
 </ul>
+<p>也可参考LeetCode 516. 最长回文子序列的写法。</p>
 <hr>
 <h2 id="leetcode-542---01-矩阵">LeetCode 542 - 01 矩阵</h2>
 <p><strong>原题描述：</strong> - 给定由 0 和 1
