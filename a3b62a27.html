@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon_io/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha256-yIDrPSXHZdOZhAqiBP7CKzIwMQmRCJ8UeB8Jo17YC4o=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.css" integrity="sha256-6cQIC71/iBIYXFK+0RHAvwmjwWzkWd+r7v/BX3/vZDc=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"saicat.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.19.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="1. 传统蒸馏的问题：一直在模仿别人的&quot;范文&quot; 在大模型落地过程中，蒸馏是把大模型能力迁移到小模型的常用手段。传统的 logits 蒸馏思路很直接：让教师模型生成一批数据，学生模型学习这些数据的 token 分布。这在学术上叫 Off-policy Distillation——因为训练数据来自教师策略 \(\pi_T\)，而学生真正推理时面对的是自己的策略 \(\pi_S\)。 这个范式在短文本分">
+<meta property="og:type" content="article">
+<meta property="og:title" content="On-Policy Distillation：让学生自己犯错、自己改正">
+<meta property="og:url" content="https://saicat.github.io/a3b62a27.html">
+<meta property="og:site_name" content="Linsight">
+<meta property="og:description" content="1. 传统蒸馏的问题：一直在模仿别人的&quot;范文&quot; 在大模型落地过程中，蒸馏是把大模型能力迁移到小模型的常用手段。传统的 logits 蒸馏思路很直接：让教师模型生成一批数据，学生模型学习这些数据的 token 分布。这在学术上叫 Off-policy Distillation——因为训练数据来自教师策略 \(\pi_T\)，而学生真正推理时面对的是自己的策略 \(\pi_S\)。 这个范式在短文本分">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-04-21T13:38:52.000Z">
+<meta property="article:modified_time" content="2026-04-21T13:54:34.527Z">
+<meta property="article:author" content="Lin">
+<meta property="article:tag" content="NLP">
+<meta property="article:tag" content="LLM">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://saicat.github.io/a3b62a27.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://saicat.github.io/a3b62a27.html","path":"a3b62a27.html","title":"On-Policy Distillation：让学生自己犯错、自己改正"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>On-Policy Distillation：让学生自己犯错、自己改正 | Linsight</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Linsight</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">聊聊AI技术，也聊聊其他的</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BC%A0%E7%BB%9F%E8%92%B8%E9%A6%8F%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%80%E7%9B%B4%E5%9C%A8%E6%A8%A1%E4%BB%BF%E5%88%AB%E4%BA%BA%E7%9A%84%E8%8C%83%E6%96%87"><span class="nav-number">1.</span> <span class="nav-text">1.
+传统蒸馏的问题：一直在模仿别人的&quot;范文&quot;</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#opd-%E7%9A%84%E5%81%9A%E6%B3%95%E4%BB%8E%E6%8A%84%E8%8C%83%E6%96%87%E5%88%B0%E6%94%B9%E4%BD%9C%E4%B8%9A"><span class="nav-number">2.</span> <span class="nav-text">2. OPD
+的做法：从&quot;抄范文&quot;到&quot;改作业&quot;</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0reverse-kl-%E4%B8%8E-on-policy-%E6%95%B0%E6%8D%AE%E6%B5%81"><span class="nav-number">3.</span> <span class="nav-text">3. 算法实现：Reverse KL
+与 On-Policy 数据流</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E6%B5%81%E5%92%8C%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 数据流和损失函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E7%94%A8-reverse-kl"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 为什么用 Reverse KL？</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#kl-%E6%95%A3%E5%BA%A6%E4%BF%A1%E6%81%AF%E8%AE%BA%E8%A7%86%E8%A7%92%E4%B8%8B%E7%9A%84%E7%BC%96%E7%A0%81%E6%B5%AA%E8%B4%B9"><span class="nav-number">4.</span> <span class="nav-text">4. KL
+散度：信息论视角下的&quot;编码浪费&quot;</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%9F%E6%9C%9B%E5%BA%95%E6%95%B0%E7%AB%99%E5%9C%A8%E8%B0%81%E7%9A%84%E8%A7%92%E5%BA%A6%E7%9C%8B%E9%97%AE%E9%A2%98"><span class="nav-number">4.1.</span> <span class="nav-text">4.1
+期望底数：站在谁的角度看问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mode-covering-vs-mode-seeking%E7%9C%8B%E4%B8%AA%E5%AE%9E%E9%99%85%E4%BE%8B%E5%AD%90"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 Mode-covering vs
+Mode-seeking：看个实际例子</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#forward-kl%E6%91%8A%E5%B9%B3%E8%A6%86%E7%9B%96mode-covering"><span class="nav-number">4.2.1.</span> <span class="nav-text">Forward
+KL：摊平覆盖（Mode-covering）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#reverse-kl%E9%94%81%E5%AE%9A%E4%BF%AE%E6%AD%A3mode-seeking"><span class="nav-number">4.2.2.</span> <span class="nav-text">Reverse
+KL：锁定修正（Mode-seeking）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reverse-kl-%E7%9A%84%E7%A1%AC%E8%BE%B9%E7%95%8C%E5%8F%8D%E8%80%8C%E6%98%AF%E5%A5%BD%E4%BA%8B"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 Reverse KL
+的&quot;硬边界&quot;反而是好事</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%E7%9A%84%E5%87%A0%E4%B8%AA%E7%BB%86%E8%8A%82"><span class="nav-number">5.</span> <span class="nav-text">5. 工程实现的几个细节</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%87%E6%A0%B7%E9%A2%91%E7%8E%87%E8%A6%81%E4%B8%8D%E8%A6%81%E6%AF%8F%E6%AD%A5%E9%83%BD%E9%87%8D%E6%96%B0%E7%94%9F%E6%88%90"><span class="nav-number">5.1.</span> <span class="nav-text">5.1
+采样频率：要不要每步都重新生成？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%92%8C%E7%8E%B0%E6%9C%89%E6%A1%86%E6%9E%B6%E7%9A%84%E5%85%BC%E5%AE%B9%E6%80%A7"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 和现有框架的兼容性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B8%A9%E5%BA%A6%E5%92%8C%E9%87%87%E6%A0%B7%E7%AD%96%E7%95%A5"><span class="nav-number">5.3.</span> <span class="nav-text">5.3 温度和采样策略</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E7%94%A8-opd"><span class="nav-number">6.</span> <span class="nav-text">6. 什么时候用 OPD？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">7. 小结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin"
+      src="/images/avatar/Picasso_Elephant.png">
+  <p class="site-author-name" itemprop="name">Lin</p>
+  <div class="site-description" itemprop="description">AI | NLP</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">104</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">87</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="mailto:331603034@qq.com" title="E-Mail → mailto:331603034@qq.com" rel="noopener me" target="_blank"><i class="fa-regular fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+<!--
+<script type="text/javascript" src="//rf.revolvermaps.com/0/0/1.js?i=5acfv0hqzp5&amp;s=220&amp;m=1&amp;v=false&amp;r=false&amp;b=000000&amp;n=false&amp;c=ff0000" async="async"></script>
+-->
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://saicat.github.io/a3b62a27.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar/Picasso_Elephant.png">
+      <meta itemprop="name" content="Lin">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Linsight">
+      <meta itemprop="description" content="AI | NLP">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="On-Policy Distillation：让学生自己犯错、自己改正 | Linsight">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          On-Policy Distillation：让学生自己犯错、自己改正
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2026-04-21 21:38:52 / 修改时间：21:54:34" itemprop="dateCreated datePublished" datetime="2026-04-21T21:38:52+08:00">2026-04-21</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/" itemprop="url" rel="index"><span itemprop="name">CS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CS/NLP/LLM/" itemprop="url" rel="index"><span itemprop="name">LLM</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>13 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="传统蒸馏的问题一直在模仿别人的范文">1.
+传统蒸馏的问题：一直在模仿别人的"范文"</h1>
+<p>在大模型落地过程中，蒸馏是把大模型能力迁移到小模型的常用手段。传统的
+logits 蒸馏思路很直接：让教师模型生成一批数据，学生模型学习这些数据的
+token 分布。这在学术上叫 Off-policy
+Distillation——因为训练数据来自教师策略 <span class="math inline">\(\pi_T\)</span>，而学生真正推理时面对的是自己的策略
+<span class="math inline">\(\pi_S\)</span>。</p>
+<p>这个范式在短文本分类、简单问答上效果不错，但一旦进入长链推理（数学证明、代码生成、多轮工具调用），问题就来了：自回归误差积累。</p>
+<p>想象一个数学推理场景。教师在第 3 步写的是"令 <span class="math inline">\(x=2\)</span>"，学生训练时反复看到这个正确示范。但真实推理时，学生可能在第
+3 步写成"设 <span class="math inline">\(x=2\)</span>"——这本身未必错，却改变了后续所有
+token 的条件分布。接下来第 4 步，学生面对的前缀变成了自己写的"设 <span class="math inline">\(x=2\)</span>"，而训练时它从未见过教师在这个前缀下会怎么做。一步偏差之后，学生逐渐滑向教师数据分布从未覆盖过的区域，开始胡编乱造。</p>
+<p>这就是模仿学习里经典的 Train-Test
+Mismatch：学生一直在"看别人写的范文"上训练，考试时却必须"自己写作文"。教师的数据不可能覆盖学生所有可能犯错的状态，而
+LLM 的自回归特性会让这种分布偏移指数级放大。</p>
+<h1 id="opd-的做法从抄范文到改作业">2. OPD
+的做法：从"抄范文"到"改作业"</h1>
+<p>On-Policy
+Distillation（OPD）解决上述问题的思路很直接：既然推理时是学生自己生成，那训练时也让学生自己生成；既然错误会一步步积累，那就在学生每一步的轨迹上给出密集纠正信号。</p>
+<p>它的训练循环遵循三步：</p>
+<ol type="1">
+<li>Rollout：给定输入 <span class="math inline">\(x\)</span>，学生模型
+<span class="math inline">\(\pi_\theta\)</span> 自回归生成完整回复 <span class="math inline">\(y\)</span>；<br>
+</li>
+<li>Evaluation：教师模型 <span class="math inline">\(\pi_T\)</span>
+不重新生成，而是直接对学生生成的 <span class="math inline">\(y\)</span>
+做前向传播，逐 token 输出 logits；<br>
+</li>
+<li>Alignment：用学生分布与教师分布之间的差异作为损失，更新学生模型。</li>
+</ol>
+<p>和传统蒸馏的差异在于：教师不再是"范文生成者"，而是"作业批改者"。教师不需要写出一篇新文章，只需要对学生写好的文章逐字打分。这意味着教师可以是更大的模型、黑盒
+API，甚至是带有特权信息（如 gold reasoning
+trace、检索文档）的同一个模型。</p>
+<h1 id="算法实现reverse-kl-与-on-policy-数据流">3. 算法实现：Reverse KL
+与 On-Policy 数据流</h1>
+<h2 id="数据流和损失函数">3.1 数据流和损失函数</h2>
+<p>OPD 的标准实现如下：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">for</span> batch <span class="token keyword">in</span> dataloader<span class="token punctuation">:</span>
+    <span class="token comment"># Step 1: 学生当前策略生成</span>
+    y <span class="token operator">=</span> student<span class="token punctuation">.</span>generate<span class="token punctuation">(</span>x<span class="token punctuation">,</span> temperature<span class="token operator">=</span><span class="token number">0.7</span><span class="token punctuation">)</span>  <span class="token comment"># y ~ π_θ</span>
+    
+    <span class="token comment"># Step 2: 教师对学生轨迹打分（前向传播，无需反向传播）</span>
+    teacher_logits <span class="token operator">=</span> teacher<span class="token punctuation">(</span>context<span class="token operator">=</span>c<span class="token punctuation">,</span> <span class="token builtin">input</span><span class="token operator">=</span>x<span class="token punctuation">,</span> output<span class="token operator">=</span>y<span class="token punctuation">)</span>
+    student_logits <span class="token operator">=</span> student<span class="token punctuation">(</span><span class="token builtin">input</span><span class="token operator">=</span>x<span class="token punctuation">,</span> output<span class="token operator">=</span>y<span class="token punctuation">)</span>
+    
+    <span class="token comment"># Step 3: 计算 Reverse KL 并更新</span>
+    loss <span class="token operator">=</span> reverse_kl<span class="token punctuation">(</span>student_logits<span class="token punctuation">,</span> teacher_logits<span class="token punctuation">)</span>
+    student<span class="token punctuation">.</span>update<span class="token punctuation">(</span>loss<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这里有两个必须同时满足的条件：</p>
+<ul>
+<li>On-Policy：序列 <span class="math inline">\(y\)</span>
+必须来自学生当前 checkpoint
+的采样分布，而非教师历史数据或静态语料；<br>
+</li>
+<li>Token-level Dense Signal：教师对 <span class="math inline">\(y\)</span> 的每一个位置 <span class="math inline">\(t\)</span>
+都输出完整词表分布，损失函数在词表级别精确计算，而非只在采样到的 token
+上算交叉熵。</li>
+</ul>
+<h2 id="为什么用-reverse-kl">3.2 为什么用 Reverse KL？</h2>
+<p>OPD 通常最小化 Reverse KL Divergence。要理解这个选择，我们需要先回到
+KL 散度的本质。</p>
+<h1 id="kl-散度信息论视角下的编码浪费">4. KL
+散度：信息论视角下的"编码浪费"</h1>
+<p>KL 散度衡量的是：<strong>当你用分布 <span class="math inline">\(Q\)</span>（学生）去近似真实分布 <span class="math inline">\(P\)</span>（教师）时，平均会多浪费多少比特的信息量</strong>。</p>
+<p>它的定义是：</p>
+<p><span class="math display">\[
+D_{KL}(P \| Q) = \mathbb{E}_{x \sim P} \left[ \log \frac{P(x)}{Q(x)}
+\right]
+\]</span></p>
+<p>注意一个关键性质：<strong>KL 散度不对称</strong>。<span class="math inline">\(D_{KL}(P\|Q)\)</span> 和 <span class="math inline">\(D_{KL}(Q\|P)\)</span>
+是两个完全不同的目标，对应完全不同的优化行为。</p>
+<h2 id="期望底数站在谁的角度看问题">4.1
+期望底数：站在谁的角度看问题</h2>
+<p>两种 KL 的差异在于期望是在哪个分布下求的：</p>
+<table>
+<colgroup>
+<col style="width: 21%">
+<col style="width: 21%">
+<col style="width: 35%">
+<col style="width: 21%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>类型</th>
+<th>写法</th>
+<th>期望底数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Forward KL</td>
+<td><span class="math inline">\(D_{KL}(P \| Q)\)</span></td>
+<td><span class="math inline">\(x \sim P\)</span>（教师）</td>
+<td>站在教师的角度，看学生的编码多烂</td>
+</tr>
+<tr class="even">
+<td>Reverse KL</td>
+<td><span class="math inline">\(D_{KL}(Q \| P)\)</span></td>
+<td><span class="math inline">\(x \sim Q\)</span>（学生）</td>
+<td>站在学生的角度，看教师的编码多烂</td>
+</tr>
+</tbody>
+</table>
+<p>这个"期望底数"不是抽象概念，它直接决定了蒙特卡洛估计时你该用谁的样本做平均。</p>
+<ul>
+<li>如果你要无偏估计 <span class="math inline">\(D_{KL}(P\|Q)\)</span>，你必须有从 <span class="math inline">\(P\)</span> 采样的数据；<br>
+</li>
+<li>如果你要无偏估计 <span class="math inline">\(D_{KL}(Q\|P)\)</span>，你必须有从 <span class="math inline">\(Q\)</span> 采样的数据。</li>
+</ul>
+<p>而 OPD 的数据流天然产生的是 <span class="math inline">\(y \sim
+Q\)</span>（学生 rollouts）。因此，Reverse KL
+可以直接对学生生成的序列求平均，得到无偏估计；Forward KL
+若强行用学生数据估计，则需要引入重要性采样权重 <span class="math inline">\(P(y)/Q(y)\)</span>，在 LLM
+的长序列空间上方差极大，工程上几乎不可用。</p>
+<h2 id="mode-covering-vs-mode-seeking看个实际例子">4.2 Mode-covering vs
+Mode-seeking：看个实际例子</h2>
+<p>假设在某个推理步骤，教师模型（大模型）对下一个词的概率分布如下：</p>
+<table>
+<thead>
+<tr class="header">
+<th>token</th>
+<th>教师 <span class="math inline">\(P\)</span></th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>"分析"</td>
+<td><strong>0.40</strong></td>
+<td>展开逻辑分析</td>
+</tr>
+<tr class="even">
+<td>"计算"</td>
+<td><strong>0.35</strong></td>
+<td>进入数值运算</td>
+</tr>
+<tr class="odd">
+<td>"推导"</td>
+<td><strong>0.15</strong></td>
+<td>形式化推导</td>
+</tr>
+<tr class="even">
+<td>"求解"</td>
+<td><strong>0.10</strong></td>
+<td>直接给答案</td>
+</tr>
+</tbody>
+</table>
+<p>教师是"多面手"，四种表达都合理。但学生模型（小模型或
+LoRA）容量有限，在这个位置只能强表达一个偏好（单峰）。假设学生初始分布为：</p>
+<table>
+<thead>
+<tr class="header">
+<th>token</th>
+<th>学生 <span class="math inline">\(Q\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>"分析"</td>
+<td><strong>0.85</strong></td>
+</tr>
+<tr class="even">
+<td>"计算"</td>
+<td>0.08</td>
+</tr>
+<tr class="odd">
+<td>"推导"</td>
+<td>0.04</td>
+</tr>
+<tr class="even">
+<td>"求解"</td>
+<td>0.03</td>
+</tr>
+</tbody>
+</table>
+<h3 id="forward-kl摊平覆盖mode-covering">Forward
+KL：摊平覆盖（Mode-covering）</h3>
+<p>Forward KL
+在教师分布上求期望。如果学生不给某个教师支持的词分配足够概率，惩罚会急剧上升：</p>
+<p><span class="math display">\[
+D_{KL}(P \| Q) = 0.40 \log\frac{0.40}{Q(\text{&quot;分析&quot;})} + 0.35
+\log\frac{0.35}{Q(\text{&quot;计算&quot;})} + 0.15
+\log\frac{0.15}{Q(\text{&quot;推导&quot;})} + 0.10
+\log\frac{0.10}{Q(\text{&quot;求解&quot;})}
+\]</span></p>
+<p>如果学生坚持单峰押注"分析"（<span class="math inline">\(Q(\text{&quot;分析&quot;})=0.85\)</span>，其余接近
+0）：<br>
+- 第一项：<span class="math inline">\(0.40 \times \log(0.40/0.85)
+\approx 0.40 \times (-0.76) =
+-0.30\)</span>（负值，但注意整体被其他项主导）<br>
+- 第二项：<span class="math inline">\(0.35 \times \log(0.35/0.08)
+\approx 0.35 \times 1.48 = 0.52\)</span><br>
+- 第三项：<span class="math inline">\(0.15 \times \log(0.15/0.04)
+\approx 0.15 \times 1.32 = 0.20\)</span><br>
+- 第四项：<span class="math inline">\(0.10 \times \log(0.10/0.03)
+\approx 0.10 \times 1.20 = 0.12\)</span></p>
+<p>总损失约为 <span class="math inline">\(0.54\)</span>，且梯度会迫使学生把概率摊向教师的所有模式。最终学生可能变成：</p>
+<table>
+<thead>
+<tr class="header">
+<th>token</th>
+<th>学生 <span class="math inline">\(Q\)</span>（Forward KL 后）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>"分析"</td>
+<td>0.42</td>
+</tr>
+<tr class="even">
+<td>"计算"</td>
+<td>0.38</td>
+</tr>
+<tr class="odd">
+<td>"推导"</td>
+<td>0.12</td>
+</tr>
+<tr class="even">
+<td>"求解"</td>
+<td>0.08</td>
+</tr>
+</tbody>
+</table>
+<p>问题出现了：学生原来在"分析"上有 0.85 的置信度，被稀释到了
+0.42。推理时，它在"分析"和"计算"之间随机跳跃，前后步骤的术语不一致，导致逻辑连贯性崩坏。这就是
+Mode-covering——学生被迫覆盖教师的所有表达模式，结果每个模式都学不精。</p>
+<h3 id="reverse-kl锁定修正mode-seeking">Reverse
+KL：锁定修正（Mode-seeking）</h3>
+<p>Reverse KL 在学生分布上求期望：</p>
+<p><span class="math display">\[
+D_{KL}(Q \| P) = 0.85 \log\frac{0.85}{0.40} + 0.08 \log\frac{0.08}{0.35}
++ 0.04 \log\frac{0.04}{0.15} + 0.03 \log\frac{0.03}{0.10}
+\]</span></p>
+<p>逐项看：<br>
+- 第一项（"分析"）：<span class="math inline">\(0.85 \times \log(2.125)
+\approx 0.85 \times 0.75 = 0.64\)</span><br>
+- 第二项（"计算"）：<span class="math inline">\(0.08 \times \log(0.23)
+\approx 0.08 \times (-1.47) = -0.12\)</span><br>
+- 第三、四项：权重极小，贡献接近 0</p>
+<p>可以看到，虽然单个项可能是负的，但 KL
+散度的总和必然非负（这是数学性质）。关键在于："推导"和"求解"这两个词因为学生概率极低，几乎不参与损失计算。</p>
+<p>Reverse KL
+的梯度会把学生推向什么方向？它只会在学生实际高概率的区域（"分析"）上，将
+<span class="math inline">\(Q\)</span> 向 <span class="math inline">\(P\)</span> 靠拢（从 0.85 往 0.40
+微调），同时不会强迫学生给"计算""推导"分配显著概率。</p>
+<p>最终学生可能变成：</p>
+<table>
+<thead>
+<tr class="header">
+<th>token</th>
+<th>学生 <span class="math inline">\(Q\)</span>（Reverse KL 后）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>"分析"</td>
+<td>0.72</td>
+</tr>
+<tr class="even">
+<td>"计算"</td>
+<td>0.15</td>
+</tr>
+<tr class="odd">
+<td>"推导"</td>
+<td>0.08</td>
+</tr>
+<tr class="even">
+<td>"求解"</td>
+<td>0.05</td>
+</tr>
+</tbody>
+</table>
+<p>结果：学生保持单峰特性，稳定地使用"分析"这一表达，内部逻辑一致。它放弃了模仿教师的所有措辞风格，只确保自己走的每一步在教师看来"合理即可"。这就是
+Mode-seeking——学生寻找并锁定一个自己擅长、教师也认可的模式。</p>
+<h2 id="reverse-kl-的硬边界反而是好事">4.3 Reverse KL
+的"硬边界"反而是好事</h2>
+<p>Reverse KL
+有一个严格的数学约束：如果学生给某个词分配了非零概率，而教师给零概率，损失会爆炸到无穷大：</p>
+<p><span class="math display">\[
+Q(x) &gt; 0, \ P(x) = 0 \ \Rightarrow \ Q(x) \log\frac{Q(x)}{0} \to
++\infty
+\]</span></p>
+<p>这意味着 <span class="math inline">\(\text{supp}(Q) \subseteq
+\text{supp}(P)\)</span>——学生的支持集必须是教师支持集的子集。学生"不敢"探索教师认为绝对不可能的区域。</p>
+<p>在 OPD
+场景中，这反而是安全机制：它防止学生自由发挥到低质量或语法崩坏的区域，确保蒸馏始终发生在教师认可的语言空间内。（工程上通常会对教师概率做
+epsilon 平滑，如 <code>clamp(min=1e-6)</code>，来避免数值溢出）</p>
+<h1 id="工程实现的几个细节">5. 工程实现的几个细节</h1>
+<h2 id="采样频率要不要每步都重新生成">5.1
+采样频率：要不要每步都重新生成？</h2>
+<p>理论上，一旦学生参数更新（<span class="math inline">\(\theta_t \to
+\theta_{t+1}\)</span>），之前的 rollouts 就"过期"了。完全严格的 OPD
+每步都重新采样：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">for</span> step <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>total_steps<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    y <span class="token operator">=</span> student<span class="token punctuation">.</span>generate<span class="token punctuation">(</span>x<span class="token punctuation">)</span>        <span class="token comment"># 来自 π_θ_t</span>
+    loss <span class="token operator">=</span> reverse_kl<span class="token punctuation">(</span>student<span class="token punctuation">(</span>x<span class="token punctuation">,</span>y<span class="token punctuation">)</span><span class="token punctuation">,</span> teacher<span class="token punctuation">(</span>c<span class="token punctuation">,</span>x<span class="token punctuation">,</span>y<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    student<span class="token punctuation">.</span>update<span class="token punctuation">(</span>loss<span class="token punctuation">)</span>           <span class="token comment"># 变成 π_θ_&#123;t+1&#125;</span>
+    <span class="token comment"># 下一步必须重新 generate</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>但 LLM 的生成代价远高于训练（通常 10-100 倍）。工程上普遍采用 PPO
+风格的缓冲池策略：每隔 <span class="math inline">\(N\)</span> 步用当前
+checkpoint 采样一批数据，重复训练 <span class="math inline">\(K\)</span>
+个 epoch（通常 <span class="math inline">\(K \leq 4\)</span>）。只要
+policy lag 不大，效果与严格 on-policy 几乎无差异。</p>
+<h2 id="和现有框架的兼容性">5.2 和现有框架的兼容性</h2>
+<p>OPD 对基础设施很友好：<br>
+- 教师无需反向传播：只需前向传播输出 logits，可以是更大的模型或黑盒
+API；<br>
+- 与 LoRA 天然适配：Qwen3 技术报告显示，SFT 后 LoRA 与全量微调差距约
+13%，经过 OPD 后差距缩小到 6%，且 OPD 阶段可用更小的 batch size（因为
+token-level 信号密度高，梯度噪声低）；<br>
+- 接入 RL 框架很简单：如果你已有 VeRL / verl 等 RL 流水线，只需将
+reference model 的 KL penalty 替换为 teacher model 的 log-prob
+评估，即完成 OPD 改造。</p>
+<h2 id="温度和采样策略">5.3 温度和采样策略</h2>
+<ul>
+<li>学生生成：通常使用 temperature &gt; 0（如
+0.7-1.0）采样，覆盖自身分布中的多种错误模式；<br>
+</li>
+<li>教师评估：可用 temperature=0 获取确定性反馈，降低方差。</li>
+</ul>
+<h1 id="什么时候用-opd">6. 什么时候用 OPD？</h1>
+<p>OPD 最适合的场景：<br>
+- 长链推理任务（数学、代码）：早期错误会导致后期严重偏离，OPD
+能纠正中间步骤；<br>
+- 持续学习/对齐恢复：当 SFT 会遗忘 post-training 行为时，OPD
+可以恢复已学习的特性，而不会像 SFT 那样在自身样本上训练导致退化；<br>
+- 跨架构蒸馏：如从 Dense 模型蒸馏到 MoE，OPD 比静态数据更鲁棒。</p>
+<p>局限：<br>
+- 需要在线生成学生轨迹，训练吞吐低于静态 SFT（但比 RL 好很多，因为不需要
+Value Model 或大量 rollout）；<br>
+-
+若学生与教师能力差距过大（教师的高概率区域完全不在学生的支撑集内），需配合
+warm-up SFT 缩小初始分布差异。</p>
+<h1 id="小结">7. 小结</h1>
+<p>On-Policy Distillation 的核心思路可以概括为一句话：</p>
+<blockquote>
+<p>学生生成自己的轨迹 → 教师对这条轨迹的每个 token 打分 → 用 Reverse KL
+将学生分布拉向教师分布，但只纠正学生实际会犯的错误。</p>
+</blockquote>
+<p>它与传统蒸馏的差异不在于"有没有教师信号"，而在于信号以什么密度、在什么分布上传递：</p>
+<table>
+<colgroup>
+<col style="width: 16%">
+<col style="width: 27%">
+<col style="width: 27%">
+<col style="width: 27%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>方法</th>
+<th>数据来源</th>
+<th>反馈密度</th>
+<th>核心行为</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Off-policy Distillation</td>
+<td>教师生成</td>
+<td>Token-level Dense</td>
+<td>模仿教师范文，但分布不匹配</td>
+</tr>
+<tr class="even">
+<td>RL (PPO/GRPO)</td>
+<td>学生当前策略</td>
+<td>Episode-level Sparse</td>
+<td>探索自身分布，但信用分配困难</td>
+</tr>
+<tr class="odd">
+<td>OPD</td>
+<td>学生当前策略</td>
+<td>Token-level Dense</td>
+<td>在自己分布上被密集纠正</td>
+</tr>
+</tbody>
+</table>
+<p>从信息论视角看，RL 每个 episode 只传输 <span class="math inline">\(O(1)\)</span> bits 信号，而 OPD 传输 <span class="math inline">\(O(N)\)</span> bits（<span class="math inline">\(N\)</span> 为序列长度）。这种效率优势使得 OPD
+在复现同等策略时，所需梯度步数通常比 RL 少一个数量级。</p>
+<p>如果你已有 RL 训练框架，实现 OPD 的工程改动很小；如果你正在用 LoRA
+做领域适配，在 SFT 后追加一轮 OPD
+往往是提升推理稳定性的最高性价比手段。</p>
+<hr>
+<p>【推荐文章】<br>
+- Agent：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2d60084c.html">Karpathy所说的LLM
+Wiki</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/24a6683a.html">Harness
+Engineer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b3f8d798.html">O-MEM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5f0d3c82.html">字节的M3-Agent</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/44c62dc5.html">DeepResearch的报告生成方法</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7c2f9dcb.html">从RAG到DeepSearch</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f7d600f3.html">阿里通义Lab:
+WebWalker,WebDancer和WebSailor</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/72150a83.html">Agent评测数据集</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b242bfb3.html">Agent完全手册(零)：三大模块，三个理念</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/226b059f.html">agent调研(1)--MetaGPT,OpenManus和OWL</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f93b3aaf.html">Devin和Anthropic的Agent开发经验</a><br>
+- MoE：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a9c496e3.html">DeepSeek-V3细节探索</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/44e38c1b.html">MoE模型的前世今生</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/83c49df0.html">DeepSeek-V2和MLA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1d5bcd45.html">昆仑万维-SkyworkMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f3acf042.html">成本10w刀的JetMoE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/224c42da.html">MoE的top-p
+routing</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5e1d14b3.html">对MoE模型的一些观察</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0824e29.html">从dense到MoE -- sparse
+upcycling</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c8bbc7.html">MoE路由--expert choice
+routing</a><br>
+- 端侧模型：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e34e252.html">苹果智能系统模型--AFM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/376db710.html">MiniCPM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5ac36d34.html">适合移动设备的语言模型--MobileLLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe13b56f.html">phi系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cf3f1f81.html">Gemma2</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f845f3e4.html">苹果的OpenELM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/770b63e1.html">bilibili的index-1.9B</a><br>
+- 预训练：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e996bf25.html">预训练经验</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/37ee84bb.html">Qwen3实测&amp;技术报告</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a0b50049.html">代码大模型(一)--业界现状</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7856bcc1.html">代码大模型(二)--OpenCoder</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/dcb57672.html">LLM高效预训练(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/1e2e35a7.html">LLM高效预训练(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7d7294cb.html">Llama3.1--预训练要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a8f8b641.html">Qwen2技术报告</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/41b6a819.html">Yi技术报告-划重点看细节</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7f3d361.html">InternLM系列模型</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a5206abd.html">GLM4报告的一些技术点</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3df0cd42.html">从Yuan2.0到Yuan2.0-M32</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f5fb75e4.html">从loss视角理解大模型涌现能力</a><br>
+- 数据：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/85132189.html">训练数据合成(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2a22baeb.html">训练数据合成(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e259c7b2.html">训练数据合成(三)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2c2cdc34.html">LLM预训练数据策略(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/210dbccd.html">预训练数据处理--长度分解</a><br>
+- 长上下文：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/6c0f6207.html">Qwen2.5-1M技术解析</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c4da56c0.html">LLM长上下文的问题</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/cc852861.html">解锁大模型长上下文能力</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/45ee1a6d.html">大模型推理窗口-从有限到无限大</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4519eadd.html">prompt压缩(一)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ea2871bf.html">prompt压缩(二)</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bfa4f144.html">reasoning压缩(一)</a><br>
+- 推理加速：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/f5c015c.html">大模型推理加速-投机解码</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7bbe2df6.html">大模型推理加速-MEDUSA</a><br>
+- 对齐：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/cc1c31d.html">VeRA，LoRA-XS和TinyLoRA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9cb56255.html">腾讯的Training-Free
+GRPO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9e4b4e6d.html">深度求索DeepSeek-R1详解</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/657a6d17.html">基模型Cognitive
+Behaviors对RL的影响</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/93328a2a.html">Llama3.1--post-training要点一览</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/bb8fcf21.html">模型平均 -- model
+soup</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/473f2b43.html">大模型偏好对齐-DPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/da871ebe.html">大模型偏好对齐-ODPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/280fa97a.html">大模型偏好对齐-simPO</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/4fe7b810.html">大模型偏好对齐-IPO</a><br>
+- Transformer：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/5b81d487.html">Attention
+Residuals</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3dc22f96.html">理解Attention:从起源到MHA,MQA和GQA</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/7381cae3.html">LLM的重复生成和ICL</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/6a40bfa5.html">transformer中normalization的二三事</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/b70b4a2d.html">从代码实现看normalization-到底做了什么</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/c61d17e3.html">稀疏注意力计算:sliding
+window attention</a><br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/a051710f.html">理解LLM位置编码:RoPE</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f0902f1a.html">RoPE的远距离衰减</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/2dee4921.html">LLM水印</a><br>
+- 训练框架<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f25d614e.html">Muon优化器</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/fe0adaa5.html">LLM训练框架：从优化器和精度讲到ZeRO</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/4cd8532f.html">LLM训练各种并行策略</a><br>
+- 项目应用：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/9c593ccd.html">一个模型支持智能助手系统</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/d253d7b3.html">关于The Bitter
+Lesson</a><br>
+- CV：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/a11e2633.html">CV入门--关于Vision
+Transformer</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/ae81a87b.html">CV入门--无监督学习</a><br>
+- 多模态：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/3069051d.html">多模态入门(一)--CLIP</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/569d722c.html">多模态入门(二)--Flamingo,LLaVA系列和BLIP系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/f16505b3.html">多模态入门(三)--MiniGPT4,DeepSeekVL,InternVL系列和QwenVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e00debee.html">多模态入门(四)--CogVLM,VILA,MM1,MM1.5和Pixtral-12B</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/52c8a4f9.html">多模态入门(五)--InternVL系列</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/96393d3b.html">小米的移动UI多模态模型--MobileVLM</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/b4d047c1.html">DeepSeek-VL2的细节</a><br>
+- 论文阅读：<br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/e96c7aac.html">最近阅读--关于数据合成、agent、reasoning和多任务</a><br>
+<a target="_blank" rel="noopener" href="https://www.linsight.cn/af7f9363.html">最近阅读2-关于自适应深度思考、context
+engineering和模型训练</a><br>
+- 大模型算法题：<br>
+<a target="_blank" rel="noopener" href="http://www.linsight.cn/3345028a.html">(1)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/ad0bba9d.html">(2)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(3)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/1736008.html">(4)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/336f2f3e.html">(5)</a>、 <a target="_blank" rel="noopener" href="http://www.linsight.cn/7c04944d.html">(6)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/dd614e12.html">(7)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/e287b9c3.html">(8)</a>、 <a target="_blank" rel="noopener" href="https://www.linsight.cn/fb9c8882.html">(9)</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Lin
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://saicat.github.io/a3b62a27.html" title="On-Policy Distillation：让学生自己犯错、自己改正">https://saicat.github.io/a3b62a27.html</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/NLP/" rel="tag"><i class="fa fa-tag"></i> NLP</a>
+              <a href="/tags/LLM/" rel="tag"><i class="fa fa-tag"></i> LLM</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2d60084c.html" rel="prev" title="Karpathy所说的LLM Wiki">
+                  <i class="fa fa-angle-left"></i> Karpathy所说的LLM Wiki
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Lin</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">949k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">28:46</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+</div>
+
+<!--
+-->
+
+
+<!-- 网站运行时间的设置 -->
+<span id="timeDate">载入天数...</span>
+<span id="times">载入时分秒...</span>
+<script>
+    var now = new Date();
+    function createtime() {
+        var grt= new Date("03/01/2023 10:00:00"); //此处修改你的建站时间或者网站上线时间
+        now.setTime(now.getTime()+250);
+        days = (now - grt ) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+        hours = (now - grt ) / 1000 / 60 / 60 - (24 * dnum); hnum = Math.floor(hours);
+        if(String(hnum).length ==1 ){hnum = "0" + hnum;} minutes = (now - grt ) / 1000 /60 - (24 * 60 * dnum) - (60 * hnum);
+        mnum = Math.floor(minutes); if(String(mnum).length ==1 ){mnum = "0" + mnum;}
+        seconds = (now - grt ) / 1000 - (24 * 60 * 60 * dnum) - (60 * 60 * hnum) - (60 * mnum);
+        snum = Math.round(seconds); if(String(snum).length ==1 ){snum = "0" + snum;}
+        document.getElementById("timeDate").innerHTML = "本站已安全运行 "+dnum+" 天 ";
+        document.getElementById("times").innerHTML = hnum + " 小时 " + mnum + " 分 " + snum + " 秒.";
+    }
+setInterval("createtime()",250);
+</script>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.28/fancybox/fancybox.umd.js" integrity="sha256-ytMJGN3toR+a84u7g7NuHm91VIR06Q41kMWDr2pq7Zo=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"Saicat/comment-utterance","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
