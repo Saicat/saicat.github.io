@@ -40212,6 +40212,15 @@ RFT</h1>
 <h1 id="rejection-sampling-fine-tuning-rft">Rejection Sampling
 Fine-Tuning, RFT</h1>
 <h1 id="多模态">多模态</h1>
+<p>ViT，patch，2D-RoPE</p>
+<p>Vision-Language Adaptor</p>
+<p>pixel shuffle</p>
+<p>动态分辨率，子图，全景图</p>
+<p>deepseek-vl：Hybrid Vision Encoder</p>
+<h1 id="长上下文">长上下文</h1>
+<h1 id="claude-code">claude code</h1>
+<p>(https://zhuanlan.zhihu.com/p/2025176118068621451)[https://zhuanlan.zhihu.com/p/2025176118068621451]</p>
+<h1 id="预训练">预训练</h1>
 ]]></content>
       <categories>
         <category>CS</category>
